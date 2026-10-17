@@ -1,4 +1,4 @@
-# tasks-app
+# monkey-tasks
 
 Personal tasks, reminders, and calendar, built on the Obsidian vault. The
 phone vault folder `Documents/obsidian-vault` is the store. The app is a
