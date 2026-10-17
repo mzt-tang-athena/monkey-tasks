@@ -39,11 +39,12 @@ What and why. Concrete enough that a fresh agent with no context could do it.
 ## Rules
 
 1. Claim = `git mv` to `doing/` and fill `assignee`, one commit.
-2. One ticket, one branch, one PR.
+2. One ticket, one branch, one PR. A repo that pushes straight to main
+   may instead close a ticket with a direct push.
 3. Finish = write `Outcome`, attach `pr`, `git mv` to `done/`.
 4. Tickets are never deleted. They are the project's history.
 5. State lives in the folder, not in a duplicate property. Folders are
    scannable with plain `ls`.
 6. Bigger than one ticket? Split it into child tickets and link them with
-   `depends`. Group child tickets under a section in `PLAN.md`. Add a
+   `depends`. Group child tickets under a section in `README.md`. Add a
    `milestone:` property only when release grouping becomes real.
