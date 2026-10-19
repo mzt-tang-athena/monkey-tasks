@@ -23,3 +23,8 @@ generator is not worth installing.
 Every client validates against identical definitions, so code and contract
 cannot drift. A new property means editing one file. Writing schemas by
 hand costs an hour up front and buys ownership of the vocabulary.
+
+Amendment 2026-10-19: the schemas moved to the central contracts repo
+(ADR 0007). The reasoning stands unchanged: hand-written Zod as the
+single contract. Only the location changed. The monorepo framing for
+this project is superseded by the home-wide contracts repo.

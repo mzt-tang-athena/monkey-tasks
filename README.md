@@ -20,7 +20,8 @@ Phases:
    `completed` date; reminders are a list; recurrence is an RRULE
    string (0004).
 3. Schema package: Zod models for task, deed, and list notes mirroring
-   the vocabulary (0002, ADR 0005).
+   the vocabulary (0002, ADR 0005). Done; now extracted to the central
+   contracts repo (0007, ADR 0007).
 4. MVP screens: focus list, upcoming reminders, calendar, task editor,
    note viewer (0003).
 5. Capture: quick capture with offline natural language dates via
