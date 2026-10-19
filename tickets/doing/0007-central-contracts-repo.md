@@ -3,7 +3,7 @@ id: 0007
 title: Extract schemas to the central contracts repo
 created: 2026-10-19
 priority: high
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
