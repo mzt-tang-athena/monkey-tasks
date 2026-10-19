@@ -166,6 +166,53 @@ export default function App() {
   >([]);
   const [note, setNote] = React.useState<Note | null>(null);
   const [message, setMessage] = React.useState("No vault folder granted yet.");
+  const [scheduled, setScheduled] = React.useState<
+    { id: string; trigger: string }[]
+  >([]);
+  const [alarmState, setAlarmState] = React.useState<string>("unknown");
+
+  const refreshScheduled = React.useCallback(async () => {
+    const requests = await Notifications.getAllScheduledNotificationsAsync();
+    setScheduled(
+      requests.map((request) => {
+        const trigger = request.trigger as Record<string, unknown>;
+        const when =
+          typeof trigger === "object" && trigger !== null
+            ? JSON.stringify({ ...trigger, channelId: undefined })
+            : String(trigger);
+        return { id: request.identifier, trigger: when };
+      }),
+    );
+    const exact = await Notifications.getExactAlarmPermissionsAsync();
+    setAlarmState(exact.granted ? "exact alarms granted" : "exact alarms DENIED");
+  }, []);
+
+  React.useEffect(() => {
+    let active = true;
+    void (async () => {
+      const requests = await Notifications.getAllScheduledNotificationsAsync();
+      if (!active) {
+        return;
+      }
+      setScheduled(
+        requests.map((request) => {
+          const trigger = request.trigger as Record<string, unknown>;
+          const when =
+            typeof trigger === "object" && trigger !== null
+              ? JSON.stringify({ ...trigger, channelId: undefined })
+              : String(trigger);
+          return { id: request.identifier, trigger: when };
+        }),
+      );
+      const exact = await Notifications.getExactAlarmPermissionsAsync();
+      if (active) {
+        setAlarmState(exact.granted ? "exact alarms granted" : "exact alarms DENIED");
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const openDirectory = React.useCallback(async (uri: string) => {
     try {
@@ -267,6 +314,18 @@ export default function App() {
         {folderUri ? (
           <Text style={styles.folder}>Vault: {lastSegment(folderUri) || "root"}</Text>
         ) : null}
+
+        <Text style={styles.section}>Diagnostics</Text>
+        <Text style={styles.rowText}>{alarmState}</Text>
+        <Text style={styles.rowText}>
+          {scheduled.length} notification(s) scheduled right now
+        </Text>
+        {scheduled.map((item) => (
+          <Text key={item.id} style={styles.rowText}>
+            {item.id.slice(0, 8)}: {item.trigger}
+          </Text>
+        ))}
+        <RowButton label="Refresh scheduled list" onPress={refreshScheduled} />
 
         <Text style={styles.section}>Notes</Text>
         {entries.map((entry) => (
