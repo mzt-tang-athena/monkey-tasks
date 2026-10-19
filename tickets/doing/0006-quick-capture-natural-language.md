@@ -3,7 +3,7 @@ id: 0006
 title: Quick capture with natural language dates
 created: 2026-10-19
 priority: high
-assignee:
+assignee: opencode
 pr:
 depends: [0002, 0004]
 ---
