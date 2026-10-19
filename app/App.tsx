@@ -274,8 +274,15 @@ export default function App() {
   const [input, setInput] = React.useState("");
 
   const capture = React.useCallback(async () => {
-    if (!tasksDir) {
-      setMessage("Capture needs the Tasks folder. Open the vault root first.");
+    let dir = tasksDir;
+    if (!dir && rootUriRef.current) {
+      const listed = await listDirectory(rootUriRef.current);
+      const tasks = listed.find((entry) => !entry.isFile && entry.name === "Tasks");
+      dir = tasks?.uri ?? null;
+      setTasksDir(dir);
+    }
+    if (!dir) {
+      setMessage("Capture needs the Tasks folder. Grant the vault folder first.");
       return;
     }
     const parsed = parseCapture(input);
@@ -304,7 +311,7 @@ export default function App() {
     const content = `${lines.join("\n")}\n`;
     try {
       const fileUri = await StorageAccessFramework.createFileAsync(
-        tasksDir,
+        dir,
         `${parsed.name}.md`,
         "text/markdown",
       );
@@ -391,7 +398,7 @@ export default function App() {
           returnKeyType="done"
           blurOnSubmit={false}
         />
-        <RowButton label="Capture task" onPress={capture} disabled={!tasksDir} />
+        <RowButton label="Capture task" onPress={capture} disabled={!folderUri} />
 
         <RowButton label="Grant vault folder" onPress={grantVault} />
         {folderUri ? (
