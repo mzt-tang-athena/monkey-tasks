@@ -3,7 +3,7 @@ id: 0004
 title: Task and list note types in the vault
 created: 2026-10-19
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
