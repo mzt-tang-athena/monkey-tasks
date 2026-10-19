@@ -3,7 +3,7 @@ id: 0002
 title: Schema package
 created: 2026-10-17
 priority: high
-assignee:
+assignee: opencode
 pr:
 depends: [0001]
 ---
