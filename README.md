@@ -23,7 +23,7 @@ Phases:
    the vocabulary (0002, ADR 0005). Done; now extracted to the central
    contracts repo (0007, ADR 0007).
 4. MVP screens: focus list, upcoming reminders, calendar, task editor,
-   note viewer (0003).
+   note viewer (0003, children 0009 to 0013).
 5. Capture: quick capture with offline natural language dates via
    chrono-node and rrule.js. Unparsed lines go to athena agents later
    (0006, done).

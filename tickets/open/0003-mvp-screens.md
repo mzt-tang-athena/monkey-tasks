@@ -10,9 +10,16 @@ depends: [0002]
 
 ## Spec
 
-First usable screens on real vault data: focus list, upcoming reminders,
-a simple calendar view, a task editor, and a note viewer. Feature folders
-follow the Bulletproof layout.
+Parent ticket. The MVP is split into child tickets:
+
+- 0009 Foundation: feature-folder restructure, vault layer, Expo Router
+- 0010 Focus screen
+- 0011 Upcoming reminders screen
+- 0012 Calendar view
+- 0013 Task editor and note viewer
+
+Each child carries its own spec and acceptance. 0003 closes when all
+children close.
 
 ## Acceptance
 
