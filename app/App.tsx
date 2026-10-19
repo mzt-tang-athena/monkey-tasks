@@ -1,9 +1,10 @@
 import * as React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Notifications from "expo-notifications";
 import { AndroidImportance } from "expo-notifications";
+import { parseCapture, formatToday } from "./capture";
 
 const { StorageAccessFramework } = FileSystem;
 
@@ -31,7 +32,11 @@ type Note = {
 
 function lastSegment(uri: string): string {
   const segment = uri.split("/").pop() ?? uri;
-  return decodeURIComponent(segment);
+  // SAF document URIs carry the full relative path in the final
+  // segment, for example "primary:Documents/vault/Tasks". The
+  // display name is the part after the last slash.
+  const decoded = decodeURIComponent(segment);
+  return decoded.split("/").pop() ?? decoded;
 }
 
 function parseFrontmatter(text: string): {
@@ -161,6 +166,9 @@ function RowButton({
 
 export default function App() {
   const [folderUri, setFolderUri] = React.useState<string | null>(null);
+  const [currentDir, setCurrentDir] = React.useState<string | null>(null);
+  const [tasksDir, setTasksDir] = React.useState<string | null>(null);
+  const rootUriRef = React.useRef<string | null>(null);
   const [entries, setEntries] = React.useState<
     { uri: string; name: string; isFile: boolean }[]
   >([]);
@@ -218,8 +226,19 @@ export default function App() {
     try {
       const listed = await listDirectory(uri);
       setEntries(listed);
+      setCurrentDir(uri);
       setNote(null);
-      setMessage(`${listed.length} entries in ${lastSegment(uri) || "vault root"}`);
+      if (rootUriRef.current === uri) {
+        const tasks = listed.find((entry) => !entry.isFile && entry.name === "Tasks");
+        setTasksDir(tasks?.uri ?? null);
+        setMessage(
+          tasks
+            ? `${listed.length} entries in vault root`
+            : "No Tasks folder in the vault root yet. Create it in Obsidian, then sync.",
+        );
+      } else {
+        setMessage(`${listed.length} entries in ${lastSegment(uri) || "vault root"}`);
+      }
     } catch (error) {
       setMessage(`List failed: ${String(error)}`);
     }
@@ -232,12 +251,14 @@ export default function App() {
       return;
     }
     await writePermissionFile(result.directoryUri);
+    rootUriRef.current = result.directoryUri;
     setFolderUri(result.directoryUri);
     await openDirectory(result.directoryUri);
   }, [openDirectory]);
 
   const restoreVault = React.useCallback(async (uri: string) => {
     try {
+      rootUriRef.current = uri;
       await openDirectory(uri);
       setFolderUri(uri);
       setMessage("Restored saved vault folder.");
@@ -253,6 +274,71 @@ export default function App() {
       }
     });
   }, [restoreVault]);
+
+  const [input, setInput] = React.useState("");
+
+  const capture = React.useCallback(async () => {
+    let dir = tasksDir;
+    if (!dir && rootUriRef.current) {
+      const listed = await listDirectory(rootUriRef.current);
+      const tasks = listed.find((entry) => !entry.isFile && entry.name === "Tasks");
+      dir = tasks?.uri ?? null;
+      if (!dir) {
+        dir = await StorageAccessFramework.makeDirectoryAsync(rootUriRef.current, "Tasks");
+        setMessage("Created the Tasks folder in the vault root.");
+      }
+      setTasksDir(dir);
+    }
+    if (!dir) {
+      setMessage("Capture needs the Tasks folder. Grant the vault folder first.");
+      return;
+    }
+    const parsed = parseCapture(input);
+    if (!parsed) {
+      setMessage("Nothing to capture.");
+      return;
+    }
+    const lines = [
+      "---",
+      'kind: "[[tasks]]"',
+      `created: ${formatToday()}`,
+    ];
+    if (parsed.due) {
+      lines.push(`due: ${parsed.due}`);
+    }
+    if (parsed.reminders?.length) {
+      lines.push("reminders:");
+      for (const reminder of parsed.reminders) {
+        lines.push(`  - ${reminder}`);
+      }
+    }
+    if (parsed.recurrence) {
+      lines.push(`recurrence: "${parsed.recurrence}"`);
+    }
+    lines.push("lists:", "---", "");
+    const content = `${lines.join("\n")}\n`;
+    try {
+      const fileUri = await StorageAccessFramework.createFileAsync(
+        dir,
+        `${parsed.name}.md`,
+        "text/markdown",
+      );
+      await FileSystem.writeAsStringAsync(fileUri, content, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      setInput("");
+      setMessage(
+        `Captured "${parsed.name}"` +
+          (parsed.due ? `, due ${parsed.due}` : ", no date") +
+          (parsed.recurrence ? `, ${parsed.recurrence}` : ""),
+      );
+      if (currentDir) {
+        await openDirectory(currentDir);
+      }
+    } catch (error) {
+      setMessage(`Capture failed: ${String(error)}`);
+    }
+  }, [input, tasksDir, currentDir, openDirectory]);
 
   const openFile = React.useCallback(async (uri: string, name: string) => {
     try {
@@ -309,6 +395,18 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.heading}>monkey-tasks vault spike</Text>
         <Text style={styles.message}>{message}</Text>
+
+        <Text style={styles.section}>Capture</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="call the dentist tuesday 3pm repeat monthly"
+          value={input}
+          onChangeText={setInput}
+          onSubmitEditing={capture}
+          returnKeyType="done"
+          blurOnSubmit={false}
+        />
+        <RowButton label="Capture task" onPress={capture} disabled={!folderUri} />
 
         <RowButton label="Grant vault folder" onPress={grantVault} />
         {folderUri ? (
@@ -435,5 +533,12 @@ const styles = StyleSheet.create({
   buttonLabel: {
     color: "#ffffff",
     fontWeight: "600",
+  },
+  input: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#999999",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
   },
 });
