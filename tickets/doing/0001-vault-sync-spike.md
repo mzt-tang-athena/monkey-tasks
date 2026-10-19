@@ -3,7 +3,7 @@ id: 0001
 title: Vault sync spike
 created: 2026-10-17
 priority: high
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
