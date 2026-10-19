@@ -32,7 +32,11 @@ type Note = {
 
 function lastSegment(uri: string): string {
   const segment = uri.split("/").pop() ?? uri;
-  return decodeURIComponent(segment);
+  // SAF document URIs carry the full relative path in the final
+  // segment, for example "primary:Documents/vault/Tasks". The
+  // display name is the part after the last slash.
+  const decoded = decodeURIComponent(segment);
+  return decoded.split("/").pop() ?? decoded;
 }
 
 function parseFrontmatter(text: string): {
@@ -279,6 +283,10 @@ export default function App() {
       const listed = await listDirectory(rootUriRef.current);
       const tasks = listed.find((entry) => !entry.isFile && entry.name === "Tasks");
       dir = tasks?.uri ?? null;
+      if (!dir) {
+        dir = await StorageAccessFramework.makeDirectoryAsync(rootUriRef.current, "Tasks");
+        setMessage("Created the Tasks folder in the vault root.");
+      }
       setTasksDir(dir);
     }
     if (!dir) {
