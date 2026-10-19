@@ -14,11 +14,18 @@ the device (ADR 0004).
 Phases:
 
 1. Spike: bare app reads a task note from the vault folder, edits it, and
-   the change appears in Obsidian on desktop after sync.
-2. Schema package: Zod models for task, reminder, and event notes
-   (ADR 0005).
-3. MVP screens: focus list, upcoming reminders, calendar, task editor,
-   note viewer.
-4. Notifications: on-device alarms with recurrence.
-5. Later: location triggers, MCP capture on athena, ntfy fallback, email
-   and calendar integrations.
+   the change appears in Obsidian on desktop after sync (0001).
+2. Vault vocabulary: lightweight task notes in `Tasks/`, list notes in
+   `Tasks/Lists/`, deeds unchanged. Task done is derived from a
+   `completed` date; deeds keep their five-value status (0004).
+3. Schema package: Zod models for task, deed, and list notes mirroring
+   the vocabulary (0002, ADR 0005).
+4. MVP screens: focus list, upcoming reminders, calendar, task editor,
+   note viewer (0003).
+5. Capture: quick capture with offline natural language dates via
+   chrono-node and rrule.js. Unparsed lines go to athena agents later
+   (0006).
+6. Notifications: on-device alarms with recurrence.
+7. Later: deed vocabulary cleanup (0005), the quick-task and deed merge
+   decision, location triggers, MCP capture on athena, ntfy fallback,
+   email and calendar integrations, pull-only Google Calendar read.
