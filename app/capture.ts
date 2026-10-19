@@ -77,14 +77,14 @@ export function formatToday(): string {
 }
 
 export function parseCapture(input: string, now: Date = new Date()): ParsedCapture | null {
-  const original = input.trim();
+  const original = squash(input.replace(/^(?:please\s+)?remind\s+me(?:\s+to)?\s+/i, ""));
   if (original === "") {
     return null;
   }
   let text = original;
   let recurrence: string | undefined;
 
-  const repeatMatch = /\brepeats?\s+(daily|weekly|monthly|yearly|annually)\b/i.exec(text);
+  const repeatMatch = /\b(?:repeats?|recurs?|recurring)\s+(daily|weekly|monthly|yearly|annually)\b/i.exec(text);
   if (repeatMatch) {
     recurrence = RECURRENCE_WORDS[repeatMatch[1].toLowerCase()];
     text = squash(strip(text, repeatMatch.index, repeatMatch[0].length));

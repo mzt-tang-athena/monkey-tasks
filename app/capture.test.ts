@@ -46,6 +46,12 @@ describe("parseCapture", () => {
     expect(result?.recurrence).toBe("FREQ=WEEKLY;BYDAY=WE");
   });
 
+  it("strips the remind-me-to prefix and recurring keyword", () => {
+    const result = parseCapture("remind me to go to the dentist recurring monthly", now);
+    expect(result?.name).toBe("go to the dentist");
+    expect(result?.recurrence).toBe("FREQ=MONTHLY");
+  });
+
   it("falls back to the whole line when everything matches", () => {
     const result = parseCapture("tomorrow", now);
     expect(result?.name).toBe("tomorrow");

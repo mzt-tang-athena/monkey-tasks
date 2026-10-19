@@ -315,7 +315,7 @@ export default function App() {
     if (parsed.recurrence) {
       lines.push(`recurrence: "${parsed.recurrence}"`);
     }
-    lines.push("lists:", "---", "", parsed.name);
+    lines.push("lists:", "---", "");
     const content = `${lines.join("\n")}\n`;
     try {
       const fileUri = await StorageAccessFramework.createFileAsync(
