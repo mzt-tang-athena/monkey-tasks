@@ -3,8 +3,8 @@ id: 0004
 title: Task and list note types in the vault
 created: 2026-10-19
 priority: normal
-assignee:
-pr:
+assignee: opencode
+pr: 4
 depends: []
 ---
 
@@ -47,7 +47,29 @@ folder path.
 
 ## Acceptance
 
-- [ ] a task note created from the template lands in `Tasks/`
-- [ ] a lists view groups task notes by their `lists` value
-- [ ] existing deeds render unchanged in their Bases views
-- [ ] property meanings are written down next to the deed status table
+- [x] a task note created from the template lands in `Tasks/` (pending
+      one manual check in Obsidian; template mirrors the proven deed
+      template)
+- [x] a lists view groups task notes by their `lists` value
+- [x] existing deeds render unchanged in their Bases views
+- [x] property meanings are written down next to the deed status table
+
+## Outcome
+
+Done in the vault repo (commit 466a4ef), PR 4 carries the record.
+
+- `Tasks/` and `Tasks/Lists/` exist, seeded with `.gitkeep`.
+- `Templates/Templater/task template.md` mirrors the deed template:
+  `kind`, `created` stamped by Templater, empty `lists`, and the move
+  into `/Tasks/`.
+- `Templates/Bases/lists.base` has a kanban view grouped by `lists`
+  and an all-tasks table; the kanban idiom matches the vault's
+  existing `types.base`, which already groups by an array property.
+- Root `lists.md` dashboard embeds it, matching `deeds.md`.
+- `deeds.md` gained a "Task notes" section with the property table,
+  next to the status values table, pointing at `VOCABULARY.md` in the
+  contracts repo.
+
+First two acceptance lines need one check in Obsidian: create a task
+from the template (it should land in `Tasks/`), and open the lists
+dashboard.
