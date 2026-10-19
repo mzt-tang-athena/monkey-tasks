@@ -14,7 +14,7 @@ Parent ticket. The MVP is split into child tickets:
 
 - 0009 Foundation: feature-folder restructure, vault layer, Expo Router
 - 0010 Focus screen
-- 0011 Upcoming reminders screen
+- 0011 Upcoming strip and reminder scheduling
 - 0012 Calendar view
 - 0013 Task editor and note viewer
 
