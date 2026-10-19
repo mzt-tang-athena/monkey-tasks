@@ -26,3 +26,9 @@ submodule. There is one more repo to maintain. The vocabulary stays
 hand-written Zod (ADR 0005); only its home changed. Moving to a
 registry later (GitHub Packages) changes only the install path, never
 the schemas.
+
+Amendment 2026-10-19: the repo was first created by hand, missing the
+org project template. It was retrofitted with the template the same
+day (agent rules, ADR record, ticket queue, docs CI), and the CI runs
+green. Contracts records its own decisions from now on; its ADR 0001
+mirrors this one.
