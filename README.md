@@ -17,7 +17,8 @@ Phases:
    the change appears in Obsidian on desktop after sync (0001).
 2. Vault vocabulary: lightweight task notes in `Tasks/`, list notes in
    `Tasks/Lists/`, deeds unchanged. Task done is derived from a
-   `completed` date; deeds keep their five-value status (0004).
+   `completed` date; reminders are a list; recurrence is an RRULE
+   string (0004).
 3. Schema package: Zod models for task, deed, and list notes mirroring
    the vocabulary (0002, ADR 0005).
 4. MVP screens: focus list, upcoming reminders, calendar, task editor,
