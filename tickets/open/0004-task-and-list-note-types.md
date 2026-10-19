@@ -30,7 +30,10 @@ Task note optional frontmatter. Absent means the default:
 
 Tasks carry no `status` property. Done is derived: `completed` present
 means done. Deliberately dropped from this first version: `cancelled`,
-`categories`, `after`. They can return when a need appears. Deeds keep
+`categories`, `after`. They can return when a need appears. Also
+deferred: `updatedAt`, until a consumer exists (incremental sync on
+athena, offline edit conflicts, or date queries). If added, every
+writer family stamps it: the app, vault agents, and an Obsidian plugin. Deeds keep
 their current shape untouched, including the five-value `status`. List
 notes carry `kind: "[[lists]]"` and `created`. Checkbox lines inside any
 note body are throwaway checklists the app ignores: anything needing a
