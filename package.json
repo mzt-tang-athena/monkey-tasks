@@ -1,11 +1,11 @@
 {
   "name": "monkey-tasks",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
+  "dependencies": {
+    "@monkey-tasks/schemas": "file:contracts/packages/schemas"
+  },
   "scripts": {
-    "test": "npm test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "test": "npm test --prefix contracts/packages/schemas",
+    "typecheck": "npm run typecheck --prefix contracts/packages/schemas"
   }
 }
