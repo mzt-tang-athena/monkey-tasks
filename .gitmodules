@@ -1,0 +1,3 @@
+[submodule "contracts"]
+	path = contracts
+	url = git@github.com:mzt-tang-athena/contracts.git
