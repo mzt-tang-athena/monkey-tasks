@@ -26,8 +26,9 @@ Phases:
    note viewer (0003).
 5. Capture: quick capture with offline natural language dates via
    chrono-node and rrule.js. Unparsed lines go to athena agents later
-   (0006).
+   (0006, done).
 6. Notifications: on-device alarms with recurrence.
 7. Later: deed vocabulary cleanup (0005), the quick-task and deed merge
-   decision, location triggers, MCP capture on athena, ntfy fallback,
-   email and calendar integrations, pull-only Google Calendar read.
+   decision, capture text highlighting (0008), location triggers,
+   MCP capture on athena, ntfy fallback, email and calendar
+   integrations, pull-only Google Calendar read.
