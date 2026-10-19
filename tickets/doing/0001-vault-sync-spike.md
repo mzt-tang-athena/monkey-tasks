@@ -4,7 +4,7 @@ title: Vault sync spike
 created: 2026-10-17
 priority: high
 assignee: opencode
-pr:
+pr: 1
 depends: []
 ---
 
