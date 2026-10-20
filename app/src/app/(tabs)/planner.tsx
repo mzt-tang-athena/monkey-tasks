@@ -1,99 +1,655 @@
 import * as React from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
-import { useVault } from "../../hooks/useVault";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
-import { setCompleted } from "../../features/tasks/mutate";
-import { writeCapture, type CaptureTarget } from "../../features/capture/write";
+import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { CaptureSheet } from "../../components/CaptureSheet";
-import { FloatingCaptureButton } from "../../components/FloatingCaptureButton";
-import { dayLabel, todayIso } from "../../lib/dates";
+import { InlineComposer } from "../../components/InlineComposer";
+import { BottomBar } from "../../components/BottomBar";
+import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
+import { addDays, parseStoredDate, startOfDay } from "../../lib/dates";
+import { colors, fonts, spacing, radii, measure } from "../../theme/tokens";
 
 /**
- * Planner tab, Day mode. 0009 ships today's spread; month and week
- * modes and swiping are ticket 0012.
+ * Variant D Planner tab, mock-driven for the design exploration.
+ * Day mode is the hero: the serif notebook date header, an
+ * hour-ruler timeline with tasks pinned at their times, and an
+ * unscheduled tray docked at the bottom of the spread, holding
+ * undated tasks that wait to be dragged onto the ruler. Week is a
+ * wide canvas of day columns; month stays a compact grid.
  */
+type Mode = "day" | "week" | "month";
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAYS_FULL = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const TARGETS: CaptureTarget[] = [{ kind: "main" }];
+
+/** First and last hour shown by the ruler. */
+const RULER_START = 7;
+const RULER_END = 22;
+
 export default function PlannerScreen() {
-  const { rootUri, tasksDir, tasks, status, refresh } = useVault();
-  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [tasks, setTasks] = React.useState<TaskItem[] | null>(null);
+  const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
+    "loading",
+  );
+  const [mode, setMode] = React.useState<Mode>("day");
+  const [selected, setSelected] = React.useState(() => startOfDay(new Date()));
+  const [draft, setDraft] = React.useState<{
+    text: string;
+    targetIndex: number;
+  } | null>(null);
 
-  const targets: CaptureTarget[] = [{ kind: "main" }];
+  React.useEffect(() => {
+    let cancelled = false;
+    loadMockTasks()
+      .then((loaded) => {
+        if (!cancelled) {
+          setTasks(loaded);
+          setStatus("ready");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStatus("error");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const groups = groupByDue(tasks, new Date());
-
-  const toggle = async (task: TaskItem) => {
-    const done = task.data?.completed != null && task.data.completed !== "";
-    await setCompleted(task, !done);
-    await refresh();
-  };
-
-  const send = async (
-    parsed: Parameters<typeof writeCapture>[1],
-    target: CaptureTarget,
-  ) => {
-    if (!tasksDir) {
-      return;
-    }
-    // Capturing from a day spread preselects that day as due.
-    await writeCapture(tasksDir, parsed, target, todayIso());
-    await refresh();
-  };
-
-  if (!rootUri) {
-    return (
-      <View style={[styles.screen, styles.center]}>
-        <Text style={styles.status}>{status}</Text>
-      </View>
+  const toggle = (task: TaskItem) => {
+    setTasks((current) =>
+      (current ?? []).map((item) =>
+        item.uri === task.uri ? toggleMockCompleted(item) : item,
+      ),
     );
-  }
+  };
 
-  const now = new Date();
-  const sections: { title: string; items: TaskItem[]; red?: boolean }[] = [
-    { title: "Overdue", items: groups.overdue, red: true },
-    { title: dayLabel(now, now), items: groups.today },
-    ...groups.upcoming.slice(0, 7).map((bucket) => ({
-      title: dayLabel(bucket.date, now),
-      items: bucket.items,
-    })),
-  ];
+  const all = tasks ?? [];
+  const groups = groupByDue(all, new Date());
+  const open = [...groups.overdue, ...groups.today, ...groups.undated];
+  for (const bucket of groups.upcoming) {
+    open.push(...bucket.items);
+  }
 
   return (
     <View style={styles.screen}>
-      <FlatList
-        contentContainerStyle={styles.content}
-        data={[{ key: "header" }]}
-        renderItem={() => (
-          <View>
-            <Text style={styles.status}>{status}</Text>
-            {sections
-              .filter((section) => section.items.length > 0)
-              .map((section) => (
-                <View key={section.title}>
-                  <Text style={[styles.section, section.red && styles.sectionRed]}>
-                    {section.title}
-                  </Text>
-                  {section.items.map((task) => (
-                    <TaskRow key={task.uri} task={task} onToggle={toggle} />
-                  ))}
-                </View>
-              ))}
-            {groups.overdue.length === 0 && groups.today.length === 0 ? (
-              <Text style={styles.empty}>Nothing scheduled. Enjoy the calm.</Text>
-            ) : null}
-          </View>
-        )}
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* 7-day strip: today first, a dot marks days with tasks. */}
+        <DayStrip selected={selected} tasks={open} onSelect={setSelected} />
+
+        {/* Month / Week / Day toggle; Day is the default landing. */}
+        <View style={styles.segmented}>
+          {(["month", "week", "day"] as Mode[]).map((option) => (
+            <Pressable
+              key={option}
+              style={({ pressed }) => [
+                styles.segment,
+                mode === option && styles.segmentActive,
+                pressed && styles.pressedFill,
+              ]}
+              onPress={() => setMode(option)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: mode === option }}
+            >
+              <Text
+                style={[
+                  styles.segmentText,
+                  mode === option && styles.segmentTextActive,
+                ]}
+              >
+                {option === "day" ? "Day" : option === "week" ? "Week" : "Month"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {status === "loading" ? <LoadingState /> : null}
+        {status === "error" ? (
+          <EmptyState label="Something went wrong. Pull to retry." />
+        ) : null}
+
+        {status === "ready" && mode === "day" ? (
+          <DaySpread
+            date={selected}
+            today={new Date()}
+            tasks={all}
+            onToggle={toggle}
+          />
+        ) : null}
+        {status === "ready" && mode === "week" ? (
+          <WeekView tasks={open} today={new Date()} selected={selected} />
+        ) : null}
+        {status === "ready" && mode === "month" ? (
+          <MonthView tasks={open} today={new Date()} />
+        ) : null}
+      </ScrollView>
+
+      {/* Persistent inline composer, docked above the bottom bar. */}
+      <InlineComposer
+        targets={TARGETS}
+        defaultTargetIndex={0}
+        onSend={() => undefined}
+        onOpenDetails={(text, targetIndex) =>
+          setDraft(text.trim() ? { text, targetIndex } : null)
+        }
       />
-      <FloatingCaptureButton onPress={() => setSheetOpen(true)} />
-      {sheetOpen ? (
+      <BottomBar />
+      {draft ? (
         <CaptureSheet
           visible
-          targets={targets}
-          defaultTargetIndex={0}
-          preselectedDue={todayIso()}
-          onClose={() => setSheetOpen(false)}
-          onSend={send}
+          targets={TARGETS}
+          defaultTargetIndex={draft.targetIndex}
+          initialText={draft.text}
+          preselectedDue={isoOf(selected)}
+          onClose={() => setDraft(null)}
+          onSend={() => setDraft(null)}
         />
       ) : null}
+    </View>
+  );
+}
+
+/* ---------------------------------------------------------------- day */
+
+function DaySpread({
+  date,
+  today,
+  tasks,
+  onToggle,
+}: {
+  date: Date;
+  today: Date;
+  tasks: TaskItem[];
+  onToggle: (task: TaskItem) => void;
+}) {
+  const sameDay = startOfDay(today).getTime() === startOfDay(date).getTime();
+  const groups = groupByDue(tasks, today);
+  const overdue = sameDay ? groups.overdue : [];
+  const dayTasks = sameDay ? groups.today : tasksForDay(tasks, date);
+  const timed = dayTasks.filter(hasTime);
+  const untimed = dayTasks.filter((task) => !hasTime(task));
+  // Undated open tasks wait in the tray on every day spread.
+  const tray = groups.undated;
+
+  return (
+    <View>
+      <Text style={styles.dateMonth}>
+        {MONTHS[date.getMonth()]} {date.getFullYear()}
+      </Text>
+      <Text style={styles.dateHeader}>
+        {WEEKDAYS_FULL[date.getDay()]} {date.getDate()}
+      </Text>
+      <View style={styles.dateRule} />
+
+      {overdue.length > 0 ? (
+        <View style={styles.overdueBlock}>
+          <Text style={styles.overdueLabel}>Overdue  {overdue.length}</Text>
+          {overdue.map((task) => (
+            <TaskRow key={task.uri} task={task} onToggle={onToggle} />
+          ))}
+        </View>
+      ) : null}
+
+      {/* Untimed tasks for the day, before the ruler. */}
+      {untimed.length > 0 ? (
+        <View style={styles.anytimeBlock}>
+          <Text style={styles.sectionLabel}>Anytime  {untimed.length}</Text>
+          {untimed.map((task, index) => (
+            <View
+              key={task.uri}
+              style={index > 0 ? styles.groupRow : undefined}
+            >
+              <TaskRow task={task} onToggle={onToggle} />
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {/* The hour ruler, with drop targets when the tray has tasks. */}
+      <Text style={styles.sectionLabel}>Timeline</Text>
+      <Timeline
+        tasks={timed}
+        isToday={sameDay}
+        showDropTargets={tray.length > 0}
+        onToggle={onToggle}
+      />
+
+      {/* Undated tasks, docked at the bottom of the spread. */}
+      <UnscheduledTray tasks={tray} />
+    </View>
+  );
+}
+
+/** The hour ruler: hour marks down the left, tasks pinned between. */
+function Timeline({
+  tasks,
+  isToday,
+  showDropTargets,
+  onToggle,
+}: {
+  tasks: TaskItem[];
+  isToday: boolean;
+  showDropTargets: boolean;
+  onToggle: (task: TaskItem) => void;
+}) {
+  const now = new Date();
+  const hours: TaskItem[][] = [];
+  for (let h = RULER_START; h <= RULER_END; h++) {
+    hours[h] = [];
+  }
+  for (const task of tasks) {
+    const hour = hourOf(task);
+    if (hour === null) {
+      continue;
+    }
+    const slot = Math.min(Math.max(hour, RULER_START), RULER_END);
+    hours[slot].push(task);
+  }
+
+  // One convincing drop target: the next free hour on today's ruler.
+  const ghostHour = showDropTargets ? nextFreeHour(hours, isToday, now) : null;
+
+  return (
+    <View style={styles.ruler}>
+      {hours.map((slotTasks, hour) => {
+        const children: React.ReactNode[] = [];
+        let placedNow = false;
+        for (const task of slotTasks) {
+          if (
+            isToday &&
+            hour === now.getHours() &&
+            minuteOf(task) > now.getMinutes() &&
+            !placedNow
+          ) {
+            children.push(<NowLine key="now" />);
+            placedNow = true;
+          }
+          children.push(
+            <HourTask key={task.uri} task={task} onToggle={onToggle} />,
+          );
+        }
+        if (isToday && hour === now.getHours() && !placedNow) {
+          children.push(<NowLine key="now" />);
+        }
+        if (hour === ghostHour) {
+          children.push(<DropSlot key="drop" />);
+        }
+        return (
+          <View
+            key={hour}
+            style={[styles.rulerRow, showDropTargets ? styles.rulerRowDrop : null]}
+          >
+            <Text style={styles.rulerMark}>{labelHour(hour)}</Text>
+            <View style={styles.rulerSlot}>{children}</View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function HourTask({
+  task,
+  onToggle,
+}: {
+  task: TaskItem;
+  onToggle: (task: TaskItem) => void;
+}) {
+  const [pressed, setPressed] = React.useState(false);
+  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
+  return (
+    <Pressable
+      onPress={() => onToggle(task)}
+      disabled={onToggle == null}
+      onHoverIn={() => setPressed(true)}
+      onHoverOut={() => setPressed(false)}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      accessibilityLabel={onToggle != null ? "mark done" : undefined}
+      accessibilityRole="button"
+      style={[styles.hourTask, pressed && styles.hourTaskPressed]}
+    >
+      <View style={styles.taskBar} />
+      <View style={styles.taskBody}>
+        <Text style={styles.taskName} numberOfLines={2}>
+          {task.name}
+        </Text>
+        {due?.hasTime ? (
+          <Text style={styles.taskTime}>{formatTime(due.date)}</Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+/** A dashed drop slot on the ruler, where a tray task would land. */
+function DropSlot() {
+  return (
+    <View style={styles.dropSlot}>
+      <View style={styles.dropSlotNotch} />
+      <Text style={styles.dropSlotText}>drop here</Text>
+    </View>
+  );
+}
+
+function NowLine() {
+  return (
+    <View style={styles.nowLineRow}>
+      <View style={styles.nowDot} />
+      <View style={styles.nowLine} />
+    </View>
+  );
+}
+
+/** The unscheduled tray: undated tasks docked at the spread's foot. */
+function UnscheduledTray({ tasks }: { tasks: TaskItem[] }) {
+  if (tasks.length === 0) {
+    return null;
+  }
+  return (
+    <View style={styles.tray}>
+      <View style={styles.trayEdge} />
+      <View style={styles.trayHead}>
+        <Text style={styles.trayLabel}>Unscheduled  {tasks.length}</Text>
+        <Text style={styles.trayHint}>drag onto the timeline</Text>
+      </View>
+      <View style={styles.trayChips}>
+        {tasks.map((task) => (
+          <View key={task.uri} style={styles.trayChip}>
+            <View style={styles.trayGrip}>
+              <View style={styles.trayGripDot} />
+              <View style={styles.trayGripDot} />
+            </View>
+            <Text style={styles.trayChipText} numberOfLines={1}>
+              {task.name}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/* --------------------------------------------------------------- week */
+
+/** The week as a wide canvas: seven day columns side by side. */
+function WeekView({
+  tasks,
+  today,
+  selected,
+}: {
+  tasks: TaskItem[];
+  today: Date;
+  selected: Date;
+}) {
+  const todayStart = startOfDay(today).getTime();
+  const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(today, offset));
+  return (
+    <View style={styles.weekCanvas}>
+      {days.map((day) => {
+        const items = tasksForDay(tasks, day);
+        const isToday = startOfDay(day).getTime() === todayStart;
+        const isSelected =
+          startOfDay(day).getTime() === startOfDay(selected).getTime();
+        return (
+          <View
+            key={day.getTime()}
+            style={[
+              styles.weekCol,
+              isSelected && styles.weekColSelected,
+              isToday && styles.weekColToday,
+            ]}
+          >
+            <Text style={styles.weekDayName}>{WEEKDAYS[day.getDay()]}</Text>
+            <Text
+              style={[styles.weekDayNum, isToday && styles.weekDayNumToday]}
+            >
+              {day.getDate()}
+            </Text>
+            <View style={styles.weekColRule} />
+            {items.length > 0 ? (
+              items.map((task) => (
+                <View key={task.uri} style={styles.weekTask}>
+                  <View style={styles.taskBar} />
+                  <Text style={styles.weekTaskText} numberOfLines={3}>
+                    {hasTime(task) ? `${timeOf(task)}  ` : ""}
+                    {task.name}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.weekFree}>-</Text>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/* -------------------------------------------------------------- month */
+
+function MonthView({ tasks, today }: { tasks: TaskItem[]; today: Date }) {
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const daysInMonth = new Date(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    0,
+  ).getDate();
+  const lead = monthStart.getDay();
+  const busy = new Set(
+    tasks
+      .map((task) => (task.data?.due ? parseStoredDate(task.data.due) : null))
+      .filter((due) => due != null)
+      .map((due) => isoOf(due!.date)),
+  );
+  const cells: (Date | null)[] = [
+    ...Array.from({ length: lead }, () => null),
+    ...Array.from(
+      { length: daysInMonth },
+      (_, index) => new Date(today.getFullYear(), today.getMonth(), index + 1),
+    ),
+  ];
+  return (
+    <View style={styles.monthCard}>
+      <View style={styles.monthHead}>
+        {WEEKDAYS.map((name) => (
+          <Text key={name} style={styles.monthHeadCell}>
+            {name[0]}
+          </Text>
+        ))}
+      </View>
+      <View style={styles.monthGrid}>
+        {cells.map((day, index) =>
+          day == null ? (
+            <View key={`blank-${index}`} style={styles.monthCell} />
+          ) : (
+            <View
+              key={day.getTime()}
+              style={[
+                styles.monthCell,
+                isSameDay(day, today) && styles.monthCellToday,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.monthNum,
+                  isSameDay(day, today) && styles.monthNumToday,
+                ]}
+              >
+                {day.getDate()}
+              </Text>
+              {busy.has(isoOf(day)) ? <View style={styles.monthDot} /> : null}
+            </View>
+          ),
+        )}
+      </View>
+    </View>
+  );
+}
+
+/* ----------------------------------------------------------- helpers */
+
+function DayStrip({
+  selected,
+  tasks,
+  onSelect,
+}: {
+  selected: Date;
+  tasks: TaskItem[];
+  onSelect: (date: Date) => void;
+}) {
+  const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(new Date(), offset));
+  const busy = new Set(
+    tasks
+      .map((task) => (task.data?.due ? parseStoredDate(task.data.due) : null))
+      .filter((due) => due != null)
+      .map((due) => isoOf(due!.date)),
+  );
+  return (
+    <View style={styles.strip}>
+      {days.map((day) => {
+        const active = isSameDay(day, selected);
+        return (
+          <Pressable
+            key={day.getTime()}
+            style={({ pressed }) => [
+              styles.stripDay,
+              active && styles.stripDayActive,
+              pressed && styles.pressedFill,
+            ]}
+            onPress={() => onSelect(day)}
+            accessibilityRole="button"
+            accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
+          >
+            <Text style={[styles.stripName, active && styles.stripNameActive]}>
+              {WEEKDAYS[day.getDay()]}
+            </Text>
+            <Text
+              style={[
+                styles.stripNum,
+                active && styles.stripNumActive,
+                !active && busy.has(isoOf(day)) ? styles.stripNumBusy : null,
+              ]}
+            >
+              {day.getDate()}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function tasksForDay(tasks: TaskItem[], day: Date): TaskItem[] {
+  const iso = isoOf(day);
+  return tasks.filter(
+    (task) =>
+      task.data?.due != null &&
+      task.data.due.slice(0, 10) === iso &&
+      !(task.data?.completed != null && task.data.completed !== ""),
+  );
+}
+
+function hasTime(task: TaskItem): boolean {
+  return task.data?.due
+    ? (parseStoredDate(task.data.due)?.hasTime ?? false)
+    : false;
+}
+
+function timeOf(task: TaskItem): string {
+  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
+  if (!due) {
+    return "";
+  }
+  return formatTime(due.date);
+}
+
+function hourOf(task: TaskItem): number | null {
+  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
+  return due?.hasTime ? due.date.getHours() : null;
+}
+
+function minuteOf(task: TaskItem): number {
+  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
+  return due?.date.getMinutes() ?? 0;
+}
+
+/** The first hour from now with no tasks, for the drop-slot ghost. */
+function nextFreeHour(
+  hours: TaskItem[][],
+  isToday: boolean,
+  now: Date,
+): number | null {
+  const from = isToday ? now.getHours() : RULER_START;
+  for (let h = Math.max(from, RULER_START); h <= RULER_END; h++) {
+    if ((hours[h] ?? []).length === 0) {
+      return h;
+    }
+  }
+  return null;
+}
+
+function labelHour(hour: number): string {
+  const h = hour % 12 || 12;
+  return `${h} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+function formatTime(date: Date): string {
+  const h = date.getHours() % 12 || 12;
+  const ampm = date.getHours() >= 12 ? "PM" : "AM";
+  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
+}
+
+function isoOf(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return startOfDay(a).getTime() === startOfDay(b).getTime();
+}
+
+function LoadingState() {
+  return (
+    <View style={styles.holder}>
+      <View style={[styles.skeleton, { width: "60%" as const, height: 28 }]} />
+      <View style={[styles.skeleton, { width: "85%" as const }]} />
+      <View style={[styles.skeleton, { width: "70%" as const }]} />
+    </View>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <View style={styles.holder}>
+      <Text style={styles.empty}>{label}</Text>
     </View>
   );
 }
@@ -101,33 +657,471 @@ export default function PlannerScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#ffffff",
-  },
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
+    backgroundColor: colors.paper,
   },
   content: {
-    padding: 16,
-    paddingBottom: 96,
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    width: "100%" as const,
+    padding: spacing.l,
+    paddingBottom: spacing.xl,
   },
-  status: {
-    color: "#777777",
-    marginBottom: 8,
+  pressedFill: {
+    backgroundColor: colors.pressed,
   },
-  section: {
-    fontSize: 15,
+
+  // 7-day strip
+  strip: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.s,
+    marginBottom: spacing.l,
+  },
+  stripDay: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 44,
+    height: 52,
+    borderRadius: radii.m,
+  },
+  stripDayActive: {
+    backgroundColor: colors.accent,
+  },
+  stripName: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    letterSpacing: 0.5,
+  },
+  stripNameActive: {
+    color: colors.onAccent,
+  },
+  stripNum: {
+    fontSize: 16,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    color: colors.ink,
+    marginTop: 2,
+  },
+  stripNumActive: {
+    color: colors.onAccent,
+    fontWeight: "600",
+  },
+  stripNumBusy: {
+    fontWeight: "600",
+  },
+
+  // segmented toggle
+  segmented: {
+    flexDirection: "row",
+    backgroundColor: colors.surface,
+    borderRadius: radii.m,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    padding: 3,
+    marginBottom: spacing.xl,
+  },
+  segment: {
+    flex: 1,
+    minHeight: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.s,
+  },
+  segmentActive: {
+    backgroundColor: colors.accent,
+  },
+  segmentText: {
+    fontSize: 13,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    fontWeight: "500",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  segmentTextActive: {
+    color: colors.onAccent,
+    fontWeight: "600",
+  },
+
+  // day spread, the hero
+  dateMonth: {
+    fontSize: 13,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    marginTop: spacing.xs,
+  },
+  dateHeader: {
+    fontSize: 36,
+    lineHeight: 44,
+    fontFamily: fonts.display,
+    color: colors.ink,
+    marginTop: spacing.xs,
+  },
+  dateRule: {
+    height: 2,
+    backgroundColor: colors.accent,
+    width: 40,
+    marginTop: spacing.m,
+    marginBottom: spacing.l,
+    borderRadius: 1,
+  },
+  overdueBlock: {
+    marginBottom: spacing.l,
+  },
+  overdueLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: fonts.body,
     fontWeight: "700",
-    color: "#1a4b8f",
-    marginTop: 16,
-    marginBottom: 4,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: colors.danger,
+    marginBottom: spacing.xs,
   },
-  sectionRed: {
-    color: "#b3261e",
+  anytimeBlock: {
+    marginBottom: spacing.l,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: fonts.body,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: colors.accent,
+    marginBottom: spacing.s,
+  },
+  groupRow: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.hairline,
+  },
+
+  // hour ruler
+  ruler: {
+    marginBottom: spacing.l,
+  },
+  rulerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    minHeight: 44,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.hairline,
+  },
+  rulerRowDrop: {
+    borderBottomColor: colors.accentSoft,
+    borderBottomWidth: 2,
+  },
+  rulerMark: {
+    width: 56,
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    fontVariant: ["tabular-nums"],
+    paddingTop: spacing.xs,
+  },
+  rulerSlot: {
+    flex: 1,
+    paddingVertical: spacing.xs,
+    gap: spacing.xs,
+  },
+  hourTask: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: colors.surface,
+    borderRadius: radii.m,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    padding: spacing.s,
+    gap: spacing.s,
+  },
+  hourTaskPressed: {
+    backgroundColor: colors.pressed,
+  },
+  taskBar: {
+    width: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.accent,
+    minHeight: 20,
+  },
+  taskBody: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.s,
+  },
+  taskName: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 19,
+    fontFamily: fonts.body,
+    color: colors.ink,
+  },
+  taskTime: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    fontVariant: ["tabular-nums"],
+  },
+  dropSlot: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.s,
+    borderWidth: 1.5,
+    borderColor: colors.inkFaint,
+    borderRadius: radii.m,
+    borderStyle: "dashed",
+    padding: spacing.s,
+    minHeight: 36,
+  },
+  dropSlotNotch: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accentSoft,
+  },
+  dropSlotText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.inkFaint,
+    fontStyle: "italic",
+  },
+  nowLineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 18,
+  },
+  nowDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.danger,
+    marginRight: spacing.xs,
+  },
+  nowLine: {
+    flex: 1,
+    height: 1.5,
+    backgroundColor: colors.danger,
+    borderRadius: 1,
+  },
+
+  // unscheduled tray, docked at the foot of the spread
+  tray: {
+    backgroundColor: colors.pressed,
+    borderRadius: radii.l,
+    padding: spacing.m,
+    marginBottom: spacing.m,
+  },
+  trayEdge: {
+    alignSelf: "stretch" as const,
+    height: 0,
+    borderTopWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: colors.inkFaint,
+    marginBottom: spacing.m,
+  },
+  trayHead: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginBottom: spacing.s,
+  },
+  trayLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: fonts.body,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: colors.accent,
+  },
+  trayHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.inkFaint,
+    fontStyle: "italic",
+  },
+  trayChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.s,
+  },
+  trayChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.s,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radii.pill,
+    paddingLeft: spacing.s,
+    paddingRight: spacing.m,
+    paddingVertical: spacing.s,
+    maxWidth: "100%" as const,
+  },
+  trayGrip: {
+    alignItems: "center",
+    gap: 2,
+  },
+  trayGripDot: {
+    width: 10,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.inkFaint,
+  },
+  trayChipText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.ink,
+  },
+
+  // week canvas: day columns
+  weekCanvas: {
+    flexDirection: "row",
+    gap: spacing.s,
+    marginBottom: spacing.xl,
+  },
+  weekCol: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radii.m,
+    padding: spacing.s,
+    minHeight: 220,
+  },
+  weekColSelected: {
+    borderColor: colors.accent,
+  },
+  weekColToday: {
+    backgroundColor: colors.accentSoft,
+  },
+  weekDayName: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  weekDayNum: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontFamily: fonts.display,
+    color: colors.ink,
+  },
+  weekDayNumToday: {
+    color: colors.accent,
+    fontWeight: "700",
+  },
+  weekColRule: {
+    height: 1,
+    backgroundColor: colors.hairline,
+    marginVertical: spacing.s,
+  },
+  weekTask: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.xs,
+    backgroundColor: colors.paper,
+    borderRadius: radii.s,
+    padding: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  weekTaskText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 15,
+    fontFamily: fonts.body,
+    color: colors.ink,
+  },
+  weekFree: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.inkFaint,
+    textAlign: "center",
+  },
+
+  // month view
+  monthCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.l,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    padding: spacing.m,
+    marginBottom: spacing.xl,
+  },
+  monthHead: {
+    flexDirection: "row",
+  },
+  monthHeadCell: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    fontWeight: "600",
+  },
+  monthGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  monthCell: {
+    width: "14.28%" as const,
+    aspectRatio: 1.1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+  },
+  monthCellToday: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radii.m,
+  },
+  monthNum: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+  },
+  monthNumToday: {
+    color: colors.accent,
+    fontWeight: "700",
+  },
+  monthDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.accent,
+  },
+
+  // states
+  holder: {
+    minHeight: 160,
+    justifyContent: "center",
+    paddingVertical: spacing.xl,
+  },
+  skeleton: {
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.hairline,
+    marginVertical: spacing.m,
   },
   empty: {
-    color: "#777777",
-    marginTop: 24,
+    fontSize: 15,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    textAlign: "center",
   },
 });
