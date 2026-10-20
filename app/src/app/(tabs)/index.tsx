@@ -15,9 +15,10 @@ import { dayLabel } from "../../lib/dates";
 import { colors, fonts, spacing, radii } from "../../theme/tokens";
 
 /**
- * Variant B Lists tab, mock-driven for the design exploration.
- * Date groups are understated cards, not plain headers. The capture
- * affordance lives in the slim bottom bar.
+ * Variant E Lists tab, mock-driven for the design exploration.
+ * The list tabs sit alone at the very top. Groups are plain headers
+ * over hairline-separated rows: no cards, the paper carries them.
+ * Capture is the persistent inline composer above the bottom bar.
  */
 type ListTab = "Focus" | "Main";
 
@@ -31,7 +32,6 @@ export default function ListsScreen() {
   const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
     "loading",
   );
-  const [sheetOpen, setSheetOpen] = React.useState(false);
   const [tab, setTab] = React.useState<ListTab>("Main");
 
   // Mock load. Status changes only in async callbacks, so the effect
@@ -54,7 +54,9 @@ export default function ListsScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);  const toggle = (task: TaskItem) => {
+  }, []);
+
+  const toggle = (task: TaskItem) => {
     setTasks((current) =>
       (current ?? []).map((item) =>
         item.uri === task.uri ? toggleMockCompleted(item) : item,
@@ -88,6 +90,7 @@ export default function ListsScreen() {
         data={[{ key: "lists" }]}
         renderItem={() => (
           <View>
+            {/* The only chrome at the top: the list tabs, nothing else. */}
             <View style={styles.tabBar}>
               {(["Focus", "Main"] as ListTab[]).map((name) => (
                 <Pressable
@@ -122,59 +125,52 @@ export default function ListsScreen() {
 
             {status === "ready"
               ? shown.map((section) => (
-                  <View
-                    key={section.title}
-                    style={styles.groupCard}
-                  >
+                  <View key={section.title} style={styles.group}>
                     <Text style={[styles.groupLabel, toneLabel(section.tone)]}>
                       {section.title}
                       {"  "}
                       {section.items.length}
                     </Text>
-                    {section.items.map((task, index) => (
-                      <View
-                        key={task.uri}
-                        style={
-                          index > 0 ? styles.groupRow : styles.groupRowFirst
-                        }
-                      >
-                        <TaskRow task={task} onToggle={toggle} />
-                      </View>
-                    ))}
+                    <View style={styles.rows}>
+                      {section.items.map((task, index) => (
+                        <View
+                          key={task.uri}
+                          style={index > 0 ? styles.groupRow : styles.groupRowFirst}
+                        >
+                          <TaskRow task={task} onToggle={toggle} />
+                        </View>
+                      ))}
+                    </View>
                   </View>
                 ))
               : null}
 
             {status === "ready" && groups.completed.length > 0 ? (
-              <View style={[styles.groupCard, styles.completedCard]}>
+              <View style={[styles.group, styles.completedGroup]}>
                 <Text style={styles.completedLabel}>
                   Completed  {groups.completed.length}
                 </Text>
-                {groups.completed.map((task, index) => (
-                  <View
-                    key={task.uri}
-                    style={
-                      index > 0 ? styles.groupRow : styles.groupRowFirst
-                    }
-                  >
-                    <TaskRow task={task} onToggle={toggle} />
-                  </View>
-                ))}
+                <View style={styles.rows}>
+                  {groups.completed.map((task, index) => (
+                    <View
+                      key={task.uri}
+                      style={index > 0 ? styles.groupRow : styles.groupRowFirst}
+                    >
+                      <TaskRow task={task} onToggle={toggle} />
+                    </View>
+                  ))}
+                </View>
               </View>
             ) : null}
           </View>
         )}
       />
-      <BottomBar onAdd={() => setSheetOpen(true)} />
-      {sheetOpen ? (
-        <CaptureSheet
-          visible
-          targets={TARGETS}
-          defaultTargetIndex={tab === "Focus" ? 0 : 1}
-          onClose={() => setSheetOpen(false)}
-          onSend={() => setSheetOpen(false)}
-        />
-      ) : null}
+      <CaptureSheet
+        targets={TARGETS}
+        defaultTargetIndex={tab === "Focus" ? 0 : 1}
+        onSend={() => undefined}
+      />
+      <BottomBar />
     </View>
   );
 }
@@ -217,56 +213,47 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
   content: {
-    padding: spacing.l,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.m,
+    paddingBottom: spacing.l,
   },
   tabBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.s,
-    marginTop: spacing.xl,
-    marginBottom: spacing.l,
+    gap: spacing.m,
+    paddingHorizontal: spacing.l,
+    marginBottom: spacing.s,
   },
   tabChip: {
-    minHeight: 40,
-    paddingHorizontal: spacing.m,
-    paddingVertical: spacing.xs,
+    minHeight: 36,
+    paddingHorizontal: spacing.xs,
     justifyContent: "center",
-    borderRadius: radii.m,
+    borderRadius: radii.s,
   },
   chipPressed: {
     backgroundColor: colors.pressed,
   },
   tabText: {
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
     fontFamily: fonts.body,
     color: colors.inkMuted,
     fontWeight: "500",
   },
   tabTextActive: {
-    color: colors.ink,
+    color: colors.accent,
     fontWeight: "700",
-    textDecorationLine: "underline",
-    textDecorationColor: colors.accent,
   },
   count: {
     marginLeft: "auto" as const,
     fontSize: 12,
+    lineHeight: 16,
     fontFamily: fonts.body,
     color: colors.inkFaint,
   },
-  groupCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.l,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    marginTop: spacing.m,
-    paddingVertical: spacing.s,
-  },
-  completedCard: {
-    opacity: 0.6,
-    marginTop: spacing.xl,
+
+  // Plain groups: a header, then hairline rows. No cards.
+  group: {
+    marginTop: spacing.l,
   },
   groupLabel: {
     fontSize: 11,
@@ -276,14 +263,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
     paddingHorizontal: spacing.l,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.s,
+    paddingBottom: spacing.xs,
+  },
+  rows: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.hairline,
   },
   groupRow: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.hairline,
   },
   groupRowFirst: {},
+  completedGroup: {
+    opacity: 0.65,
+    marginBottom: spacing.l,
+  },
   completedLabel: {
     fontSize: 11,
     lineHeight: 14,
@@ -293,8 +287,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: colors.inkFaint,
     paddingHorizontal: spacing.l,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.s,
+    paddingBottom: spacing.xs,
   },
   holder: {
     minHeight: 160,

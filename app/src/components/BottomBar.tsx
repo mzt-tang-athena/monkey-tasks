@@ -2,40 +2,31 @@ import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, spacing } from "../theme/tokens";
+import { colors, spacing, radii } from "../theme/tokens";
 
 /**
- * Variant B capture affordance: instead of a floating button, a slim
- * full-width bottom bar. Tab icons sit on the left, the round add
- * button on the right. Both screens mount one.
+ * Variant E bottom bar: navigation only. The add button is gone; the
+ * persistent inline composer above this bar carries capture.
  */
-export function BottomBar({ onAdd }: { onAdd: () => void }) {
+export function BottomBar() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}>
+    <View style={[styles.bar, { paddingBottom: insets.bottom + 6 }]}>
       <IconTab
         label="Lists"
         active={pathname === "/"}
         onPress={() => router.navigate("/")}
         icon={<ListGlyph active={pathname === "/"} />}
       />
+      <View style={styles.spring} />
       <IconTab
         label="Planner"
         active={pathname === "/planner"}
         onPress={() => router.navigate("/planner")}
         icon={<CalendarGlyph active={pathname === "/planner"} />}
       />
-      <View style={styles.spring} />
-      <Pressable
-        style={({ pressed }) => [styles.add, pressed && styles.addPressed]}
-        onPress={onAdd}
-        accessibilityLabel="add a task"
-        accessibilityRole="button"
-      >
-        <Text style={styles.addGlyph}>+</Text>
-      </Pressable>
     </View>
   );
 }
@@ -67,14 +58,14 @@ function IconTab({
   );
 }
 
-/** Simple vecless glyphs built from hairline views; no icon font. */
+/** Simple vectorless glyphs built from hairline views; no icon font. */
 function ListGlyph({ active }: { active: boolean }) {
   const color = active ? colors.accent : colors.inkMuted;
   return (
     <View style={styles.glyphList}>
-      <View style={[styles.glyphLine, { backgroundColor: color, width: 22 }]} />
-      <View style={[styles.glyphLine, { backgroundColor: color, width: 16 }]} />
-      <View style={[styles.glyphLine, { backgroundColor: color, width: 22 }]} />
+      <View style={[styles.glyphLine, { backgroundColor: color, width: 20 }]} />
+      <View style={[styles.glyphLine, { backgroundColor: color, width: 14 }]} />
+      <View style={[styles.glyphLine, { backgroundColor: color, width: 20 }]} />
     </View>
   );
 }
@@ -96,26 +87,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.hairline,
-    paddingHorizontal: spacing.l,
-    paddingTop: spacing.s,
-    gap: spacing.m,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xs,
+    gap: spacing.s,
   },
   tab: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    minWidth: 64,
-    minHeight: 44,
+    gap: spacing.s,
+    minHeight: 40,
     paddingHorizontal: spacing.s,
-    borderRadius: spacing.m,
+    borderRadius: radii.m,
   },
   tabPressed: {
     backgroundColor: colors.pressed,
   },
   tabLabel: {
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.inkMuted,
-    marginTop: 3,
   },
   tabLabelActive: {
     color: colors.accent,
@@ -123,24 +113,6 @@ const styles = StyleSheet.create({
   },
   spring: {
     flex: 1,
-  },
-  add: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addPressed: {
-    opacity: 0.7,
-  },
-  addGlyph: {
-    color: colors.onAccent,
-    fontSize: 26,
-    lineHeight: 30,
-    fontWeight: "400",
-    marginTop: -2,
   },
   glyphList: {
     height: 12,
@@ -152,8 +124,8 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
   glyphCalendar: {
-    width: 18,
-    height: 18,
+    width: 17,
+    height: 17,
     borderWidth: 1.5,
     borderRadius: 4,
     overflow: "hidden",
@@ -167,6 +139,6 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     marginLeft: 4,
-    marginTop: 4,
+    marginTop: 3,
   },
 });

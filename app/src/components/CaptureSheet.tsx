@@ -1,6 +1,5 @@
 import * as React from "react";
 import {
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -25,29 +24,26 @@ const webFocusRing = Platform.select({
 });
 
 /**
- * The capture sheet: input, target-list chip, send. The target shows
- * where the capture will land; tap it to cycle. Main targets write no
- * lists property. Restyled with the Variant B tokens.
+ * Variant E capture affordance: a persistent inline composer docked
+ * above the bottom bar, not a modal and not a round button. Idle, it
+ * is a pill-shaped field that reads "Add a task..." with the target
+ * chip inline next to it. Focusing it opens the keyboard in place:
+ * the field expands, the parse preview and Add button appear, and the
+ * chip stays inline. Send or an empty blur collapses it again.
  */
 export function CaptureSheet({
-  visible,
   targets,
   defaultTargetIndex,
   preselectedDue,
-  onClose,
   onSend,
 }: {
-  visible: boolean;
-  /** Main first, then the lists. */
   targets: CaptureTarget[];
   defaultTargetIndex: number;
   preselectedDue?: string;
-  onClose: () => void;
   onSend: (parsed: ParsedCapture, target: CaptureTarget) => void;
 }) {
-  // The parent remounts this sheet on open, so local state starts
-  // fresh; no reset effect needed.
   const [text, setText] = React.useState("");
+  const [active, setActive] = React.useState(false);
   const [targetIndex, setTargetIndex] = React.useState(defaultTargetIndex);
   const [lastParse, setLastParse] = React.useState<ParsedCapture | null>(null);
   const [sending, setSending] = React.useState(false);
@@ -61,77 +57,111 @@ export function CaptureSheet({
     }
     setSending(true);
     onSend(parsed, targets[targetIndex] ?? targets[0]);
-    onClose();
+    setText("");
+    setLastParse(null);
+    setActive(false);
+    setSending(false);
+  };
+
+  const collapse = () => {
+    if (text.trim() === "") {
+      setActive(false);
+      setLastParse(null);
+    }
   };
 
   const cycleTarget = () => {
     setTargetIndex((index) => (index + 1) % targets.length);
   };
 
-  return (
-    <Modal visible={visible} transparent animationType="fade">
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => undefined}>
-          <View style={styles.handle} />
-          <TextInput
-            style={[styles.input, webFocusRing]}
-            placeholder="Add a task..."
-            placeholderTextColor={colors.inkFaint}
-            value={text}
-            onChangeText={(value) => {
-              setText(value);
-              setLastParse(value.trim() ? parseCapture(value) : null);
-            }}
-            onSubmitEditing={send}
-            returnKeyType="send"
-            autoFocus
-          />
-          {preselectedDue && !lastParse?.due ? (
-            <Text style={styles.dueNote}>due {preselectedDue}</Text>
-          ) : null}
-          {lastParse && lastParse.name !== "" ? (
-            <Text style={styles.preview}>
-              {lastParse.matches?.length
-                ? `parsed: ${lastParse.matches.map((m) => m.text).join(", ")}`
-                : "no date"}
-              {" -> "}
-              {lastParse.name}
-            </Text>
-          ) : null}
-          <View style={styles.actions}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.chip,
-                pressed && styles.chipPressed,
-              ]}
-              onPress={cycleTarget}
-              accessibilityRole="button"
-            >
-              <Text style={styles.chipText}>
-                {targetLabel(targets[targetIndex] ?? targets[0])}
-              </Text>
-            </Pressable>
-            <View style={styles.spring} />
-            <Pressable
-              style={[styles.send, !canSend && styles.sendDisabled]}
-              onPress={send}
-              disabled={!canSend}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !canSend }}
-            >
-              <Text
-                style={[
-                  styles.sendText,
-                  !canSend && styles.sendTextDisabled,
-                ]}
-              >
-                Add
-              </Text>
-            </Pressable>
-          </View>
+  const target = targets[targetIndex] ?? targets[0];
+
+  if (!active) {
+    // Idle: the pill field and the target chip, one quiet row.
+    return (
+      <View style={styles.dock}>
+        <Pressable
+          style={[styles.idleRow, webFocusRing]}
+          onPress={() => setActive(true)}
+          accessibilityRole="button"
+          accessibilityLabel="add a task"
+        >
+          <Text style={styles.placeholder}>Add a task...</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+        <TargetChip label={targetLabel(target)} onPress={cycleTarget} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.dock, styles.dockActive]}>
+      <TextInput
+        style={[styles.input, webFocusRing]}
+        placeholder="Add a task..."
+        placeholderTextColor={colors.inkFaint}
+        value={text}
+        autoFocus
+        multiline
+        onChangeText={(value) => {
+          setText(value);
+          setLastParse(value.trim() ? parseCapture(value) : null);
+        }}
+        onBlur={collapse}
+        onSubmitEditing={send}
+        returnKeyType="send"
+      />
+      {preselectedDue && !lastParse?.due ? (
+        <Text style={styles.dueNote}>due {preselectedDue}</Text>
+      ) : null}
+      {lastParse && lastParse.name !== "" ? (
+        <Text style={styles.preview}>
+          {lastParse.matches?.length
+            ? `parsed: ${lastParse.matches.map((m) => m.text).join(", ")}`
+            : "no date"}
+          {" -> "}
+          {lastParse.name}
+        </Text>
+      ) : null}
+      <View style={styles.actions}>
+        <TargetChip label={targetLabel(target)} onPress={cycleTarget} />
+        <View style={styles.spring} />
+        <Pressable
+          style={[styles.send, !canSend && styles.sendDisabled]}
+          onPress={send}
+          disabled={!canSend}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canSend }}
+        >
+          <Text
+            style={[
+              styles.sendText,
+              !canSend && styles.sendTextDisabled,
+            ]}
+          >
+            Add
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function TargetChip({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="change target list"
+    >
+      <Text style={styles.chipText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -140,46 +170,63 @@ function targetLabel(target: CaptureTarget): string {
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(43,38,29,0.4)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.l + 4,
-    borderTopRightRadius: radii.l + 4,
-    paddingTop: spacing.s,
+  dock: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.s,
+    backgroundColor: colors.paper,
     paddingHorizontal: spacing.l,
-    paddingBottom: spacing.xl,
-    gap: spacing.m,
+    paddingTop: spacing.s,
   },
-  handle: {
-    alignSelf: "center",
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.hairline,
+  dockActive: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: spacing.s,
+    paddingBottom: spacing.s,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.hairline,
   },
-  input: {
+  idleRow: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
-    backgroundColor: colors.paper,
+    backgroundColor: colors.surface,
+    justifyContent: "center",
+    paddingHorizontal: spacing.l,
+  },
+  placeholder: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    color: colors.inkFaint,
+  },
+  input: {
+    minHeight: 40,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    backgroundColor: colors.surface,
     borderRadius: radii.m,
-    padding: spacing.m,
-    fontSize: 16,
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.s,
+    fontSize: 15,
     fontFamily: fonts.body,
     color: colors.ink,
   },
   dueNote: {
     color: colors.accent,
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 16,
     fontFamily: fonts.body,
+    paddingHorizontal: spacing.xs,
   },
   preview: {
     color: colors.inkMuted,
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 16,
     fontFamily: fonts.body,
+    paddingHorizontal: spacing.xs,
   },
   actions: {
     flexDirection: "row",
@@ -189,18 +236,19 @@ const styles = StyleSheet.create({
   chip: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
-    backgroundColor: colors.paper,
+    backgroundColor: colors.surface,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.l,
-    paddingVertical: spacing.s,
-    minHeight: 36,
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.xs,
+    minHeight: 32,
     justifyContent: "center",
   },
   chipPressed: {
     backgroundColor: colors.pressed,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 18,
     fontFamily: fonts.body,
     color: colors.accent,
     fontWeight: "600",
@@ -211,9 +259,9 @@ const styles = StyleSheet.create({
   send: {
     backgroundColor: colors.accent,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.m,
-    minHeight: 44,
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.xs,
+    minHeight: 32,
     justifyContent: "center",
   },
   sendDisabled: {
@@ -224,6 +272,8 @@ const styles = StyleSheet.create({
   },
   sendText: {
     color: colors.onAccent,
+    fontSize: 14,
+    lineHeight: 20,
     fontFamily: fonts.body,
     fontWeight: "600",
   },

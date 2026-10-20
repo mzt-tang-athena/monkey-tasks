@@ -22,7 +22,7 @@ export default function Root({ children }: PropsWithChildren) {
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
-            __html: "html, body { background-color: #F7F2E7; }",
+            __html: "html, body { background-color: #FBFAF8; }",
           }}
         />
         {headNodes}

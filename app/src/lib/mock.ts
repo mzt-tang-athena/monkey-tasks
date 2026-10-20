@@ -82,9 +82,13 @@ function buildTasks(): TaskItem[] {
     }),
 
     // Today: untimed and timed, including the recurring supplements.
+    // Two timed tasks give the hour ruler real anchors.
     mock("Supplements", {
       due: dueOn(0, { h: 19, m: 0 }),
       recurrence: "RRULE:FREQ=DAILY",
+    }),
+    mock("Pick up prescription", {
+      due: dueOn(0, { h: 11, m: 30 }),
     }),
     mock("Groceries: milk, eggs, oats", {
       due: dueOn(0),
@@ -109,11 +113,14 @@ function buildTasks(): TaskItem[] {
       due: dueOn(3),
     }),
 
-    // No date.
+    // No date. These wait in the planner's unscheduled tray.
     mock("Call Mum", {}),
     mock("Clear vault inbox", {
       lists: ["[[Focus]]"],
     }),
+    mock("Book train tickets", {}),
+    mock("Sort trip photos", {}),
+    mock("Draft birthday card for Dad", {}),
 
     // Completed, faded at the bottom.
     mock("Buy stamps", {

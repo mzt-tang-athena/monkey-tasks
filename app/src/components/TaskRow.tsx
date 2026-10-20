@@ -4,6 +4,11 @@ import type { TaskItem } from "../features/tasks/query";
 import { parseStoredDate } from "../lib/dates";
 import { colors, fonts, spacing } from "../theme/tokens";
 
+/**
+ * Variant E task row: dense and quiet. A 20pt circle, one 15pt line
+ * of text, tight 44pt minimum height. Separators come from the list,
+ * not the row.
+ */
 export function TaskRow({
   task,
   onToggle,
@@ -84,10 +89,10 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 56,
+    minHeight: 44,
     paddingHorizontal: spacing.l,
-    paddingVertical: spacing.m,
-    borderRadius: spacing.m,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surface,
   },
   rowPressed: {
     backgroundColor: colors.pressed,
@@ -96,9 +101,9 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   circle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 1.5,
     borderColor: colors.inkFaint,
     alignItems: "center",
@@ -111,16 +116,16 @@ const styles = StyleSheet.create({
   },
   check: {
     color: colors.onAccent,
-    fontSize: 13,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 13,
     fontWeight: "600",
   },
   textBlock: {
     flex: 1,
   },
   name: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
     fontFamily: fonts.body,
     color: colors.ink,
   },
@@ -135,28 +140,28 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   time: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     fontFamily: fonts.body,
     color: colors.inkMuted,
   },
   gutterTime: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     fontFamily: fonts.body,
     color: colors.inkMuted,
-    width: 64,
+    width: 60,
     fontVariant: ["tabular-nums"],
   },
   recur: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     fontFamily: fonts.body,
     color: colors.accent,
   },
   overdueText: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     fontFamily: fonts.body,
     color: colors.danger,
   },
