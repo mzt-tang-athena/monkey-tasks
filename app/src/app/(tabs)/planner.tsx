@@ -722,6 +722,7 @@ function PeriodStrip({
 
   if (mode === "week") {
     // The current week first, then the upcoming ones, one swipe away.
+    // Cells match the day strip's size: a compact week shorthand.
     const weeks = Array.from({ length: 12 }, (_, index) =>
       startOfWeek(addDays(today, 7 * index)),
     );
@@ -737,32 +738,27 @@ function PeriodStrip({
           const endT = weekEnd.getTime();
           const active = selStart >= startT && selStart <= endT;
           const isCurrent = todayStart >= startT && todayStart <= endT;
-          const crosses = weekStartDay.getMonth() !== weekEnd.getMonth();
-          const label = crosses
-            ? `${MONTHS_SHORT[weekStartDay.getMonth()]} ${weekStartDay.getDate()}-${MONTHS_SHORT[weekEnd.getMonth()]} ${weekEnd.getDate()}`
-            : `${MONTHS_SHORT[weekStartDay.getMonth()]} ${weekStartDay.getDate()}-${weekEnd.getDate()}`;
           return (
             <Pressable
               key={startT}
               style={({ pressed }) => [
-                styles.stripCell,
-                styles.stripCellWeek,
+                styles.stripDay,
                 active && styles.stripDayActive,
                 isCurrent && !active && styles.stripDayToday,
                 pressed && styles.pressedFill,
               ]}
               onPress={() => onSelect(weekStartDay)}
               accessibilityRole="button"
-              accessibilityLabel={`week of ${label}`}
+              accessibilityLabel={`week of ${MONTHS_SHORT[weekStartDay.getMonth()]} ${weekStartDay.getDate()}-${weekEnd.getDate()}`}
             >
               <Text
                 style={[
-                  styles.stripCellText,
-                  active && styles.stripNameActive,
-                  isCurrent && !active && styles.stripNameToday,
+                  styles.stripNum,
+                  active && styles.stripNumActive,
+                  isCurrent && !active && styles.stripNumToday,
                 ]}
               >
-                {label}
+                {`W${isoWeek(addDays(weekStartDay, 3))}`}
               </Text>
             </Pressable>
           );
@@ -772,6 +768,8 @@ function PeriodStrip({
   }
 
   // Month mode: the current month first, then the upcoming ones.
+  // Cells mirror the day strip's anatomy: the year small on top, the
+  // month word below it.
   const months = Array.from(
     { length: 12 },
     (_, index) =>
@@ -790,29 +788,36 @@ function PeriodStrip({
         const isCurrent =
           today.getFullYear() === monthStartDay.getFullYear() &&
           today.getMonth() === monthStartDay.getMonth();
-        const label = `${MONTHS[monthStartDay.getMonth()]} ${monthStartDay.getFullYear()}`;
         return (
           <Pressable
             key={monthStartDay.getTime()}
             style={({ pressed }) => [
-              styles.stripCell,
-              styles.stripCellMonth,
+              styles.stripDay,
               active && styles.stripDayActive,
               isCurrent && !active && styles.stripDayToday,
               pressed && styles.pressedFill,
             ]}
             onPress={() => onSelect(monthStartDay)}
             accessibilityRole="button"
-            accessibilityLabel={label}
+            accessibilityLabel={`${MONTHS[monthStartDay.getMonth()]} ${monthStartDay.getFullYear()}`}
           >
             <Text
               style={[
-                styles.stripCellText,
+                styles.stripName,
                 active && styles.stripNameActive,
                 isCurrent && !active && styles.stripNameToday,
               ]}
             >
-              {label}
+              {monthStartDay.getFullYear()}
+            </Text>
+            <Text
+              style={[
+                styles.stripNum,
+                active && styles.stripNumActive,
+                isCurrent && !active && styles.stripNumToday,
+              ]}
+            >
+              {MONTHS_SHORT[monthStartDay.getMonth()]}
             </Text>
           </Pressable>
         );
@@ -903,6 +908,18 @@ function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
+/** The ISO week number of the week holding date. */
+function isoWeek(date: Date): number {
+  const probe = startOfDay(date);
+  probe.setDate(probe.getDate() + 3 - ((probe.getDay() + 6) % 7));
+  const firstThu = new Date(probe.getFullYear(), 0, 4);
+  firstThu.setDate(firstThu.getDate() - ((firstThu.getDay() + 6) % 7));
+  return (
+    1 +
+    Math.round((probe.getTime() - firstThu.getTime()) / (7 * 86400000))
+  );
+}
+
 function LoadingState() {
   return (
     <View style={styles.holder}>
@@ -947,6 +964,9 @@ const styles = StyleSheet.create({
   stripScroll: {
     flexDirection: "row",
     gap: spacing.s,
+    // The same bottom spacing the day strip has, so the wide strips
+    // never touch the pills.
+    marginBottom: spacing.s,
     paddingRight: spacing.s,
   },
   stripDay: {
@@ -955,27 +975,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 52,
     borderRadius: radius,
-  },
-  stripCell: {
-    alignItems: "center",
-    justifyContent: "center",
-    height: 52,
-    borderRadius: radius,
-  },
-  stripCellWeek: {
-    minWidth: 104,
-    paddingHorizontal: spacing.m,
-  },
-  stripCellMonth: {
-    minWidth: 120,
-    paddingHorizontal: spacing.m,
-  },
-  stripCellText: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: fonts.body,
-    color: colors.ink,
-    fontWeight: "500",
   },
   stripDayActive: {
     backgroundColor: colors.accent,

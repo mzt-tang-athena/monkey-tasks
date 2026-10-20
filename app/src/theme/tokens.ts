@@ -133,6 +133,8 @@ export const spacing = {
  * rounded capture pill is the only exception.
  */
 export const radius = 6;
+/** Floating surfaces (the capture sheet) sit a step larger. */
+export const radiusFloating = radius + 4;
 export const radii = { pill: 999 } as const;
 
 /** Reading measure: screens cap their content width on wide screens. */

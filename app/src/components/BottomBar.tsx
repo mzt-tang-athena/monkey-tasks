@@ -7,13 +7,21 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
   type TextStyle,
 } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { parseCapture, type ParsedCapture } from "../features/capture/parse";
 import type { CaptureTarget } from "../features/capture/write";
-import { colors, fonts, spacing, radius, radii } from "../theme/tokens";
+import {
+  colors,
+  fonts,
+  spacing,
+  radius,
+  radiusFloating,
+  radii,
+} from "../theme/tokens";
 
 // Web keeps a focus ring, but themed to the accent instead of the
 // browser default black. The longhands are web-only styles.
@@ -29,11 +37,13 @@ const webFocusRing = Platform.select({
 /**
  * The single bottom bar, shared by both tabs. Left: the Lists and
  * Planner nav items, icon plus label, selection carried by weight
- * and color alone. Right: a compact capture button that reads as
- * tappable. Tapping it expands, with an upward animation, into the
- * focused capture pill: the parse preview panel above, the target
- * pill inline, and the send button in the field's edge. A blur with
- * empty text collapses back to the button.
+ * and color alone. Right: a compact capture button. Tapping it opens
+ * a floating capture sheet over the page: a scrim dims the content
+ * while a rounded panel rises just above the navbar, which stays
+ * visible and interactive under it. The sheet holds a multi-line
+ * input, the parse line, and an action row with the target pill and
+ * the save control. Tapping outside, the Add button again, or the
+ * save control closes it with a downward fade.
  */
 export function BottomBar({
   targets,
@@ -49,16 +59,18 @@ export function BottomBar({
 }) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const window = useWindowDimensions();
   const [text, setText] = React.useState("");
   const [targetIndex, setTargetIndex] = React.useState(defaultTargetIndex);
   const [sending, setSending] = React.useState(false);
 
-  // Open is the user intent; mounted keeps the field on screen while
-  // the collapse animation plays.
+  // Open is the user intent; mounted keeps the sheet on screen while
+  // the exit animation plays.
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const [expand] = React.useState(() => new Animated.Value(0));
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [barHeight, setBarHeight] = React.useState(64);
 
   React.useEffect(() => {
     Animated.timing(expand, {
@@ -89,6 +101,7 @@ export function BottomBar({
     onSend(capture, targets[targetIndex] ?? targets[0]);
     setText("");
     setSending(false);
+    close();
   };
 
   const openCapture = () => {
@@ -100,11 +113,9 @@ export function BottomBar({
     setOpen(true);
   };
 
-  const collapse = () => {
-    if (text.trim() === "") {
-      setOpen(false);
-      closeTimer.current = setTimeout(() => setMounted(false), 220);
-    }
+  const close = () => {
+    setOpen(false);
+    closeTimer.current = setTimeout(() => setMounted(false), 220);
   };
 
   const closeNow = () => {
@@ -117,100 +128,87 @@ export function BottomBar({
   };
 
   return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}>
-      {/* The panel grows upward out of the field while open. */}
+    <View style={styles.root}>
+      {/* Scrim over the content; the navbar below stays uncovered. */}
       {mounted ? (
         <Animated.View
           pointerEvents={open ? "auto" : "none"}
           style={[
-            styles.panel,
+            styles.scrim,
             {
-              maxHeight: expand.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 56],
-              }),
+              bottom: barHeight,
+              height: Math.max(window.height - barHeight, 0),
+              opacity: expand,
+            },
+          ]}
+        >
+          <Pressable
+            style={styles.scrimFill}
+            onPress={close}
+            accessibilityLabel="close capture"
+            accessibilityRole="button"
+          />
+        </Animated.View>
+      ) : null}
+
+      {/* The floating sheet, just above the navbar. */}
+      {mounted ? (
+        <Animated.View
+          pointerEvents={open ? "auto" : "none"}
+          style={[
+            styles.sheet,
+            {
+              bottom: barHeight + spacing.s,
               opacity: expand,
               transform: [
                 {
                   translateY: expand.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [10, 0],
+                    outputRange: [16, 0],
+                  }),
+                },
+                {
+                  scale: expand.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.96, 1],
                   }),
                 },
               ],
             },
           ]}
         >
+          <TextInput
+            style={[styles.sheetInput, webFocusRing]}
+            placeholder="Add a task"
+            placeholderTextColor={colors.inkFaint}
+            value={text}
+            onChangeText={setText}
+            onSubmitEditing={send}
+            returnKeyType="send"
+            multiline
+            autoFocus
+          />
           {parsed && parsed.name !== "" ? (
-            <Text style={styles.preview} numberOfLines={1}>
+            <Text style={styles.sheetParse} numberOfLines={1}>
               {parsed.matches?.length
                 ? `parsed: ${parsed.matches.map((m) => m.text).join(", ")}`
                 : "no date"}
               {" -> "}
               {parsed.name}
+              {onOpenDetails != null ? (
+                <Text
+                  style={styles.sheetParseDetails}
+                  onPress={() => {
+                    closeNow();
+                    onOpenDetails(text, targetIndex);
+                  }}
+                >
+                  {"  details"}
+                </Text>
+              ) : null}
             </Text>
-          ) : (
-            <Text style={[styles.preview, styles.previewHint]}>
-              {'Try "tomorrow" or "friday 9am" for a date.'}
-            </Text>
-          )}
-          {onOpenDetails != null && text.trim() !== "" ? (
-            <Pressable
-              style={({ pressed }) => [
-                styles.details,
-                pressed && styles.detailsPressed,
-              ]}
-              onPress={() => {
-                closeNow();
-                onOpenDetails(text, targetIndex);
-              }}
-              accessibilityLabel="open capture details"
-              accessibilityRole="button"
-            >
-              <Text style={styles.detailsText}>details</Text>
-            </Pressable>
           ) : null}
-        </Animated.View>
-      ) : null}
-
-      <View style={styles.row}>
-        <IconTab
-          label="Lists"
-          active={pathname === "/"}
-          onPress={() => router.navigate("/")}
-          icon={<ListGlyph active={pathname === "/"} />}
-        />
-        <IconTab
-          label="Planner"
-          active={pathname === "/planner"}
-          onPress={() => router.navigate("/planner")}
-          icon={<CalendarGlyph active={pathname === "/planner"} />}
-        />
-
-        {mounted ? (
-          // The target pill rides the expansion; its width collapses
-          // with it, so it takes no space when hidden.
-          <Animated.View
-            pointerEvents={open ? "auto" : "none"}
-            style={[
-              styles.pillWrap,
-              {
-                opacity: expand,
-                maxWidth: expand.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 96],
-                }),
-                transform: [
-                  {
-                    scale: expand.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.7, 1],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
+          <View style={styles.sheetActions}>
             <Pressable
               style={({ pressed }) => [
                 styles.pill,
@@ -226,82 +224,67 @@ export function BottomBar({
                 {targetLabel(targets[targetIndex] ?? targets[0])}
               </Text>
             </Pressable>
-          </Animated.View>
-        ) : null}
+            <View style={styles.sheetSpacer} />
+            <Pressable
+              style={({ pressed }) => [
+                styles.send,
+                pressed && canSend && styles.sendPressed,
+                !canSend && styles.sendDisabled,
+              ]}
+              onPress={send}
+              disabled={!canSend}
+              accessibilityRole="button"
+              accessibilityLabel="add task"
+              accessibilityState={{ disabled: !canSend }}
+            >
+              <Text style={[styles.sendText, !canSend && styles.sendTextDisabled]}>
+                {"↑"}
+              </Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      ) : null}
 
-        {mounted ? (
-          // The capture field: a fully rounded pill, capped in width
-          // so the nav keeps its breathing space. Autofocus opens the
-          // keyboard on mount.
-          <Animated.View
-            pointerEvents={open ? "auto" : "none"}
-            style={[
-              styles.fieldWrap,
-              {
-                opacity: expand,
-                transform: [
-                  {
-                    translateY: expand.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [8, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <View style={[styles.field, webFocusRing]}>
-              <TextInput
-                style={styles.input}
-                placeholder="Add a task"
-                placeholderTextColor={colors.inkFaint}
-                value={text}
-                onChangeText={setText}
-                onBlur={collapse}
-                onSubmitEditing={send}
-                returnKeyType="send"
-                multiline={false}
-                autoFocus
-              />
-              <Pressable
-                style={({ pressed }) => [
-                  styles.send,
-                  pressed && canSend && styles.sendPressed,
-                  !canSend && styles.sendDisabled,
-                ]}
-                onPress={send}
-                disabled={!canSend}
-                accessibilityRole="button"
-                accessibilityLabel="add task"
-                accessibilityState={{ disabled: !canSend }}
-              >
-                <Text
-                  style={[
-                    styles.sendText,
-                    !canSend && styles.sendTextDisabled,
-                  ]}
-                >
-                  {"↑"}
-                </Text>
-              </Pressable>
-            </View>
-          </Animated.View>
-        ) : (
-          // The collapsed control: a compact button, not an empty
-          // field. Tapping expands into the capture pill.
+      {/* The navbar: measured so the sheet anchors to its top. */}
+      <View
+        style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}
+        onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}
+      >
+        <View style={styles.row}>
+          <IconTab
+            label="Lists"
+            active={pathname === "/"}
+            onPress={() => {
+              closeNow();
+              router.navigate("/");
+            }}
+            icon={<ListGlyph active={pathname === "/"} />}
+          />
+          <IconTab
+            label="Planner"
+            active={pathname === "/planner"}
+            onPress={() => {
+              closeNow();
+              router.navigate("/planner");
+            }}
+            icon={<CalendarGlyph active={pathname === "/planner"} />}
+          />
           <Pressable
             style={({ pressed }) => [
               styles.captureButton,
               pressed && styles.capturePressed,
             ]}
-            onPress={() => openCapture()}
+            onPress={() => (open ? close() : openCapture())}
             accessibilityRole="button"
             accessibilityLabel="add task"
           >
-            <Text style={styles.capturePlus}>{"+"}</Text>
+            <View style={styles.capturePlus}>
+              <View style={styles.capturePlusH} />
+              <View style={styles.capturePlusV} />
+            </View>
             <Text style={styles.captureLabel}>Add</Text>
           </Pressable>
-        )}
+        </View>
       </View>
     </View>
   );
@@ -361,13 +344,13 @@ function CalendarGlyph({ active }: { active: boolean }) {
 }
 
 const styles = StyleSheet.create({
+  root: {},
   bar: {
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.hairline,
     paddingHorizontal: spacing.m,
     paddingTop: spacing.s,
-    gap: spacing.xs,
   },
   row: {
     flexDirection: "row",
@@ -427,11 +410,12 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  // Collapsed capture control: an unmistakable button.
+  // Collapsed capture control: an unmistakable button, glyph and
+  // label optically centered on one line.
   captureButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     marginLeft: "auto" as const,
     minHeight: 36,
     paddingHorizontal: spacing.m,
@@ -442,10 +426,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentDeep,
   },
   capturePlus: {
-    color: colors.onAccent,
-    fontSize: 16,
-    lineHeight: 18,
-    fontWeight: "700",
+    width: 14,
+    height: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  capturePlusH: {
+    width: 12,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.onAccent,
+  },
+  capturePlusV: {
+    position: "absolute" as const,
+    left: 6,
+    top: 1,
+    width: 2,
+    height: 12,
+    borderRadius: 1,
+    backgroundColor: colors.onAccent,
   },
   captureLabel: {
     color: colors.onAccent,
@@ -455,18 +454,74 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Target pill, animated with the panel.
-  pillWrap: {
-    justifyContent: "center",
-    overflow: "hidden" as const,
+  // Scrim: covers the content above the navbar only.
+  scrim: {
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.scrim,
   },
+  scrimFill: {
+    position: "absolute" as const,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+
+  // The floating capture sheet.
+  sheet: {
+    position: "absolute" as const,
+    left: spacing.m,
+    right: spacing.m,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radiusFloating,
+    padding: spacing.m,
+    gap: spacing.xs,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  sheetInput: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    color: colors.ink,
+    minHeight: 40,
+    maxHeight: 120,
+    padding: 0,
+  },
+  sheetParse: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.accent,
+  },
+  sheetParseDetails: {
+    color: colors.inkMuted,
+    fontWeight: "600",
+  },
+  sheetActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.s,
+  },
+  sheetSpacer: {
+    flex: 1,
+  },
+
+  // Target list pill, inside the sheet's action row.
   pill: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     backgroundColor: colors.accentSoft,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.m,
-    minHeight: 36,
+    minHeight: 32,
     justifyContent: "center",
   },
   pillPressed: {
@@ -480,36 +535,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // The capture field: a fully rounded pill, capped in width so a
-  // clear gap stays between the nav and the input.
-  fieldWrap: {
-    flex: 1,
-    maxWidth: 240,
-    marginLeft: "auto" as const,
-  },
-  field: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    backgroundColor: colors.paper,
-    borderRadius: radii.pill,
-    paddingLeft: spacing.m,
-    paddingRight: 5,
-    minHeight: 36,
-    gap: spacing.s,
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 19,
-    fontFamily: fonts.body,
-    color: colors.ink,
-    minHeight: 36,
-  },
+  // The save control, right edge of the action row.
   send: {
-    width: 26,
-    height: 26,
+    width: 32,
+    height: 32,
     borderRadius: radius,
     backgroundColor: colors.accent,
     alignItems: "center",
@@ -523,47 +552,12 @@ const styles = StyleSheet.create({
   },
   sendText: {
     color: colors.onAccent,
-    fontSize: 14,
-    lineHeight: 16,
+    fontSize: 15,
+    lineHeight: 18,
     fontFamily: fonts.body,
     fontWeight: "700",
   },
   sendTextDisabled: {
     color: colors.inkFaint,
-  },
-
-  // The expanding panel above the field.
-  panel: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    overflow: "hidden",
-    paddingHorizontal: spacing.xs,
-  },
-  preview: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.accent,
-  },
-  previewHint: {
-    color: colors.inkFaint,
-  },
-  details: {
-    minHeight: 28,
-    justifyContent: "center",
-    paddingHorizontal: spacing.s,
-    borderRadius: radius,
-  },
-  detailsPressed: {
-    backgroundColor: colors.pressed,
-  },
-  detailsText: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    fontWeight: "600",
   },
 });
