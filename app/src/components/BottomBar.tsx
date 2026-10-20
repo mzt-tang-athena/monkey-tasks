@@ -1,14 +1,12 @@
 import * as React from "react";
 import {
   Animated,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
   useWindowDimensions,
-  type TextStyle,
 } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,17 +21,6 @@ import {
   radii,
 } from "../theme/tokens";
 
-// Web keeps a focus ring, but themed to the accent instead of the
-// browser default black. The longhands are web-only styles.
-const webFocusRing = Platform.select({
-  web: {
-    outlineColor: colors.accent,
-    outlineStyle: "solid",
-    outlineWidth: 2,
-  } as unknown as TextStyle,
-  default: {},
-});
-
 /**
  * The single bottom bar, shared by both tabs. Left: the Lists and
  * Planner nav items, icon plus label, selection carried by weight
@@ -43,7 +30,9 @@ const webFocusRing = Platform.select({
  * visible and interactive under it. The sheet holds a multi-line
  * input, the parse line, and an action row with the target pill and
  * the save control. Tapping outside, the Add button again, or the
- * save control closes it with a downward fade.
+ * save control closes it with a downward fade. The input shows no
+ * focus ring: the elevated panel is the focus, carried by the accent
+ * caret and placeholder alone.
  */
 export function BottomBar({
   targets,
@@ -178,7 +167,7 @@ export function BottomBar({
           ]}
         >
           <TextInput
-            style={[styles.sheetInput, webFocusRing]}
+            style={styles.sheetInput}
             placeholder="Add a task"
             placeholderTextColor={colors.inkFaint}
             value={text}
@@ -187,6 +176,7 @@ export function BottomBar({
             returnKeyType="send"
             multiline
             autoFocus
+            selectionColor={colors.accent}
           />
           {parsed && parsed.name !== "" ? (
             <Text style={styles.sheetParse} numberOfLines={1}>

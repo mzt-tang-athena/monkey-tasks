@@ -320,7 +320,7 @@ function DaySpread({
     const x = e.nativeEvent.pageX;
     const y = e.nativeEvent.pageY;
     if (resizing) {
-      const grown = resizing.height + (resizing.y - y);
+      const grown = resizing.height + (y - resizing.y);
       setTimelineHeight(
         Math.min(Math.max(grown, drag.minPane), Math.max(maxTimeline, drag.minPane)),
       );
@@ -969,6 +969,15 @@ function PeriodStrip({
               >
                 {`W${isoWeek(addDays(weekStartDay, 3))}`}
               </Text>
+              <Text
+                style={[
+                  styles.stripName,
+                  active && styles.stripNameActive,
+                  isCurrent && !active && styles.stripNameToday,
+                ]}
+              >
+                {`${weekStartDay.getDate()}-${weekEnd.getDate()}`}
+              </Text>
             </Pressable>
           );
         })}
@@ -1396,6 +1405,7 @@ const styles = StyleSheet.create({
     maxWidth: measure,
     alignSelf: "center" as const,
     paddingHorizontal: 26,
+    paddingTop: spacing.m,
   },
   pane: {},
   paneList: {
