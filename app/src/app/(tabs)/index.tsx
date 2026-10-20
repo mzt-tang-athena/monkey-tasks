@@ -1,118 +1,212 @@
 import * as React from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { useVault } from "../../hooks/useVault";
-import { onMain, groupByDue, type TaskItem } from "../../features/tasks/query";
-import { setCompleted } from "../../features/tasks/mutate";
-import { writeCapture, type CaptureTarget } from "../../features/capture/write";
+import { groupByDue, type TaskItem } from "../../features/tasks/query";
+import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { CaptureSheet } from "../../components/CaptureSheet";
-import { FloatingCaptureButton } from "../../components/FloatingCaptureButton";
-import { dayLabel, parseStoredDate } from "../../lib/dates";
+import { BottomBar } from "../../components/BottomBar";
+import {
+  inMockFocus,
+  inMockMain,
+  loadMockTasks,
+  toggleMockCompleted,
+} from "../../lib/mock";
+import { dayLabel } from "../../lib/dates";
+import { colors, fonts, spacing, radii } from "../../theme/tokens";
 
 /**
- * Lists tab. 0009 ships the Main list working; the real list tab bar
- * is ticket 0010.
+ * Variant B Lists tab, mock-driven for the design exploration.
+ * Date groups are understated cards, not plain headers. The capture
+ * affordance lives in the slim bottom bar.
  */
+type ListTab = "Focus" | "Main";
+
+const TARGETS: CaptureTarget[] = [
+  { kind: "list", name: "Focus", uri: "mock://vault/Tasks/Lists/Focus.md" },
+  { kind: "main" },
+];
+
 export default function ListsScreen() {
-  const { rootUri, tasksDir, tasks, status, grant, refresh } = useVault();
+  const [tasks, setTasks] = React.useState<TaskItem[] | null>(null);
+  const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
+    "loading",
+  );
   const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [tab, setTab] = React.useState<ListTab>("Main");
 
-  const targets: CaptureTarget[] = [{ kind: "main" }];
-
-  const main = onMain(tasks);
-  const groups = groupByDue(main, new Date());
-
-  const toggle = async (task: TaskItem) => {
-    const done = task.data?.completed != null && task.data.completed !== "";
-    await setCompleted(task, !done);
-    await refresh();
-  };
-
-  const send = async (
-    parsed: Parameters<typeof writeCapture>[1],
-    target: CaptureTarget,
-  ) => {
-    if (!tasksDir) {
-      return;
-    }
-    await writeCapture(tasksDir, parsed, target);
-    await refresh();
-  };
-
-  if (!rootUri) {
-    return (
-      <View style={[styles.screen, styles.center]}>
-        <Text style={styles.status}>{status}</Text>
-        <Pressable style={styles.grant} onPress={grant}>
-          <Text style={styles.grantText}>Grant vault folder</Text>
-        </Pressable>
-      </View>
+  // Mock load. Status changes only in async callbacks, so the effect
+  // does not set state synchronously. Loading starts as the initial
+  // state, and the error state stays a real code path.
+  React.useEffect(() => {
+    let cancelled = false;
+    loadMockTasks()
+      .then((loaded) => {
+        if (!cancelled) {
+          setTasks(loaded);
+          setStatus("ready");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStatus("error");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);  const toggle = (task: TaskItem) => {
+    setTasks((current) =>
+      (current ?? []).map((item) =>
+        item.uri === task.uri ? toggleMockCompleted(item) : item,
+      ),
     );
-  }
+  };
 
-  const sections: { title: string; items: TaskItem[]; red?: boolean }[] = [
-    { title: "Past", items: groups.overdue, red: true },
-    { title: "Today", items: groups.today },
+  const visible = inTabTasks(tasks, tab);
+  const groups = groupByDue(visible, new Date());
+
+  const sections: {
+    title: string;
+    items: TaskItem[];
+    tone: "danger" | "muted" | "ink";
+  }[] = [
+    { title: "Past", items: groups.overdue, tone: "danger" },
+    { title: "Today", items: groups.today, tone: "ink" },
     ...groups.upcoming.map((bucket) => ({
       title: dayLabel(bucket.date, new Date()),
       items: bucket.items,
+      tone: "muted" as const,
     })),
-    { title: "No date", items: groups.undated },
+    { title: "No date", items: groups.undated, tone: "muted" },
   ];
-  const timed = (task: TaskItem) =>
-    task.data?.due ? (parseStoredDate(task.data.due)?.hasTime ?? false) : false;
+  const shown = sections.filter((section) => section.items.length > 0);
 
   return (
     <View style={styles.screen}>
       <FlatList
         contentContainerStyle={styles.content}
-        data={[{ key: "header" }]}
+        data={[{ key: "lists" }]}
         renderItem={() => (
           <View>
-            <Text style={styles.header}>Main</Text>
-            <Text style={styles.status}>{status}</Text>
-            {sections
-              .filter((section) => section.items.length > 0)
-              .map((section) => (
-                <View key={section.title}>
-                  <Text style={[styles.section, section.red && styles.sectionRed]}>
-                    {section.title}
+            <View style={styles.tabBar}>
+              {(["Focus", "Main"] as ListTab[]).map((name) => (
+                <Pressable
+                  key={name}
+                  style={({ pressed }) => [
+                    styles.tabChip,
+                    pressed && styles.chipPressed,
+                  ]}
+                  onPress={() => setTab(name)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: tab === name }}
+                >
+                  <Text
+                    style={[styles.tabText, tab === name && styles.tabTextActive]}
+                  >
+                    {name}
                   </Text>
-                  {section.items.map((task) => (
-                    <TaskRow
-                      key={task.uri}
-                      task={{ ...task, name: timed(task) ? task.name : task.name }}
-                      onToggle={toggle}
-                    />
-                  ))}
-                </View>
+                </Pressable>
               ))}
-            {groups.completed.length > 0 ? (
-              <View>
-                <Text style={styles.sectionCompleted}>
-                  Completed ({groups.completed.length})
+              <Text style={styles.count}>
+                {visible.length} open
+              </Text>
+            </View>
+
+            {status === "loading" ? <LoadingState /> : null}
+            {status === "error" ? (
+              <EmptyState label="Something went wrong. Pull to retry." />
+            ) : null}
+            {status === "ready" && shown.length === 0 ? (
+              <EmptyState label="Nothing on this list yet." />
+            ) : null}
+
+            {status === "ready"
+              ? shown.map((section) => (
+                  <View
+                    key={section.title}
+                    style={styles.groupCard}
+                  >
+                    <Text style={[styles.groupLabel, toneLabel(section.tone)]}>
+                      {section.title}
+                      {"  "}
+                      {section.items.length}
+                    </Text>
+                    {section.items.map((task, index) => (
+                      <View
+                        key={task.uri}
+                        style={
+                          index > 0 ? styles.groupRow : styles.groupRowFirst
+                        }
+                      >
+                        <TaskRow task={task} onToggle={toggle} />
+                      </View>
+                    ))}
+                  </View>
+                ))
+              : null}
+
+            {status === "ready" && groups.completed.length > 0 ? (
+              <View style={[styles.groupCard, styles.completedCard]}>
+                <Text style={styles.completedLabel}>
+                  Completed  {groups.completed.length}
                 </Text>
-                {groups.completed.map((task) => (
-                  <TaskRow key={task.uri} task={task} onToggle={toggle} />
+                {groups.completed.map((task, index) => (
+                  <View
+                    key={task.uri}
+                    style={
+                      index > 0 ? styles.groupRow : styles.groupRowFirst
+                    }
+                  >
+                    <TaskRow task={task} onToggle={toggle} />
+                  </View>
                 ))}
               </View>
-            ) : null}
-            {main.length === 0 && groups.completed.length === 0 ? (
-              <Text style={styles.empty}>Nothing yet. Tap + to add a task.</Text>
             ) : null}
           </View>
         )}
       />
-      <FloatingCaptureButton onPress={() => setSheetOpen(true)} />
+      <BottomBar onAdd={() => setSheetOpen(true)} />
       {sheetOpen ? (
         <CaptureSheet
           visible
-          targets={targets}
-          defaultTargetIndex={0}
+          targets={TARGETS}
+          defaultTargetIndex={tab === "Focus" ? 0 : 1}
           onClose={() => setSheetOpen(false)}
-          onSend={send}
+          onSend={() => setSheetOpen(false)}
         />
       ) : null}
+    </View>
+  );
+}
+
+function inTabTasks(tasks: TaskItem[] | null, tab: ListTab): TaskItem[] {
+  const all = tasks ?? [];
+  return tab === "Focus" ? inMockFocus(all) : inMockMain(all);
+}
+
+const toneLabel = (() => {
+  const map = StyleSheet.create({
+    danger: { color: colors.danger },
+    muted: { color: colors.inkMuted },
+    ink: { color: colors.ink },
+  });
+  return (tone: "danger" | "muted" | "ink") => map[tone];
+})();
+
+function LoadingState() {
+  return (
+    <View style={styles.holder}>
+      <View style={[styles.skeleton, { width: "40%" as const }]} />
+      <View style={[styles.skeleton, { width: "70%" as const }]} />
+      <View style={[styles.skeleton, { width: "55%" as const }]} />
+    </View>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <View style={styles.holder}>
+      <Text style={styles.empty}>{label}</Text>
     </View>
   );
 }
@@ -120,53 +214,104 @@ export default function ListsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#ffffff",
-  },
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
+    backgroundColor: colors.paper,
   },
   content: {
-    padding: 16,
-    paddingBottom: 96,
+    padding: spacing.l,
+    paddingBottom: spacing.xl,
   },
-  header: {
-    fontSize: 22,
+  tabBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.s,
+    marginTop: spacing.xl,
+    marginBottom: spacing.l,
+  },
+  tabChip: {
+    minHeight: 40,
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.xs,
+    justifyContent: "center",
+    borderRadius: radii.m,
+  },
+  chipPressed: {
+    backgroundColor: colors.pressed,
+  },
+  tabText: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    fontWeight: "500",
+  },
+  tabTextActive: {
+    color: colors.ink,
     fontWeight: "700",
+    textDecorationLine: "underline",
+    textDecorationColor: colors.accent,
   },
-  status: {
-    color: "#777777",
-    marginBottom: 8,
+  count: {
+    marginLeft: "auto" as const,
+    fontSize: 12,
+    fontFamily: fonts.body,
+    color: colors.inkFaint,
   },
-  section: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1a4b8f",
-    marginTop: 16,
-    marginBottom: 4,
+  groupCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.l,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    marginTop: spacing.m,
+    paddingVertical: spacing.s,
   },
-  sectionRed: {
-    color: "#b3261e",
+  completedCard: {
+    opacity: 0.6,
+    marginTop: spacing.xl,
   },
-  sectionCompleted: {
-    fontSize: 15,
+  groupLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: fonts.body,
     fontWeight: "600",
-    color: "#999999",
-    marginTop: 20,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    paddingHorizontal: spacing.l,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.s,
+  },
+  groupRow: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.hairline,
+  },
+  groupRowFirst: {},
+  completedLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: fonts.body,
+    fontWeight: "600",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    color: colors.inkFaint,
+    paddingHorizontal: spacing.l,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.s,
+  },
+  holder: {
+    minHeight: 160,
+    justifyContent: "center",
+    paddingVertical: spacing.xl,
+  },
+  skeleton: {
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.hairline,
+    marginVertical: spacing.m,
+    marginHorizontal: spacing.l,
   },
   empty: {
-    color: "#777777",
-    marginTop: 24,
-  },
-  grant: {
-    backgroundColor: "#1d3fbf",
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  grantText: {
-    color: "#ffffff",
-    fontWeight: "700",
+    fontSize: 15,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    textAlign: "center",
   },
 });
