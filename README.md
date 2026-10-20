@@ -30,5 +30,5 @@ Phases:
 6. Notifications: on-device alarms with recurrence.
 7. Later: deed vocabulary cleanup (0005), the quick-task and deed merge
    decision, capture text highlighting (0008), location triggers,
-   MCP capture on athena, ntfy fallback, email and calendar
+   MCP capture on athena, ntfy fallback, the athena operational dashboard as a possible app surface (idea only), email and calendar
    integrations, pull-only Google Calendar read.
