@@ -27,7 +27,8 @@ const webFocusRing = Platform.select({
 /**
  * The capture sheet: input, target-list chip, send. The target shows
  * where the capture will land; tap it to cycle. Main targets write no
- * lists property. Restyled with the Variant B tokens.
+ * lists property. Restyled with the Variant F tokens; on the planner
+ * it stands in for drag-to-schedule from the unscheduled tray.
  */
 export function CaptureSheet({
   visible,
@@ -142,16 +143,16 @@ function targetLabel(target: CaptureTarget): string {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(43,38,29,0.4)",
+    backgroundColor: colors.scrim,
     justifyContent: "flex-end",
   },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.l + 4,
-    borderTopRightRadius: radii.l + 4,
+    borderTopLeftRadius: radii.l,
+    borderTopRightRadius: radii.l,
     paddingTop: spacing.s,
     paddingHorizontal: spacing.l,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxl,
     gap: spacing.m,
   },
   handle: {
@@ -167,6 +168,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
     borderRadius: radii.m,
     padding: spacing.m,
+    minHeight: 48,
     fontSize: 16,
     fontFamily: fonts.body,
     color: colors.ink,

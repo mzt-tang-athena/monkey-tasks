@@ -2,8 +2,13 @@ import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "../features/tasks/query";
 import { parseStoredDate } from "../lib/dates";
-import { colors, fonts, spacing } from "../theme/tokens";
+import { colors, fonts, spacing, radii } from "../theme/tokens";
 
+/**
+ * Variant F task row: the tallest of the round-2 variants. Extra
+ * padding, a larger target circle, and one more breath of line
+ * height. Default, pressed, and disabled states all ship.
+ */
 export function TaskRow({
   task,
   onToggle,
@@ -84,26 +89,26 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 56,
+    minHeight: 64,
     paddingHorizontal: spacing.l,
     paddingVertical: spacing.m,
-    borderRadius: spacing.m,
+    borderRadius: radii.m,
   },
   rowPressed: {
     backgroundColor: colors.pressed,
   },
   rowDisabled: {
-    opacity: 0.6,
+    opacity: 0.55,
   },
   circle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1.5,
     borderColor: colors.inkFaint,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: spacing.m,
+    marginRight: spacing.l,
   },
   circleDone: {
     backgroundColor: colors.accent,
@@ -111,16 +116,16 @@ const styles = StyleSheet.create({
   },
   check: {
     color: colors.onAccent,
-    fontSize: 13,
-    lineHeight: 14,
+    fontSize: 14,
+    lineHeight: 16,
     fontWeight: "600",
   },
   textBlock: {
     flex: 1,
   },
   name: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 17,
+    lineHeight: 24,
     fontFamily: fonts.body,
     color: colors.ink,
   },
@@ -132,7 +137,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.s,
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   time: {
     fontSize: 13,

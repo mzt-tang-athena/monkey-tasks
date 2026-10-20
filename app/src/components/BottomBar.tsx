@@ -2,19 +2,19 @@ import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, spacing } from "../theme/tokens";
+import { colors, spacing, radii } from "../theme/tokens";
 
 /**
- * Variant B capture affordance: instead of a floating button, a slim
- * full-width bottom bar. Tab icons sit on the left, the round add
- * button on the right. Both screens mount one.
+ * Variant F bottom bar: navigation icons only. There is no add
+ * button here; the inline composer docked above this bar owns
+ * capture, so no round plus-in-a-circle anywhere.
  */
-export function BottomBar({ onAdd }: { onAdd: () => void }) {
+export function BottomBar() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}>
+    <View style={[styles.bar, { paddingBottom: insets.bottom + spacing.s }]}>
       <IconTab
         label="Lists"
         active={pathname === "/"}
@@ -27,15 +27,6 @@ export function BottomBar({ onAdd }: { onAdd: () => void }) {
         onPress={() => router.navigate("/planner")}
         icon={<CalendarGlyph active={pathname === "/planner"} />}
       />
-      <View style={styles.spring} />
-      <Pressable
-        style={({ pressed }) => [styles.add, pressed && styles.addPressed]}
-        onPress={onAdd}
-        accessibilityLabel="add a task"
-        accessibilityRole="button"
-      >
-        <Text style={styles.addGlyph}>+</Text>
-      </Pressable>
     </View>
   );
 }
@@ -67,7 +58,7 @@ function IconTab({
   );
 }
 
-/** Simple vecless glyphs built from hairline views; no icon font. */
+/** Simple glyphs built from hairline views; no icon font. */
 function ListGlyph({ active }: { active: boolean }) {
   const color = active ? colors.accent : colors.inkMuted;
   return (
@@ -93,20 +84,21 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.hairline,
-    paddingHorizontal: spacing.l,
+    paddingHorizontal: spacing.xl,
     paddingTop: spacing.s,
-    gap: spacing.m,
+    gap: spacing.xxl,
   },
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 64,
-    minHeight: 44,
-    paddingHorizontal: spacing.s,
-    borderRadius: spacing.m,
+    minWidth: 72,
+    minHeight: 48,
+    paddingHorizontal: spacing.m,
+    borderRadius: radii.m,
   },
   tabPressed: {
     backgroundColor: colors.pressed,
@@ -120,27 +112,6 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     color: colors.accent,
     fontWeight: "600",
-  },
-  spring: {
-    flex: 1,
-  },
-  add: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addPressed: {
-    opacity: 0.7,
-  },
-  addGlyph: {
-    color: colors.onAccent,
-    fontSize: 26,
-    lineHeight: 30,
-    fontWeight: "400",
-    marginTop: -2,
   },
   glyphList: {
     height: 12,

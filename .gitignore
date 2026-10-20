@@ -26,3 +26,4 @@ __pycache__/
 
 # Vale (write-good is cloned, not committed)
 .vale/styles/write-good/
+.openchamber/

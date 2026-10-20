@@ -1,39 +1,45 @@
 import { Platform } from "react-native";
 
 /**
- * Variant B design tokens: "Notebook calm". Warm paper surfaces, warm
- * ink, one sage accent. Every screen reads from here; no component
- * declares a raw color.
+ * Variant F design tokens: "Quiet custom". The custom-color answer:
+ * one owned, low-saturation warm clay accent, no borrowed brand hue.
+ * The accent sits at OKLCH(0.60 0.08 50), a muted terracotta that
+ * reads clearly on cream paper without shouting. Spacing is the 8pt
+ * scale stretched one step further than Variant B: this is the most
+ * generous of the round-2 variants. Every screen reads from here; no
+ * component declares a raw color.
  */
 export const theme = {
   colors: {
-    /** Screen background: warm cream paper, not gray-white. */
-    paper: "#F7F2E7",
+    /** Screen background: cream paper from the #F7F4D5 family, toned towards ivory. */
+    paper: "#F7F4E4",
     /** Card and bar surfaces: a half-step brighter than paper. */
-    surface: "#FFFDF6",
+    surface: "#FCFAF0",
     /** Pressed rows and recessed fills. */
-    pressed: "#EFE8D8",
+    pressed: "#EFEAD6",
     /** Near-black warm ink for primary text. */
-    ink: "#2B261D",
+    ink: "#2E2A20",
     /** Secondary text: warm gray-brown. */
-    inkMuted: "#8A8070",
+    inkMuted: "#8B8271",
     /** Faded text: done rows, disabled controls. */
-    inkFaint: "#B7AD9B",
+    inkFaint: "#B9B09C",
     /** Hairline separators and card borders. */
-    hairline: "#E4DCC8",
-    /** The single quiet accent: muted sage green. */
-    accent: "#4E6B54",
-    /** Accent tint for selected chips and fills. */
-    accentSoft: "#E6EBE2",
-    /** Overdue and errors: warm rust, never pure red. */
-    danger: "#A8402F",
+    hairline: "#E6DFC9",
+    /** The single quiet accent: muted warm clay, owned not borrowed. */
+    accent: "#A65B3B",
+    /** Accent tint for selected chips, fills, and drop targets. */
+    accentSoft: "#F1E3D7",
+    /** Overdue and errors: deep oxblood, distinct from the clay accent. */
+    danger: "#8F3B2C",
     /** Danger tint for overdue badges. */
-    dangerSoft: "#F4E3DD",
+    dangerSoft: "#F2E0DA",
     /** Text and icons on accent fills. */
-    onAccent: "#FBF8EF",
+    onAccent: "#FBF7ED",
+    /** Translucent ink veil behind modal sheets. */
+    scrim: "rgba(46, 42, 32, 0.45)",
   },
   fonts: {
-    /** Serif display face: date headers only. */
+    /** Serif display face: date headers only, strongest in this variant. */
     display: Platform.select({
       ios: "Georgia",
       android: "serif",
@@ -44,7 +50,7 @@ export const theme = {
       web: "-apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
     }) as string | undefined,
   },
-  /** 8pt scale, with the half steps 4pt and 12pt. */
+  /** The 8pt scale, stretched: two extra steps for group air. */
   spacing: {
     xs: 4,
     s: 8,
@@ -52,12 +58,14 @@ export const theme = {
     l: 16,
     xl: 24,
     xxl: 32,
+    /** Extra air between groups; this variant's signature gap. */
+    air: 40,
     xxxl: 48,
   },
   radii: {
-    s: 6,
-    m: 10,
-    l: 16,
+    s: 8,
+    m: 12,
+    l: 20,
     pill: 999,
   },
 } as const;

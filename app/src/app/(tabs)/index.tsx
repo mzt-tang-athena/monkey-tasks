@@ -2,8 +2,9 @@ import * as React from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
+import type { ParsedCapture } from "../../features/capture/parse";
 import { TaskRow } from "../../components/TaskRow";
-import { CaptureSheet } from "../../components/CaptureSheet";
+import { InlineComposer } from "../../components/InlineComposer";
 import { BottomBar } from "../../components/BottomBar";
 import {
   inMockFocus,
@@ -12,12 +13,14 @@ import {
   toggleMockCompleted,
 } from "../../lib/mock";
 import { dayLabel } from "../../lib/dates";
-import { colors, fonts, spacing, radii } from "../../theme/tokens";
+import { colors, fonts, spacing } from "../../theme/tokens";
 
 /**
- * Variant B Lists tab, mock-driven for the design exploration.
- * Date groups are understated cards, not plain headers. The capture
- * affordance lives in the slim bottom bar.
+ * Variant F Lists tab, mock-driven for the design exploration.
+ * The clean Variant B top stays: list tabs at the very top, no
+ * announcement header. Groups are plain uppercase headers on paper,
+ * not cards, with a full breath of air between groups. Capture is
+ * the inline composer docked above the bottom bar.
  */
 type ListTab = "Focus" | "Main";
 
@@ -31,7 +34,6 @@ export default function ListsScreen() {
   const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
     "loading",
   );
-  const [sheetOpen, setSheetOpen] = React.useState(false);
   const [tab, setTab] = React.useState<ListTab>("Main");
 
   // Mock load. Status changes only in async callbacks, so the effect
@@ -54,12 +56,36 @@ export default function ListsScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);  const toggle = (task: TaskItem) => {
+  }, []);
+
+  const toggle = (task: TaskItem) => {
     setTasks((current) =>
       (current ?? []).map((item) =>
         item.uri === task.uri ? toggleMockCompleted(item) : item,
       ),
     );
+  };
+
+  // The inline composer appends to the mock list in place; the real
+  // write path is ticketed separately.
+  const send = (parsed: ParsedCapture, target: CaptureTarget) => {
+    setTasks((current) => [
+      {
+        uri: `mock://vault/Tasks/${parsed.name}.md`,
+        fileName: `${parsed.name}.md`,
+        name: parsed.name,
+        text: "",
+        data: {
+          kind: "[[tasks]]",
+          created: new Date().toISOString().slice(0, 10),
+          due: parsed.due ?? undefined,
+          lists:
+            target.kind === "list" ? [`[[${target.name}]]`] : undefined,
+        },
+        body: "",
+      },
+      ...(current ?? []),
+    ]);
   };
 
   const visible = inTabTasks(tasks, tab);
@@ -121,60 +147,46 @@ export default function ListsScreen() {
             ) : null}
 
             {status === "ready"
-              ? shown.map((section) => (
+              ? shown.map((section, sectionIndex) => (
                   <View
                     key={section.title}
-                    style={styles.groupCard}
+                    style={
+                      sectionIndex > 0
+                        ? styles.group
+                        : styles.groupFirst
+                    }
                   >
                     <Text style={[styles.groupLabel, toneLabel(section.tone)]}>
                       {section.title}
                       {"  "}
                       {section.items.length}
                     </Text>
-                    {section.items.map((task, index) => (
-                      <View
-                        key={task.uri}
-                        style={
-                          index > 0 ? styles.groupRow : styles.groupRowFirst
-                        }
-                      >
-                        <TaskRow task={task} onToggle={toggle} />
-                      </View>
+                    {section.items.map((task) => (
+                      <TaskRow key={task.uri} task={task} onToggle={toggle} />
                     ))}
                   </View>
                 ))
               : null}
 
             {status === "ready" && groups.completed.length > 0 ? (
-              <View style={[styles.groupCard, styles.completedCard]}>
+              <View style={[styles.group, styles.completedGroup]}>
                 <Text style={styles.completedLabel}>
                   Completed  {groups.completed.length}
                 </Text>
-                {groups.completed.map((task, index) => (
-                  <View
-                    key={task.uri}
-                    style={
-                      index > 0 ? styles.groupRow : styles.groupRowFirst
-                    }
-                  >
-                    <TaskRow task={task} onToggle={toggle} />
-                  </View>
+                {groups.completed.map((task) => (
+                  <TaskRow key={task.uri} task={task} onToggle={toggle} />
                 ))}
               </View>
             ) : null}
           </View>
         )}
       />
-      <BottomBar onAdd={() => setSheetOpen(true)} />
-      {sheetOpen ? (
-        <CaptureSheet
-          visible
-          targets={TARGETS}
-          defaultTargetIndex={tab === "Focus" ? 0 : 1}
-          onClose={() => setSheetOpen(false)}
-          onSend={() => setSheetOpen(false)}
-        />
-      ) : null}
+      <InlineComposer
+        targets={TARGETS}
+        defaultTargetIndex={tab === "Focus" ? 0 : 1}
+        onSend={send}
+      />
+      <BottomBar />
     </View>
   );
 }
@@ -218,21 +230,20 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.l,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxl,
   },
   tabBar: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.s,
     marginTop: spacing.xl,
-    marginBottom: spacing.l,
+    marginBottom: spacing.xl,
   },
   tabChip: {
     minHeight: 40,
     paddingHorizontal: spacing.m,
     paddingVertical: spacing.xs,
     justifyContent: "center",
-    borderRadius: radii.m,
   },
   chipPressed: {
     backgroundColor: colors.pressed,
@@ -256,46 +267,40 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     color: colors.inkFaint,
   },
-  groupCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.l,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    marginTop: spacing.m,
-    paddingVertical: spacing.s,
+
+  // Plain headers: no cards, rows sit straight on the paper. A full
+  // breath of air separates the groups; this is the variant's calm.
+  group: {
+    marginTop: spacing.air,
   },
-  completedCard: {
+  groupFirst: {
+    marginTop: spacing.s,
+  },
+  completedGroup: {
     opacity: 0.6,
-    marginTop: spacing.xl,
   },
   groupLabel: {
     fontSize: 11,
     lineHeight: 14,
     fontFamily: fonts.body,
     fontWeight: "600",
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     textTransform: "uppercase",
     paddingHorizontal: spacing.l,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.s,
+    marginBottom: spacing.m,
   },
-  groupRow: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.hairline,
-  },
-  groupRowFirst: {},
   completedLabel: {
     fontSize: 11,
     lineHeight: 14,
     fontFamily: fonts.body,
     fontWeight: "600",
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     textTransform: "uppercase",
     color: colors.inkFaint,
     paddingHorizontal: spacing.l,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.s,
+    marginBottom: spacing.m,
   },
+
   holder: {
     minHeight: 160,
     justifyContent: "center",

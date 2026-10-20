@@ -109,9 +109,15 @@ function buildTasks(): TaskItem[] {
       due: dueOn(3),
     }),
 
-    // No date.
+    // No date. These feed the planner's unscheduled tray; a few more
+    // than round 1 so the tray reads as a real holding pen.
     mock("Call Mum", {}),
     mock("Clear vault inbox", {
+      lists: ["[[Focus]]"],
+    }),
+    mock("Sketch reading-nook shelf", {}),
+    mock("Draft birthday card for Dad", {}),
+    mock("Compare standing desks", {
       lists: ["[[Focus]]"],
     }),
 
