@@ -80,6 +80,8 @@ export function CaptureSheet({
           ) : null}
           <View style={styles.actions}>
             <Pressable
+              accessibilityLabel="cycle target list"
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.chip,
                 pressed && styles.chipPressed,
@@ -92,6 +94,8 @@ export function CaptureSheet({
             </Pressable>
             <View style={{ flex: 1 }} />
             <Pressable
+              accessibilityLabel="add task"
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.send,
                 pressed && styles.sendPressed,

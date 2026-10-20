@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "../features/tasks/query";
-import { dayLabel, parseStoredDate, startOfDay } from "../lib/dates";
+import { parseStoredDate, startOfDay } from "../lib/dates";
 import { theme } from "../theme/tokens";
 
 /**
@@ -74,17 +74,16 @@ function startOfToday(): number {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 }
 
-/** Muted due info line: when it is due, red when it is past due. */
+/** Muted due info line: time only, red with an Overdue note when past due. */
 function secondaryLabel(
   due: { date: Date; hasTime: boolean },
   overdue: boolean,
-): string {
+): string | null {
   const time = due.hasTime ? formatTime(due.date) : null;
   if (overdue) {
     return time ? `Overdue · ${time}` : "Overdue";
   }
-  const label = dayLabel(due.date, new Date());
-  return time ? `${label} · ${time}` : label;
+  return time;
 }
 
 function formatTime(date: Date): string {
