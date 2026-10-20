@@ -137,5 +137,14 @@ export const radius = 6;
 export const radiusFloating = radius + 4;
 export const radii = { pill: 999 } as const;
 
+/**
+ * Day-spread drag physics: pointer travel that promotes a press into
+ * a drag, and how small either pane of the split may go.
+ */
+export const drag = {
+  threshold: 8,
+  minPane: 150,
+} as const;
+
 /** Reading measure: screens cap their content width on wide screens. */
 export const measure = 720;

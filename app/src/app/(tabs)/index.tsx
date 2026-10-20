@@ -12,7 +12,7 @@ import {
   toggleMockCompleted,
 } from "../../lib/mock";
 import { dayLabel } from "../../lib/dates";
-import { colors, fonts, spacing, radius, radii, measure } from "../../theme/tokens";
+import { colors, fonts, spacing, radius, radiusFloating, radii, measure } from "../../theme/tokens";
 
 /**
  * Variant D Lists tab, mock-driven for the design exploration.
@@ -33,10 +33,16 @@ export default function ListsScreen() {
     "loading",
   );
   const [tab, setTab] = React.useState<ListTab>("Main");
+  const [menu, setMenu] = React.useState<{
+    open: boolean;
+    top: number;
+    left: number;
+  } | null>(null);
   const [draft, setDraft] = React.useState<{
     text: string;
     targetIndex: number;
   } | null>(null);
+  const dotsRef = React.useRef<React.ComponentRef<typeof View>>(null);
 
   // Mock load. Status changes only in async callbacks, so the effect
   // does not set state synchronously. Loading starts as the initial
@@ -87,15 +93,38 @@ export default function ListsScreen() {
   ];
   const shown = sections.filter((section) => section.items.length > 0);
 
+  const openMenu = () => {
+    dotsRef.current?.measureInWindow((x, y, width, height) => {
+      setMenu({
+        open: true,
+        top: y + height + 4,
+        left: Math.max(x + width - 216, spacing.m),
+      });
+    });
+  };
+
+  const closeMenu = () => setMenu(null);
+
   return (
     <View style={styles.screen}>
+      {menu?.open ? (
+        // The backdrop sits under the menu card and swallows taps
+        // anywhere else, closing the menu.
+        <Pressable
+          style={styles.menuBackdrop}
+          onPress={closeMenu}
+          accessibilityLabel="close menu"
+          accessibilityRole="button"
+        />
+      ) : null}
       <View style={styles.body}>
         <FlatList
           contentContainerStyle={styles.content}
           data={[{ key: "lists" }]}
           renderItem={() => (
             <View>
-              {/* Clean top: the list tab bar, nothing above it. */}
+              {/* Clean top: the list tab bar, then the quiet
+                  sort and overflow controls on the right. */}
               <View style={styles.tabBar}>
                 {(["Focus", "Main"] as ListTab[]).map((name) => (
                   <Pressable
@@ -118,7 +147,27 @@ export default function ListsScreen() {
                     </Text>
                   </Pressable>
                 ))}
-                <Text style={styles.count}>{visible.length} open</Text>
+                <View style={styles.tabSpacer} />
+                <IconButton label="sort list">
+                  <View style={styles.glyphSort}>
+                    <View style={[styles.glyphSortBar, { width: 16 }]} />
+                    <View style={[styles.glyphSortBar, { width: 11 }]} />
+                    <View style={[styles.glyphSortBar, { width: 6 }]} />
+                  </View>
+                </IconButton>
+                <View ref={dotsRef}>
+                  <IconButton
+                    label="list menu"
+                    active={menu?.open ?? false}
+                    onPress={() => (menu?.open ? closeMenu() : openMenu())}
+                  >
+                    <View style={styles.glyphDots}>
+                      <View style={styles.glyphDot} />
+                      <View style={styles.glyphDot} />
+                      <View style={styles.glyphDot} />
+                    </View>
+                  </IconButton>
+                </View>
               </View>
 
               {status === "loading" ? <LoadingState /> : null}
@@ -171,7 +220,45 @@ export default function ListsScreen() {
         />
       </View>
 
-      {/* One bottom bar: nav left, capture field right. */}
+      {/* The overflow menu, anchored to the dots button. */}
+      {menu?.open ? (
+        <View style={[styles.menu, { top: menu.top, left: menu.left }]}>
+          {(
+            [
+              { key: "rename", label: "Rename list", danger: false },
+              { key: "delete-list", label: "Delete list", danger: true },
+              {
+                key: "clear-done",
+                label: "Delete all completed tasks",
+                danger: true,
+              },
+            ] as const
+          ).map((action) => (
+            <Pressable
+              key={action.key}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && styles.menuItemPressed,
+              ]}
+              // Visual only for this round: a tap just closes.
+              onPress={closeMenu}
+              accessibilityRole="button"
+              accessibilityLabel={action.label}
+            >
+              <Text
+                style={[
+                  styles.menuItemText,
+                  action.danger && styles.menuItemDanger,
+                ]}
+              >
+                {action.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {/* One bottom bar: nav left, capture button right. */}
       <BottomBar
         targets={TARGETS}
         defaultTargetIndex={tab === "Focus" ? 0 : 1}
@@ -197,6 +284,37 @@ export default function ListsScreen() {
 function inTabTasks(tasks: TaskItem[] | null, tab: ListTab): TaskItem[] {
   const all = tasks ?? [];
   return tab === "Focus" ? inMockFocus(all) : inMockMain(all);
+}
+
+/** A quiet 36pt glyph button: hover, pressed, and active states. */
+function IconButton({
+  label,
+  active,
+  onPress,
+  children,
+}: {
+  label: string;
+  active?: boolean;
+  onPress?: () => void;
+  children: React.ReactNode;
+}) {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.iconButton,
+        (hover || pressed) && styles.iconButtonHot,
+        active && styles.iconButtonActive,
+      ]}
+      onHoverIn={() => setHover(true)}
+      onHoverOut={() => setHover(false)}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      {children}
+    </Pressable>
+  );
 }
 
 const toneLabel = (() => {
@@ -277,6 +395,84 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontFamily: fonts.body,
     color: colors.inkFaint,
+  },
+  tabSpacer: {
+    flex: 1,
+  },
+
+  // Quiet top-right controls: sort glyph and the three-dot overflow.
+  iconButton: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius,
+  },
+  iconButtonHot: {
+    backgroundColor: colors.pressed,
+  },
+  iconButtonActive: {
+    backgroundColor: colors.accentSoft,
+  },
+  glyphSort: {
+    alignItems: "flex-end" as const,
+    gap: 3,
+  },
+  glyphSortBar: {
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.inkMuted,
+  },
+  glyphDots: {
+    alignItems: "center" as const,
+    gap: 2.5,
+  },
+  glyphDot: {
+    width: 3.5,
+    height: 3.5,
+    borderRadius: 1.75,
+    backgroundColor: colors.inkMuted,
+  },
+
+  // The overflow menu: a small floating card on a full-screen
+  // invisible backdrop.
+  menuBackdrop: {
+    position: "absolute" as const,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  menu: {
+    position: "absolute" as const,
+    width: 216,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radiusFloating,
+    paddingVertical: spacing.xs,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  menuItem: {
+    minHeight: 40,
+    justifyContent: "center",
+    paddingHorizontal: spacing.m,
+  },
+  menuItemPressed: {
+    backgroundColor: colors.pressed,
+  },
+  menuItemText: {
+    fontSize: 14,
+    lineHeight: 19,
+    fontFamily: fonts.body,
+    color: colors.ink,
+  },
+  menuItemDanger: {
+    color: colors.danger,
   },
 
   // Plain groups: a header on the paper, flush rows beneath.

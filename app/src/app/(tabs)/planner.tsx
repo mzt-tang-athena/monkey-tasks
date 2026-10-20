@@ -2,20 +2,23 @@ import * as React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
+import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../components/TaskRow";
 import { CaptureSheet } from "../../components/CaptureSheet";
 import { BottomBar } from "../../components/BottomBar";
 import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
-import { addDays, parseStoredDate, startOfDay } from "../../lib/dates";
-import { colors, fonts, spacing, radius, radii, measure } from "../../theme/tokens";
+import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
+import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag } from "../../theme/tokens";
+import type { PointerEvent as RNPointerEvent } from "react-native";
 
 /**
- * The consolidated Planner tab. Day mode is the hero: a compact
- * header (toggle pills, short serif date, accent rule), then D's body
- * - the hour-ruler timeline with tasks pinned at their times, the
- * live now line, and the unscheduled tray docked at the foot. Week is
- * F's horizontal canvas of day columns; month stays a card with dots
- * and lists a day's tasks on tap.
+ * The consolidated Planner tab. Day mode is a fixed split: the
+ * hour-ruler timeline on top, the dashed drop line as the divider
+ * between it and the full today-list below, and a grabber on the
+ * line that resizes the two panes. Tasks drag between the list and
+ * the ruler; a drop writes the slot's hour onto the task. Week is
+ * F's horizontal canvas of day columns; month stays a card with
+ * dots and lists a day's tasks on tap.
  */
 type Mode = "day" | "week" | "month";
 
@@ -92,6 +95,17 @@ export default function PlannerScreen() {
     );
   };
 
+  // The day spread's drag-and-drop writes due times through here.
+  const updateTask = (task: TaskItem, patch: Partial<TaskFrontmatter>) => {
+    setTasks((current) =>
+      (current ?? []).map((item) =>
+        item.uri === task.uri
+          ? { ...item, data: { ...(item.data as TaskFrontmatter), ...patch } }
+          : item,
+      ),
+    );
+  };
+
   const all = tasks ?? [];
   const groups = groupByDue(all, new Date());
   const open = [...groups.overdue, ...groups.today, ...groups.undated];
@@ -101,77 +115,57 @@ export default function PlannerScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Period strip above the pills: days, weeks, or months to
-            match the mode. Tapping a period jumps to it. */}
-        <PeriodStrip
-          mode={mode}
-          selected={selected}
+      {status === "ready" && mode === "day" ? (
+        // Day mode leaves the page scroll: it is a fixed split of
+        // timeline and list, sized by the grabber between them.
+        <DaySpread
+          date={selected}
           today={new Date()}
-          tasks={open}
-          onSelect={setSelected}
+          tasks={all}
+          openTasks={open}
+          onMode={setMode}
+          onSelectStrip={setSelected}
+          onToggle={toggle}
+          onUpdate={updateTask}
         />
-
-        {/* E's economy: the toggle pills lead the header block. */}
-        <View style={styles.segmented}>
-          {(["day", "week", "month"] as Mode[]).map((option) => (
-            <Pressable
-              key={option}
-              style={({ pressed }) => [
-                styles.segment,
-                mode === option && styles.segmentActive,
-                pressed && styles.pressedFill,
-              ]}
-              onPress={() => setMode(option)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: mode === option }}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  mode === option && styles.segmentTextActive,
-                ]}
-              >
-                {option === "day" ? "Day" : option === "week" ? "Week" : "Month"}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {status === "loading" ? <LoadingState /> : null}
-        {status === "error" ? (
-          <EmptyState label="Something went wrong. Pull to retry." />
-        ) : null}
-
-        {status === "ready" && mode === "day" ? (
-          <DaySpread
-            date={selected}
-            today={new Date()}
-            tasks={all}
-            onToggle={toggle}
-          />
-        ) : null}
-        {status === "ready" && mode === "week" ? (
-          <WeekView
-            tasks={open}
-            today={new Date()}
+      ) : (
+        <ScrollView contentContainerStyle={styles.content}>
+          <PlannerHeader
+            mode={mode}
             selected={selected}
-            onSelect={setSelected}
-          />
-        ) : null}
-        {status === "ready" && mode === "month" ? (
-          <MonthView
-            viewMonth={startOfMonth(selected)}
             today={new Date()}
             tasks={open}
-            onToggle={toggle}
-            onOpenDay={(day) => {
-              setSelected(day);
-              setMode("day");
-            }}
+            onSelect={setSelected}
+            onMode={setMode}
           />
-        ) : null}
-      </ScrollView>
+
+          {status === "loading" ? <LoadingState /> : null}
+          {status === "error" ? (
+            <EmptyState label="Something went wrong. Pull to retry." />
+          ) : null}
+
+          {status === "ready" && mode === "week" ? (
+            <WeekView
+              tasks={open}
+              today={new Date()}
+              selected={selected}
+              onSelect={setSelected}
+            />
+          ) : null}
+          {status === "ready" && mode === "month" ? (
+            <MonthView
+              viewMonth={startOfMonth(selected)}
+              today={new Date()}
+              tasks={open}
+              onToggle={toggle}
+              onOpenDay={(day) => {
+                setSelected(day);
+                setMode("day");
+              }}
+            />
+          ) : null}
+        </ScrollView>
+      )}
 
       {/* One bottom bar: nav left, capture field right. */}
       <BottomBar
@@ -197,30 +191,196 @@ export default function PlannerScreen() {
   );
 }
 
+/* ------------------------------------------------------------- header */
+
+/** The shared top block: period strip and the mode pills. */
+function PlannerHeader({
+  mode,
+  selected,
+  today,
+  tasks,
+  onSelect,
+  onMode,
+}: {
+  mode: Mode;
+  selected: Date;
+  today: Date;
+  tasks: TaskItem[];
+  onSelect: (date: Date) => void;
+  onMode: (mode: Mode) => void;
+}) {
+  return (
+    <View>
+      {/* Period strip above the pills: days, weeks, or months to
+          match the mode. Tapping a period jumps to it. */}
+      <PeriodStrip
+        mode={mode}
+        selected={selected}
+        today={today}
+        tasks={tasks}
+        onSelect={onSelect}
+      />
+
+      {/* E's economy: the toggle pills lead the header block. */}
+      <View style={styles.segmented}>
+        {(["day", "week", "month"] as Mode[]).map((option) => (
+          <Pressable
+            key={option}
+            style={({ pressed }) => [
+              styles.segment,
+              mode === option && styles.segmentActive,
+              pressed && styles.pressedFill,
+            ]}
+            onPress={() => onMode(option)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: mode === option }}
+          >
+            <Text
+              style={[
+                styles.segmentText,
+                mode === option && styles.segmentTextActive,
+              ]}
+            >
+              {option === "day" ? "Day" : option === "week" ? "Week" : "Month"}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 /* ---------------------------------------------------------------- day */
 
 function DaySpread({
   date,
   today,
   tasks,
+  openTasks,
+  onMode,
+  onSelectStrip,
   onToggle,
+  onUpdate,
 }: {
   date: Date;
   today: Date;
   tasks: TaskItem[];
+  openTasks: TaskItem[];
+  onMode: (mode: Mode) => void;
+  onSelectStrip: (date: Date) => void;
   onToggle: (task: TaskItem) => void;
+  onUpdate: (task: TaskItem, patch: Partial<TaskFrontmatter>) => void;
 }) {
+  const [rootHeight, setRootHeight] = React.useState(0);
+  const [rootX, setRootX] = React.useState(0);
+  const [timelineHeight, setTimelineHeight] = React.useState(320);
+  // A press waiting to travel: promoted to a drag past the threshold.
+  const [pending, setPending] = React.useState<{
+    task: TaskItem;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [dragging, setDragging] = React.useState<{
+    task: TaskItem;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [hoverHour, setHoverHour] = React.useState<number | null>(null);
+  const [resizing, setResizing] = React.useState<{
+    y: number;
+    height: number;
+  } | null>(null);
+  const [grabHot, setGrabHot] = React.useState(false);
+  const moved = React.useRef(false);
+  const suppressClick = React.useRef(false);
+
   const sameDay = startOfDay(today).getTime() === startOfDay(date).getTime();
   const groups = groupByDue(tasks, today);
   const overdue = sameDay ? groups.overdue : [];
   const dayTasks = sameDay ? groups.today : tasksForDay(tasks, date);
   const timed = dayTasks.filter(hasTime);
-  const untimed = dayTasks.filter((task) => !hasTime(task));
-  // Undated open tasks wait in the tray on every day spread.
-  const tray = groups.undated;
+
+  const maxTimeline = Math.max(rootHeight - drag.minPane, drag.minPane);
+
+  const startTaskDrag = (task: TaskItem, e: RNPointerEvent) => {
+    moved.current = false;
+    setPending({ task, x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+  };
+
+  // A drag that ends back on its source must not also toggle it.
+  const guardedToggle = (task: TaskItem) => {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
+    onToggle(task);
+  };
+
+  const onPointerMove = (e: RNPointerEvent) => {
+    const x = e.nativeEvent.pageX;
+    const y = e.nativeEvent.pageY;
+    if (resizing) {
+      const grown = resizing.height + (resizing.y - y);
+      setTimelineHeight(
+        Math.min(Math.max(grown, drag.minPane), Math.max(maxTimeline, drag.minPane)),
+      );
+      return;
+    }
+    if (pending) {
+      const travel = Math.abs(x - pending.x) + Math.abs(y - pending.y);
+      if (travel > drag.threshold) {
+        moved.current = true;
+        setDragging({ task: pending.task, x, y });
+        setPending(null);
+      }
+      return;
+    }
+    if (dragging) {
+      setDragging({ ...dragging, x, y });
+    }
+  };
+
+  const onPointerUp = () => {
+    if (resizing) {
+      setResizing(null);
+      return;
+    }
+    if (dragging) {
+      if (hoverHour != null) {
+        onUpdate(dragging.task, { due: withTime(date, hoverHour) });
+      }
+      // Swallow the click that follows a drop onto the source row.
+      suppressClick.current = true;
+      setTimeout(() => {
+        suppressClick.current = false;
+      }, 350);
+      setDragging(null);
+      setHoverHour(null);
+    }
+    setPending(null);
+    moved.current = false;
+  };
 
   return (
-    <View>
+    <View
+      style={styles.dayRoot}
+      onLayout={(e) => {
+        setRootHeight(e.nativeEvent.layout.height);
+        setRootX(e.nativeEvent.layout.x);
+      }}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+    >
+      <PlannerHeader
+        mode="day"
+        selected={date}
+        today={today}
+        tasks={openTasks}
+        onSelect={onSelectStrip}
+        onMode={onMode}
+      />
+
       {/* Compact day heading: eyebrow, short serif date, accent rule. */}
       <Text style={styles.dateMonth}>
         {MONTHS[date.getMonth()]} {date.getFullYear()}
@@ -230,41 +390,112 @@ function DaySpread({
       </Text>
       <View style={styles.dateRule} />
 
-      {overdue.length > 0 ? (
-        <View style={styles.overdueBlock}>
-          <Text style={styles.overdueLabel}>Overdue  {overdue.length}</Text>
-          {overdue.map((task) => (
-            <TaskRow key={task.uri} task={task} onToggle={onToggle} />
-          ))}
-        </View>
-      ) : null}
+      {/* The timeline pane: the ruler, resizable by the grabber. */}
+      <View style={[styles.pane, { height: timelineHeight }]}>
+        <Text style={styles.sectionLabel}>Timeline  {timed.length}</Text>
+        <ScrollView
+          style={styles.paneScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <Timeline
+            tasks={timed}
+            isToday={sameDay}
+            now={today}
+            dragActive={dragging != null}
+            hoverHour={hoverHour}
+            onHoverSlot={setHoverHour}
+            onToggle={guardedToggle}
+            onDragStart={startTaskDrag}
+          />
+        </ScrollView>
+      </View>
 
-      {/* Untimed tasks for the day, before the ruler. */}
-      {untimed.length > 0 ? (
-        <View style={styles.anytimeBlock}>
-          <Text style={styles.sectionLabel}>Anytime  {untimed.length}</Text>
-          {untimed.map((task, index) => (
-            <View
-              key={task.uri}
-              style={index > 0 ? styles.groupRow : undefined}
-            >
-              <TaskRow task={task} onToggle={onToggle} />
+      {/* The dashed drop line IS the divider: quiet until a drag
+          starts. The grabber on it resizes the split. */}
+      <View style={styles.divider}>
+        <View
+          style={[
+            styles.dividerLine,
+            (dragging != null || resizing != null) && styles.dividerActive,
+          ]}
+        />
+        <Pressable
+          style={({ pressed }) => [
+            styles.grabberHit,
+            (grabHot || pressed) && styles.grabberHitHot,
+          ]}
+          onHoverIn={() => setGrabHot(true)}
+          onHoverOut={() => setGrabHot(false)}
+          onPointerDown={(e) => {
+            setResizing({
+              y: e.nativeEvent.pageY,
+              height: timelineHeight,
+            });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="resize timeline"
+        >
+          <View
+            style={[
+              styles.grabberBar,
+              (grabHot || resizing != null || dragging != null) &&
+                styles.grabberBarActive,
+            ]}
+          />
+        </Pressable>
+      </View>
+
+      {/* The task list pane: all of today's tasks, timed ones with
+          their time. Dragging a row up into the ruler sets its time. */}
+      <View style={styles.paneList}>
+        <Text style={styles.sectionLabel}>Today  {dayTasks.length}</Text>
+        <ScrollView
+          style={styles.paneScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          {overdue.length > 0 ? (
+            <View style={styles.overdueBlock}>
+              <Text style={styles.overdueLabel}>Overdue  {overdue.length}</Text>
+              {overdue.map((task) => (
+                <View
+                  key={task.uri}
+                  onPointerDown={(e) => startTaskDrag(task, e)}
+                >
+                  <TaskRow task={task} onToggle={guardedToggle} />
+                </View>
+              ))}
             </View>
-          ))}
+          ) : null}
+          {dayTasks.length > 0 ? (
+            dayTasks.map((task, index) => (
+              <View
+                key={task.uri}
+                style={index > 0 ? styles.groupRow : undefined}
+                onPointerDown={(e) => startTaskDrag(task, e)}
+              >
+                <TaskRow task={task} onToggle={guardedToggle} />
+              </View>
+            ))
+          ) : (
+            <Text style={styles.empty}>Nothing scheduled today.</Text>
+          )}
+        </ScrollView>
+      </View>
+
+      {/* The drag ghost, riding just above the pointer. */}
+      {dragging ? (
+        <View
+          pointerEvents="none"
+          style={[styles.dragGhost, { left: dragging.x - rootX - 100, top: dragging.y - 40 }]}
+        >
+          <View style={styles.dragGhostChip}>
+            <View style={styles.ghostBar} />
+            <Text style={styles.dragGhostText} numberOfLines={1}>
+              {dragging.task.name}
+            </Text>
+          </View>
         </View>
       ) : null}
-
-      {/* The hour ruler, with drop targets when the tray has tasks. */}
-      <Text style={styles.sectionLabel}>Timeline</Text>
-      <Timeline
-        tasks={timed}
-        isToday={sameDay}
-        showDropTargets={tray.length > 0}
-        onToggle={onToggle}
-      />
-
-      {/* Undated tasks, docked at the foot of the spread. */}
-      <UnscheduledTray tasks={tray} />
     </View>
   );
 }
@@ -273,15 +504,22 @@ function DaySpread({
 function Timeline({
   tasks,
   isToday,
-  showDropTargets,
+  now,
+  dragActive,
+  hoverHour,
+  onHoverSlot,
   onToggle,
+  onDragStart,
 }: {
   tasks: TaskItem[];
   isToday: boolean;
-  showDropTargets: boolean;
+  now: Date;
+  dragActive: boolean;
+  hoverHour: number | null;
+  onHoverSlot: (hour: number | null) => void;
   onToggle: (task: TaskItem) => void;
+  onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
 }) {
-  const now = new Date();
   const hours: TaskItem[][] = [];
   for (let h = RULER_START; h <= RULER_END; h++) {
     hours[h] = [];
@@ -295,11 +533,8 @@ function Timeline({
     hours[slot].push(task);
   }
 
-  // One convincing drop target: the next free hour on today's ruler.
-  const ghostHour = showDropTargets ? nextFreeHour(hours, isToday, now) : null;
-
   return (
-    <View style={styles.ruler}>
+    <View style={styles.ruler} onPointerLeave={() => onHoverSlot(null)}>
       {hours.map((slotTasks, hour) => {
         const children: React.ReactNode[] = [];
         let placedNow = false;
@@ -314,19 +549,29 @@ function Timeline({
             placedNow = true;
           }
           children.push(
-            <HourTask key={task.uri} task={task} onToggle={onToggle} />,
+            <HourTask
+              key={task.uri}
+              task={task}
+              onToggle={onToggle}
+              onDragStart={onDragStart}
+            />,
           );
         }
         if (isToday && hour === now.getHours() && !placedNow) {
           children.push(<NowLine key="now" />);
         }
-        if (hour === ghostHour) {
-          children.push(<DropSlot key="drop" />);
-        }
         return (
           <View
             key={hour}
-            style={[styles.rulerRow, showDropTargets ? styles.rulerRowDrop : null]}
+            style={[
+              styles.rulerRow,
+              dragActive && hoverHour === hour && styles.rulerRowHover,
+            ]}
+            onPointerEnter={() => {
+              if (dragActive) {
+                onHoverSlot(hour);
+              }
+            }}
           >
             <Text style={styles.rulerMark}>{labelHour(hour)}</Text>
             <View style={styles.rulerSlot}>{children}</View>
@@ -340,9 +585,11 @@ function Timeline({
 function HourTask({
   task,
   onToggle,
+  onDragStart,
 }: {
   task: TaskItem;
   onToggle: (task: TaskItem) => void;
+  onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
 }) {
   const [pressed, setPressed] = React.useState(false);
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
@@ -354,6 +601,7 @@ function HourTask({
       onHoverOut={() => setPressed(false)}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
+      onPointerDown={(e) => onDragStart(task, e)}
       accessibilityLabel={onToggle != null ? "mark done" : undefined}
       accessibilityRole="button"
       style={[styles.hourTask, pressed && styles.hourTaskPressed]}
@@ -371,50 +619,11 @@ function HourTask({
   );
 }
 
-/** A dashed drop slot on the ruler, where a tray task would land. */
-function DropSlot() {
-  return (
-    <View style={styles.dropSlot}>
-      <View style={styles.dropSlotNotch} />
-      <Text style={styles.dropSlotText}>drop here</Text>
-    </View>
-  );
-}
-
 function NowLine() {
   return (
     <View style={styles.nowLineRow}>
       <View style={styles.nowDot} />
       <View style={styles.nowLine} />
-    </View>
-  );
-}
-
-/** The unscheduled tray: undated tasks docked at the spread's foot. */
-function UnscheduledTray({ tasks }: { tasks: TaskItem[] }) {
-  if (tasks.length === 0) {
-    return null;
-  }
-  return (
-    <View style={styles.tray}>
-      <View style={styles.trayEdge} />
-      <View style={styles.trayHead}>
-        <Text style={styles.trayLabel}>Unscheduled  {tasks.length}</Text>
-        <Text style={styles.trayHint}>drag onto the timeline</Text>
-      </View>
-      <View style={styles.trayChips}>
-        {tasks.map((task) => (
-          <View key={task.uri} style={styles.trayChip}>
-            <View style={styles.trayGrip}>
-              <View style={styles.trayGripDot} />
-              <View style={styles.trayGripDot} />
-            </View>
-            <Text style={styles.trayChipText} numberOfLines={1}>
-              {task.name}
-            </Text>
-          </View>
-        ))}
-      </View>
     </View>
   );
 }
@@ -860,19 +1069,15 @@ function minuteOf(task: TaskItem): number {
   return due?.date.getMinutes() ?? 0;
 }
 
-/** The first hour from now with no tasks, for the drop-slot ghost. */
-function nextFreeHour(
-  hours: TaskItem[][],
-  isToday: boolean,
-  now: Date,
-): number | null {
-  const from = isToday ? now.getHours() : RULER_START;
-  for (let h = Math.max(from, RULER_START); h <= RULER_END; h++) {
-    if ((hours[h] ?? []).length === 0) {
-      return h;
-    }
-  }
-  return null;
+/**
+ * The due string a drop writes: the shown day at the slot's hour,
+ * minutes zeroed. Dropping always schedules onto the day in view.
+ */
+function withTime(day: Date, hour: number): string {
+  return formatLocal(
+    new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0),
+    true,
+  );
 }
 
 function labelHour(hour: number): string {
@@ -1085,9 +1290,6 @@ const styles = StyleSheet.create({
     color: colors.danger,
     marginBottom: spacing.xs,
   },
-  anytimeBlock: {
-    marginBottom: spacing.l,
-  },
   sectionLabel: {
     fontSize: 11,
     lineHeight: 14,
@@ -1104,9 +1306,7 @@ const styles = StyleSheet.create({
   },
 
   // hour ruler
-  ruler: {
-    marginBottom: spacing.l,
-  },
+  ruler: {},
   rulerRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -1114,9 +1314,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.hairline,
   },
-  rulerRowDrop: {
-    borderBottomColor: colors.accentSoft,
-    borderBottomWidth: 2,
+  rulerRowHover: {
+    backgroundColor: colors.accentSoft,
   },
   rulerMark: {
     width: 56,
@@ -1171,30 +1370,6 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     fontVariant: ["tabular-nums"],
   },
-  dropSlot: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    borderWidth: 1.5,
-    borderColor: colors.inkFaint,
-    borderRadius: radius,
-    borderStyle: "dashed",
-    padding: spacing.s,
-    minHeight: 36,
-  },
-  dropSlotNotch: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.accentSoft,
-  },
-  dropSlotText: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: fonts.body,
-    color: colors.inkFaint,
-    fontStyle: "italic",
-  },
   nowLineRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1214,76 +1389,91 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
 
-  // unscheduled tray, docked at the foot of the spread
-  tray: {
-    backgroundColor: colors.pressed,
-    borderRadius: radius,
-    padding: spacing.m,
-    marginBottom: spacing.m,
+  // day split: fixed header over two panes, sized by the grabber
+  dayRoot: {
+    flex: 1,
+    width: "100%" as const,
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    paddingHorizontal: 26,
   },
-  trayEdge: {
-    alignSelf: "stretch" as const,
-    height: 0,
+  pane: {},
+  paneList: {
+    flex: 1,
+  },
+  paneScroll: {
+    flex: 1,
+  },
+  divider: {
+    height: 28,
+    justifyContent: "center",
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  dividerLine: {
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    top: 13,
     borderTopWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: colors.inkFaint,
-    marginBottom: spacing.m,
-  },
-  trayHead: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    marginBottom: spacing.s,
-  },
-  trayLabel: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontFamily: fonts.body,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    color: colors.accent,
-  },
-  trayHint: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: fonts.body,
-    color: colors.inkFaint,
-    fontStyle: "italic",
-  },
-  trayChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.s,
-  },
-  trayChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
-    borderRadius: radii.pill,
-    paddingLeft: spacing.s,
-    paddingRight: spacing.m,
-    paddingVertical: spacing.s,
-    maxWidth: "100%" as const,
   },
-  trayGrip: {
-    alignItems: "center",
-    gap: 2,
+  dividerActive: {
+    borderTopColor: colors.accent,
   },
-  trayGripDot: {
-    width: 10,
-    height: 2,
-    borderRadius: 1,
+  grabberHit: {
+    alignSelf: "center" as const,
+    width: 72,
+    height: 28,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: radius,
+  },
+  grabberHitHot: {
+    backgroundColor: colors.pressed,
+  },
+  grabberBar: {
+    width: 44,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.inkFaint,
   },
-  trayChipText: {
+  grabberBarActive: {
+    backgroundColor: colors.accent,
+  },
+  dragGhost: {
+    position: "absolute" as const,
+    width: 200,
+    zIndex: 20,
+  },
+  dragGhostChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.s,
+    backgroundColor: colors.accent,
+    borderRadius: radiusFloating,
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.s,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 5,
+  },
+  ghostBar: {
+    width: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.onAccent,
+    minHeight: 20,
+  },
+  dragGhostText: {
+    flex: 1,
     fontSize: 13,
     lineHeight: 18,
     fontFamily: fonts.body,
-    color: colors.ink,
+    color: colors.onAccent,
+    fontWeight: "600",
   },
 
   // week canvas: horizontally scrolling day columns
