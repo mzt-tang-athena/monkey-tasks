@@ -7,7 +7,7 @@ import { CaptureSheet } from "../../components/CaptureSheet";
 import { BottomBar } from "../../components/BottomBar";
 import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
 import { addDays, parseStoredDate, startOfDay } from "../../lib/dates";
-import { colors, fonts, spacing, radii, measure } from "../../theme/tokens";
+import { colors, fonts, spacing, radius, radii, measure } from "../../theme/tokens";
 
 /**
  * The consolidated Planner tab. Day mode is the hero: a compact
@@ -102,6 +102,18 @@ export default function PlannerScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
+        {/* 7-day strip above the mode pills: small date cells, today
+            highlighted; picking a day lands you in Day mode. */}
+        <DayStrip
+          selected={selected}
+          today={new Date()}
+          tasks={open}
+          onSelect={(day) => {
+            setSelected(day);
+            setMode("day");
+          }}
+        />
+
         {/* E's economy: the toggle pills lead the header block. */}
         <View style={styles.segmented}>
           {(["day", "week", "month"] as Mode[]).map((option) => (
@@ -605,6 +617,70 @@ function MonthView({
 
 /* ----------------------------------------------------------- helpers */
 
+/** The 7-day strip: today first, a tap selects the day. */
+function DayStrip({
+  selected,
+  today,
+  tasks,
+  onSelect,
+}: {
+  selected: Date;
+  today: Date;
+  tasks: TaskItem[];
+  onSelect: (date: Date) => void;
+}) {
+  const todayStart = startOfDay(today).getTime();
+  const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(today, offset));
+  const busy = new Set(
+    tasks
+      .map((task) => (task.data?.due ? parseStoredDate(task.data.due) : null))
+      .filter((due) => due != null)
+      .map((due) => isoOf(due!.date)),
+  );
+  return (
+    <View style={styles.strip}>
+      {days.map((day) => {
+        const active = isSameDay(day, selected);
+        const isToday = startOfDay(day).getTime() === todayStart;
+        return (
+          <Pressable
+            key={day.getTime()}
+            style={({ pressed }) => [
+              styles.stripDay,
+              active && styles.stripDayActive,
+              isToday && !active && styles.stripDayToday,
+              pressed && styles.pressedFill,
+            ]}
+            onPress={() => onSelect(day)}
+            accessibilityRole="button"
+            accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
+          >
+            <Text
+              style={[
+                styles.stripName,
+                active && styles.stripNameActive,
+                isToday && !active && styles.stripNameToday,
+              ]}
+            >
+              {WEEKDAYS[day.getDay()]}
+            </Text>
+            <Text
+              style={[
+                styles.stripNum,
+                active && styles.stripNumActive,
+                isToday && !active && styles.stripNumToday,
+                !active && busy.has(isoOf(day)) ? styles.stripNumBusy : null,
+              ]}
+            >
+              {day.getDate()}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 function tasksForDay(tasks: TaskItem[], day: Date): TaskItem[] {
   const iso = isoOf(day);
   return tasks.filter(
@@ -712,11 +788,63 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pressed,
   },
 
+  // 7-day strip, above the pills
+  strip: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: spacing.s,
+  },
+  stripDay: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 44,
+    height: 52,
+    borderRadius: radius,
+  },
+  stripDayActive: {
+    backgroundColor: colors.accent,
+  },
+  stripDayToday: {
+    backgroundColor: colors.accentSoft,
+  },
+  stripName: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    letterSpacing: 0.5,
+  },
+  stripNameActive: {
+    color: colors.onAccent,
+  },
+  stripNameToday: {
+    color: colors.accent,
+    fontWeight: "600",
+  },
+  stripNum: {
+    fontSize: 16,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    color: colors.ink,
+    marginTop: 2,
+  },
+  stripNumActive: {
+    color: colors.onAccent,
+    fontWeight: "600",
+  },
+  stripNumToday: {
+    color: colors.accent,
+    fontWeight: "700",
+  },
+  stripNumBusy: {
+    fontWeight: "600",
+  },
+
   // segmented toggle, E's tighter spacing
   segmented: {
     flexDirection: "row",
     backgroundColor: colors.surface,
-    borderRadius: radii.m,
+    borderRadius: radius,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     padding: 3,
@@ -727,7 +855,7 @@ const styles = StyleSheet.create({
     minHeight: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radii.s,
+    borderRadius: radius,
   },
   segmentActive: {
     backgroundColor: colors.accent,
@@ -833,7 +961,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     backgroundColor: colors.surface,
-    borderRadius: radii.m,
+    borderRadius: radius,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     padding: spacing.s,
@@ -874,7 +1002,7 @@ const styles = StyleSheet.create({
     gap: spacing.s,
     borderWidth: 1.5,
     borderColor: colors.inkFaint,
-    borderRadius: radii.m,
+    borderRadius: radius,
     borderStyle: "dashed",
     padding: spacing.s,
     minHeight: 36,
@@ -914,7 +1042,7 @@ const styles = StyleSheet.create({
   // unscheduled tray, docked at the foot of the spread
   tray: {
     backgroundColor: colors.pressed,
-    borderRadius: radii.l,
+    borderRadius: radius,
     padding: spacing.m,
     marginBottom: spacing.m,
   },
@@ -995,7 +1123,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
-    borderRadius: radii.m,
+    borderRadius: radius,
     padding: spacing.s,
     minHeight: 240,
   },
@@ -1034,7 +1162,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: spacing.xs,
     backgroundColor: colors.paper,
-    borderRadius: radii.s,
+    borderRadius: radius,
     padding: spacing.xs,
     marginBottom: spacing.xs,
   },
@@ -1065,7 +1193,7 @@ const styles = StyleSheet.create({
   },
   monthCard: {
     backgroundColor: colors.surface,
-    borderRadius: radii.l,
+    borderRadius: radius,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     padding: spacing.m,
@@ -1093,7 +1221,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 3,
-    borderRadius: radii.m,
+    borderRadius: radius,
   },
   monthCellPicked: {
     backgroundColor: colors.accentSoft,
@@ -1133,7 +1261,7 @@ const styles = StyleSheet.create({
     minHeight: 32,
     justifyContent: "center",
     paddingHorizontal: spacing.m,
-    borderRadius: radii.m,
+    borderRadius: radius,
   },
   monthDayOpenText: {
     fontSize: 13,
@@ -1154,7 +1282,7 @@ const styles = StyleSheet.create({
   },
   skeleton: {
     height: 14,
-    borderRadius: 7,
+    borderRadius: radii.pill,
     backgroundColor: colors.hairline,
     marginVertical: spacing.m,
   },

@@ -12,7 +12,7 @@ import {
   toggleMockCompleted,
 } from "../../lib/mock";
 import { dayLabel } from "../../lib/dates";
-import { colors, fonts, spacing, radii, measure } from "../../theme/tokens";
+import { colors, fonts, spacing, radius, radii, measure } from "../../theme/tokens";
 
 /**
  * Variant D Lists tab, mock-driven for the design exploration.
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   },
   chipPressed: {
     backgroundColor: colors.pressed,
-    borderRadius: radii.m,
+    borderRadius: radius,
   },
   tabText: {
     fontSize: 16,
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   },
   skeleton: {
     height: 14,
-    borderRadius: 7,
+    borderRadius: radii.pill,
     backgroundColor: colors.hairline,
     marginVertical: spacing.m,
   },

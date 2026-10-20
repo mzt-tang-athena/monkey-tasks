@@ -7,7 +7,7 @@ import {
   exactAlarmState,
   scheduleAt,
 } from "../features/reminders/schedule";
-import { THEMES, colors, setDevTheme, type ThemeName } from "../theme/tokens";
+import { THEMES, colors, radius, setDevTheme, type ThemeName } from "../theme/tokens";
 
 /**
  * Dev-only diagnostics from the spike: alarm state, scheduled
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   button: {
     alignSelf: "flex-start",
     backgroundColor: colors.accent,
-    borderRadius: 8,
+    borderRadius: radius,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 4,
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   swatch: {
     width: 32,
     height: 32,
-    borderRadius: 8,
+    borderRadius: radius,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
   },

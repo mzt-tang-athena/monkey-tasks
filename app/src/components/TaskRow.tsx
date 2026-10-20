@@ -2,7 +2,7 @@ import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "../features/tasks/query";
 import { parseStoredDate } from "../lib/dates";
-import { colors, fonts, spacing } from "../theme/tokens";
+import { colors, fonts, spacing, radii } from "../theme/tokens";
 
 export function TaskRow({
   task,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   circle: {
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: radii.pill,
     borderWidth: 1.5,
     borderColor: colors.inkFaint,
     alignItems: "center",

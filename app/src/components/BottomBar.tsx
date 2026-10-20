@@ -1,10 +1,19 @@
 import * as React from "react";
-import { Platform, Pressable, StyleSheet, Text, TextInput, View, type TextStyle } from "react-native";
+import {
+  Animated,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextStyle,
+} from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { parseCapture, type ParsedCapture } from "../features/capture/parse";
 import type { CaptureTarget } from "../features/capture/write";
-import { colors, fonts, spacing, radii } from "../theme/tokens";
+import { colors, fonts, spacing, radius, radii } from "../theme/tokens";
 
 // Web keeps a focus ring, but themed to the accent instead of the
 // browser default black. The longhands are web-only styles.
@@ -19,11 +28,11 @@ const webFocusRing = Platform.select({
 
 /**
  * The single bottom bar, shared by both tabs. Left: the Lists and
- * Planner nav items, icon plus label with an active dot. Right: the
- * capture field, a compact rounded rect with the send button inside
- * its right edge. The target-list pill is hidden until the field is
- * focused; focusing also expands the bar upward to show the parse
- * preview and the details affordance.
+ * Planner nav items, icon plus label, selection carried by weight
+ * and color alone. Right: the capture field, a fully rounded pill,
+ * kept narrow so the nav gets clear breathing space. Focusing expands
+ * the composer up and out with an animated panel: the parse preview,
+ * with the target pill and send controls alongside.
  */
 export function BottomBar({
   targets,
@@ -44,9 +53,20 @@ export function BottomBar({
   const [focused, setFocused] = React.useState(false);
   const [sending, setSending] = React.useState(false);
 
+  // The expansion value drives the up-and-out panel animation.
+  const [expand] = React.useState(() => new Animated.Value(0));
+  const expanded = focused || text.trim() !== "";
+
+  React.useEffect(() => {
+    Animated.timing(expand, {
+      toValue: expanded ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [expand, expanded]);
+
   const parsed = text.trim() ? parseCapture(text) : null;
   const canSend = text.trim() !== "" && !sending;
-  const expanded = focused || text.trim() !== "";
 
   const send = () => {
     const capture = parsed;
@@ -61,40 +81,58 @@ export function BottomBar({
 
   return (
     <View style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}>
-      {/* Expanded state: the parse preview grows upward from the field. */}
-      {expanded ? (
-        <View style={styles.previewRow}>
-          {parsed && parsed.name !== "" ? (
-            <Text style={styles.preview} numberOfLines={1}>
-              {parsed.matches?.length
-                ? `parsed: ${parsed.matches.map((m) => m.text).join(", ")}`
-                : "no date"}
-              {" -> "}
-              {parsed.name}
-            </Text>
-          ) : (
-            <Text style={[styles.preview, styles.previewHint]}>
-              {'Try "tomorrow" or "friday 9am" for a date.'}
-            </Text>
-          )}
-          {onOpenDetails != null && text.trim() !== "" ? (
-            <Pressable
-              style={({ pressed }) => [
-                styles.details,
-                pressed && styles.detailsPressed,
-              ]}
-              onPress={() => {
-                setFocused(false);
-                onOpenDetails(text, targetIndex);
-              }}
-              accessibilityLabel="open capture details"
-              accessibilityRole="button"
-            >
-              <Text style={styles.detailsText}>details</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
+      {/* The panel grows upward out of the field when focused. */}
+      <Animated.View
+        pointerEvents={expanded ? "auto" : "none"}
+        style={[
+          styles.panel,
+          {
+            maxHeight: expand.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 56],
+            }),
+            opacity: expand,
+            transform: [
+              {
+                translateY: expand.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [10, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {parsed && parsed.name !== "" ? (
+          <Text style={styles.preview} numberOfLines={1}>
+            {parsed.matches?.length
+              ? `parsed: ${parsed.matches.map((m) => m.text).join(", ")}`
+              : "no date"}
+            {" -> "}
+            {parsed.name}
+          </Text>
+        ) : (
+          <Text style={[styles.preview, styles.previewHint]}>
+            {'Try "tomorrow" or "friday 9am" for a date.'}
+          </Text>
+        )}
+        {onOpenDetails != null && text.trim() !== "" ? (
+          <Pressable
+            style={({ pressed }) => [
+              styles.details,
+              pressed && styles.detailsPressed,
+            ]}
+            onPress={() => {
+              setFocused(false);
+              onOpenDetails(text, targetIndex);
+            }}
+            accessibilityLabel="open capture details"
+            accessibilityRole="button"
+          >
+            <Text style={styles.detailsText}>details</Text>
+          </Pressable>
+        ) : null}
+      </Animated.View>
 
       <View style={styles.row}>
         <IconTab
@@ -110,8 +148,29 @@ export function BottomBar({
           icon={<CalendarGlyph active={pathname === "/planner"} />}
         />
 
-        {/* The target pill only exists while the field is focused. */}
-        {focused ? (
+        {/* The target pill rides the same expansion animation; its
+            width collapses with it, so it takes no space when hidden. */}
+        <Animated.View
+          pointerEvents={expanded ? "auto" : "none"}
+          style={[
+            styles.pillWrap,
+            {
+              opacity: expand,
+              maxWidth: expand.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 96],
+              }),
+              transform: [
+                {
+                  scale: expand.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.7, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <Pressable
             style={({ pressed }) => [
               styles.pill,
@@ -127,9 +186,10 @@ export function BottomBar({
               {targetLabel(targets[targetIndex] ?? targets[0])}
             </Text>
           </Pressable>
-        ) : null}
+        </Animated.View>
 
-        {/* The field: rounded rect, send inside the right edge. */}
+        {/* The field: a fully rounded pill, narrowed so the nav items
+            keep their breathing space on the left. */}
         <View style={[styles.field, webFocusRing]}>
           <TextInput
             style={styles.input}
@@ -187,12 +247,9 @@ function IconTab({
       accessibilityState={{ selected: active }}
     >
       {icon}
-      <View style={styles.tabTextRow}>
-        <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
-          {label}
-        </Text>
-        {active ? <View style={styles.activeDot} /> : null}
-      </View>
+      <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -238,39 +295,29 @@ const styles = StyleSheet.create({
     gap: spacing.s,
   },
 
-  // Nav items: icon over label, an accent dot marks the active tab.
+  // Nav items: icon over label, no dot; weight and color carry the
+  // selection.
   tab: {
     alignItems: "center",
     justifyContent: "center",
     minHeight: 44,
     minWidth: 52,
     paddingHorizontal: spacing.xs,
-    borderRadius: radii.m,
+    borderRadius: radius,
   },
   tabPressed: {
     backgroundColor: colors.pressed,
-  },
-  tabTextRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    marginTop: 3,
   },
   tabLabel: {
     fontSize: 11,
     lineHeight: 14,
     fontFamily: fonts.body,
     color: colors.inkMuted,
+    marginTop: 3,
   },
   tabLabelActive: {
     color: colors.accent,
     fontWeight: "600",
-  },
-  activeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.accent,
   },
   glyphList: {
     height: 12,
@@ -300,7 +347,12 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  // Target pill, focused state only.
+  // Target pill, animated with the panel. Overflow hidden lets the
+  // width animate away to zero.
+  pillWrap: {
+    justifyContent: "center",
+    overflow: "hidden" as const,
+  },
   pill: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
@@ -321,17 +373,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // The capture field: a rounded rect, not a pill, not a circle.
+  // The capture field: a fully rounded pill, capped in width so a
+  // clear gap stays between the nav and the input.
   field: {
     flex: 1,
+    maxWidth: 240,
+    marginLeft: "auto" as const,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     backgroundColor: colors.paper,
-    borderRadius: radii.m,
+    borderRadius: radii.pill,
     paddingLeft: spacing.m,
-    paddingRight: spacing.xs,
+    paddingRight: 5,
     minHeight: 36,
     gap: spacing.s,
   },
@@ -346,7 +401,7 @@ const styles = StyleSheet.create({
   send: {
     width: 26,
     height: 26,
-    borderRadius: radii.s,
+    borderRadius: radius,
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
@@ -368,11 +423,12 @@ const styles = StyleSheet.create({
     color: colors.inkFaint,
   },
 
-  // Expanded preview row above the field.
-  previewRow: {
+  // The expanding panel above the field.
+  panel: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.s,
+    overflow: "hidden",
     paddingHorizontal: spacing.xs,
   },
   preview: {
@@ -389,7 +445,7 @@ const styles = StyleSheet.create({
     minHeight: 28,
     justifyContent: "center",
     paddingHorizontal: spacing.s,
-    borderRadius: radii.s,
+    borderRadius: radius,
   },
   detailsPressed: {
     backgroundColor: colors.pressed,

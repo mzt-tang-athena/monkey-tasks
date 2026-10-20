@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { parseCapture, type ParsedCapture } from "../features/capture/parse";
 import type { CaptureTarget } from "../features/capture/write";
-import { colors, fonts, spacing, radii } from "../theme/tokens";
+import { radius, radii, colors, fonts, spacing } from "../theme/tokens";
 
 // Web keeps a focus ring, but themed to the accent instead of the
 // browser default black. The longhands are web-only styles.
@@ -155,8 +155,8 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.l + 4,
-    borderTopRightRadius: radii.l + 4,
+    borderTopLeftRadius: radius,
+    borderTopRightRadius: radius,
     paddingTop: spacing.s,
     paddingHorizontal: spacing.l,
     paddingBottom: spacing.xl,
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     backgroundColor: colors.paper,
-    borderRadius: radii.m,
+    borderRadius: radius,
     padding: spacing.m,
     fontSize: 16,
     fontFamily: fonts.body,

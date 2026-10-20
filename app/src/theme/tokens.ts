@@ -127,12 +127,12 @@ export const spacing = {
   xxxl: 48,
 } as const;
 
-export const radii = {
-  s: 6,
-  m: 10,
-  l: 16,
-  pill: 999,
-} as const;
+/**
+ * The one shared corner radius for every surface: cards, cells,
+ * buttons, the composer panel. The pill is the only exception.
+ */
+export const radius = 8;
+export const radii = { pill: 999 } as const;
 
 /** Reading measure: screens cap their content width on wide screens. */
 export const measure = 720;
