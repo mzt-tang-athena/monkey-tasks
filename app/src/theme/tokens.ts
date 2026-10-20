@@ -129,9 +129,10 @@ export const spacing = {
 
 /**
  * The one shared corner radius for every surface: cards, cells,
- * buttons, the composer panel. The pill is the only exception.
+ * buttons, the composer panel. Round 5 shaved it a step. The fully
+ * rounded capture pill is the only exception.
  */
-export const radius = 8;
+export const radius = 6;
 export const radii = { pill: 999 } as const;
 
 /** Reading measure: screens cap their content width on wide screens. */

@@ -102,16 +102,14 @@ export default function PlannerScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* 7-day strip above the mode pills: small date cells, today
-            highlighted; picking a day lands you in Day mode. */}
-        <DayStrip
+        {/* Period strip above the pills: days, weeks, or months to
+            match the mode. Tapping a period jumps to it. */}
+        <PeriodStrip
+          mode={mode}
           selected={selected}
           today={new Date()}
           tasks={open}
-          onSelect={(day) => {
-            setSelected(day);
-            setMode("day");
-          }}
+          onSelect={setSelected}
         />
 
         {/* E's economy: the toggle pills lead the header block. */}
@@ -163,8 +161,9 @@ export default function PlannerScreen() {
         ) : null}
         {status === "ready" && mode === "month" ? (
           <MonthView
-            tasks={open}
+            viewMonth={startOfMonth(selected)}
             today={new Date()}
+            tasks={open}
             onToggle={toggle}
             onOpenDay={(day) => {
               setSelected(day);
@@ -435,7 +434,9 @@ function WeekView({
   onSelect: (date: Date) => void;
 }) {
   const todayStart = startOfDay(today).getTime();
-  const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(today, offset));
+  // The strip picks the week; its seven columns start on Sunday.
+  const weekStart = startOfWeek(selected);
+  const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(weekStart, offset));
   return (
     <ScrollView
       horizontal
@@ -493,24 +494,32 @@ function WeekView({
 
 /** D/F month: the grid in a card; a tapped day lists its tasks. */
 function MonthView({
-  tasks,
+  viewMonth,
   today,
+  tasks,
   onToggle,
   onOpenDay,
 }: {
-  tasks: TaskItem[];
+  viewMonth: Date;
   today: Date;
+  tasks: TaskItem[];
   onToggle: (task: TaskItem) => void;
   onOpenDay: (day: Date) => void;
 }) {
-  const [picked, setPicked] = React.useState<Date | null>(null);
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const daysInMonth = new Date(
-    today.getFullYear(),
-    today.getMonth() + 1,
-    0,
-  ).getDate();
+  // The picked day carries the month key it belongs to, so a new
+  // month from the strip invalidates the tapped-day panel without
+  // an effect.
+  const [picked, setPicked] = React.useState<{
+    key: string;
+    day: Date;
+  } | null>(null);
+  const year = viewMonth.getFullYear();
+  const monthIdx = viewMonth.getMonth();
+  const monthKey = `${year}-${monthIdx}`;
+  const monthStart = new Date(year, monthIdx, 1);
+  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
   const lead = monthStart.getDay();
+
   const byDay = new Map<string, TaskItem[]>();
   for (const task of tasks) {
     if (task.data?.due == null) {
@@ -528,15 +537,18 @@ function MonthView({
     ...Array.from({ length: lead }, () => null),
     ...Array.from(
       { length: daysInMonth },
-      (_, index) => new Date(today.getFullYear(), today.getMonth(), index + 1),
+      (_, index) => new Date(year, monthIdx, index + 1),
     ),
   ];
-  const pickedTasks = picked ? (byDay.get(isoOf(picked)) ?? []) : null;
+  const pickedTasks =
+    picked && picked.key === monthKey
+      ? (byDay.get(isoOf(picked.day)) ?? [])
+      : null;
 
   return (
     <View>
       <Text style={styles.monthTitle}>
-        {MONTHS[today.getMonth()]} {today.getFullYear()}
+        {MONTHS[monthIdx]} {year}
       </Text>
       <View style={styles.monthCard}>
         <View style={styles.monthHead}>
@@ -555,11 +567,12 @@ function MonthView({
                 key={day.getTime()}
                 style={({ pressed }) => [
                   styles.monthCell,
-                  isSameDay(day, picked) && styles.monthCellPicked,
+                  isSameDay(day, picked?.day ?? null) &&
+                  styles.monthCellPicked,
                   isSameDay(day, today) && styles.monthCellToday,
                   pressed && styles.pressedFill,
                 ]}
-                onPress={() => setPicked(day)}
+                onPress={() => setPicked({ key: monthKey, day })}
                 accessibilityRole="button"
                 accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
               >
@@ -582,7 +595,7 @@ function MonthView({
       {pickedTasks ? (
         <View style={styles.monthDayPanel}>
           <Text style={styles.sectionLabel}>
-            {WEEKDAYS_FULL[picked!.getDay()]} {picked!.getDate()}
+            {WEEKDAYS_FULL[picked!.day.getDay()]} {picked!.day.getDate()}
             {"  "}
             {pickedTasks.length}
           </Text>
@@ -603,7 +616,7 @@ function MonthView({
               styles.monthDayOpen,
               pressed && styles.detailsPressed,
             ]}
-            onPress={() => onOpenDay(picked!)}
+            onPress={() => onOpenDay(picked!.day)}
             accessibilityRole="button"
             accessibilityLabel="open this day"
           >
@@ -617,67 +630,194 @@ function MonthView({
 
 /* ----------------------------------------------------------- helpers */
 
-/** The 7-day strip: today first, a tap selects the day. */
-function DayStrip({
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/**
+ * The period strip above the pills. Day mode shows the seven days
+ * from today; week mode shows the current week plus the upcoming
+ * ones; month mode shows the current month plus the upcoming ones.
+ * The current period is tinted, the selected period is filled, and a
+ * tap jumps to it.
+ */
+function PeriodStrip({
+  mode,
   selected,
   today,
   tasks,
   onSelect,
 }: {
+  mode: Mode;
   selected: Date;
   today: Date;
   tasks: TaskItem[];
   onSelect: (date: Date) => void;
 }) {
   const todayStart = startOfDay(today).getTime();
-  const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(today, offset));
-  const busy = new Set(
-    tasks
-      .map((task) => (task.data?.due ? parseStoredDate(task.data.due) : null))
-      .filter((due) => due != null)
-      .map((due) => isoOf(due!.date)),
+  const selStart = startOfDay(selected).getTime();
+
+  if (mode === "day") {
+    const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(today, offset));
+    const busy = new Set(
+      tasks
+        .map((task) => (task.data?.due ? parseStoredDate(task.data.due) : null))
+        .filter((due) => due != null)
+        .map((due) => isoOf(due!.date)),
+    );
+    return (
+      <View style={styles.strip}>
+        {days.map((day) => {
+          const active = isSameDay(day, selected);
+          const isToday = startOfDay(day).getTime() === todayStart;
+          return (
+            <Pressable
+              key={day.getTime()}
+              style={({ pressed }) => [
+                styles.stripDay,
+                active && styles.stripDayActive,
+                isToday && !active && styles.stripDayToday,
+                pressed && styles.pressedFill,
+              ]}
+              onPress={() => onSelect(day)}
+              accessibilityRole="button"
+              accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
+            >
+              <Text
+                style={[
+                  styles.stripName,
+                  active && styles.stripNameActive,
+                  isToday && !active && styles.stripNameToday,
+                ]}
+              >
+                {WEEKDAYS[day.getDay()]}
+              </Text>
+              <Text
+                style={[
+                  styles.stripNum,
+                  active && styles.stripNumActive,
+                  isToday && !active && styles.stripNumToday,
+                  !active && busy.has(isoOf(day)) ? styles.stripNumBusy : null,
+                ]}
+              >
+                {day.getDate()}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
+
+  if (mode === "week") {
+    // The current week first, then the upcoming ones, one swipe away.
+    const weeks = Array.from({ length: 12 }, (_, index) =>
+      startOfWeek(addDays(today, 7 * index)),
+    );
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.stripScroll}
+      >
+        {weeks.map((weekStartDay) => {
+          const weekEnd = addDays(weekStartDay, 6);
+          const startT = weekStartDay.getTime();
+          const endT = weekEnd.getTime();
+          const active = selStart >= startT && selStart <= endT;
+          const isCurrent = todayStart >= startT && todayStart <= endT;
+          const crosses = weekStartDay.getMonth() !== weekEnd.getMonth();
+          const label = crosses
+            ? `${MONTHS_SHORT[weekStartDay.getMonth()]} ${weekStartDay.getDate()}-${MONTHS_SHORT[weekEnd.getMonth()]} ${weekEnd.getDate()}`
+            : `${MONTHS_SHORT[weekStartDay.getMonth()]} ${weekStartDay.getDate()}-${weekEnd.getDate()}`;
+          return (
+            <Pressable
+              key={startT}
+              style={({ pressed }) => [
+                styles.stripCell,
+                styles.stripCellWeek,
+                active && styles.stripDayActive,
+                isCurrent && !active && styles.stripDayToday,
+                pressed && styles.pressedFill,
+              ]}
+              onPress={() => onSelect(weekStartDay)}
+              accessibilityRole="button"
+              accessibilityLabel={`week of ${label}`}
+            >
+              <Text
+                style={[
+                  styles.stripCellText,
+                  active && styles.stripNameActive,
+                  isCurrent && !active && styles.stripNameToday,
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    );
+  }
+
+  // Month mode: the current month first, then the upcoming ones.
+  const months = Array.from(
+    { length: 12 },
+    (_, index) =>
+      new Date(today.getFullYear(), today.getMonth() + index, 1),
   );
   return (
-    <View style={styles.strip}>
-      {days.map((day) => {
-        const active = isSameDay(day, selected);
-        const isToday = startOfDay(day).getTime() === todayStart;
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.stripScroll}
+    >
+      {months.map((monthStartDay) => {
+        const active =
+          selected.getFullYear() === monthStartDay.getFullYear() &&
+          selected.getMonth() === monthStartDay.getMonth();
+        const isCurrent =
+          today.getFullYear() === monthStartDay.getFullYear() &&
+          today.getMonth() === monthStartDay.getMonth();
+        const label = `${MONTHS[monthStartDay.getMonth()]} ${monthStartDay.getFullYear()}`;
         return (
           <Pressable
-            key={day.getTime()}
+            key={monthStartDay.getTime()}
             style={({ pressed }) => [
-              styles.stripDay,
+              styles.stripCell,
+              styles.stripCellMonth,
               active && styles.stripDayActive,
-              isToday && !active && styles.stripDayToday,
+              isCurrent && !active && styles.stripDayToday,
               pressed && styles.pressedFill,
             ]}
-            onPress={() => onSelect(day)}
+            onPress={() => onSelect(monthStartDay)}
             accessibilityRole="button"
-            accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
+            accessibilityLabel={label}
           >
             <Text
               style={[
-                styles.stripName,
+                styles.stripCellText,
                 active && styles.stripNameActive,
-                isToday && !active && styles.stripNameToday,
+                isCurrent && !active && styles.stripNameToday,
               ]}
             >
-              {WEEKDAYS[day.getDay()]}
-            </Text>
-            <Text
-              style={[
-                styles.stripNum,
-                active && styles.stripNumActive,
-                isToday && !active && styles.stripNumToday,
-                !active && busy.has(isoOf(day)) ? styles.stripNumBusy : null,
-              ]}
-            >
-              {day.getDate()}
+              {label}
             </Text>
           </Pressable>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -753,6 +893,16 @@ function isSameDay(a: Date | null, b: Date | null): boolean {
   return startOfDay(a).getTime() === startOfDay(b).getTime();
 }
 
+/** Sunday of the week holding date. */
+function startOfWeek(date: Date): Date {
+  return addDays(date, -date.getDay());
+}
+
+/** The first of the month holding date. */
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
 function LoadingState() {
   return (
     <View style={styles.holder}>
@@ -788,11 +938,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pressed,
   },
 
-  // 7-day strip, above the pills
+  // period strip: day cells, then the wider week and month cells
   strip: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: spacing.s,
+  },
+  stripScroll: {
+    flexDirection: "row",
+    gap: spacing.s,
+    paddingRight: spacing.s,
   },
   stripDay: {
     alignItems: "center",
@@ -800,6 +955,27 @@ const styles = StyleSheet.create({
     width: 44,
     height: 52,
     borderRadius: radius,
+  },
+  stripCell: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 52,
+    borderRadius: radius,
+  },
+  stripCellWeek: {
+    minWidth: 104,
+    paddingHorizontal: spacing.m,
+  },
+  stripCellMonth: {
+    minWidth: 120,
+    paddingHorizontal: spacing.m,
+  },
+  stripCellText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.ink,
+    fontWeight: "500",
   },
   stripDayActive: {
     backgroundColor: colors.accent,

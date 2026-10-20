@@ -29,10 +29,11 @@ const webFocusRing = Platform.select({
 /**
  * The single bottom bar, shared by both tabs. Left: the Lists and
  * Planner nav items, icon plus label, selection carried by weight
- * and color alone. Right: the capture field, a fully rounded pill,
- * kept narrow so the nav gets clear breathing space. Focusing expands
- * the composer up and out with an animated panel: the parse preview,
- * with the target pill and send controls alongside.
+ * and color alone. Right: a compact capture button that reads as
+ * tappable. Tapping it expands, with an upward animation, into the
+ * focused capture pill: the parse preview panel above, the target
+ * pill inline, and the send button in the field's edge. A blur with
+ * empty text collapses back to the button.
  */
 export function BottomBar({
   targets,
@@ -50,20 +51,31 @@ export function BottomBar({
   const insets = useSafeAreaInsets();
   const [text, setText] = React.useState("");
   const [targetIndex, setTargetIndex] = React.useState(defaultTargetIndex);
-  const [focused, setFocused] = React.useState(false);
   const [sending, setSending] = React.useState(false);
 
-  // The expansion value drives the up-and-out panel animation.
+  // Open is the user intent; mounted keeps the field on screen while
+  // the collapse animation plays.
+  const [open, setOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
   const [expand] = React.useState(() => new Animated.Value(0));
-  const expanded = focused || text.trim() !== "";
+  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     Animated.timing(expand, {
-      toValue: expanded ? 1 : 0,
+      toValue: open ? 1 : 0,
       duration: 200,
       useNativeDriver: false,
     }).start();
-  }, [expand, expanded]);
+  }, [expand, open]);
+
+  React.useEffect(
+    () => () => {
+      if (closeTimer.current != null) {
+        clearTimeout(closeTimer.current);
+      }
+    },
+    [],
+  );
 
   const parsed = text.trim() ? parseCapture(text) : null;
   const canSend = text.trim() !== "" && !sending;
@@ -79,60 +91,87 @@ export function BottomBar({
     setSending(false);
   };
 
+  const openCapture = () => {
+    if (closeTimer.current != null) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    setMounted(true);
+    setOpen(true);
+  };
+
+  const collapse = () => {
+    if (text.trim() === "") {
+      setOpen(false);
+      closeTimer.current = setTimeout(() => setMounted(false), 220);
+    }
+  };
+
+  const closeNow = () => {
+    if (closeTimer.current != null) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    setOpen(false);
+    setMounted(false);
+  };
+
   return (
     <View style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}>
-      {/* The panel grows upward out of the field when focused. */}
-      <Animated.View
-        pointerEvents={expanded ? "auto" : "none"}
-        style={[
-          styles.panel,
-          {
-            maxHeight: expand.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 56],
-            }),
-            opacity: expand,
-            transform: [
-              {
-                translateY: expand.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [10, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        {parsed && parsed.name !== "" ? (
-          <Text style={styles.preview} numberOfLines={1}>
-            {parsed.matches?.length
-              ? `parsed: ${parsed.matches.map((m) => m.text).join(", ")}`
-              : "no date"}
-            {" -> "}
-            {parsed.name}
-          </Text>
-        ) : (
-          <Text style={[styles.preview, styles.previewHint]}>
-            {'Try "tomorrow" or "friday 9am" for a date.'}
-          </Text>
-        )}
-        {onOpenDetails != null && text.trim() !== "" ? (
-          <Pressable
-            style={({ pressed }) => [
-              styles.details,
-              pressed && styles.detailsPressed,
-            ]}
-            onPress={() => {
-              setFocused(false);
-              onOpenDetails(text, targetIndex);
-            }}
-            accessibilityLabel="open capture details"
-            accessibilityRole="button"
-          >
-            <Text style={styles.detailsText}>details</Text>
-          </Pressable>
-        ) : null}
-      </Animated.View>
+      {/* The panel grows upward out of the field while open. */}
+      {mounted ? (
+        <Animated.View
+          pointerEvents={open ? "auto" : "none"}
+          style={[
+            styles.panel,
+            {
+              maxHeight: expand.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 56],
+              }),
+              opacity: expand,
+              transform: [
+                {
+                  translateY: expand.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [10, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          {parsed && parsed.name !== "" ? (
+            <Text style={styles.preview} numberOfLines={1}>
+              {parsed.matches?.length
+                ? `parsed: ${parsed.matches.map((m) => m.text).join(", ")}`
+                : "no date"}
+              {" -> "}
+              {parsed.name}
+            </Text>
+          ) : (
+            <Text style={[styles.preview, styles.previewHint]}>
+              {'Try "tomorrow" or "friday 9am" for a date.'}
+            </Text>
+          )}
+          {onOpenDetails != null && text.trim() !== "" ? (
+            <Pressable
+              style={({ pressed }) => [
+                styles.details,
+                pressed && styles.detailsPressed,
+              ]}
+              onPress={() => {
+                closeNow();
+                onOpenDetails(text, targetIndex);
+              }}
+              accessibilityLabel="open capture details"
+              accessibilityRole="button"
+            >
+              <Text style={styles.detailsText}>details</Text>
+            </Pressable>
+          ) : null}
+        </Animated.View>
+      ) : null}
 
       <View style={styles.row}>
         <IconTab
@@ -148,80 +187,121 @@ export function BottomBar({
           icon={<CalendarGlyph active={pathname === "/planner"} />}
         />
 
-        {/* The target pill rides the same expansion animation; its
-            width collapses with it, so it takes no space when hidden. */}
-        <Animated.View
-          pointerEvents={expanded ? "auto" : "none"}
-          style={[
-            styles.pillWrap,
-            {
-              opacity: expand,
-              maxWidth: expand.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 96],
-              }),
-              transform: [
-                {
-                  scale: expand.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.7, 1],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <Pressable
-            style={({ pressed }) => [
-              styles.pill,
-              pressed && styles.pillPressed,
+        {mounted ? (
+          // The target pill rides the expansion; its width collapses
+          // with it, so it takes no space when hidden.
+          <Animated.View
+            pointerEvents={open ? "auto" : "none"}
+            style={[
+              styles.pillWrap,
+              {
+                opacity: expand,
+                maxWidth: expand.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 96],
+                }),
+                transform: [
+                  {
+                    scale: expand.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.7, 1],
+                    }),
+                  },
+                ],
+              },
             ]}
-            onPress={() =>
-              setTargetIndex((index) => (index + 1) % targets.length)
-            }
-            accessibilityRole="button"
-            accessibilityLabel="target list"
           >
-            <Text style={styles.pillText}>
-              {targetLabel(targets[targetIndex] ?? targets[0])}
-            </Text>
-          </Pressable>
-        </Animated.View>
+            <Pressable
+              style={({ pressed }) => [
+                styles.pill,
+                pressed && styles.pillPressed,
+              ]}
+              onPress={() =>
+                setTargetIndex((index) => (index + 1) % targets.length)
+              }
+              accessibilityRole="button"
+              accessibilityLabel="target list"
+            >
+              <Text style={styles.pillText}>
+                {targetLabel(targets[targetIndex] ?? targets[0])}
+              </Text>
+            </Pressable>
+          </Animated.View>
+        ) : null}
 
-        {/* The field: a fully rounded pill, narrowed so the nav items
-            keep their breathing space on the left. */}
-        <View style={[styles.field, webFocusRing]}>
-          <TextInput
-            style={styles.input}
-            placeholder="Add a task"
-            placeholderTextColor={colors.inkFaint}
-            value={text}
-            onChangeText={setText}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            onSubmitEditing={send}
-            returnKeyType="send"
-            multiline={false}
-          />
+        {mounted ? (
+          // The capture field: a fully rounded pill, capped in width
+          // so the nav keeps its breathing space. Autofocus opens the
+          // keyboard on mount.
+          <Animated.View
+            pointerEvents={open ? "auto" : "none"}
+            style={[
+              styles.fieldWrap,
+              {
+                opacity: expand,
+                transform: [
+                  {
+                    translateY: expand.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [8, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <View style={[styles.field, webFocusRing]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Add a task"
+                placeholderTextColor={colors.inkFaint}
+                value={text}
+                onChangeText={setText}
+                onBlur={collapse}
+                onSubmitEditing={send}
+                returnKeyType="send"
+                multiline={false}
+                autoFocus
+              />
+              <Pressable
+                style={({ pressed }) => [
+                  styles.send,
+                  pressed && canSend && styles.sendPressed,
+                  !canSend && styles.sendDisabled,
+                ]}
+                onPress={send}
+                disabled={!canSend}
+                accessibilityRole="button"
+                accessibilityLabel="add task"
+                accessibilityState={{ disabled: !canSend }}
+              >
+                <Text
+                  style={[
+                    styles.sendText,
+                    !canSend && styles.sendTextDisabled,
+                  ]}
+                >
+                  {"↑"}
+                </Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        ) : (
+          // The collapsed control: a compact button, not an empty
+          // field. Tapping expands into the capture pill.
           <Pressable
             style={({ pressed }) => [
-              styles.send,
-              pressed && canSend && styles.sendPressed,
-              !canSend && styles.sendDisabled,
+              styles.captureButton,
+              pressed && styles.capturePressed,
             ]}
-            onPress={send}
-            disabled={!canSend}
+            onPress={() => openCapture()}
             accessibilityRole="button"
             accessibilityLabel="add task"
-            accessibilityState={{ disabled: !canSend }}
           >
-            <Text
-              style={[styles.sendText, !canSend && styles.sendTextDisabled]}
-            >
-              {"↑"}
-            </Text>
+            <Text style={styles.capturePlus}>{"+"}</Text>
+            <Text style={styles.captureLabel}>Add</Text>
           </Pressable>
-        </View>
+        )}
       </View>
     </View>
   );
@@ -347,8 +427,35 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  // Target pill, animated with the panel. Overflow hidden lets the
-  // width animate away to zero.
+  // Collapsed capture control: an unmistakable button.
+  captureButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginLeft: "auto" as const,
+    minHeight: 36,
+    paddingHorizontal: spacing.m,
+    borderRadius: radii.pill,
+    backgroundColor: colors.accent,
+  },
+  capturePressed: {
+    backgroundColor: colors.accentDeep,
+  },
+  capturePlus: {
+    color: colors.onAccent,
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: "700",
+  },
+  captureLabel: {
+    color: colors.onAccent,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    fontWeight: "600",
+  },
+
+  // Target pill, animated with the panel.
   pillWrap: {
     justifyContent: "center",
     overflow: "hidden" as const,
@@ -375,10 +482,12 @@ const styles = StyleSheet.create({
 
   // The capture field: a fully rounded pill, capped in width so a
   // clear gap stays between the nav and the input.
-  field: {
+  fieldWrap: {
     flex: 1,
     maxWidth: 240,
     marginLeft: "auto" as const,
+  },
+  field: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: StyleSheet.hairlineWidth,
