@@ -1,9 +1,26 @@
 import * as React from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
+import { theme } from "../theme/tokens";
 
-export function FloatingCaptureButton({ onPress }: { onPress: () => void }) {
+/** Floating capture button, variant A: one blue disc, bottom right. */
+export function FloatingCaptureButton({
+  onPress,
+  disabled = false,
+}: {
+  onPress: () => void;
+  disabled?: boolean;
+}) {
   return (
-    <Pressable style={styles.button} onPress={onPress} accessibilityLabel="add a task">
+    <Pressable
+      accessibilityLabel="add a task"
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.button,
+        pressed && styles.buttonPressed,
+        disabled && styles.buttonDisabled,
+      ]}
+    >
       <Text style={styles.plus}>+</Text>
     </Pressable>
   );
@@ -11,25 +28,32 @@ export function FloatingCaptureButton({ onPress }: { onPress: () => void }) {
 
 const styles = StyleSheet.create({
   button: {
-    position: "absolute",
-    right: 20,
-    bottom: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#1d3fbf",
     alignItems: "center",
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radii.fab,
+    bottom: theme.spacing[5],
+    elevation: 6,
+    height: 56,
     justifyContent: "center",
-    shadowColor: "#000000",
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    position: "absolute",
+    right: theme.spacing[5],
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    width: 56,
+  },
+  buttonPressed: {
+    backgroundColor: theme.colors.accentPressed,
+    transform: [{ scale: 0.96 }],
+  },
+  buttonDisabled: {
+    opacity: 0.4,
   },
   plus: {
-    color: "#ffffff",
+    color: theme.colors.onAccent,
     fontSize: 28,
+    fontWeight: theme.weights.regular,
     lineHeight: 32,
-    fontWeight: "400",
   },
 });

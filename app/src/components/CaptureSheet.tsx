@@ -2,6 +2,7 @@ import * as React from "react";
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { parseCapture, type ParsedCapture } from "../features/capture/parse";
 import type { CaptureTarget } from "../features/capture/write";
+import { theme } from "../theme/tokens";
 
 /**
  * The capture sheet: input, target-list chip, send. The target shows
@@ -27,6 +28,7 @@ export function CaptureSheet({
   // The parent remounts this sheet on open, so local state starts
   // fresh; no reset effect needed.
   const [text, setText] = React.useState("");
+  const [focused, setFocused] = React.useState(false);
   const [targetIndex, setTargetIndex] = React.useState(defaultTargetIndex);
   const [lastParse, setLastParse] = React.useState<ParsedCapture | null>(null);
 
@@ -43,18 +45,23 @@ export function CaptureSheet({
     setTargetIndex((index) => (index + 1) % targets.length);
   };
 
+  const canSend = text.trim() !== "";
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => undefined}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, focused && styles.inputFocused]}
             placeholder="Add a task..."
+            placeholderTextColor={theme.colors.textFaint}
             value={text}
             onChangeText={(value) => {
               setText(value);
               setLastParse(value.trim() ? parseCapture(value) : null);
             }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             onSubmitEditing={send}
             returnKeyType="send"
             autoFocus
@@ -72,14 +79,25 @@ export function CaptureSheet({
             </Text>
           ) : null}
           <View style={styles.actions}>
-            <Pressable style={styles.chip} onPress={cycleTarget}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.chip,
+                pressed && styles.chipPressed,
+              ]}
+              onPress={cycleTarget}
+            >
               <Text style={styles.chipText}>
                 {targetLabel(targets[targetIndex] ?? targets[0])}
               </Text>
             </Pressable>
             <View style={{ flex: 1 }} />
             <Pressable
-              style={[styles.send, text.trim() === "" && styles.sendDisabled]}
+              style={({ pressed }) => [
+                styles.send,
+                pressed && styles.sendPressed,
+                !canSend && styles.sendDisabled,
+              ]}
+              disabled={!canSend}
               onPress={send}
             >
               <Text style={styles.sendText}>Add</Text>
@@ -97,59 +115,74 @@ function targetLabel(target: CaptureTarget): string {
 
 const styles = StyleSheet.create({
   backdrop: {
+    backgroundColor: theme.colors.scrim,
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 16,
-    gap: 10,
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radii.lg,
+    borderTopRightRadius: theme.radii.lg,
+    gap: theme.spacing[2],
+    padding: theme.spacing[4],
+    paddingBottom: theme.spacing[6],
   },
   input: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#bbbbbb",
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    color: theme.colors.text,
+    fontSize: theme.type.body.fontSize,
+    padding: theme.spacing[3],
+  },
+  inputFocused: {
+    borderColor: theme.colors.accent,
   },
   dueNote: {
-    color: "#1d5c3f",
-    fontSize: 13,
+    color: theme.colors.success,
+    fontSize: theme.type.small.fontSize,
   },
   preview: {
-    color: "#555555",
-    fontSize: 13,
+    color: theme.colors.textMuted,
+    fontSize: theme.type.small.fontSize,
   },
   actions: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    flexDirection: "row",
+    gap: theme.spacing[2],
+    marginTop: theme.spacing[1],
   },
   chip: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#bbbbbb",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderColor: theme.colors.borderStrong,
+    borderRadius: theme.radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: theme.spacing[3],
+    paddingVertical: theme.spacing[2],
+  },
+  chipPressed: {
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accent,
   },
   chipText: {
-    fontSize: 14,
-    color: "#222222",
+    color: theme.colors.text,
+    fontSize: theme.type.small.fontSize,
+    fontWeight: theme.weights.medium,
   },
   send: {
-    backgroundColor: "#1d3fbf",
-    borderRadius: 22,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radii.pill,
+    paddingHorizontal: theme.spacing[4],
+    paddingVertical: theme.spacing[2],
+  },
+  sendPressed: {
+    backgroundColor: theme.colors.accentPressed,
   },
   sendDisabled: {
-    opacity: 0.4,
+    opacity: 0.35,
   },
   sendText: {
-    color: "#ffffff",
-    fontWeight: "700",
+    color: theme.colors.onAccent,
+    fontSize: theme.type.body.fontSize,
+    fontWeight: theme.weights.semibold,
   },
 });

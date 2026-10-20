@@ -1,54 +1,57 @@
 import * as React from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { useVault } from "../../hooks/useVault";
-import { onMain, groupByDue, type TaskItem } from "../../features/tasks/query";
-import { setCompleted } from "../../features/tasks/mutate";
-import { writeCapture, type CaptureTarget } from "../../features/capture/write";
-import { TaskRow } from "../../components/TaskRow";
+import { groupByDue, type TaskItem } from "../../features/tasks/query";
+import type { ParsedCapture } from "../../features/capture/parse";
+import type { CaptureTarget } from "../../features/capture/write";
+import { TaskRow, TaskRowSkeleton } from "../../components/TaskRow";
 import { CaptureSheet } from "../../components/CaptureSheet";
 import { FloatingCaptureButton } from "../../components/FloatingCaptureButton";
-import { dayLabel, parseStoredDate } from "../../lib/dates";
+import { countOpen, mockLists, mockTasks, taskFromCapture } from "../../lib/mock";
+import { dayLabel, todayIso } from "../../lib/dates";
+import { theme } from "../../theme/tokens";
 
 /**
- * Lists tab. 0009 ships the Main list working; the real list tab bar
- * is ticket 0010.
+ * Lists tab, variant A. Mock-driven for this design branch: the same
+ * TaskItem shape the vault feed produces, held in local state so
+ * toggling and capturing stay interactive.
  */
+const TARGETS: CaptureTarget[] = [
+  { kind: "main" },
+  { kind: "list", name: "Focus", uri: "mock://lists/focus" },
+];
+
+type Phase = "loading" | "ready" | "error";
+
 export default function ListsScreen() {
-  const { rootUri, tasksDir, tasks, status, grant, refresh } = useVault();
+  const [tasks, setTasks] = React.useState<TaskItem[]>(mockTasks);
+  const [phase, setPhase] = React.useState<Phase>("ready");
+  const [active, setActive] = React.useState<string>("Main");
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
-  const targets: CaptureTarget[] = [{ kind: "main" }];
+  const visible = tasks.filter((task) =>
+    active === "Main"
+      ? task.data == null || !task.data.lists?.length
+      : task.data?.lists?.includes(`[[${active}]]`) ?? false,
+  );
+  const groups = groupByDue(visible, new Date());
 
-  const main = onMain(tasks);
-  const groups = groupByDue(main, new Date());
-
-  const toggle = async (task: TaskItem) => {
+  const toggle = (task: TaskItem) => {
     const done = task.data?.completed != null && task.data.completed !== "";
-    await setCompleted(task, !done);
-    await refresh();
-  };
-
-  const send = async (
-    parsed: Parameters<typeof writeCapture>[1],
-    target: CaptureTarget,
-  ) => {
-    if (!tasksDir) {
-      return;
-    }
-    await writeCapture(tasksDir, parsed, target);
-    await refresh();
-  };
-
-  if (!rootUri) {
-    return (
-      <View style={[styles.screen, styles.center]}>
-        <Text style={styles.status}>{status}</Text>
-        <Pressable style={styles.grant} onPress={grant}>
-          <Text style={styles.grantText}>Grant vault folder</Text>
-        </Pressable>
-      </View>
+    const fresh: TaskItem["data"] = {
+      kind: "[[tasks]]",
+      created: todayIso(),
+    };
+    const data = { ...(task.data ?? fresh), completed: done ? null : todayIso() };
+    setTasks((prev) =>
+      prev.map((item) =>
+        item.uri === task.uri ? { ...item, data } : item,
+      ),
     );
-  }
+  };
+
+  const send = (parsed: ParsedCapture, target: CaptureTarget) => {
+    setTasks((prev) => [...prev, taskFromCapture(parsed, target)]);
+  };
 
   const sections: { title: string; items: TaskItem[]; red?: boolean }[] = [
     { title: "Past", items: groups.overdue, red: true },
@@ -59,35 +62,65 @@ export default function ListsScreen() {
     })),
     { title: "No date", items: groups.undated },
   ];
-  const timed = (task: TaskItem) =>
-    task.data?.due ? (parseStoredDate(task.data.due)?.hasTime ?? false) : false;
+  const open = sections.filter((section) => section.items.length > 0);
+  const empty = visible.length === 0 && groups.completed.length === 0;
 
   return (
     <View style={styles.screen}>
+      <View style={styles.tabBar}>
+        {mockLists.map((name) => (
+          <ListTab
+            key={name}
+            name={name}
+            count={countOpen(tasks, name)}
+            selected={name === active}
+            onSelect={() => setActive(name)}
+          />
+        ))}
+      </View>
       <FlatList
         contentContainerStyle={styles.content}
-        data={[{ key: "header" }]}
+        data={[{ key: "body" }]}
         renderItem={() => (
           <View>
-            <Text style={styles.header}>Main</Text>
-            <Text style={styles.status}>{status}</Text>
-            {sections
-              .filter((section) => section.items.length > 0)
-              .map((section) => (
+            {phase === "loading" ? (
+              <View>
+                <TaskRowSkeleton />
+                <TaskRowSkeleton />
+                <TaskRowSkeleton />
+              </View>
+            ) : null}
+            {phase === "error" ? (
+              <View style={styles.note}>
+                <Text style={styles.noteTitle}>Could not load tasks.</Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.retry,
+                    pressed && styles.retryPressed,
+                  ]}
+                  onPress={() => setPhase("ready")}
+                >
+                  <Text style={styles.retryText}>Try again</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {phase === "ready" && empty ? (
+              <Text style={styles.empty}>
+                Nothing here. Tap + to add a task.
+              </Text>
+            ) : null}
+            {phase === "ready" &&
+              open.map((section) => (
                 <View key={section.title}>
                   <Text style={[styles.section, section.red && styles.sectionRed]}>
                     {section.title}
                   </Text>
                   {section.items.map((task) => (
-                    <TaskRow
-                      key={task.uri}
-                      task={{ ...task, name: timed(task) ? task.name : task.name }}
-                      onToggle={toggle}
-                    />
+                    <TaskRow key={task.uri} task={task} onToggle={toggle} />
                   ))}
                 </View>
               ))}
-            {groups.completed.length > 0 ? (
+            {phase === "ready" && groups.completed.length > 0 ? (
               <View>
                 <Text style={styles.sectionCompleted}>
                   Completed ({groups.completed.length})
@@ -97,9 +130,6 @@ export default function ListsScreen() {
                 ))}
               </View>
             ) : null}
-            {main.length === 0 && groups.completed.length === 0 ? (
-              <Text style={styles.empty}>Nothing yet. Tap + to add a task.</Text>
-            ) : null}
           </View>
         )}
       />
@@ -107,7 +137,7 @@ export default function ListsScreen() {
       {sheetOpen ? (
         <CaptureSheet
           visible
-          targets={targets}
+          targets={TARGETS}
           defaultTargetIndex={0}
           onClose={() => setSheetOpen(false)}
           onSend={send}
@@ -117,56 +147,130 @@ export default function ListsScreen() {
   );
 }
 
+/** List tab: label plus open count, accent underline when selected. */
+function ListTab({
+  name,
+  count,
+  selected,
+  onSelect,
+}: {
+  name: string;
+  count: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={`show ${name}`}
+      onPress={onSelect}
+      style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
+    >
+      <Text
+        style={[
+          styles.tabText,
+          selected ? styles.tabTextActive : styles.tabTextInactive,
+        ]}
+      >
+        {name}
+        {count > 0 ? `  ${count}` : ""}
+      </Text>
+      <View
+        style={[styles.tabUnderline, selected && styles.tabUnderlineActive]}
+      />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
+    backgroundColor: theme.colors.paper,
     flex: 1,
-    backgroundColor: "#ffffff",
   },
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
+  tabBar: {
+    backgroundColor: theme.colors.paper,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
+    flexDirection: "row",
+    gap: theme.spacing[5],
+    paddingHorizontal: theme.spacing[4],
+  },
+  tab: {
+    paddingTop: theme.spacing[2],
+  },
+  tabPressed: {
+    opacity: 0.6,
+  },
+  tabText: {
+    fontSize: theme.type.body.fontSize,
+    fontWeight: theme.weights.medium,
+  },
+  tabTextActive: {
+    color: theme.colors.text,
+    fontWeight: theme.weights.bold,
+  },
+  tabTextInactive: {
+    color: theme.colors.textMuted,
+  },
+  tabUnderline: {
+    backgroundColor: "transparent",
+    height: 2,
+    marginTop: theme.spacing[1],
+  },
+  tabUnderlineActive: {
+    backgroundColor: theme.colors.accent,
   },
   content: {
-    padding: 16,
     paddingBottom: 96,
-  },
-  header: {
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  status: {
-    color: "#777777",
-    marginBottom: 8,
+    paddingHorizontal: theme.spacing[4],
+    paddingTop: theme.spacing[2],
   },
   section: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1a4b8f",
-    marginTop: 16,
-    marginBottom: 4,
+    color: theme.colors.textMuted,
+    fontSize: theme.type.micro.fontSize,
+    fontWeight: theme.weights.semibold,
+    letterSpacing: 0.6,
+    marginBottom: theme.spacing[1],
+    marginTop: theme.spacing[5],
+    textTransform: "uppercase",
   },
   sectionRed: {
-    color: "#b3261e",
+    color: theme.colors.danger,
   },
   sectionCompleted: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#999999",
-    marginTop: 20,
+    color: theme.colors.textFaint,
+    fontSize: theme.type.micro.fontSize,
+    fontWeight: theme.weights.semibold,
+    letterSpacing: 0.6,
+    marginBottom: theme.spacing[1],
+    marginTop: theme.spacing[8],
+    textTransform: "uppercase",
   },
   empty: {
-    color: "#777777",
-    marginTop: 24,
+    color: theme.colors.textMuted,
+    fontSize: theme.type.small.fontSize,
+    marginTop: theme.spacing[6],
   },
-  grant: {
-    backgroundColor: "#1d3fbf",
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  note: {
+    alignItems: "flex-start",
+    gap: theme.spacing[3],
+    marginTop: theme.spacing[6],
   },
-  grantText: {
-    color: "#ffffff",
-    fontWeight: "700",
+  noteTitle: {
+    color: theme.colors.textMuted,
+    fontSize: theme.type.small.fontSize,
+  },
+  retry: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing[4],
+    paddingVertical: theme.spacing[2],
+  },
+  retryPressed: {
+    backgroundColor: theme.colors.accentPressed,
+  },
+  retryText: {
+    color: theme.colors.onAccent,
+    fontSize: theme.type.small.fontSize,
+    fontWeight: theme.weights.semibold,
   },
 });
