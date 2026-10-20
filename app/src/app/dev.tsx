@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { getSavedVaultUri, requestVaultAccess } from "../features/vault/grant";
 import { listDirectory } from "../features/vault/scan";
 import {
@@ -7,6 +7,7 @@ import {
   exactAlarmState,
   scheduleAt,
 } from "../features/reminders/schedule";
+import { THEMES, colors, setDevTheme, type ThemeName } from "../theme/tokens";
 
 /**
  * Dev-only diagnostics from the spike: alarm state, scheduled
@@ -95,7 +96,28 @@ export default function DevScreen() {
         <Text style={styles.buttonText}>Grant vault folder</Text>
       </Pressable>
       <Text style={styles.line}>{message}</Text>
+      <ThemeSwitcher />
     </ScrollView>
+  );
+}
+
+/** Dev-only theme switcher: three swatches, one per named theme. */
+function ThemeSwitcher() {
+  return (
+    <View style={styles.switcher}>
+      <Text style={styles.switcherLabel}>theme (reload applies)</Text>
+      <View style={styles.swatchRow}>
+        {(Object.keys(THEMES) as ThemeName[]).map((name) => (
+          <Pressable
+            key={name}
+            style={[styles.swatch, { backgroundColor: THEMES[name].accent }]}
+            onPress={() => setDevTheme(name)}
+            accessibilityRole="button"
+            accessibilityLabel={`theme ${name}`}
+          />
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -107,23 +129,44 @@ const styles = StyleSheet.create({
   line: {
     fontSize: 14,
     fontFamily: "monospace",
+    color: colors.ink,
   },
   sub: {
     fontSize: 12,
     fontFamily: "monospace",
-    color: "#555555",
+    color: colors.inkMuted,
     marginLeft: 12,
   },
   button: {
     alignSelf: "flex-start",
-    backgroundColor: "#1d3fbf",
+    backgroundColor: colors.accent,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 4,
   },
   buttonText: {
-    color: "#ffffff",
+    color: colors.onAccent,
     fontWeight: "600",
+  },
+  switcher: {
+    marginTop: 16,
+    gap: 8,
+  },
+  switcherLabel: {
+    fontSize: 12,
+    fontFamily: "monospace",
+    color: colors.inkMuted,
+  },
+  swatchRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  swatch: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
   },
 });

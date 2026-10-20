@@ -4,19 +4,18 @@ import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { CaptureSheet } from "../../components/CaptureSheet";
-import { InlineComposer } from "../../components/InlineComposer";
 import { BottomBar } from "../../components/BottomBar";
 import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
 import { addDays, parseStoredDate, startOfDay } from "../../lib/dates";
 import { colors, fonts, spacing, radii, measure } from "../../theme/tokens";
 
 /**
- * Variant D Planner tab, mock-driven for the design exploration.
- * Day mode is the hero: the serif notebook date header, an
- * hour-ruler timeline with tasks pinned at their times, and an
- * unscheduled tray docked at the bottom of the spread, holding
- * undated tasks that wait to be dragged onto the ruler. Week is a
- * wide canvas of day columns; month stays a compact grid.
+ * The consolidated Planner tab. Day mode is the hero: a compact
+ * header (toggle pills, short serif date, accent rule), then D's body
+ * - the hour-ruler timeline with tasks pinned at their times, the
+ * live now line, and the unscheduled tray docked at the foot. Week is
+ * F's horizontal canvas of day columns; month stays a card with dots
+ * and lists a day's tasks on tap.
  */
 type Mode = "day" | "week" | "month";
 
@@ -45,7 +44,10 @@ const MONTHS = [
   "December",
 ];
 
-const TARGETS: CaptureTarget[] = [{ kind: "main" }];
+const TARGETS: CaptureTarget[] = [
+  { kind: "list", name: "Focus", uri: "mock://vault/Tasks/Lists/Focus.md" },
+  { kind: "main" },
+];
 
 /** First and last hour shown by the ruler. */
 const RULER_START = 7;
@@ -100,12 +102,9 @@ export default function PlannerScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* 7-day strip: today first, a dot marks days with tasks. */}
-        <DayStrip selected={selected} tasks={open} onSelect={setSelected} />
-
-        {/* Month / Week / Day toggle; Day is the default landing. */}
+        {/* E's economy: the toggle pills lead the header block. */}
         <View style={styles.segmented}>
-          {(["month", "week", "day"] as Mode[]).map((option) => (
+          {(["day", "week", "month"] as Mode[]).map((option) => (
             <Pressable
               key={option}
               style={({ pressed }) => [
@@ -143,23 +142,35 @@ export default function PlannerScreen() {
           />
         ) : null}
         {status === "ready" && mode === "week" ? (
-          <WeekView tasks={open} today={new Date()} selected={selected} />
+          <WeekView
+            tasks={open}
+            today={new Date()}
+            selected={selected}
+            onSelect={setSelected}
+          />
         ) : null}
         {status === "ready" && mode === "month" ? (
-          <MonthView tasks={open} today={new Date()} />
+          <MonthView
+            tasks={open}
+            today={new Date()}
+            onToggle={toggle}
+            onOpenDay={(day) => {
+              setSelected(day);
+              setMode("day");
+            }}
+          />
         ) : null}
       </ScrollView>
 
-      {/* Persistent inline composer, docked above the bottom bar. */}
-      <InlineComposer
+      {/* One bottom bar: nav left, capture field right. */}
+      <BottomBar
         targets={TARGETS}
-        defaultTargetIndex={0}
+        defaultTargetIndex={1}
         onSend={() => undefined}
         onOpenDetails={(text, targetIndex) =>
           setDraft(text.trim() ? { text, targetIndex } : null)
         }
       />
-      <BottomBar />
       {draft ? (
         <CaptureSheet
           visible
@@ -199,6 +210,7 @@ function DaySpread({
 
   return (
     <View>
+      {/* Compact day heading: eyebrow, short serif date, accent rule. */}
       <Text style={styles.dateMonth}>
         {MONTHS[date.getMonth()]} {date.getFullYear()}
       </Text>
@@ -240,7 +252,7 @@ function DaySpread({
         onToggle={onToggle}
       />
 
-      {/* Undated tasks, docked at the bottom of the spread. */}
+      {/* Undated tasks, docked at the foot of the spread. */}
       <UnscheduledTray tasks={tray} />
     </View>
   );
@@ -398,35 +410,47 @@ function UnscheduledTray({ tasks }: { tasks: TaskItem[] }) {
 
 /* --------------------------------------------------------------- week */
 
-/** The week as a wide canvas: seven day columns side by side. */
+/** F's week body: day columns with real content, one swipe away. */
 function WeekView({
   tasks,
   today,
   selected,
+  onSelect,
 }: {
   tasks: TaskItem[];
   today: Date;
   selected: Date;
+  onSelect: (date: Date) => void;
 }) {
   const todayStart = startOfDay(today).getTime();
   const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(today, offset));
   return (
-    <View style={styles.weekCanvas}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.weekCanvas}
+    >
       {days.map((day) => {
         const items = tasksForDay(tasks, day);
         const isToday = startOfDay(day).getTime() === todayStart;
         const isSelected =
           startOfDay(day).getTime() === startOfDay(selected).getTime();
         return (
-          <View
+          <Pressable
             key={day.getTime()}
-            style={[
+            style={({ pressed }) => [
               styles.weekCol,
-              isSelected && styles.weekColSelected,
+              isSelected && !isToday && styles.weekColSelected,
               isToday && styles.weekColToday,
+              pressed && styles.pressedFill,
             ]}
+            onPress={() => onSelect(day)}
+            accessibilityRole="button"
+            accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
           >
-            <Text style={styles.weekDayName}>{WEEKDAYS[day.getDay()]}</Text>
+            <Text style={styles.weekDayName}>
+              {isToday ? "Today" : WEEKDAYS[day.getDay()]}
+            </Text>
             <Text
               style={[styles.weekDayNum, isToday && styles.weekDayNumToday]}
             >
@@ -444,18 +468,30 @@ function WeekView({
                 </View>
               ))
             ) : (
-              <Text style={styles.weekFree}>-</Text>
+              <Text style={styles.weekFree}>free</Text>
             )}
-          </View>
+          </Pressable>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
 /* -------------------------------------------------------------- month */
 
-function MonthView({ tasks, today }: { tasks: TaskItem[]; today: Date }) {
+/** D/F month: the grid in a card; a tapped day lists its tasks. */
+function MonthView({
+  tasks,
+  today,
+  onToggle,
+  onOpenDay,
+}: {
+  tasks: TaskItem[];
+  today: Date;
+  onToggle: (task: TaskItem) => void;
+  onOpenDay: (day: Date) => void;
+}) {
+  const [picked, setPicked] = React.useState<Date | null>(null);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
   const daysInMonth = new Date(
     today.getFullYear(),
@@ -463,12 +499,19 @@ function MonthView({ tasks, today }: { tasks: TaskItem[]; today: Date }) {
     0,
   ).getDate();
   const lead = monthStart.getDay();
-  const busy = new Set(
-    tasks
-      .map((task) => (task.data?.due ? parseStoredDate(task.data.due) : null))
-      .filter((due) => due != null)
-      .map((due) => isoOf(due!.date)),
-  );
+  const byDay = new Map<string, TaskItem[]>();
+  for (const task of tasks) {
+    if (task.data?.due == null) {
+      continue;
+    }
+    const iso = task.data.due.slice(0, 10);
+    const bucket = byDay.get(iso);
+    if (bucket) {
+      bucket.push(task);
+    } else {
+      byDay.set(iso, [task]);
+    }
+  }
   const cells: (Date | null)[] = [
     ...Array.from({ length: lead }, () => null),
     ...Array.from(
@@ -476,96 +519,91 @@ function MonthView({ tasks, today }: { tasks: TaskItem[]; today: Date }) {
       (_, index) => new Date(today.getFullYear(), today.getMonth(), index + 1),
     ),
   ];
+  const pickedTasks = picked ? (byDay.get(isoOf(picked)) ?? []) : null;
+
   return (
-    <View style={styles.monthCard}>
-      <View style={styles.monthHead}>
-        {WEEKDAYS.map((name) => (
-          <Text key={name} style={styles.monthHeadCell}>
-            {name[0]}
-          </Text>
-        ))}
-      </View>
-      <View style={styles.monthGrid}>
-        {cells.map((day, index) =>
-          day == null ? (
-            <View key={`blank-${index}`} style={styles.monthCell} />
-          ) : (
-            <View
-              key={day.getTime()}
-              style={[
-                styles.monthCell,
-                isSameDay(day, today) && styles.monthCellToday,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.monthNum,
-                  isSameDay(day, today) && styles.monthNumToday,
+    <View>
+      <Text style={styles.monthTitle}>
+        {MONTHS[today.getMonth()]} {today.getFullYear()}
+      </Text>
+      <View style={styles.monthCard}>
+        <View style={styles.monthHead}>
+          {WEEKDAYS.map((name) => (
+            <Text key={name} style={styles.monthHeadCell}>
+              {name[0]}
+            </Text>
+          ))}
+        </View>
+        <View style={styles.monthGrid}>
+          {cells.map((day, index) =>
+            day == null ? (
+              <View key={`blank-${index}`} style={styles.monthCell} />
+            ) : (
+              <Pressable
+                key={day.getTime()}
+                style={({ pressed }) => [
+                  styles.monthCell,
+                  isSameDay(day, picked) && styles.monthCellPicked,
+                  isSameDay(day, today) && styles.monthCellToday,
+                  pressed && styles.pressedFill,
                 ]}
+                onPress={() => setPicked(day)}
+                accessibilityRole="button"
+                accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
               >
-                {day.getDate()}
-              </Text>
-              {busy.has(isoOf(day)) ? <View style={styles.monthDot} /> : null}
-            </View>
-          ),
-        )}
+                <Text
+                  style={[
+                    styles.monthNum,
+                    isSameDay(day, today) && styles.monthNumToday,
+                  ]}
+                >
+                  {day.getDate()}
+                </Text>
+                {byDay.has(isoOf(day)) ? <View style={styles.monthDot} /> : null}
+              </Pressable>
+            ),
+          )}
+        </View>
       </View>
+
+      {/* The tapped day's tasks, listed beneath the card. */}
+      {pickedTasks ? (
+        <View style={styles.monthDayPanel}>
+          <Text style={styles.sectionLabel}>
+            {WEEKDAYS_FULL[picked!.getDay()]} {picked!.getDate()}
+            {"  "}
+            {pickedTasks.length}
+          </Text>
+          {pickedTasks.length > 0 ? (
+            pickedTasks.map((task, index) => (
+              <View
+                key={task.uri}
+                style={index > 0 ? styles.groupRow : undefined}
+              >
+                <TaskRow task={task} onToggle={onToggle} />
+              </View>
+            ))
+          ) : (
+            <Text style={styles.monthDayEmpty}>Nothing scheduled.</Text>
+          )}
+          <Pressable
+            style={({ pressed }) => [
+              styles.monthDayOpen,
+              pressed && styles.detailsPressed,
+            ]}
+            onPress={() => onOpenDay(picked!)}
+            accessibilityRole="button"
+            accessibilityLabel="open this day"
+          >
+            <Text style={styles.monthDayOpenText}>Open in day view</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 /* ----------------------------------------------------------- helpers */
-
-function DayStrip({
-  selected,
-  tasks,
-  onSelect,
-}: {
-  selected: Date;
-  tasks: TaskItem[];
-  onSelect: (date: Date) => void;
-}) {
-  const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(new Date(), offset));
-  const busy = new Set(
-    tasks
-      .map((task) => (task.data?.due ? parseStoredDate(task.data.due) : null))
-      .filter((due) => due != null)
-      .map((due) => isoOf(due!.date)),
-  );
-  return (
-    <View style={styles.strip}>
-      {days.map((day) => {
-        const active = isSameDay(day, selected);
-        return (
-          <Pressable
-            key={day.getTime()}
-            style={({ pressed }) => [
-              styles.stripDay,
-              active && styles.stripDayActive,
-              pressed && styles.pressedFill,
-            ]}
-            onPress={() => onSelect(day)}
-            accessibilityRole="button"
-            accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
-          >
-            <Text style={[styles.stripName, active && styles.stripNameActive]}>
-              {WEEKDAYS[day.getDay()]}
-            </Text>
-            <Text
-              style={[
-                styles.stripNum,
-                active && styles.stripNumActive,
-                !active && busy.has(isoOf(day)) ? styles.stripNumBusy : null,
-              ]}
-            >
-              {day.getDate()}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
 
 function tasksForDay(tasks: TaskItem[], day: Date): TaskItem[] {
   const iso = isoOf(day);
@@ -632,7 +670,10 @@ function isoOf(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function isSameDay(a: Date, b: Date): boolean {
+function isSameDay(a: Date | null, b: Date | null): boolean {
+  if (a == null || b == null) {
+    return false;
+  }
   return startOfDay(a).getTime() === startOfDay(b).getTime();
 }
 
@@ -663,56 +704,15 @@ const styles = StyleSheet.create({
     maxWidth: measure,
     alignSelf: "center" as const,
     width: "100%" as const,
-    padding: spacing.l,
+    paddingHorizontal: 26,
+    paddingTop: spacing.m,
     paddingBottom: spacing.xl,
   },
   pressedFill: {
     backgroundColor: colors.pressed,
   },
 
-  // 7-day strip
-  strip: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: spacing.s,
-    marginBottom: spacing.l,
-  },
-  stripDay: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 44,
-    height: 52,
-    borderRadius: radii.m,
-  },
-  stripDayActive: {
-    backgroundColor: colors.accent,
-  },
-  stripName: {
-    fontSize: 10,
-    lineHeight: 12,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    letterSpacing: 0.5,
-  },
-  stripNameActive: {
-    color: colors.onAccent,
-  },
-  stripNum: {
-    fontSize: 16,
-    lineHeight: 20,
-    fontFamily: fonts.body,
-    color: colors.ink,
-    marginTop: 2,
-  },
-  stripNumActive: {
-    color: colors.onAccent,
-    fontWeight: "600",
-  },
-  stripNumBusy: {
-    fontWeight: "600",
-  },
-
-  // segmented toggle
+  // segmented toggle, E's tighter spacing
   segmented: {
     flexDirection: "row",
     backgroundColor: colors.surface,
@@ -720,11 +720,11 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     padding: 3,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.m,
   },
   segment: {
     flex: 1,
-    minHeight: 36,
+    minHeight: 32,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radii.s,
@@ -733,8 +733,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   segmentText: {
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: 12,
+    lineHeight: 15,
     fontFamily: fonts.body,
     color: colors.inkMuted,
     fontWeight: "500",
@@ -746,29 +746,27 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // day spread, the hero
+  // compact day heading
   dateMonth: {
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
     fontFamily: fonts.body,
     color: colors.inkMuted,
     textTransform: "uppercase",
     letterSpacing: 1.5,
-    marginTop: spacing.xs,
   },
   dateHeader: {
-    fontSize: 36,
-    lineHeight: 44,
+    fontSize: 26,
+    lineHeight: 32,
     fontFamily: fonts.display,
     color: colors.ink,
-    marginTop: spacing.xs,
   },
   dateRule: {
     height: 2,
     backgroundColor: colors.accent,
     width: 40,
-    marginTop: spacing.m,
-    marginBottom: spacing.l,
+    marginTop: spacing.xs,
+    marginBottom: spacing.m,
     borderRadius: 1,
   },
   overdueBlock: {
@@ -985,26 +983,28 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
 
-  // week canvas: day columns
+  // week canvas: horizontally scrolling day columns
   weekCanvas: {
     flexDirection: "row",
     gap: spacing.s,
+    paddingVertical: spacing.xs,
     marginBottom: spacing.xl,
   },
   weekCol: {
-    flex: 1,
+    width: 176,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     borderRadius: radii.m,
     padding: spacing.s,
-    minHeight: 220,
+    minHeight: 240,
   },
   weekColSelected: {
     borderColor: colors.accent,
   },
   weekColToday: {
     backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
   },
   weekDayName: {
     fontSize: 11,
@@ -1054,13 +1054,22 @@ const styles = StyleSheet.create({
   },
 
   // month view
+  monthTitle: {
+    fontSize: 13,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    marginBottom: spacing.s,
+  },
   monthCard: {
     backgroundColor: colors.surface,
     borderRadius: radii.l,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     padding: spacing.m,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.m,
   },
   monthHead: {
     flexDirection: "row",
@@ -1084,10 +1093,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 3,
+    borderRadius: radii.m,
+  },
+  monthCellPicked: {
+    backgroundColor: colors.accentSoft,
   },
   monthCellToday: {
     backgroundColor: colors.accentSoft,
-    borderRadius: radii.m,
   },
   monthNum: {
     fontSize: 14,
@@ -1104,6 +1116,34 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.accent,
+  },
+  monthDayPanel: {
+    marginBottom: spacing.xl,
+  },
+  monthDayEmpty: {
+    fontSize: 14,
+    lineHeight: 19,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    paddingVertical: spacing.m,
+  },
+  monthDayOpen: {
+    alignSelf: "flex-start" as const,
+    marginTop: spacing.s,
+    minHeight: 32,
+    justifyContent: "center",
+    paddingHorizontal: spacing.m,
+    borderRadius: radii.m,
+  },
+  monthDayOpenText: {
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: fonts.body,
+    color: colors.accent,
+    fontWeight: "600",
+  },
+  detailsPressed: {
+    backgroundColor: colors.pressed,
   },
 
   // states

@@ -4,7 +4,6 @@ import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { CaptureSheet } from "../../components/CaptureSheet";
-import { InlineComposer } from "../../components/InlineComposer";
 import { BottomBar } from "../../components/BottomBar";
 import {
   inMockFocus,
@@ -172,8 +171,8 @@ export default function ListsScreen() {
         />
       </View>
 
-      {/* Persistent inline composer, docked above the bottom bar. */}
-      <InlineComposer
+      {/* One bottom bar: nav left, capture field right. */}
+      <BottomBar
         targets={TARGETS}
         defaultTargetIndex={tab === "Focus" ? 0 : 1}
         onSend={() => undefined}
@@ -181,7 +180,6 @@ export default function ListsScreen() {
           setDraft(text.trim() ? { text, targetIndex } : null)
         }
       />
-      <BottomBar />
       {draft ? (
         <CaptureSheet
           visible
@@ -240,7 +238,9 @@ const styles = StyleSheet.create({
     maxWidth: measure,
     alignSelf: "center" as const,
     width: "100%" as const,
-    padding: spacing.l,
+    // F's centered feel: real page margins, rows never touch the edge.
+    paddingHorizontal: 26,
+    paddingTop: spacing.l,
     paddingBottom: spacing.xl,
   },
   tabBar: {
