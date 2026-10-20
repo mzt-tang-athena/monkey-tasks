@@ -1,36 +1,42 @@
 import { Platform } from "react-native";
 
 /**
- * Variant B design tokens: "Notebook calm". Warm paper surfaces, warm
- * ink, one sage accent. Every screen reads from here; no component
- * declares a raw color.
+ * Variant D design tokens: "Budget green on paper". The monkey-budget
+ * palette as the accent seed: one deep green on warm cream paper, a
+ * muted warm red for overdue only. A's row density with B's paper
+ * warmth. Every screen reads from here; no component declares a raw
+ * color.
  */
 export const theme = {
   colors: {
-    /** Screen background: warm cream paper, not gray-white. */
-    paper: "#F7F2E7",
-    /** Card and bar surfaces: a half-step brighter than paper. */
-    surface: "#FFFDF6",
-    /** Pressed rows and recessed fills. */
-    pressed: "#EFE8D8",
+    /** Screen background: warm cream paper from the budget palette. */
+    paper: "#F7F4D5",
+    /** Bars and raised surfaces: a half-step brighter than paper. */
+    surface: "#FCFAE6",
+    /** Pressed rows and recessed fills, including the tray well. */
+    pressed: "#EDEAC6",
     /** Near-black warm ink for primary text. */
-    ink: "#2B261D",
-    /** Secondary text: warm gray-brown. */
-    inkMuted: "#8A8070",
+    ink: "#262B20",
+    /** Secondary text: warm gray-green. */
+    inkMuted: "#7C816C",
     /** Faded text: done rows, disabled controls. */
-    inkFaint: "#B7AD9B",
-    /** Hairline separators and card borders. */
-    hairline: "#E4DCC8",
-    /** The single quiet accent: muted sage green. */
-    accent: "#4E6B54",
-    /** Accent tint for selected chips and fills. */
-    accentSoft: "#E6EBE2",
-    /** Overdue and errors: warm rust, never pure red. */
+    inkFaint: "#B2B59C",
+    /** Hairline separators and field borders. */
+    hairline: "#E0DDb8",
+    /** The single accent: budget deep green. */
+    accent: "#0F4031",
+    /** Pressed accent fills: the deep sibling. */
+    accentDeep: "#0A3323",
+    /** Lighter sibling for soft fills and selected chips. */
+    accentSoft: "#E2E7CE",
+    /** Overdue and errors: muted warm red, never pure red. */
     danger: "#A8402F",
     /** Danger tint for overdue badges. */
     dangerSoft: "#F4E3DD",
     /** Text and icons on accent fills. */
-    onAccent: "#FBF8EF",
+    onAccent: "#F7F4D5",
+    /** Modal backdrop: ink at 40 percent. */
+    scrim: "rgba(38,43,32,0.4)",
   },
   fonts: {
     /** Serif display face: date headers only. */
@@ -60,6 +66,8 @@ export const theme = {
     l: 16,
     pill: 999,
   },
+  /** Reading measure: screens cap their content width on wide screens. */
+  measure: 720,
 } as const;
 
-export const { colors, fonts, spacing, radii } = theme;
+export const { colors, fonts, spacing, radii, measure } = theme;

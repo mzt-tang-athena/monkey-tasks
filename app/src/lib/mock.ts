@@ -109,11 +109,14 @@ function buildTasks(): TaskItem[] {
       due: dueOn(3),
     }),
 
-    // No date.
+    // No date. These feed the planner's unscheduled tray too.
     mock("Call Mum", {}),
     mock("Clear vault inbox", {
       lists: ["[[Focus]]"],
     }),
+    mock("Water the plants", {}),
+    mock("Sort the receipt drawer", {}),
+    mock("Book train tickets home", {}),
 
     // Completed, faded at the bottom.
     mock("Buy stamps", {

@@ -1,5 +1,6 @@
 import { ScrollViewStyleReset, useServerDocumentContext } from "expo-router/html";
 import { type PropsWithChildren } from "react";
+import { colors } from "../theme/tokens";
 
 /**
  * Root HTML for web. The paper background is set here so there is no
@@ -22,7 +23,7 @@ export default function Root({ children }: PropsWithChildren) {
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
-            __html: "html, body { background-color: #F7F2E7; }",
+            __html: `html, body { background-color: ${colors.paper}; }`,
           }}
         />
         {headNodes}

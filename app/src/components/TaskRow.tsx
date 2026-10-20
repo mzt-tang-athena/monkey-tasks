@@ -84,10 +84,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 56,
-    paddingHorizontal: spacing.l,
-    paddingVertical: spacing.m,
-    borderRadius: spacing.m,
+    minHeight: 48,
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.s,
   },
   rowPressed: {
     backgroundColor: colors.pressed,

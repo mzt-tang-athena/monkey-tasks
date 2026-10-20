@@ -27,13 +27,15 @@ const webFocusRing = Platform.select({
 /**
  * The capture sheet: input, target-list chip, send. The target shows
  * where the capture will land; tap it to cycle. Main targets write no
- * lists property. Restyled with the Variant B tokens.
+ * lists property. The inline composer hands its draft here when the
+ * writer wants the full form.
  */
 export function CaptureSheet({
   visible,
   targets,
   defaultTargetIndex,
   preselectedDue,
+  initialText = "",
   onClose,
   onSend,
 }: {
@@ -42,12 +44,14 @@ export function CaptureSheet({
   targets: CaptureTarget[];
   defaultTargetIndex: number;
   preselectedDue?: string;
+  /** A draft carried over from the inline composer. */
+  initialText?: string;
   onClose: () => void;
   onSend: (parsed: ParsedCapture, target: CaptureTarget) => void;
 }) {
   // The parent remounts this sheet on open, so local state starts
   // fresh; no reset effect needed.
-  const [text, setText] = React.useState("");
+  const [text, setText] = React.useState(initialText);
   const [targetIndex, setTargetIndex] = React.useState(defaultTargetIndex);
   const [lastParse, setLastParse] = React.useState<ParsedCapture | null>(null);
   const [sending, setSending] = React.useState(false);
@@ -113,7 +117,11 @@ export function CaptureSheet({
             </Pressable>
             <View style={styles.spring} />
             <Pressable
-              style={[styles.send, !canSend && styles.sendDisabled]}
+              style={({ pressed }) => [
+                styles.send,
+                pressed && canSend && styles.sendPressed,
+                !canSend && styles.sendDisabled,
+              ]}
               onPress={send}
               disabled={!canSend}
               accessibilityRole="button"
@@ -142,7 +150,7 @@ function targetLabel(target: CaptureTarget): string {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(43,38,29,0.4)",
+    backgroundColor: colors.scrim,
     justifyContent: "flex-end",
   },
   sheet: {
@@ -218,6 +226,9 @@ const styles = StyleSheet.create({
   },
   sendDisabled: {
     backgroundColor: colors.pressed,
+  },
+  sendPressed: {
+    backgroundColor: colors.accentDeep,
   },
   sendTextDisabled: {
     color: colors.inkFaint,

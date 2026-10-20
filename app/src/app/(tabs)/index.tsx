@@ -4,6 +4,7 @@ import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { CaptureSheet } from "../../components/CaptureSheet";
+import { InlineComposer } from "../../components/InlineComposer";
 import { BottomBar } from "../../components/BottomBar";
 import {
   inMockFocus,
@@ -12,12 +13,13 @@ import {
   toggleMockCompleted,
 } from "../../lib/mock";
 import { dayLabel } from "../../lib/dates";
-import { colors, fonts, spacing, radii } from "../../theme/tokens";
+import { colors, fonts, spacing, radii, measure } from "../../theme/tokens";
 
 /**
- * Variant B Lists tab, mock-driven for the design exploration.
- * Date groups are understated cards, not plain headers. The capture
- * affordance lives in the slim bottom bar.
+ * Variant D Lists tab, mock-driven for the design exploration.
+ * The list tab bar sits at the very top, the brain breathes between
+ * plain group headers, and capture is the inline composer docked
+ * above the bottom bar.
  */
 type ListTab = "Focus" | "Main";
 
@@ -31,8 +33,11 @@ export default function ListsScreen() {
   const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
     "loading",
   );
-  const [sheetOpen, setSheetOpen] = React.useState(false);
   const [tab, setTab] = React.useState<ListTab>("Main");
+  const [draft, setDraft] = React.useState<{
+    text: string;
+    targetIndex: number;
+  } | null>(null);
 
   // Mock load. Status changes only in async callbacks, so the effect
   // does not set state synchronously. Loading starts as the initial
@@ -54,7 +59,9 @@ export default function ListsScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);  const toggle = (task: TaskItem) => {
+  }, []);
+
+  const toggle = (task: TaskItem) => {
     setTasks((current) =>
       (current ?? []).map((item) =>
         item.uri === task.uri ? toggleMockCompleted(item) : item,
@@ -83,96 +90,106 @@ export default function ListsScreen() {
 
   return (
     <View style={styles.screen}>
-      <FlatList
-        contentContainerStyle={styles.content}
-        data={[{ key: "lists" }]}
-        renderItem={() => (
-          <View>
-            <View style={styles.tabBar}>
-              {(["Focus", "Main"] as ListTab[]).map((name) => (
-                <Pressable
-                  key={name}
-                  style={({ pressed }) => [
-                    styles.tabChip,
-                    pressed && styles.chipPressed,
-                  ]}
-                  onPress={() => setTab(name)}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: tab === name }}
-                >
-                  <Text
-                    style={[styles.tabText, tab === name && styles.tabTextActive]}
+      <View style={styles.body}>
+        <FlatList
+          contentContainerStyle={styles.content}
+          data={[{ key: "lists" }]}
+          renderItem={() => (
+            <View>
+              {/* Clean top: the list tab bar, nothing above it. */}
+              <View style={styles.tabBar}>
+                {(["Focus", "Main"] as ListTab[]).map((name) => (
+                  <Pressable
+                    key={name}
+                    style={({ pressed }) => [
+                      styles.tabChip,
+                      pressed && styles.chipPressed,
+                    ]}
+                    onPress={() => setTab(name)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: tab === name }}
                   >
-                    {name}
-                  </Text>
-                </Pressable>
-              ))}
-              <Text style={styles.count}>
-                {visible.length} open
-              </Text>
-            </View>
-
-            {status === "loading" ? <LoadingState /> : null}
-            {status === "error" ? (
-              <EmptyState label="Something went wrong. Pull to retry." />
-            ) : null}
-            {status === "ready" && shown.length === 0 ? (
-              <EmptyState label="Nothing on this list yet." />
-            ) : null}
-
-            {status === "ready"
-              ? shown.map((section) => (
-                  <View
-                    key={section.title}
-                    style={styles.groupCard}
-                  >
-                    <Text style={[styles.groupLabel, toneLabel(section.tone)]}>
-                      {section.title}
-                      {"  "}
-                      {section.items.length}
+                    <Text
+                      style={[
+                        styles.tabText,
+                        tab === name && styles.tabTextActive,
+                      ]}
+                    >
+                      {name}
                     </Text>
-                    {section.items.map((task, index) => (
-                      <View
-                        key={task.uri}
-                        style={
-                          index > 0 ? styles.groupRow : styles.groupRowFirst
-                        }
-                      >
-                        <TaskRow task={task} onToggle={toggle} />
-                      </View>
-                    ))}
-                  </View>
-                ))
-              : null}
-
-            {status === "ready" && groups.completed.length > 0 ? (
-              <View style={[styles.groupCard, styles.completedCard]}>
-                <Text style={styles.completedLabel}>
-                  Completed  {groups.completed.length}
-                </Text>
-                {groups.completed.map((task, index) => (
-                  <View
-                    key={task.uri}
-                    style={
-                      index > 0 ? styles.groupRow : styles.groupRowFirst
-                    }
-                  >
-                    <TaskRow task={task} onToggle={toggle} />
-                  </View>
+                  </Pressable>
                 ))}
+                <Text style={styles.count}>{visible.length} open</Text>
               </View>
-            ) : null}
-          </View>
-        )}
+
+              {status === "loading" ? <LoadingState /> : null}
+              {status === "error" ? (
+                <EmptyState label="Something went wrong. Pull to retry." />
+              ) : null}
+              {status === "ready" && shown.length === 0 ? (
+                <EmptyState label="Nothing on this list yet." />
+              ) : null}
+
+              {status === "ready"
+                ? shown.map((section) => (
+                    <View key={section.title} style={styles.group}>
+                      <Text
+                        style={[styles.groupLabel, toneLabel(section.tone)]}
+                      >
+                        {section.title}
+                        {"  "}
+                        {section.items.length}
+                      </Text>
+                      {section.items.map((task, index) => (
+                        <View
+                          key={task.uri}
+                          style={index > 0 ? styles.groupRow : undefined}
+                        >
+                          <TaskRow task={task} onToggle={toggle} />
+                        </View>
+                      ))}
+                    </View>
+                  ))
+                : null}
+
+              {status === "ready" && groups.completed.length > 0 ? (
+                <View style={[styles.group, styles.completedGroup]}>
+                  <Text style={styles.completedLabel}>
+                    Completed  {groups.completed.length}
+                  </Text>
+                  {groups.completed.map((task, index) => (
+                    <View
+                      key={task.uri}
+                      style={index > 0 ? styles.groupRow : undefined}
+                    >
+                      <TaskRow task={task} onToggle={toggle} />
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          )}
+        />
+      </View>
+
+      {/* Persistent inline composer, docked above the bottom bar. */}
+      <InlineComposer
+        targets={TARGETS}
+        defaultTargetIndex={tab === "Focus" ? 0 : 1}
+        onSend={() => undefined}
+        onOpenDetails={(text, targetIndex) =>
+          setDraft(text.trim() ? { text, targetIndex } : null)
+        }
       />
-      <BottomBar onAdd={() => setSheetOpen(true)} />
-      {sheetOpen ? (
+      <BottomBar />
+      {draft ? (
         <CaptureSheet
           visible
           targets={TARGETS}
-          defaultTargetIndex={tab === "Focus" ? 0 : 1}
-          onClose={() => setSheetOpen(false)}
-          onSend={() => setSheetOpen(false)}
+          defaultTargetIndex={draft.targetIndex}
+          initialText={draft.text}
+          onClose={() => setDraft(null)}
+          onSend={() => setDraft(null)}
         />
       ) : null}
     </View>
@@ -188,7 +205,7 @@ const toneLabel = (() => {
   const map = StyleSheet.create({
     danger: { color: colors.danger },
     muted: { color: colors.inkMuted },
-    ink: { color: colors.ink },
+    ink: { color: colors.accent },
   });
   return (tone: "danger" | "muted" | "ink") => map[tone];
 })();
@@ -216,7 +233,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.paper,
   },
+  body: {
+    flex: 1,
+  },
   content: {
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    width: "100%" as const,
     padding: spacing.l,
     paddingBottom: spacing.xl,
   },
@@ -224,28 +247,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.s,
-    marginTop: spacing.xl,
     marginBottom: spacing.l,
   },
   tabChip: {
-    minHeight: 40,
-    paddingHorizontal: spacing.m,
-    paddingVertical: spacing.xs,
+    minHeight: 36,
+    paddingHorizontal: spacing.s,
     justifyContent: "center",
-    borderRadius: radii.m,
   },
   chipPressed: {
     backgroundColor: colors.pressed,
+    borderRadius: radii.m,
   },
   tabText: {
-    fontSize: 17,
+    fontSize: 16,
     lineHeight: 22,
     fontFamily: fonts.body,
     color: colors.inkMuted,
     fontWeight: "500",
   },
   tabTextActive: {
-    color: colors.ink,
+    color: colors.accent,
     fontWeight: "700",
     textDecorationLine: "underline",
     textDecorationColor: colors.accent,
@@ -253,49 +274,44 @@ const styles = StyleSheet.create({
   count: {
     marginLeft: "auto" as const,
     fontSize: 12,
+    lineHeight: 16,
     fontFamily: fonts.body,
     color: colors.inkFaint,
   },
-  groupCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.l,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    marginTop: spacing.m,
-    paddingVertical: spacing.s,
-  },
-  completedCard: {
-    opacity: 0.6,
-    marginTop: spacing.xl,
+
+  // Plain groups: a header on the paper, flush rows beneath.
+  group: {
+    marginTop: spacing.l,
   },
   groupLabel: {
     fontSize: 11,
     lineHeight: 14,
     fontFamily: fonts.body,
-    fontWeight: "600",
-    letterSpacing: 1,
+    fontWeight: "700",
+    letterSpacing: 1.2,
     textTransform: "uppercase",
-    paddingHorizontal: spacing.l,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.s,
+    paddingBottom: spacing.xs,
   },
   groupRow: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.hairline,
   },
-  groupRowFirst: {},
+  completedGroup: {
+    opacity: 0.55,
+    marginTop: spacing.xl,
+  },
   completedLabel: {
     fontSize: 11,
     lineHeight: 14,
     fontFamily: fonts.body,
-    fontWeight: "600",
-    letterSpacing: 1,
+    fontWeight: "700",
+    letterSpacing: 1.2,
     textTransform: "uppercase",
     color: colors.inkFaint,
-    paddingHorizontal: spacing.l,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.s,
+    paddingBottom: spacing.xs,
   },
+
+  // States
   holder: {
     minHeight: 160,
     justifyContent: "center",
@@ -306,7 +322,6 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     backgroundColor: colors.hairline,
     marginVertical: spacing.m,
-    marginHorizontal: spacing.l,
   },
   empty: {
     fontSize: 15,

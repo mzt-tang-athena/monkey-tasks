@@ -5,11 +5,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, spacing } from "../theme/tokens";
 
 /**
- * Variant B capture affordance: instead of a floating button, a slim
- * full-width bottom bar. Tab icons sit on the left, the round add
- * button on the right. Both screens mount one.
+ * Variant D bottom chrome: icon tabs only. Capture is the inline
+ * composer docked above this bar, so there is no add button here.
  */
-export function BottomBar({ onAdd }: { onAdd: () => void }) {
+export function BottomBar() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
@@ -27,15 +26,6 @@ export function BottomBar({ onAdd }: { onAdd: () => void }) {
         onPress={() => router.navigate("/planner")}
         icon={<CalendarGlyph active={pathname === "/planner"} />}
       />
-      <View style={styles.spring} />
-      <Pressable
-        style={({ pressed }) => [styles.add, pressed && styles.addPressed]}
-        onPress={onAdd}
-        accessibilityLabel="add a task"
-        accessibilityRole="button"
-      >
-        <Text style={styles.addGlyph}>+</Text>
-      </Pressable>
     </View>
   );
 }
@@ -67,7 +57,7 @@ function IconTab({
   );
 }
 
-/** Simple vecless glyphs built from hairline views; no icon font. */
+/** Simple glyphs built from hairline views; no icon font. */
 function ListGlyph({ active }: { active: boolean }) {
   const color = active ? colors.accent : colors.inkMuted;
   return (
@@ -93,12 +83,13 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.hairline,
     paddingHorizontal: spacing.l,
     paddingTop: spacing.s,
-    gap: spacing.m,
+    gap: spacing.xl,
   },
   tab: {
     alignItems: "center",
@@ -120,27 +111,6 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     color: colors.accent,
     fontWeight: "600",
-  },
-  spring: {
-    flex: 1,
-  },
-  add: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addPressed: {
-    opacity: 0.7,
-  },
-  addGlyph: {
-    color: colors.onAccent,
-    fontSize: 26,
-    lineHeight: 30,
-    fontWeight: "400",
-    marginTop: -2,
   },
   glyphList: {
     height: 12,
