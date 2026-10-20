@@ -1,4 +1,5 @@
 import * as chrono from "chrono-node";
+import { formatLocal } from "../../lib/dates";
 
 /**
  * Offline capture parsing: turn a typed line into task note properties.
@@ -16,6 +17,8 @@ export type ParsedCapture = {
   reminders?: string[];
   /** One RRULE string, for example FREQ=MONTHLY. */
   recurrence?: string;
+  /** Character spans of matched text, for the highlighting preview. */
+  matches?: { kind: "date" | "recurrence"; text: string; index: number }[];
 };
 
 const RECURRENCE_WORDS: Record<string, string> = {
@@ -36,11 +39,19 @@ const WEEKDAY_CODES: Record<string, string> = {
   sunday: "SU",
 };
 
-const RECURRENCE_PATTERNS: { pattern: RegExp; rule: (m: RegExpExecArray) => string }[] = [
+const RECURRENCE_PATTERNS: {
+  pattern: RegExp;
+  rule: (m: RegExpExecArray) => string;
+}[] = [
   {
-    pattern: new RegExp(`\\b(?:every|each)\\s+(mon|tues|wednes|thurs|fri|satur|sun)days?\\b`, "i"),
+    pattern: new RegExp(
+      `\\b(?:every|each)\\s+(mon|tues|wednes|thurs|fri|satur|sun)days?\\b`,
+      "i",
+    ),
     rule: (m) => {
-      const full = Object.keys(WEEKDAY_CODES).find((word) => word.startsWith(m[1].slice(0, 4).replace(/s$/, "")));
+      const full = Object.keys(WEEKDAY_CODES).find((word) =>
+        word.startsWith(m[1].slice(0, 4).replace(/s$/, "")),
+      );
       const day = WEEKDAY_CODES[full ?? m[1].toLowerCase()];
       return `FREQ=WEEKLY;BYDAY=${day}`;
     },
@@ -63,36 +74,33 @@ function squash(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function formatLocal(date: Date, withTime: boolean): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  if (!withTime) {
-    return datePart;
-  }
-  return `${datePart}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-export function formatToday(): string {
-  return formatLocal(new Date(), false);
-}
-
-export function parseCapture(input: string, now: Date = new Date()): ParsedCapture | null {
-  const original = squash(input.replace(/^(?:please\s+)?remind\s+me(?:\s+to)?\s+/i, ""));
+export function parseCapture(
+  input: string,
+  now: Date = new Date(),
+): ParsedCapture | null {
+  const original = squash(
+    input.replace(/^(?:please\s+)?remind\s+me(?:\s+to)?\s+/i, ""),
+  );
   if (original === "") {
     return null;
   }
   let text = original;
   let recurrence: string | undefined;
+  const matches: { kind: "date" | "recurrence"; text: string; index: number }[] = [];
 
-  const repeatMatch = /\b(?:repeats?|recurs?|recurring)\s+(daily|weekly|monthly|yearly|annually)\b/i.exec(text);
+  const repeatMatch = /\b(?:repeats?|recurs?|recurring)\s+(daily|weekly|monthly|yearly|annually)\b/i.exec(
+    text,
+  );
   if (repeatMatch) {
     recurrence = RECURRENCE_WORDS[repeatMatch[1].toLowerCase()];
+    matches.push({ kind: "recurrence", text: repeatMatch[0], index: repeatMatch.index });
     text = squash(strip(text, repeatMatch.index, repeatMatch[0].length));
   } else {
     for (const entry of RECURRENCE_PATTERNS) {
       const match = entry.pattern.exec(text);
       if (match) {
         recurrence = entry.rule(match);
+        matches.push({ kind: "recurrence", text: match[0], index: match.index });
         text = squash(strip(text, match.index, match[0].length));
         break;
       }
@@ -109,6 +117,7 @@ export function parseCapture(input: string, now: Date = new Date()): ParsedCaptu
     if (hasTime) {
       reminders = [due];
     }
+    matches.push({ kind: "date", text: first.text, index: first.index });
     text = squash(strip(text, first.index, first.text.length));
   }
 
@@ -123,5 +132,6 @@ export function parseCapture(input: string, now: Date = new Date()): ParsedCaptu
   if (recurrence) {
     result.recurrence = recurrence;
   }
+  result.matches = matches.sort((a, b) => a.index - b.index);
   return result;
 }
