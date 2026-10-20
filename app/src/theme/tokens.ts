@@ -144,6 +144,7 @@ export const radii = { pill: 999 } as const;
 export const drag = {
   threshold: 8,
   minPane: 150,
+  holdMs: 450,
 } as const;
 
 /** Reading measure: screens cap their content width on wide screens. */

@@ -178,13 +178,11 @@ export function BottomBar({
             autoFocus
             selectionColor={colors.accent}
           />
-          {parsed && parsed.name !== "" ? (
+          {/* Parse feedback only when something parsed; the panel
+              stays as clean as possible otherwise. */}
+          {parsed && parsed.matches != null && parsed.matches.length > 0 ? (
             <Text style={styles.sheetParse} numberOfLines={1}>
-              {parsed.matches?.length
-                ? `parsed: ${parsed.matches.map((m) => m.text).join(", ")}`
-                : "no date"}
-              {" -> "}
-              {parsed.name}
+              {`parsed: ${parsed.matches.map((m) => m.text).join(", ")} -> ${parsed.name}`}
               {onOpenDetails != null ? (
                 <Text
                   style={styles.sheetParseDetails}
@@ -227,8 +225,10 @@ export function BottomBar({
               accessibilityLabel="add task"
               accessibilityState={{ disabled: !canSend }}
             >
-              <Text style={[styles.sendText, !canSend && styles.sendTextDisabled]}>
-                {"↑"}
+              <Text
+                style={[styles.sendText, !canSend && styles.sendTextDisabled]}
+              >
+                Add
               </Text>
             </Pressable>
           </View>
@@ -259,6 +259,8 @@ export function BottomBar({
             }}
             icon={<CalendarGlyph active={pathname === "/planner"} />}
           />
+          {/* The air between the nav and the capture control. */}
+          <View style={styles.navSpacer} />
           <Pressable
             style={({ pressed }) => [
               styles.captureButton,
@@ -347,6 +349,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.s,
   },
+  navSpacer: {
+    flex: 1,
+    minWidth: spacing.xl,
+  },
 
   // Nav items: icon over label, no dot; weight and color carry the
   // selection.
@@ -406,7 +412,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    marginLeft: "auto" as const,
     minHeight: 36,
     paddingHorizontal: spacing.m,
     borderRadius: radii.pill,
@@ -483,7 +488,11 @@ const styles = StyleSheet.create({
     color: colors.ink,
     minHeight: 40,
     maxHeight: 120,
-    padding: 0,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radius,
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.s,
   },
   sheetParse: {
     fontSize: 13,
@@ -525,14 +534,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // The save control, right edge of the action row.
+  // The save control: a solid accent button at the row's right edge.
   send: {
-    width: 32,
-    height: 32,
-    borderRadius: radius,
     backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: radius,
+    paddingHorizontal: spacing.l,
+    minHeight: 32,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   sendPressed: {
     backgroundColor: colors.accentDeep,
@@ -542,10 +551,10 @@ const styles = StyleSheet.create({
   },
   sendText: {
     color: colors.onAccent,
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 18,
     fontFamily: fonts.body,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   sendTextDisabled: {
     color: colors.inkFaint,

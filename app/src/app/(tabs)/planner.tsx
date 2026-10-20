@@ -22,6 +22,10 @@ import type { PointerEvent as RNPointerEvent } from "react-native";
  */
 type Mode = "day" | "week" | "month";
 
+/** Where the bottom list's tasks come from. */
+type Source = "due-period" | "Focus" | "Main";
+const SOURCES: Source[] = ["due-period", "Focus", "Main"];
+
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_FULL = [
   "Sunday",
@@ -68,6 +72,28 @@ export default function PlannerScreen() {
     targetIndex: number;
   } | null>(null);
 
+  // The task source for the bottom list, shared by all three modes:
+  // the due period by default, or a named list.
+  const [source, setSource] = React.useState<Source>("due-period");
+  const [sourceMenu, setSourceMenu] = React.useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
+  // The pill/list drag that targets week columns and month cells.
+  const [pending, setPending] = React.useState<{
+    task: TaskItem;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [dragging, setDragging] = React.useState<{
+    task: TaskItem;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [hoveredDay, setHoveredDay] = React.useState<Date | null>(null);
+  const moved = React.useRef(false);
+
   React.useEffect(() => {
     let cancelled = false;
     loadMockTasks()
@@ -95,7 +121,7 @@ export default function PlannerScreen() {
     );
   };
 
-  // The day spread's drag-and-drop writes due times through here.
+  // Drag-and-drop writes due dates and times through here.
   const updateTask = (task: TaskItem, patch: Partial<TaskFrontmatter>) => {
     setTasks((current) =>
       (current ?? []).map((item) =>
@@ -113,8 +139,47 @@ export default function PlannerScreen() {
     open.push(...bucket.items);
   }
 
+  const startDayDrag = (task: TaskItem, e: RNPointerEvent) => {
+    moved.current = false;
+    setPending({ task, x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+  };
+
+  const onPointerMove = (e: RNPointerEvent) => {
+    const x = e.nativeEvent.pageX;
+    const y = e.nativeEvent.pageY;
+    if (pending) {
+      const travel = Math.abs(x - pending.x) + Math.abs(y - pending.y);
+      if (travel > drag.threshold) {
+        moved.current = true;
+        setDragging({ task: pending.task, x, y });
+        setPending(null);
+      }
+      return;
+    }
+    if (dragging) {
+      setDragging({ ...dragging, x, y });
+    }
+  };
+
+  const onPointerUp = () => {
+    if (dragging) {
+      if (hoveredDay != null) {
+        updateTask(dragging.task, { due: formatLocal(hoveredDay, false) });
+      }
+      setDragging(null);
+      setHoveredDay(null);
+    }
+    setPending(null);
+    moved.current = false;
+  };
+
   return (
-    <View style={styles.screen}>
+    <View
+      style={styles.screen}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+    >
       {status === "ready" && mode === "day" ? (
         // Day mode leaves the page scroll: it is a fixed split of
         // timeline and list, sized by the grabber between them.
@@ -123,6 +188,10 @@ export default function PlannerScreen() {
           today={new Date()}
           tasks={all}
           openTasks={open}
+          source={source}
+          onCycleSource={cycleSource(source, setSource)}
+          onOpenSourceMenu={setSourceMenu}
+          sourceMenuOpen={sourceMenu != null}
           onMode={setMode}
           onSelectStrip={setSelected}
           onToggle={toggle}
@@ -145,29 +214,108 @@ export default function PlannerScreen() {
           ) : null}
 
           {status === "ready" && mode === "week" ? (
-            <WeekView
-              tasks={open}
-              today={new Date()}
-              selected={selected}
-              onSelect={setSelected}
-            />
+            <>
+              <WeekView
+                tasks={open}
+                today={new Date()}
+                selected={selected}
+                onSelect={setSelected}
+                dragActive={dragging != null}
+                hoveredDay={hoveredDay}
+                onHoverDay={setHoveredDay}
+              />
+              {/* Week's foot: draggable pill chips, filtered by the
+                  chosen source. */}
+              <View style={styles.pillsSection}>
+                <SourceToggle
+                  source={source}
+                  mode={mode}
+                  onCycle={cycleSource(source, setSource)}
+                  onOpenMenu={setSourceMenu}
+                  menuOpen={sourceMenu != null}
+                />
+                <UnscheduledPills
+                  tasks={undatedForSource(all, source)}
+                  onDragStart={startDayDrag}
+                />
+              </View>
+            </>
           ) : null}
           {status === "ready" && mode === "month" ? (
             <MonthView
               viewMonth={startOfMonth(selected)}
               today={new Date()}
-              tasks={open}
+              tasks={all}
+              source={source}
+              onCycleSource={cycleSource(source, setSource)}
+              onOpenSourceMenu={setSourceMenu}
+              sourceMenuOpen={sourceMenu != null}
               onToggle={toggle}
               onOpenDay={(day) => {
                 setSelected(day);
                 setMode("day");
               }}
+              dragActive={dragging != null}
+              hoveredDay={hoveredDay}
+              onHoverDay={setHoveredDay}
+              onDragTask={startDayDrag}
             />
           ) : null}
         </ScrollView>
       )}
 
-      {/* One bottom bar: nav left, capture field right. */}
+      {/* The drag ghost for week and month drops. */}
+      {dragging ? (
+        <View
+          pointerEvents="none"
+          style={[styles.dragGhost, { left: dragging.x - 100, top: dragging.y - 40 }]}
+        >
+          <View style={styles.dragGhostChip}>
+            <View style={styles.ghostBar} />
+            <Text style={styles.dragGhostText} numberOfLines={1}>
+              {dragging.task.name}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {/* The source chooser, opened by press-and-hold. */}
+      {sourceMenu ? (
+        <React.Fragment>
+          <Pressable
+            style={styles.menuBackdrop}
+            onPress={() => setSourceMenu(null)}
+            accessibilityLabel="close source menu"
+            accessibilityRole="button"
+          />
+          <View style={[styles.sourceMenu, { top: sourceMenu.top, left: sourceMenu.left }]}>
+            {SOURCES.map((option) => (
+              <Pressable
+                key={option}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  pressed && styles.menuItemPressed,
+                ]}
+                onPress={() => {
+                  setSource(option);
+                  setSourceMenu(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={sourceLabel(option, mode)}
+              >
+                <Text style={styles.menuItemText}>
+                  {sourceLabel(option, mode)}
+                </Text>
+                {option === source ? (
+                  <Text style={styles.menuItemCheck}>{"✓"}</Text>
+                ) : null}
+              </Pressable>
+            ))}
+          </View>
+        </React.Fragment>
+      ) : null}
+
+      {/* One bottom bar: nav left, capture button right. */}
       <BottomBar
         targets={TARGETS}
         defaultTargetIndex={1}
@@ -189,6 +337,61 @@ export default function PlannerScreen() {
       ) : null}
     </View>
   );
+}
+
+/** The source cycle: due period, then each named list, then back. */
+function cycleSource(
+  source: Source,
+  setSource: (next: Source) => void,
+): () => void {
+  return () => {
+    const index = SOURCES.indexOf(source);
+    setSource(SOURCES[(index + 1) % SOURCES.length]);
+  };
+}
+
+function sourceLabel(source: Source, mode: Mode): string {
+  if (source === "due-period") {
+    return mode === "day"
+      ? "Due today"
+      : mode === "week"
+        ? "Due this week"
+        : "Due this month";
+  }
+  return source;
+}
+
+/** Undated tasks, filtered to the chosen source. */
+function undatedForSource(tasks: TaskItem[], source: Source): TaskItem[] {
+  const undated = tasks.filter(
+    (task) => task.data?.due == null && !isDone(task),
+  );
+  return source === "due-period"
+    ? undated
+    : undated.filter((task) => inSourceList(task, source));
+}
+
+function inSourceList(task: TaskItem, list: string): boolean {
+  if (list === "Main") {
+    return task.data == null || !task.data.lists?.length;
+  }
+  return task.data?.lists?.includes(`[[${list}]]`) ?? false;
+}
+
+function isDone(task: TaskItem): boolean {
+  return task.data?.completed != null && task.data.completed !== "";
+}
+
+/** Open tasks first, by due time, then completed ones behind them. */
+function sortOpenFirst(items: TaskItem[]): TaskItem[] {
+  const timeValue = (task: TaskItem): number =>
+    task.data?.due ? (parseStoredDate(task.data.due)?.date.getTime() ?? 0) : 0;
+  const byTime = (a: TaskItem, b: TaskItem) =>
+    timeValue(a) - timeValue(b) || a.name.localeCompare(b.name);
+  return [
+    ...items.filter((task) => !isDone(task)).sort(byTime),
+    ...items.filter(isDone).sort(byTime),
+  ];
 }
 
 /* ------------------------------------------------------------- header */
@@ -252,11 +455,138 @@ function PlannerHeader({
 
 /* ---------------------------------------------------------------- day */
 
+/**
+ * The small source toggle above a mode's bottom list. Quiet at rest:
+ * a muted label and a chevron. Pressed, it previews the next source
+ * in the cycle. Held past drag.holdMs, it opens the direct chooser
+ * menu (rendered by the screen) instead of cycling.
+ */
+function SourceToggle({
+  source,
+  mode,
+  menuOpen,
+  onCycle,
+  onOpenMenu,
+}: {
+  source: Source;
+  mode: Mode;
+  menuOpen: boolean;
+  onCycle: () => void;
+  onOpenMenu: (anchor: { top: number; left: number }) => void;
+}) {
+  const wrapRef = React.useRef<React.ComponentRef<typeof View>>(null);
+  const holdTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [hover, setHover] = React.useState(false);
+  const [pressed, setPressed] = React.useState(false);
+  const [held, setHeld] = React.useState(false);
+
+  const index = SOURCES.indexOf(source);
+  const label = sourceLabel(source, mode);
+  const nextLabel = sourceLabel(SOURCES[(index + 1) % SOURCES.length], mode);
+
+  React.useEffect(
+    () => () => {
+      if (holdTimer.current != null) {
+        clearTimeout(holdTimer.current);
+      }
+    },
+    [],
+  );
+
+  return (
+    <View ref={wrapRef}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.sourceToggle,
+          (hover || pressed) && styles.sourceToggleHot,
+        ]}
+        onHoverIn={() => setHover(true)}
+        onHoverOut={() => setHover(false)}
+        onPressIn={() => {
+          setPressed(true);
+          setHeld(false);
+          holdTimer.current = setTimeout(() => {
+            setHeld(true);
+            wrapRef.current?.measureInWindow((x, y, width, height) => {
+              onOpenMenu({
+                top: y + height + 4,
+                left: Math.max(x, spacing.m),
+              });
+            });
+          }, drag.holdMs);
+        }}
+        onPressOut={() => {
+          setPressed(false);
+          if (holdTimer.current != null) {
+            clearTimeout(holdTimer.current);
+            holdTimer.current = null;
+          }
+        }}
+        // Tap cycles; a press that opened the chooser must not.
+        onPress={() => {
+          if (held || menuOpen) {
+            return;
+          }
+          onCycle();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`task source: ${label}`}
+      >
+        <Text
+          style={[
+            styles.sourceToggleText,
+            pressed && !held && styles.sourceToggleTextHot,
+          ]}
+        >
+          {pressed && !held ? nextLabel : label}
+        </Text>
+        <Text style={styles.sourceToggleChevron}>{"▾"}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/** Round-1 tray pills, back as draggable chips for the week foot. */
+function UnscheduledPills({
+  tasks,
+  onDragStart,
+}: {
+  tasks: TaskItem[];
+  onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
+}) {
+  if (tasks.length === 0) {
+    return null;
+  }
+  return (
+    <View style={styles.pillsWrap}>
+      {tasks.map((task) => (
+        <View
+          key={task.uri}
+          style={styles.pillChip}
+          onPointerDown={(e) => onDragStart(task, e)}
+        >
+          <View style={styles.pillGrip}>
+            <View style={styles.pillGripDot} />
+            <View style={styles.pillGripDot} />
+          </View>
+          <Text style={styles.pillText} numberOfLines={1}>
+            {task.name}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function DaySpread({
   date,
   today,
   tasks,
   openTasks,
+  source,
+  onCycleSource,
+  onOpenSourceMenu,
+  sourceMenuOpen,
   onMode,
   onSelectStrip,
   onToggle,
@@ -266,6 +596,10 @@ function DaySpread({
   today: Date;
   tasks: TaskItem[];
   openTasks: TaskItem[];
+  source: Source;
+  onCycleSource: () => void;
+  onOpenSourceMenu: (anchor: { top: number; left: number }) => void;
+  sourceMenuOpen: boolean;
   onMode: (mode: Mode) => void;
   onSelectStrip: (date: Date) => void;
   onToggle: (task: TaskItem) => void;
@@ -297,8 +631,23 @@ function DaySpread({
   const sameDay = startOfDay(today).getTime() === startOfDay(date).getTime();
   const groups = groupByDue(tasks, today);
   const overdue = sameDay ? groups.overdue : [];
-  const dayTasks = sameDay ? groups.today : tasksForDay(tasks, date);
+  // All of the day's tasks, completed ones struck and kept visible
+  // until the day rolls.
+  const dayTasks = sameDay
+    ? sortOpenFirst(
+        tasks.filter(
+          (task) =>
+            task.data?.due != null && task.data.due.slice(0, 10) === isoOf(date),
+        ),
+      )
+    : sortOpenFirst(tasksForDayAll(tasks, date));
   const timed = dayTasks.filter(hasTime);
+
+  // The list pane's rows follow the chosen source.
+  const listRows =
+    source === "due-period"
+      ? dayTasks
+      : sortOpenFirst(tasks.filter((task) => inSourceList(task, source)));
 
   const maxTimeline = Math.max(rootHeight - drag.minPane, drag.minPane);
 
@@ -445,15 +794,21 @@ function DaySpread({
         </Pressable>
       </View>
 
-      {/* The task list pane: all of today's tasks, timed ones with
-          their time. Dragging a row up into the ruler sets its time. */}
+      {/* The task list pane: its source picks the rows. Dragging a
+          row up into the ruler sets its time. */}
       <View style={styles.paneList}>
-        <Text style={styles.sectionLabel}>Today  {dayTasks.length}</Text>
+        <SourceToggle
+          source={source}
+          mode="day"
+          menuOpen={sourceMenuOpen}
+          onCycle={onCycleSource}
+          onOpenMenu={onOpenSourceMenu}
+        />
         <ScrollView
           style={styles.paneScroll}
           showsVerticalScrollIndicator={false}
         >
-          {overdue.length > 0 ? (
+          {source === "due-period" && overdue.length > 0 ? (
             <View style={styles.overdueBlock}>
               <Text style={styles.overdueLabel}>Overdue  {overdue.length}</Text>
               {overdue.map((task) => (
@@ -466,8 +821,8 @@ function DaySpread({
               ))}
             </View>
           ) : null}
-          {dayTasks.length > 0 ? (
-            dayTasks.map((task, index) => (
+          {listRows.length > 0 ? (
+            listRows.map((task, index) => (
               <View
                 key={task.uri}
                 style={index > 0 ? styles.groupRow : undefined}
@@ -477,7 +832,11 @@ function DaySpread({
               </View>
             ))
           ) : (
-            <Text style={styles.empty}>Nothing scheduled today.</Text>
+            <Text style={styles.empty}>
+              {source === "due-period"
+                ? "Nothing scheduled today."
+                : `Nothing on ${source} yet.`}
+            </Text>
           )}
         </ScrollView>
       </View>
@@ -591,31 +950,38 @@ function HourTask({
   onToggle: (task: TaskItem) => void;
   onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
 }) {
-  const [pressed, setPressed] = React.useState(false);
+  const [hover, setHover] = React.useState(false);
+  const done = isDone(task);
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
+  // The chip body is selection only (no-op for now); its circle is
+  // the done toggle. Done tasks stay in their slot, struck.
   return (
-    <Pressable
-      onPress={() => onToggle(task)}
-      disabled={onToggle == null}
-      onHoverIn={() => setPressed(true)}
-      onHoverOut={() => setPressed(false)}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
+    <View
+      onPointerEnter={() => setHover(true)}
+      onPointerLeave={() => setHover(false)}
       onPointerDown={(e) => onDragStart(task, e)}
-      accessibilityLabel={onToggle != null ? "mark done" : undefined}
-      accessibilityRole="button"
-      style={[styles.hourTask, pressed && styles.hourTaskPressed]}
+      style={[styles.hourTask, hover && styles.hourTaskHover]}
     >
-      <View style={styles.taskBar} />
+      <View style={[styles.taskBar, done && styles.taskBarDone]} />
+      <Pressable
+        style={[styles.tickCircle, done && styles.tickCircleDone]}
+        onPress={() => onToggle(task)}
+        accessibilityLabel={done ? "mark not done" : "mark done"}
+        accessibilityRole="button"
+      >
+        {done ? <Text style={styles.tickCheck}>{"✓"}</Text> : null}
+      </Pressable>
       <View style={styles.taskBody}>
-        <Text style={styles.taskName} numberOfLines={2}>
+        <Text style={[styles.taskName, done && styles.taskNameDone]} numberOfLines={2}>
           {task.name}
         </Text>
         {due?.hasTime ? (
-          <Text style={styles.taskTime}>{formatTime(due.date)}</Text>
+          <Text style={[styles.taskTime, done && styles.taskTimeDone]}>
+            {formatTime(due.date)}
+          </Text>
         ) : null}
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -636,11 +1002,17 @@ function WeekView({
   today,
   selected,
   onSelect,
+  dragActive,
+  hoveredDay,
+  onHoverDay,
 }: {
   tasks: TaskItem[];
   today: Date;
   selected: Date;
   onSelect: (date: Date) => void;
+  dragActive: boolean;
+  hoveredDay: Date | null;
+  onHoverDay: (day: Date | null) => void;
 }) {
   const todayStart = startOfDay(today).getTime();
   // The strip picks the week; its seven columns start on Sunday.
@@ -657,6 +1029,7 @@ function WeekView({
         const isToday = startOfDay(day).getTime() === todayStart;
         const isSelected =
           startOfDay(day).getTime() === startOfDay(selected).getTime();
+        const isHovered = dragActive && isSameDay(day, hoveredDay);
         return (
           <Pressable
             key={day.getTime()}
@@ -664,9 +1037,15 @@ function WeekView({
               styles.weekCol,
               isSelected && !isToday && styles.weekColSelected,
               isToday && styles.weekColToday,
+              isHovered && styles.weekColHovered,
               pressed && styles.pressedFill,
             ]}
             onPress={() => onSelect(day)}
+            onPointerEnter={() => {
+              if (dragActive) {
+                onHoverDay(day);
+              }
+            }}
             accessibilityRole="button"
             accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
           >
@@ -701,19 +1080,35 @@ function WeekView({
 
 /* -------------------------------------------------------------- month */
 
-/** D/F month: the grid in a card; a tapped day lists its tasks. */
+/** D/F month: the grid in a card; the list below follows the source. */
 function MonthView({
   viewMonth,
   today,
   tasks,
+  source,
+  onCycleSource,
+  onOpenSourceMenu,
+  sourceMenuOpen,
   onToggle,
   onOpenDay,
+  dragActive,
+  hoveredDay,
+  onHoverDay,
+  onDragTask,
 }: {
   viewMonth: Date;
   today: Date;
   tasks: TaskItem[];
+  source: Source;
+  onCycleSource: () => void;
+  onOpenSourceMenu: (anchor: { top: number; left: number }) => void;
+  sourceMenuOpen: boolean;
   onToggle: (task: TaskItem) => void;
   onOpenDay: (day: Date) => void;
+  dragActive: boolean;
+  hoveredDay: Date | null;
+  onHoverDay: (day: Date | null) => void;
+  onDragTask: (task: TaskItem, e: RNPointerEvent) => void;
 }) {
   // The picked day carries the month key it belongs to, so a new
   // month from the strip invalidates the tapped-day panel without
@@ -731,7 +1126,7 @@ function MonthView({
 
   const byDay = new Map<string, TaskItem[]>();
   for (const task of tasks) {
-    if (task.data?.due == null) {
+    if (task.data?.due == null || isDone(task)) {
       continue;
     }
     const iso = task.data.due.slice(0, 10);
@@ -749,6 +1144,20 @@ function MonthView({
       (_, index) => new Date(year, monthIdx, index + 1),
     ),
   ];
+
+  // The list under the card follows the source; open tasks first,
+  // completed ones struck behind.
+  const monthPrefix = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
+  const listRows =
+    source === "due-period"
+      ? sortOpenFirst(
+          tasks.filter(
+            (task) =>
+              task.data?.due != null &&
+              task.data.due.slice(0, 7) === monthPrefix,
+          ),
+        )
+      : sortOpenFirst(tasks.filter((task) => inSourceList(task, source)));
   const pickedTasks =
     picked && picked.key === monthKey
       ? (byDay.get(isoOf(picked.day)) ?? [])
@@ -779,9 +1188,16 @@ function MonthView({
                   isSameDay(day, picked?.day ?? null) &&
                   styles.monthCellPicked,
                   isSameDay(day, today) && styles.monthCellToday,
+                  dragActive &&
+                    isSameDay(day, hoveredDay) && styles.monthCellHovered,
                   pressed && styles.pressedFill,
                 ]}
                 onPress={() => setPicked({ key: monthKey, day })}
+                onPointerEnter={() => {
+                  if (dragActive) {
+                    onHoverDay(day);
+                  }
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
               >
@@ -800,39 +1216,63 @@ function MonthView({
         </View>
       </View>
 
-      {/* The tapped day's tasks, listed beneath the card. */}
-      {pickedTasks ? (
-        <View style={styles.monthDayPanel}>
-          <Text style={styles.sectionLabel}>
-            {WEEKDAYS_FULL[picked!.day.getDay()]} {picked!.day.getDate()}
-            {"  "}
-            {pickedTasks.length}
+      {/* The list beneath the card, following the source. Its rows
+          drag onto a day cell above to move their due date. */}
+      <View style={styles.monthDayPanel}>
+        <SourceToggle
+          source={source}
+          mode="month"
+          menuOpen={sourceMenuOpen}
+          onCycle={onCycleSource}
+          onOpenMenu={onOpenSourceMenu}
+        />
+        {pickedTasks ? (
+          <View style={styles.monthPickedBlock}>
+            <Text style={styles.sectionLabel}>
+              {WEEKDAYS_FULL[picked!.day.getDay()]} {picked!.day.getDate()}
+              {"  "}
+              {pickedTasks.length}
+            </Text>
+            {pickedTasks.length > 0 ? (
+              pickedTasks.map((task) => (
+                <View key={task.uri} onPointerDown={(e) => onDragTask(task, e)}>
+                  <TaskRow task={task} onToggle={onToggle} />
+                </View>
+              ))
+            ) : (
+              <Text style={styles.monthDayEmpty}>Nothing scheduled.</Text>
+            )}
+            <Pressable
+              style={({ pressed }) => [
+                styles.monthDayOpen,
+                pressed && styles.detailsPressed,
+              ]}
+              onPress={() => onOpenDay(picked!.day)}
+              accessibilityRole="button"
+              accessibilityLabel="open this day"
+            >
+              <Text style={styles.monthDayOpenText}>Open in day view</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {listRows.length > 0 ? (
+          listRows.map((task, index) => (
+            <View
+              key={task.uri}
+              style={index > 0 ? styles.groupRow : undefined}
+              onPointerDown={(e) => onDragTask(task, e)}
+            >
+              <TaskRow task={task} onToggle={onToggle} />
+            </View>
+          ))
+        ) : (
+          <Text style={styles.monthDayEmpty}>
+            {source === "due-period"
+              ? "Nothing scheduled this month."
+              : `Nothing on ${source} yet.`}
           </Text>
-          {pickedTasks.length > 0 ? (
-            pickedTasks.map((task, index) => (
-              <View
-                key={task.uri}
-                style={index > 0 ? styles.groupRow : undefined}
-              >
-                <TaskRow task={task} onToggle={onToggle} />
-              </View>
-            ))
-          ) : (
-            <Text style={styles.monthDayEmpty}>Nothing scheduled.</Text>
-          )}
-          <Pressable
-            style={({ pressed }) => [
-              styles.monthDayOpen,
-              pressed && styles.detailsPressed,
-            ]}
-            onPress={() => onOpenDay(picked!.day)}
-            accessibilityRole="button"
-            accessibilityLabel="open this day"
-          >
-            <Text style={styles.monthDayOpenText}>Open in day view</Text>
-          </Pressable>
-        </View>
-      ) : null}
+        )}
+      </View>
     </View>
   );
 }
@@ -962,21 +1402,21 @@ function PeriodStrip({
             >
               <Text
                 style={[
-                  styles.stripNum,
-                  active && styles.stripNumActive,
-                  isCurrent && !active && styles.stripNumToday,
-                ]}
-              >
-                {`W${isoWeek(addDays(weekStartDay, 3))}`}
-              </Text>
-              <Text
-                style={[
                   styles.stripName,
                   active && styles.stripNameActive,
                   isCurrent && !active && styles.stripNameToday,
                 ]}
               >
                 {`${weekStartDay.getDate()}-${weekEnd.getDate()}`}
+              </Text>
+              <Text
+                style={[
+                  styles.stripNum,
+                  active && styles.stripNumActive,
+                  isCurrent && !active && styles.stripNumToday,
+                ]}
+              >
+                {`W${isoWeek(addDays(weekStartDay, 3))}`}
               </Text>
             </Pressable>
           );
@@ -1051,6 +1491,14 @@ function tasksForDay(tasks: TaskItem[], day: Date): TaskItem[] {
       task.data?.due != null &&
       task.data.due.slice(0, 10) === iso &&
       !(task.data?.completed != null && task.data.completed !== ""),
+  );
+}
+
+/** Every task touching the day, completed ones included. */
+function tasksForDayAll(tasks: TaskItem[], day: Date): TaskItem[] {
+  const iso = isoOf(day);
+  return tasks.filter(
+    (task) => task.data?.due != null && task.data.due.slice(0, 10) === iso,
   );
 }
 
@@ -1484,6 +1932,166 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     color: colors.onAccent,
     fontWeight: "600",
+  },
+
+  // source toggle and its chooser menu
+  sourceToggle: {
+    flexDirection: "row",
+    alignItems: "center" as const,
+    alignSelf: "flex-start" as const,
+    gap: spacing.xs,
+    minHeight: 32,
+    paddingLeft: spacing.s,
+    paddingRight: spacing.s,
+    borderRadius: radius,
+    marginBottom: spacing.s,
+  },
+  sourceToggleHot: {
+    backgroundColor: colors.pressed,
+  },
+  sourceToggleText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    fontWeight: "600",
+  },
+  sourceToggleTextHot: {
+    color: colors.accent,
+  },
+  sourceToggleChevron: {
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.inkFaint,
+  },
+  menuBackdrop: {
+    position: "absolute" as const,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  sourceMenu: {
+    position: "absolute" as const,
+    width: 200,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radiusFloating,
+    paddingVertical: spacing.xs,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center" as const,
+    minHeight: 40,
+    paddingHorizontal: spacing.m,
+  },
+  menuItemPressed: {
+    backgroundColor: colors.pressed,
+  },
+  menuItemText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 19,
+    fontFamily: fonts.body,
+    color: colors.ink,
+  },
+  menuItemCheck: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.accent,
+    fontWeight: "700",
+  },
+
+  // week foot: round-1 tray pills, back as draggable chips
+  pillsSection: {
+    marginTop: spacing.m,
+    marginBottom: spacing.xl,
+  },
+  pillsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.s,
+  },
+  pillChip: {
+    flexDirection: "row",
+    alignItems: "center" as const,
+    gap: spacing.s,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radii.pill,
+    paddingLeft: spacing.s,
+    paddingRight: spacing.m,
+    paddingVertical: spacing.s,
+    maxWidth: "100%" as const,
+  },
+  pillGrip: {
+    alignItems: "center" as const,
+    gap: 2,
+  },
+  pillGripDot: {
+    width: 10,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.inkFaint,
+  },
+  pillText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.ink,
+  },
+
+  // week and month drop targets during a pill drag
+  weekColHovered: {
+    borderColor: colors.accent,
+    borderWidth: 1.5,
+  },
+  monthCellHovered: {
+    backgroundColor: colors.accentSoft,
+  },
+  monthPickedBlock: {
+    marginBottom: spacing.s,
+  },
+
+  // timeline task chip: its own circle is the done toggle
+  hourTaskHover: {
+    backgroundColor: colors.pressed,
+  },
+  taskBarDone: {
+    backgroundColor: colors.inkFaint,
+  },
+  tickCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: radii.pill,
+    borderWidth: 1.5,
+    borderColor: colors.inkFaint,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  tickCircleDone: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  tickCheck: {
+    color: colors.onAccent,
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: "600",
+  },
+  taskNameDone: {
+    color: colors.inkFaint,
+    textDecorationLine: "line-through",
+  },
+  taskTimeDone: {
+    color: colors.inkFaint,
   },
 
   // week canvas: horizontally scrolling day columns
