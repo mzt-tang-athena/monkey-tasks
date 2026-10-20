@@ -32,19 +32,17 @@ import {
  * the save control. Tapping outside, the Add button again, or the
  * save control closes it with a downward fade. The input shows no
  * focus ring: the elevated panel is the focus, carried by the accent
- * caret and placeholder alone.
+ * caret and placeholder alone. There is no second capture view; the
+ * panel is the whole flow.
  */
 export function BottomBar({
   targets,
   defaultTargetIndex,
   onSend,
-  onOpenDetails,
 }: {
   targets: CaptureTarget[];
   defaultTargetIndex: number;
   onSend: (parsed: ParsedCapture, target: CaptureTarget) => void;
-  /** Opens the full sheet with the draft text, when details matter. */
-  onOpenDetails?: (draft: string, targetIndex: number) => void;
 }) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
@@ -183,17 +181,6 @@ export function BottomBar({
           {parsed && parsed.matches != null && parsed.matches.length > 0 ? (
             <Text style={styles.sheetParse} numberOfLines={1}>
               {`parsed: ${parsed.matches.map((m) => m.text).join(", ")} -> ${parsed.name}`}
-              {onOpenDetails != null ? (
-                <Text
-                  style={styles.sheetParseDetails}
-                  onPress={() => {
-                    closeNow();
-                    onOpenDetails(text, targetIndex);
-                  }}
-                >
-                  {"  details"}
-                </Text>
-              ) : null}
             </Text>
           ) : null}
           <View style={styles.sheetActions}>
@@ -498,11 +485,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     fontFamily: fonts.body,
-    color: colors.accent,
-  },
-  sheetParseDetails: {
     color: colors.inkMuted,
-    fontWeight: "600",
   },
   sheetActions: {
     flexDirection: "row",
@@ -542,8 +525,7 @@ const styles = StyleSheet.create({
     minHeight: 32,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-  },
-  sendPressed: {
+  },  sendPressed: {
     backgroundColor: colors.accentDeep,
   },
   sendDisabled: {

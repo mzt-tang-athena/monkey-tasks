@@ -149,3 +149,11 @@ export const drag = {
 
 /** Reading measure: screens cap their content width on wide screens. */
 export const measure = 720;
+
+/**
+ * Week mode's day-column width. Sized so a 390pt phone shows three
+ * full columns plus a sliver of the fourth inside the page's side
+ * padding: viewport 338 = 3 x 96 + 2 x 8 gaps + ~26 sliver. Tune the
+ * token, the arithmetic follows.
+ */
+export const weekColWidth = 96;

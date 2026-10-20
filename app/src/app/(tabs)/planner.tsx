@@ -4,11 +4,10 @@ import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../components/TaskRow";
-import { CaptureSheet } from "../../components/CaptureSheet";
 import { BottomBar } from "../../components/BottomBar";
 import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
-import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag } from "../../theme/tokens";
+import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth } from "../../theme/tokens";
 import type { PointerEvent as RNPointerEvent } from "react-native";
 
 /**
@@ -67,10 +66,6 @@ export default function PlannerScreen() {
   );
   const [mode, setMode] = React.useState<Mode>("day");
   const [selected, setSelected] = React.useState(() => startOfDay(new Date()));
-  const [draft, setDraft] = React.useState<{
-    text: string;
-    targetIndex: number;
-  } | null>(null);
 
   // The task source for the bottom list, shared by all three modes:
   // the due period by default, or a named list.
@@ -235,7 +230,7 @@ export default function PlannerScreen() {
                   menuOpen={sourceMenu != null}
                 />
                 <UnscheduledPills
-                  tasks={undatedForSource(all, source)}
+                  tasks={pillsForSource(all, source, startOfWeek(selected))}
                   onDragStart={startDayDrag}
                 />
               </View>
@@ -320,21 +315,7 @@ export default function PlannerScreen() {
         targets={TARGETS}
         defaultTargetIndex={1}
         onSend={() => undefined}
-        onOpenDetails={(text, targetIndex) =>
-          setDraft(text.trim() ? { text, targetIndex } : null)
-        }
       />
-      {draft ? (
-        <CaptureSheet
-          visible
-          targets={TARGETS}
-          defaultTargetIndex={draft.targetIndex}
-          initialText={draft.text}
-          preselectedDue={isoOf(selected)}
-          onClose={() => setDraft(null)}
-          onSend={() => setDraft(null)}
-        />
-      ) : null}
     </View>
   );
 }
@@ -361,14 +342,29 @@ function sourceLabel(source: Source, mode: Mode): string {
   return source;
 }
 
-/** Undated tasks, filtered to the chosen source. */
-function undatedForSource(tasks: TaskItem[], source: Source): TaskItem[] {
-  const undated = tasks.filter(
-    (task) => task.data?.due == null && !isDone(task),
-  );
-  return source === "due-period"
-    ? undated
-    : undated.filter((task) => inSourceList(task, source));
+/**
+ * Week foot pills: every open task of the chosen source, dated or
+ * not - dragging moves a date, it never removes membership.
+ */
+function pillsForSource(
+  tasks: TaskItem[],
+  source: Source,
+  weekStart: Date,
+): TaskItem[] {
+  const startIso = isoOf(weekStart);
+  const endIso = isoOf(addDays(weekStart, 6));
+  const open = tasks.filter((task) => !isDone(task));
+  if (source === "due-period") {
+    return sortOpenFirst(
+      open.filter(
+        (task) =>
+          task.data?.due == null ||
+          (task.data.due.slice(0, 10) >= startIso &&
+            task.data.due.slice(0, 10) <= endIso),
+      ),
+    );
+  }
+  return sortOpenFirst(open.filter((task) => inSourceList(task, source)));
 }
 
 function inSourceList(task: TaskItem, list: string): boolean {
@@ -499,8 +495,7 @@ function SourceToggle({
         style={({ pressed }) => [
           styles.sourceToggle,
           (hover || pressed) && styles.sourceToggleHot,
-        ]}
-        onHoverIn={() => setHover(true)}
+        ]}        onHoverIn={() => setHover(true)}
         onHoverOut={() => setHover(false)}
         onPressIn={() => {
           setPressed(true);
@@ -569,6 +564,10 @@ function UnscheduledPills({
             <View style={styles.pillGripDot} />
             <View style={styles.pillGripDot} />
           </View>
+          {/* A placed pill carries its date; dragging moves it. */}
+          {task.data?.due != null ? (
+            <Text style={styles.pillDate}>{pillDateLabel(task)}</Text>
+          ) : null}
           <Text style={styles.pillText} numberOfLines={1}>
             {task.name}
           </Text>
@@ -576,6 +575,14 @@ function UnscheduledPills({
       ))}
     </View>
   );
+}
+
+function pillDateLabel(task: TaskItem): string {
+  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
+  if (!due) {
+    return "";
+  }
+  return `${MONTHS_SHORT[due.date.getMonth()]} ${due.date.getDate()}`;
 }
 
 function DaySpread({
@@ -1934,7 +1941,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // source toggle and its chooser menu
+  // The source toggle: the label slot reserves the widest source's
+  // width, so the control never resizes mid-press - the pressed
+  // preview must not move the box out from under the pointer.
   sourceToggle: {
     flexDirection: "row",
     alignItems: "center" as const,
@@ -1955,6 +1964,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     color: colors.inkMuted,
     fontWeight: "600",
+    minWidth: 96,
   },
   sourceToggleTextHot: {
     color: colors.accent,
@@ -2047,6 +2057,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     color: colors.ink,
   },
+  pillDate: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
+  },
 
   // week and month drop targets during a pill drag
   weekColHovered: {
@@ -2102,7 +2120,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   weekCol: {
-    width: 176,
+    width: weekColWidth,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,

@@ -3,7 +3,6 @@ import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
-import { CaptureSheet } from "../../components/CaptureSheet";
 import { BottomBar } from "../../components/BottomBar";
 import {
   inMockFocus,
@@ -37,10 +36,6 @@ export default function ListsScreen() {
     open: boolean;
     top: number;
     left: number;
-  } | null>(null);
-  const [draft, setDraft] = React.useState<{
-    text: string;
-    targetIndex: number;
   } | null>(null);
   const dotsRef = React.useRef<React.ComponentRef<typeof View>>(null);
 
@@ -263,20 +258,7 @@ export default function ListsScreen() {
         targets={TARGETS}
         defaultTargetIndex={tab === "Focus" ? 0 : 1}
         onSend={() => undefined}
-        onOpenDetails={(text, targetIndex) =>
-          setDraft(text.trim() ? { text, targetIndex } : null)
-        }
       />
-      {draft ? (
-        <CaptureSheet
-          visible
-          targets={TARGETS}
-          defaultTargetIndex={draft.targetIndex}
-          initialText={draft.text}
-          onClose={() => setDraft(null)}
-          onSend={() => setDraft(null)}
-        />
-      ) : null}
     </View>
   );
 }
