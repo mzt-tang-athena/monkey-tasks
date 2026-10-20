@@ -3,7 +3,7 @@ id: 0009
 title: MVP foundation: feature folders, vault layer, routing
 created: 2026-10-20
 priority: high
-assignee:
+assignee: opencode
 pr:
 depends: [0002, 0006]
 ---
