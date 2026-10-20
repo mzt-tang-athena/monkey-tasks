@@ -36,6 +36,11 @@ export function parseStoredDate(value: string): {
   return { date, hasTime: hh != null };
 }
 
+/** 24-hour clock time, "19:00". Rendered in the mono signature font. */
+export function formatTime24(date: Date): string {
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }

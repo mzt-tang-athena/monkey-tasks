@@ -1,109 +1,120 @@
 import * as React from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { useVault } from "../../hooks/useVault";
-import { onMain, groupByDue, type TaskItem } from "../../features/tasks/query";
-import { setCompleted } from "../../features/tasks/mutate";
-import { writeCapture, type CaptureTarget } from "../../features/capture/write";
+import { inList, onMain, groupByDue, type TaskItem } from "../../features/tasks/query";
+import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { CaptureSheet } from "../../components/CaptureSheet";
-import { FloatingCaptureButton } from "../../components/FloatingCaptureButton";
-import { dayLabel, parseStoredDate } from "../../lib/dates";
+import { BottomNavbar } from "../../components/BottomNavbar";
+import { dayLabel } from "../../lib/dates";
+import { t } from "../../theme/tokens";
+import { useMockTasks } from "../../lib/mock";
 
 /**
- * Lists tab. 0009 ships the Main list working; the real list tab bar
- * is ticket 0010.
+ * Lists tab, design variant C. Open tasks render as elevated cards,
+ * one per date group; completed tasks fade to the bottom. Mock
+ * driven: data comes from the fixture shaped like the vault model.
  */
 export default function ListsScreen() {
-  const { rootUri, tasksDir, tasks, status, grant, refresh } = useVault();
+  const { tasks, loading, error, toggle, capture } = useMockTasks();
+  const [list, setList] = React.useState<"Focus" | "Main">("Main");
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
-  const targets: CaptureTarget[] = [{ kind: "main" }];
+  const visible = list === "Main" ? onMain(tasks) : inList(tasks, "Focus");
+  const groups = groupByDue(visible, new Date());
+  const focusCount = countOpen(inList(tasks, "Focus"));
+  const mainCount = countOpen(onMain(tasks));
 
-  const main = onMain(tasks);
-  const groups = groupByDue(main, new Date());
+  const targets: CaptureTarget[] = [
+    { kind: "main" },
+    { kind: "list", name: "Focus", uri: "mock://lists/Focus.md" },
+  ];
 
-  const toggle = async (task: TaskItem) => {
-    const done = task.data?.completed != null && task.data.completed !== "";
-    await setCompleted(task, !done);
-    await refresh();
-  };
-
-  const send = async (
-    parsed: Parameters<typeof writeCapture>[1],
+  const send = (
+    parsed: Parameters<typeof capture>[0],
     target: CaptureTarget,
   ) => {
-    if (!tasksDir) {
-      return;
-    }
-    await writeCapture(tasksDir, parsed, target);
-    await refresh();
+    capture(parsed, target.kind === "list" ? target.name : null);
   };
 
-  if (!rootUri) {
-    return (
-      <View style={[styles.screen, styles.center]}>
-        <Text style={styles.status}>{status}</Text>
-        <Pressable style={styles.grant} onPress={grant}>
-          <Text style={styles.grantText}>Grant vault folder</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  const sections: { title: string; items: TaskItem[]; red?: boolean }[] = [
-    { title: "Past", items: groups.overdue, red: true },
-    { title: "Today", items: groups.today },
+  const sections: { label: string; items: TaskItem[]; danger?: boolean }[] = [
+    { label: "Past", items: groups.overdue, danger: true },
+    { label: "Today", items: groups.today },
     ...groups.upcoming.map((bucket) => ({
-      title: dayLabel(bucket.date, new Date()),
+      label: dayLabel(bucket.date, new Date()),
       items: bucket.items,
     })),
-    { title: "No date", items: groups.undated },
+    { label: "No date", items: groups.undated },
   ];
-  const timed = (task: TaskItem) =>
-    task.data?.due ? (parseStoredDate(task.data.due)?.hasTime ?? false) : false;
+  const shown = sections.filter((section) => section.items.length > 0);
+  const empty = !loading && !error && tasks.length === 0;
 
   return (
     <View style={styles.screen}>
       <FlatList
         contentContainerStyle={styles.content}
-        data={[{ key: "header" }]}
+        data={[{ key: "content" }]}
         renderItem={() => (
           <View>
-            <Text style={styles.header}>Main</Text>
-            <Text style={styles.status}>{status}</Text>
-            {sections
-              .filter((section) => section.items.length > 0)
-              .map((section) => (
-                <View key={section.title}>
-                  <Text style={[styles.section, section.red && styles.sectionRed]}>
-                    {section.title}
-                  </Text>
-                  {section.items.map((task) => (
-                    <TaskRow
-                      key={task.uri}
-                      task={{ ...task, name: timed(task) ? task.name : task.name }}
-                      onToggle={toggle}
-                    />
-                  ))}
-                </View>
-              ))}
-            {groups.completed.length > 0 ? (
+            {error ? <StatusCard text={error} danger /> : null}
+            {loading ? <LoadingSkeleton /> : null}
+            {empty ? <Text style={styles.empty}>Nothing yet. Tap + to add a task.</Text> : null}
+            {!loading && !error && !empty ? (
               <View>
-                <Text style={styles.sectionCompleted}>
-                  Completed ({groups.completed.length})
-                </Text>
-                {groups.completed.map((task) => (
-                  <TaskRow key={task.uri} task={task} onToggle={toggle} />
+                <Text style={styles.title}>Tasks</Text>
+                <View style={styles.tabs}>
+                  <ListTab
+                    name="Focus"
+                    count={focusCount}
+                    active={list === "Focus"}
+                    onPress={() => setList("Focus")}
+                  />
+                  <ListTab
+                    name="Main"
+                    count={mainCount}
+                    active={list === "Main"}
+                    onPress={() => setList("Main")}
+                  />
+                </View>
+                {shown.map((section) => (
+                  <View key={section.label} style={styles.group}>
+                    <Text style={[styles.groupLabel, section.danger && styles.groupLabelDanger]}>
+                      {section.label}
+                    </Text>
+                    <View style={styles.card}>
+                      {section.items.map((task, index) => (
+                        <TaskRow
+                          key={task.uri}
+                          task={task}
+                          onToggle={toggle}
+                          divider={index < section.items.length - 1}
+                        />
+                      ))}
+                    </View>
+                  </View>
                 ))}
+                {groups.completed.length > 0 ? (
+                  <View style={styles.group}>
+                    <Text style={styles.groupLabelCompleted}>
+                      Completed ({groups.completed.length})
+                    </Text>
+                    <View style={[styles.card, styles.cardFaded]}>
+                      {groups.completed.map((task, index) => (
+                        <TaskRow
+                          key={task.uri}
+                          task={task}
+                          onToggle={toggle}
+                          divider={index < groups.completed.length - 1}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-            {main.length === 0 && groups.completed.length === 0 ? (
-              <Text style={styles.empty}>Nothing yet. Tap + to add a task.</Text>
             ) : null}
           </View>
         )}
       />
-      <FloatingCaptureButton onPress={() => setSheetOpen(true)} />
+      <BottomNavbar active="lists" onCapture={() => setSheetOpen(true)} />
       {sheetOpen ? (
         <CaptureSheet
           visible
@@ -117,56 +128,180 @@ export default function ListsScreen() {
   );
 }
 
+function ListTab({
+  name,
+  count,
+  active,
+  onPress,
+}: {
+  name: string;
+  count: number;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityLabel={`list ${name}`}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      style={({ pressed }) => [
+        styles.tab,
+        active && styles.tabActive,
+        pressed && !active && styles.tabPressed,
+      ]}
+    >
+      <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{name}</Text>
+      <Text style={[styles.tabCount, active && styles.tabCountActive]}>{count}</Text>
+    </Pressable>
+  );
+}
+
+function StatusCard({ text, danger }: { text: string; danger?: boolean }) {
+  return (
+    <View style={styles.card}>
+      <Text style={[styles.statusText, danger && styles.statusTextDanger]}>{text}</Text>
+    </View>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <View>
+      {[0, 1].map((block) => (
+        <View key={block} style={[styles.card, styles.skeletonCard]}>
+          <View style={[styles.bar, styles.barWide]} />
+          <View style={[styles.bar, styles.barMid]} />
+          <View style={[styles.bar, styles.barNarrow]} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function countOpen(items: TaskItem[]): number {
+  return items.filter((item) => !(item.data?.completed != null && item.data.completed !== ""))
+    .length;
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#ffffff",
-  },
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
+    backgroundColor: t.colors.surface,
   },
   content: {
-    padding: 16,
-    paddingBottom: 96,
+    paddingHorizontal: t.spacing.lg,
+    paddingTop: t.spacing.xl,
+    paddingBottom: 140,
   },
-  header: {
-    fontSize: 22,
+  title: {
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: "700",
+    color: t.colors.text,
+    fontFamily: t.fonts.sans,
+    marginBottom: t.spacing.lg,
   },
-  status: {
-    color: "#777777",
-    marginBottom: 8,
+  tabs: {
+    flexDirection: "row",
+    gap: t.spacing.xl,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: t.colors.border,
+    marginBottom: t.spacing.xl,
   },
-  section: {
-    fontSize: 15,
+  tab: {
+    paddingBottom: t.spacing.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  tabActive: {
+    borderBottomColor: t.colors.accent,
+  },
+  tabPressed: {
+    opacity: 0.7,
+  },
+  tabLabel: {
+    fontSize: 16,
     fontWeight: "700",
-    color: "#1a4b8f",
-    marginTop: 16,
-    marginBottom: 4,
+    color: t.colors.textMuted,
+    fontFamily: t.fonts.sans,
   },
-  sectionRed: {
-    color: "#b3261e",
+  tabLabelActive: {
+    color: t.colors.text,
   },
-  sectionCompleted: {
-    fontSize: 15,
+  tabCount: {
+    fontSize: 13,
+    color: t.colors.textFaint,
+    fontFamily: t.fonts.sans,
+    marginTop: t.spacing.xxs,
+  },
+  tabCountActive: {
+    color: t.colors.accent,
+  },
+  group: {
+    marginBottom: t.spacing.xl,
+  },
+  groupLabel: {
+    fontSize: 12,
     fontWeight: "600",
-    color: "#999999",
-    marginTop: 20,
+    letterSpacing: 1,
+    color: t.colors.textMuted,
+    fontFamily: t.fonts.sans,
+    marginBottom: t.spacing.sm,
+  },
+  groupLabelDanger: {
+    color: t.colors.danger,
+  },
+  groupLabelCompleted: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 1,
+    color: t.colors.textFaint,
+    fontFamily: t.fonts.sans,
+    marginBottom: t.spacing.sm,
+  },
+  card: {
+    backgroundColor: t.colors.surfaceRaised,
+    borderRadius: t.radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: t.colors.border,
+    overflow: "hidden",
+  },
+  cardFaded: {
+    opacity: 0.55,
+  },
+  statusText: {
+    color: t.colors.textMuted,
+    fontSize: 15,
+    fontFamily: t.fonts.sans,
+    padding: t.spacing.lg,
+  },
+  statusTextDanger: {
+    color: t.colors.danger,
   },
   empty: {
-    color: "#777777",
-    marginTop: 24,
+    color: t.colors.textMuted,
+    fontSize: 15,
+    fontFamily: t.fonts.sans,
+    marginTop: t.spacing.xl,
   },
-  grant: {
-    backgroundColor: "#1d3fbf",
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  skeletonCard: {
+    padding: t.spacing.lg,
+    gap: t.spacing.md,
+    marginBottom: t.spacing.xl,
   },
-  grantText: {
-    color: "#ffffff",
-    fontWeight: "700",
+  bar: {
+    height: 12,
+    borderRadius: t.radii.sm,
+    backgroundColor: t.colors.surfaceActive,
+  },
+  barWide: {
+    width: "70%",
+  },
+  barMid: {
+    width: "48%",
+  },
+  barNarrow: {
+    width: "32%",
   },
 });

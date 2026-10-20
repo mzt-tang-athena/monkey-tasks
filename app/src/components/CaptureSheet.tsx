@@ -1,7 +1,8 @@
 import * as React from "react";
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { GestureResponderEvent, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { parseCapture, type ParsedCapture } from "../features/capture/parse";
 import type { CaptureTarget } from "../features/capture/write";
+import { t } from "../theme/tokens";
 
 /**
  * The capture sheet: input, target-list chip, send. The target shows
@@ -29,6 +30,7 @@ export function CaptureSheet({
   const [text, setText] = React.useState("");
   const [targetIndex, setTargetIndex] = React.useState(defaultTargetIndex);
   const [lastParse, setLastParse] = React.useState<ParsedCapture | null>(null);
+  const [inputFocused, setInputFocused] = React.useState(false);
 
   const send = () => {
     const parsed = parseCapture(text);
@@ -43,14 +45,27 @@ export function CaptureSheet({
     setTargetIndex((index) => (index + 1) % targets.length);
   };
 
+  const disabledSend = text.trim() === "";
+
+  // On web the press bubbles from the sheet; a tap inside must not close it.
+  const dismissOnBackdrop = (event: GestureResponderEvent) => {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    onClose();
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable style={styles.backdrop} onPress={dismissOnBackdrop} accessibilityLabel="close capture sheet">
         <Pressable style={styles.sheet} onPress={() => undefined}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, inputFocused && styles.inputFocused]}
             placeholder="Add a task..."
+            placeholderTextColor={t.colors.textFaint}
             value={text}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             onChangeText={(value) => {
               setText(value);
               setLastParse(value.trim() ? parseCapture(value) : null);
@@ -72,17 +87,32 @@ export function CaptureSheet({
             </Text>
           ) : null}
           <View style={styles.actions}>
-            <Pressable style={styles.chip} onPress={cycleTarget}>
+            <Pressable
+              style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+              onPress={cycleTarget}
+              accessibilityLabel="change target list"
+              accessibilityRole="button"
+            >
               <Text style={styles.chipText}>
                 {targetLabel(targets[targetIndex] ?? targets[0])}
               </Text>
             </Pressable>
             <View style={{ flex: 1 }} />
             <Pressable
-              style={[styles.send, text.trim() === "" && styles.sendDisabled]}
+              style={({ pressed }) => [
+                styles.send,
+                pressed && !disabledSend && styles.sendPressed,
+                disabledSend && styles.sendDisabled,
+              ]}
               onPress={send}
+              disabled={disabledSend}
+              accessibilityLabel="add task"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: disabledSend }}
             >
-              <Text style={styles.sendText}>Add</Text>
+              <Text style={[styles.sendText, disabledSend && styles.sendTextDisabled]}>
+                Add
+              </Text>
             </Pressable>
           </View>
         </Pressable>
@@ -98,58 +128,79 @@ function targetLabel(target: CaptureTarget): string {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: t.colors.scrim,
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 16,
-    gap: 10,
+    backgroundColor: t.colors.surfaceRaised,
+    borderTopLeftRadius: t.radii.lg,
+    borderTopRightRadius: t.radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: t.colors.border,
+    padding: t.spacing.lg,
+    gap: t.spacing.md,
   },
   input: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#bbbbbb",
-    borderRadius: 10,
-    padding: 14,
+    backgroundColor: t.colors.surfaceSunken,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    borderRadius: t.radii.md,
+    padding: t.spacing.md,
     fontSize: 16,
+    color: t.colors.text,
+    fontFamily: t.fonts.sans,
+  },
+  inputFocused: {
+    borderColor: t.colors.borderStrong,
   },
   dueNote: {
-    color: "#1d5c3f",
+    color: t.colors.success,
     fontSize: 13,
+    fontFamily: t.fonts.sans,
   },
   preview: {
-    color: "#555555",
+    color: t.colors.textMuted,
     fontSize: 13,
+    fontFamily: t.fonts.sans,
   },
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: t.spacing.sm,
   },
   chip: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#bbbbbb",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: t.colors.borderStrong,
+    borderRadius: t.radii.pill,
+    paddingHorizontal: t.spacing.lg,
+    paddingVertical: t.spacing.sm,
+  },
+  chipPressed: {
+    backgroundColor: t.colors.surfaceActive,
   },
   chipText: {
     fontSize: 14,
-    color: "#222222",
+    color: t.colors.text,
+    fontFamily: t.fonts.sans,
   },
   send: {
-    backgroundColor: "#1d3fbf",
-    borderRadius: 22,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    backgroundColor: t.colors.accent,
+    borderRadius: t.radii.pill,
+    paddingHorizontal: t.spacing.xl,
+    paddingVertical: t.spacing.md,
+  },
+  sendPressed: {
+    backgroundColor: t.colors.accentDeep,
   },
   sendDisabled: {
-    opacity: 0.4,
+    backgroundColor: t.colors.surfaceActive,
   },
   sendText: {
-    color: "#ffffff",
+    color: t.colors.onAccent,
     fontWeight: "700",
+    fontFamily: t.fonts.sans,
+  },
+  sendTextDisabled: {
+    color: t.colors.textFaint,
   },
 });
