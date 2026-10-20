@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCapture } from "./capture";
+import { parseCapture } from "./parse";
 
 // Fixed "now": Monday 2026-10-19, local time.
 const now = new Date(2026, 9, 19, 12, 0, 0);
@@ -7,11 +7,16 @@ const now = new Date(2026, 9, 19, 12, 0, 0);
 describe("parseCapture", () => {
   it("parses the acceptance example fully", () => {
     const result = parseCapture("call the dentist tuesday 3pm repeat monthly", now);
-    expect(result).not.toBeNull();
     expect(result?.name).toBe("call the dentist");
     expect(result?.due).toBe("2026-10-20T15:00");
     expect(result?.recurrence).toBe("FREQ=MONTHLY");
     expect(result?.reminders).toEqual(["2026-10-20T15:00"]);
+  });
+
+  it("strips the remind-me-to prefix and recurring keyword", () => {
+    const result = parseCapture("remind me to go to the dentist recurring monthly", now);
+    expect(result?.name).toBe("go to the dentist");
+    expect(result?.recurrence).toBe("FREQ=MONTHLY");
   });
 
   it("keeps an undateable line as a name-only task", () => {
@@ -44,12 +49,6 @@ describe("parseCapture", () => {
     const result = parseCapture("clean the kitchen every wednesday", now);
     expect(result?.name).toBe("clean the kitchen");
     expect(result?.recurrence).toBe("FREQ=WEEKLY;BYDAY=WE");
-  });
-
-  it("strips the remind-me-to prefix and recurring keyword", () => {
-    const result = parseCapture("remind me to go to the dentist recurring monthly", now);
-    expect(result?.name).toBe("go to the dentist");
-    expect(result?.recurrence).toBe("FREQ=MONTHLY");
   });
 
   it("falls back to the whole line when everything matches", () => {
