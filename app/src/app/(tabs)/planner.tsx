@@ -10,7 +10,7 @@ import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { DropZoneMap, touchNoScroll } from "../../lib/dropzone";
 import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
-import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth, pageGutter, periodStep } from "../../theme/tokens";
+import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth, weekCanvasHeight, pageGutter, periodStep } from "../../theme/tokens";
 import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
 import type { PointerEvent as RNPointerEvent } from "react-native";
 
@@ -103,6 +103,9 @@ export default function PlannerScreen() {
         drag.pickMs so list scrolling is never hijacked. */
     t: number;
     touch: boolean;
+    /** Pills scroll from free space around them, so their hold is
+        shorter than a row's. */
+    kind: "pill" | "row";
   } | null>(null);
   const [dragging, setDragging] = React.useState<{
     task: TaskItem;
@@ -208,7 +211,7 @@ export default function PlannerScreen() {
     [],
   );
 
-  const startDayDrag = (task: TaskItem, e: RNPointerEvent) => {
+  const startDayDrag = (task: TaskItem, e: RNPointerEvent, kind: "pill" | "row" = "row") => {
     moved.current = false;
     setPending({
       task,
@@ -216,6 +219,7 @@ export default function PlannerScreen() {
       y: e.nativeEvent.pageY,
       t: performance.now(),
       touch: (e.nativeEvent as { pointerType?: string }).pointerType === "touch",
+      kind,
     });
   };
 
@@ -227,12 +231,14 @@ export default function PlannerScreen() {
       if (pending.touch) {
         // Touch: movement before the hold means the user is
         // scrolling. Cancel the pending pickup and let the browser
-        // own the gesture.
+        // own the gesture. Pills get a shorter hold: their section
+        // has free space to scroll from without touching them.
         if (travel > drag.threshold) {
           setPending(null);
           return;
         }
-        if (performance.now() - pending.t < drag.pickMs) {
+        const hold = pending.kind === "pill" ? drag.pillPickMs : drag.pickMs;
+        if (performance.now() - pending.t < hold) {
           return;
         }
       } else if (travel <= drag.threshold) {
@@ -724,7 +730,7 @@ function TaskPills({
   onDragStart,
 }: {
   tasks: TaskItem[];
-  onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
+  onDragStart: (task: TaskItem, e: RNPointerEvent, kind?: "pill" | "row") => void;
 }) {
   if (tasks.length === 0) {
     return null;
@@ -735,7 +741,7 @@ function TaskPills({
         <View
           key={task.uri}
           style={styles.pillChip}
-          onPointerDown={(e) => onDragStart(task, e)}
+          onPointerDown={(e) => onDragStart(task, e, "pill")}
         >
           <View style={styles.pillGrip}>
             <View style={styles.pillGripDot} />
@@ -946,6 +952,9 @@ function DaySpread({
 }) {
   const [rootHeight, setRootHeight] = React.useState(0);
   const [rootX, setRootX] = React.useState(0);
+  // The pane's top edge inside the root, measured at layout: the
+  // divider may never travel past it plus a minimum list pane.
+  const [paneTop, setPaneTop] = React.useState(200);
   const [timelineHeight, setTimelineHeight] = React.useState(320);
   // A press waiting to travel: promoted to a drag past the threshold.
   const [pending, setPending] = React.useState<{
@@ -978,6 +987,7 @@ function DaySpread({
   const [swipe] = React.useState(() =>
     makeSwipeController((dir) => onShiftDay(dir === "left" ? 1 : -1)),
   );
+  const dividerHeight = 28;
   // Ruler rows register under their hour; moves hit-test these
   // rects, since touch capture suppresses enter/leave events.
   const [hourZones] = React.useState(() => new DropZoneMap());
@@ -1018,7 +1028,15 @@ function DaySpread({
       ? sortOpenFirst([...overdue, ...listRows])
       : listRows;
 
-  const maxTimeline = Math.max(rootHeight - drag.minPane, drag.minPane);
+  // The divider's travel limit: the timeline may grow until the
+  // list pane keeps its minimum, with the top block's height and
+  // the bottom bar's zone respected - so the grabber can never
+  // slide under the navbar where a finger could not reach it.
+  const barZone = 96;
+  const maxTimeline = Math.max(
+    rootHeight - paneTop - dividerHeight - drag.minPane - barZone,
+    drag.minPane,
+  );
 
   const startTaskDrag = (task: TaskItem, e: RNPointerEvent) => {
     moved.current = false;
@@ -1152,7 +1170,12 @@ function DaySpread({
       <View style={styles.dateRule} />
 
       {/* The timeline pane: the ruler, resizable by the grabber. */}
-      <View style={[styles.pane, { height: timelineHeight }]}>
+      <View
+        style={[styles.pane, { height: timelineHeight }]}
+        onLayout={(e) => {
+          setPaneTop(e.nativeEvent.layout.y);
+        }}
+      >
         <Text style={styles.sectionLabel}>Timeline  {timed.length}</Text>
         <ScrollView
           style={styles.paneScroll}
@@ -2795,8 +2818,15 @@ const styles = StyleSheet.create({
   // week canvas: horizontally scrolling day columns. The scroller
   // bleeds to the screen's edges: columns cut at the display, not
   // the page gutter, and scroll till the last one clears it.
+  // week canvas: horizontally scrolling day columns. The scroller
+  // bleeds to the screen's edges: columns cut at the display, not
+  // the page gutter, and scroll till the last one clears it. The
+  // bounded height keeps tall viewports from stretching the columns
+  // into the bottom section's space.
   weekScroller: {
     flexGrow: 0,
+    flexShrink: 0,
+    height: weekCanvasHeight,
     marginHorizontal: -pageGutter,
   },
   weekCanvas: {

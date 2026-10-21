@@ -147,18 +147,22 @@ export const drag = {
   holdMs: 450,
   /** Touch pickups wait out this hold; scrolling never gets hijacked. */
   pickMs: 300,
+  /** The pills row has free space to scroll from, so its pickup is
+      quicker than a row inside a scrolling pane. */
+  pillPickMs: 120,
 } as const;
 
 /** Reading measure: screens cap their content width on wide screens. */
 export const measure = 720;
 
 /**
- * Week mode's day-column width. Sized so a 390pt phone still shows
- * two full columns plus a third peeking on a 350pt viewport after
- * the page gutters: 2 x 144 + 2 x 8 gaps + ~22 sliver. Tune the
- * token, the arithmetic follows.
+ * Week mode's day-column width and canvas height. Sized so a 390pt
+ * phone shows two full columns plus a third peeking after the page
+ * gutters; the canvas height caps the columns so tall viewports do
+ * not stretch them into the bottom section's space.
  */
 export const weekColWidth = 144;
+export const weekCanvasHeight = 256;
 
 /**
  * The period strip's scroll step: one strip pill plus one gap. Keep
