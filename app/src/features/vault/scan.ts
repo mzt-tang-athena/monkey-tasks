@@ -24,6 +24,9 @@ export async function listDirectory(folderUri: string): Promise<Entry[]> {
   return uris
     .map((uri) => {
       const name = displayName(uri);
+      // Known limit: the dot heuristic is how a flat SAF uri list
+      // is split today, and a folder like "My Stuff 2.0" would be
+      // misclassified. TODO: trailing-slash detection on device.
       return { uri, name, isFile: name.includes(".") };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

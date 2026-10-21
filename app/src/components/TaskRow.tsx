@@ -42,10 +42,12 @@ export function TaskRow({
         ]}
         onPress={onToggle ? () => onToggle(task) : undefined}
         disabled={disabled}
+        hitSlop={11}
         onHoverIn={() => setHot(true)}
         onHoverOut={() => setHot(false)}
         accessibilityLabel={done ? "mark not done" : "mark done"}
         accessibilityRole="button"
+        accessibilityState={{ checked: done }}
       >
         {done ? <Text style={styles.check}>{"✓"}</Text> : null}
       </Pressable>
@@ -61,6 +63,11 @@ export function TaskRow({
           {timeAlign === "under" && due?.hasTime && !done ? (
             <Text style={[styles.time, overdue && styles.overdueText]}>
               {formatTime(due.date)}
+            </Text>
+          ) : null}
+          {!due && task.data?.due ? (
+            <Text style={[styles.badDate, overdue && styles.overdueText]}>
+              bad date
             </Text>
           ) : null}
           {recurring ? <Text style={styles.recur}>repeats</Text> : null}
@@ -136,6 +143,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.s,
     marginTop: 2,
+  },
+  badDate: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.danger,
   },
   time: {
     fontSize: 13,

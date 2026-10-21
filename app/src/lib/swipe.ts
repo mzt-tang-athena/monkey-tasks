@@ -1,5 +1,3 @@
-import type * as React from "react";
-
 /**
  * A horizontal swipe tripwire for pointer events. It arms only when
  * the pointer's travel is clearly horizontal and long enough, so

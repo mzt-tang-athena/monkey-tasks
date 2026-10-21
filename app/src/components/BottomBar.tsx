@@ -64,7 +64,7 @@ export function BottomBar({
 }: {
   targets: CaptureTarget[];
   defaultTargetIndex: number;
-  onSend: (parsed: ParsedCapture, target: CaptureTarget) => void;
+  onSend: (parsed: ParsedCapture, target: CaptureTarget) => void | Promise<void>;
 }) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
@@ -111,16 +111,22 @@ export function BottomBar({
   const parsed = text.trim() ? parseCapture(text) : null;
   const canSend = text.trim() !== "" && !sending;
 
-  const send = () => {
+  const send = async () => {
     const capture = parsed;
     if (!capture || sending) {
       return;
     }
     setSending(true);
-    onSend(capture, targets[targetIndex] ?? targets[0]);
-    setText("");
-    setSending(false);
-    close();
+    try {
+      await onSend(capture, targets[targetIndex] ?? targets[0]);
+      setText("");
+      close();
+    } catch {
+      // The draft stays in the input and the sheet stays open on a
+      // failed write, so nothing the user typed is ever lost.
+    } finally {
+      setSending(false);
+    }
   };
 
   const openCapture = () => {
@@ -167,14 +173,17 @@ export function BottomBar({
           <Pressable
             style={styles.scrimFill}
             onPress={close}
-            accessibilityLabel="close capture"
             accessibilityRole="button"
+            accessibilityLabel="close capture"
           />
         </Animated.View>
       ) : null}
 
       {/* The floating sheet, docked where the navbar was; on device
-          the keyboard-avoiding view lifts it to the keyboard's top. */}
+          the keyboard-avoiding view lifts it to the keyboard's top.
+          TODO(device-verify): Android 15 edge-to-edge may not resize
+          for the IME; if the sheet hides behind the keyboard on the
+          physical build, switch Android to behavior="padding". */}
       {mounted ? (
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -282,11 +291,12 @@ export function BottomBar({
                 pressed && canSend && styles.sendPressed,
                 !canSend && styles.sendDisabled,
               ]}
-              onPress={send}
+              onPress={() => void send()}
               disabled={!canSend}
+              hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel="add task"
-              accessibilityState={{ disabled: !canSend }}
+              accessibilityLabel="send task"
+              accessibilityState={{ disabled: !canSend, busy: sending }}
             >
               <Text
                 style={[styles.sendText, !canSend && styles.sendTextDisabled]}

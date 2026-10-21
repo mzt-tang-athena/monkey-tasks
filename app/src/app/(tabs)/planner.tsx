@@ -214,7 +214,11 @@ export default function PlannerScreen() {
   const onPointerUp = () => {
     if (dragging) {
       if (hoveredDay != null) {
-        updateTask(dragging.task, { due: formatLocal(hoveredDay, false) });
+        // A day move keeps the task's own time of day, per the
+        // approved rule: reschedule the date, never the clock.
+        updateTask(dragging.task, {
+          due: withKeptTime(hoveredDay, parseStoredDate(dragging.task.data?.due ?? "")),
+        });
       }
       suppressClick.current = true;
       setTimeout(() => {
@@ -227,9 +231,16 @@ export default function PlannerScreen() {
     moved.current = false;
   };
 
+  const onPointerDownScreen = () => {
+    // A fresh gesture clears drag-end suppression; the 350ms timer
+    // stays as the fallback for engines that skip pointerdown.
+    suppressClick.current = false;
+  };
+
   return (
     <View
       style={styles.screen}
+      onPointerDown={onPointerDownScreen}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
@@ -323,7 +334,7 @@ export default function PlannerScreen() {
               sourceMenuOpen={sourceMenu != null}
               taskForm={taskForm}
               onFormChange={changeTaskForm}
-              onToggle={toggle}
+              onToggle={guardedToggle}
               onOpenDay={(day) => {
                 setSelected(day);
                 setMode("day");
@@ -986,7 +997,11 @@ function DaySpread({
     }
     if (dragging) {
       if (hoverHour != null) {
-        onUpdate(dragging.task, { due: withTime(date, hoverHour) });
+        // The slot's hour with the task's own minute: an hour drop
+        // never rounds away what the task already carries.
+        onUpdate(dragging.task, {
+          due: withTime(date, hoverHour, minuteOf(dragging.task)),
+        });
       }
       // Swallow the click that follows a drop onto the source row.
       suppressClick.current = true;
@@ -1008,6 +1023,9 @@ function DaySpread({
         setRootX(e.nativeEvent.layout.x);
       }}
       onPointerDown={(e) => {
+        // A fresh gesture clears drag-end suppression, like the
+        // screen root does for its own drops.
+        suppressClick.current = false;
         swipe.down(
           e.nativeEvent.pageX,
           e.nativeEvent.pageY,
@@ -1950,12 +1968,39 @@ function minuteOf(task: TaskItem): number {
 }
 
 /**
- * The due string a drop writes: the shown day at the slot's hour,
- * minutes zeroed. Dropping always schedules onto the day in view.
+ * The due string a timeline drop writes: the shown day at the
+ * slot's hour, keeping the task's own minute.
  */
-function withTime(day: Date, hour: number): string {
+function withTime(
+  day: Date,
+  hour: number,
+  minute = 0,
+): string {
   return formatLocal(
-    new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0),
+    new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute),
+    true,
+  );
+}
+
+/**
+ * The due string an all-day move writes: the target day with the
+ * task's previous time of day when it had one.
+ */
+function withKeptTime(
+  day: Date,
+  previous: { date: Date; hasTime: boolean } | null,
+): string {
+  if (!previous?.hasTime) {
+    return formatLocal(day, false);
+  }
+  return formatLocal(
+    new Date(
+      day.getFullYear(),
+      day.getMonth(),
+      day.getDate(),
+      previous.date.getHours(),
+      previous.date.getMinutes(),
+    ),
     true,
   );
 }

@@ -84,6 +84,23 @@ export default function ListsScreen() {
     );
   };
 
+  // A real reload: the loader can fail when it talks to the vault,
+  // so the error state keeps its retry affordance (also wired to
+  // FlatList's pull-to-refresh).
+  const [refreshing, setRefreshing] = React.useState(false);
+  const reload = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const loaded = await loadMockTasks();
+      setTasks(loaded);
+      setStatus("ready");
+    } catch {
+      setStatus("error");
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   const visible = inTabTasks(tasks, tab);
   const groups = groupByDue(visible, new Date());
 
@@ -177,6 +194,8 @@ export default function ListsScreen() {
         </View>
         <FlatList
           contentContainerStyle={styles.content}
+          onRefresh={reload}
+          refreshing={refreshing}
           data={[{ key: "lists" }]}
           renderItem={() => (
             <View>
@@ -398,13 +417,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textDecorationLine: "underline",
     textDecorationColor: colors.accent,
-  },
-  count: {
-    marginLeft: "auto" as const,
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: fonts.body,
-    color: colors.inkFaint,
   },
   tabSpacer: {
     flex: 1,

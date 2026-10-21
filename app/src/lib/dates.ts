@@ -8,31 +8,45 @@ export function formatLocal(date: Date, withTime: boolean): string {
   return `${datePart}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export function formatToday(): string {
-  return todayIso();
-}
-
 export function todayIso(): string {
   return formatLocal(new Date(), false);
 }
 
-/** Parse a stored date or datetime value. */
+/** Seconds are schema-legal but the app carries no use for them:
+    they are accepted and ignored. */
 export function parseStoredDate(value: string): {
   date: Date;
   hasTime: boolean;
 } | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::\d{2})?)?$/.exec(
+    value,
+  );
   if (!match) {
     return null;
   }
   const [, y, m, d, hh, mm] = match;
+  const hours = hh ? Number(hh) : 0;
+  const minutes = mm ? Number(mm) : 0;
+  // Shape-valid but impossible clock values cannot linger either.
+  if (hh && (hours > 23 || minutes > 59)) {
+    return null;
+  }
   const date = new Date(
     Number(y),
     Number(m) - 1,
     Number(d),
-    hh ? Number(hh) : 0,
-    mm ? Number(mm) : 0,
+    hours,
+    minutes,
   );
+  // A regex-valid value can still be out of range and silently roll
+  // (2026-02-30, 2026-13-01). The app renders such notes as undated,
+  // loudly, instead of filing them under the wrong month.
+  if (
+    date.getFullYear() !== Number(y) ||
+    date.getMonth() !== Number(m) - 1
+  ) {
+    return null;
+  }
   return { date, hasTime: hh != null };
 }
 

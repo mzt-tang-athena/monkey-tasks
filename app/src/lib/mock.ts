@@ -55,15 +55,19 @@ export function loadMockTasks(): Promise<TaskItem[]> {
   });
 }
 
-/** Flip a mock task's completed date in place, for local toggling. */
+/** Flip a mock task's completed date in place, for local toggling.
+    Unticking drops the property, matching the real write path. */
 export function toggleMockCompleted(item: TaskItem): TaskItem {
   const done = item.data?.completed != null && item.data.completed !== "";
   if (!item.data) {
     return item;
   }
+  const { completed, ...rest } = item.data;
   return {
     ...item,
-    data: { ...item.data, completed: done ? null : isoToday() },
+    data: done
+      ? { ...rest }
+      : { ...item.data, completed: isoToday() },
   };
 }
 
