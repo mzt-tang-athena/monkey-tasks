@@ -2575,17 +2575,18 @@ function useTouchDragGate(
     promote: (x: number, y: number) => void;
   },
 ) {
+  const { busy, pending: pendingRef, promote } = opts;
   React.useEffect(() => {
     const node = ref.current;
     if (!node) {
       return;
     }
     const onMove = (e: TouchEvent) => {
-      if (opts.busy.current) {
+      if (busy.current) {
         e.preventDefault();
         return;
       }
-      const pending = opts.pending.current;
+      const pending = pendingRef.current;
       const touch = e.changedTouches?.[0] ?? e.touches[0];
       if (pending && touch != null) {
         const travel =
@@ -2596,7 +2597,7 @@ function useTouchDragGate(
         const held = performance.now() - pending.t >= hold;
         if (held) {
           e.preventDefault();
-          opts.promote(touch.pageX, touch.pageY);
+          promote(touch.pageX, touch.pageY);
           return;
         }
         // Still holding: movement is a scroll. Let it through.
@@ -2609,7 +2610,7 @@ function useTouchDragGate(
     return () => {
       node.removeEventListener("touchmove", onMove);
     };
-  }, [ref, opts.busy, opts.pending, opts.promote]);
+  }, [ref, busy, pendingRef, promote]);
 }
 
 function formatTime(date: Date): string {
