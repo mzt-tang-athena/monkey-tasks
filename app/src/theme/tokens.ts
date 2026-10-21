@@ -157,3 +157,9 @@ export const measure = 720;
  * token, the arithmetic follows.
  */
 export const weekColWidth = 96;
+
+/**
+ * The capture panel's internal rhythm: clear air between the input,
+ * the parse line, and the action row.
+ */
+export const sheetGap = 12;

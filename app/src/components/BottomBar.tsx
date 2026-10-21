@@ -1,12 +1,14 @@
 import * as React from "react";
 import {
   Animated,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
   useWindowDimensions,
+  type TextStyle,
 } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,7 +21,16 @@ import {
   radius,
   radiusFloating,
   radii,
+  sheetGap,
 } from "../theme/tokens";
+
+// The sheet input carries focus by caret and placeholder alone: no
+// app ring, and the browser's own focus outline is suppressed on
+// web so no UA ring can appear either.
+const noFocusOutline = Platform.select({
+  web: { outlineStyle: "none" } as unknown as TextStyle,
+  default: {},
+});
 
 /**
  * The single bottom bar, shared by both tabs. Left: the Lists and
@@ -461,7 +472,7 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
     borderRadius: radiusFloating,
     padding: spacing.m,
-    gap: spacing.xs,
+    gap: sheetGap,
     shadowColor: colors.ink,
     shadowOpacity: 0.14,
     shadowRadius: 16,
@@ -475,11 +486,9 @@ const styles = StyleSheet.create({
     color: colors.ink,
     minHeight: 40,
     maxHeight: 120,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    borderRadius: radius,
-    paddingHorizontal: spacing.m,
+    paddingHorizontal: spacing.s,
     paddingVertical: spacing.s,
+    ...noFocusOutline,
   },
   sheetParse: {
     fontSize: 13,

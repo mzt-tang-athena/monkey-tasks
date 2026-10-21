@@ -1797,7 +1797,9 @@ const styles = StyleSheet.create({
   },
   hourTask: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    // Optical centering: the circle, the accent bar, and the text
+    // share one center line within the chip.
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderRadius: radius,
     borderWidth: StyleSheet.hairlineWidth,
