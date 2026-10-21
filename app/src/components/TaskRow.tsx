@@ -9,10 +9,13 @@ export function TaskRow({
   onToggle,
   /** "under" puts the time below the name; "right" adds a planner gutter. */
   timeAlign = "under",
+  /** Planner option: a grip glyph marks the row as drag-to-schedule. */
+  grip = false,
 }: {
   task: TaskItem;
   onToggle?: (task: TaskItem) => void;
   timeAlign?: "under" | "right";
+  grip?: boolean;
 }) {
   const [pressed, setPressed] = React.useState(false);
   const done = task.data?.completed != null && task.data.completed !== "";
@@ -43,7 +46,16 @@ export function TaskRow({
           {formatTime(due.date)}
         </Text>
       ) : null}
-      {/* The circle is visual only; the whole row is the toggle target. */}
+      {grip ? (
+        <View style={styles.grip}>
+          <View style={styles.gripBar} />
+          <View style={styles.gripBar} />
+        </View>
+      ) : null}
+      {/* The circle is visual only; the whole row is the toggle target.
+          It top-anchors to the FIRST text line: 22pt circle on a
+          22pt line box, so wrapped lines flow beneath without moving
+          it (Google Tasks' rule). */}
       <View style={[styles.circle, done && styles.circleDone]}>
         {done ? <Text style={styles.check}>{"✓"}</Text> : null}
       </View>
@@ -83,10 +95,25 @@ function formatTime(date: Date): string {
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    alignItems: "center",
+    // The circle top-anchors to the first text line; the block below
+    // may wrap or grow without moving it.
+    alignItems: "flex-start",
     minHeight: 48,
     paddingHorizontal: spacing.m,
     paddingVertical: spacing.s,
+  },
+  grip: {
+    alignItems: "center",
+    gap: 2,
+    // Centered on the 22pt first-line box: (22 - 6) / 2.
+    marginTop: 8,
+    marginRight: spacing.m,
+  },
+  gripBar: {
+    width: 10,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.inkFaint,
   },
   rowPressed: {
     backgroundColor: colors.pressed,
@@ -146,6 +173,8 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     width: 64,
     fontVariant: ["tabular-nums"],
+    // Centered on the 22pt first-line box: (22 - 18) / 2.
+    marginTop: 2,
   },
   recur: {
     fontSize: 12,

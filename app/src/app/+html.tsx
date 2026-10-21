@@ -23,7 +23,9 @@ export default function Root({ children }: PropsWithChildren) {
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
-            __html: `html, body { background-color: ${colors.paper}; }`,
+            __html: `html, body { background-color: ${colors.paper}; }
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }`,
           }}
         />
         {headNodes}

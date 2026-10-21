@@ -8,6 +8,7 @@ import { BottomBar } from "../../components/BottomBar";
 import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth } from "../../theme/tokens";
+import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
 import type { PointerEvent as RNPointerEvent } from "react-native";
 
 /**
@@ -75,6 +76,16 @@ export default function PlannerScreen() {
     left: number;
   } | null>(null);
 
+  // One global task form (rows or pills) for every planner mode,
+  // persisted in app-internal settings; default rows.
+  const [taskForm, setTaskForm] = React.useState<TaskForm>(() =>
+    loadTaskForm(),
+  );
+  const changeTaskForm = (form: TaskForm) => {
+    setTaskForm(form);
+    saveTaskForm(form);
+  };
+
   // The pill/list drag that targets week columns and month cells.
   const [pending, setPending] = React.useState<{
     task: TaskItem;
@@ -134,6 +145,19 @@ export default function PlannerScreen() {
     open.push(...bucket.items);
   }
 
+  const weekPool = pillsForSource(all, source, startOfWeek(selected));
+
+  // A week drop that lands back on its source row must not also
+  // toggle it.
+  const suppressClick = React.useRef(false);
+  const guardedToggle = (task: TaskItem) => {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
+    toggle(task);
+  };
+
   const startDayDrag = (task: TaskItem, e: RNPointerEvent) => {
     moved.current = false;
     setPending({ task, x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
@@ -161,6 +185,10 @@ export default function PlannerScreen() {
       if (hoveredDay != null) {
         updateTask(dragging.task, { due: formatLocal(hoveredDay, false) });
       }
+      suppressClick.current = true;
+      setTimeout(() => {
+        suppressClick.current = false;
+      }, 350);
       setDragging(null);
       setHoveredDay(null);
     }
@@ -187,6 +215,8 @@ export default function PlannerScreen() {
           onCycleSource={cycleSource(source, setSource)}
           onOpenSourceMenu={setSourceMenu}
           sourceMenuOpen={sourceMenu != null}
+          taskForm={taskForm}
+          onFormChange={changeTaskForm}
           onMode={setMode}
           onSelectStrip={setSelected}
           onToggle={toggle}
@@ -198,7 +228,6 @@ export default function PlannerScreen() {
             mode={mode}
             selected={selected}
             today={new Date()}
-            tasks={open}
             onSelect={setSelected}
             onMode={setMode}
           />
@@ -219,19 +248,25 @@ export default function PlannerScreen() {
                 hoveredDay={hoveredDay}
                 onHoverDay={setHoveredDay}
               />
-              {/* Week's foot: draggable pill chips, filtered by the
-                  chosen source. */}
+              {/* Week's foot: the shared section, fed the week's
+                  placement pool. */}
               <View style={styles.pillsSection}>
-                <SourceToggle
+                <TaskListSection
                   source={source}
                   mode={mode}
-                  onCycle={cycleSource(source, setSource)}
-                  onOpenMenu={setSourceMenu}
-                  menuOpen={sourceMenu != null}
-                />
-                <UnscheduledPills
-                  tasks={pillsForSource(all, source, startOfWeek(selected))}
+                  sourceMenuOpen={sourceMenu != null}
+                  onCycleSource={cycleSource(source, setSource)}
+                  onOpenSourceMenu={setSourceMenu}
+                  taskForm={taskForm}
+                  onFormChange={changeTaskForm}
+                  onToggle={guardedToggle}
                   onDragStart={startDayDrag}
+                  tasks={weekPool}
+                  emptyLabel={
+                    source === "due-period"
+                      ? "Nothing to place this week."
+                      : `Nothing on ${source} yet.`
+                  }
                 />
               </View>
             </>
@@ -245,6 +280,8 @@ export default function PlannerScreen() {
               onCycleSource={cycleSource(source, setSource)}
               onOpenSourceMenu={setSourceMenu}
               sourceMenuOpen={sourceMenu != null}
+              taskForm={taskForm}
+              onFormChange={changeTaskForm}
               onToggle={toggle}
               onOpenDay={(day) => {
                 setSelected(day);
@@ -397,14 +434,12 @@ function PlannerHeader({
   mode,
   selected,
   today,
-  tasks,
   onSelect,
   onMode,
 }: {
   mode: Mode;
   selected: Date;
   today: Date;
-  tasks: TaskItem[];
   onSelect: (date: Date) => void;
   onMode: (mode: Mode) => void;
 }) {
@@ -416,7 +451,6 @@ function PlannerHeader({
         mode={mode}
         selected={selected}
         today={today}
-        tasks={tasks}
         onSelect={onSelect}
       />
 
@@ -541,8 +575,8 @@ function SourceToggle({
   );
 }
 
-/** Round-1 tray pills, back as draggable chips for the week foot. */
-function UnscheduledPills({
+/** Round-1 tray pills, back as draggable chips: drag-first, no tick. */
+function TaskPills({
   tasks,
   onDragStart,
 }: {
@@ -585,6 +619,152 @@ function pillDateLabel(task: TaskItem): string {
   return `${MONTHS_SHORT[due.date.getMonth()]} ${due.date.getDate()}`;
 }
 
+/**
+ * The tiny segmented form toggle at the bottom half's right edge:
+ * rows (ticked list) or pills (drag-first chips). Presentation only;
+ * the data is the same either way.
+ */
+function FormToggle({
+  form,
+  onChange,
+}: {
+  form: TaskForm;
+  onChange: (form: TaskForm) => void;
+}) {
+  return (
+    <View style={styles.formToggle}>
+      {(
+        [
+          { key: "rows", label: "list form" },
+          { key: "pills", label: "pill form" },
+        ] as const
+      ).map((segment) => (
+        <Pressable
+          key={segment.key}
+          style={({ pressed }) => [
+            styles.formSegment,
+            form === segment.key && styles.formSegmentActive,
+            pressed && form !== segment.key && styles.formSegmentPressed,
+          ]}
+          onPress={() => onChange(segment.key)}
+          accessibilityRole="tab"
+          accessibilityLabel={segment.label}
+          accessibilityState={{ selected: form === segment.key }}
+        >
+          {segment.key === "rows" ? (
+            <View style={styles.formGlyphRows}>
+              <View
+                style={[
+                  styles.formGlyphBar,
+                  form === segment.key && styles.formGlyphBarActive,
+                ]}
+              />
+              <View
+                style={[
+                  styles.formGlyphBar,
+                  styles.formGlyphBarShort,
+                  form === segment.key && styles.formGlyphBarActive,
+                ]}
+              />
+              <View
+                style={[
+                  styles.formGlyphBar,
+                  form === segment.key && styles.formGlyphBarActive,
+                ]}
+              />
+            </View>
+          ) : (
+            <View
+              style={[
+                styles.formGlyphPill,
+                form === segment.key && styles.formGlyphPillActive,
+              ]}
+            />
+          )}
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * The shared bottom-half task section: the source control on the
+ * left, the small form toggle on the right, then the section's
+ * tasks as rows or pills - the same data both ways. Day and Month
+ * render this; Week renders it with its placement pool. An optional
+ * header block carries a group header (overdue, tapped day) and an
+ * optional footer carries the month's open-in-day-view link.
+ */
+function TaskListSection({
+  source,
+  mode,
+  sourceMenuOpen,
+  onCycleSource,
+  onOpenSourceMenu,
+  taskForm,
+  onFormChange,
+  onToggle,
+  onDragStart,
+  tasks,
+  emptyLabel,
+  header,
+  footer,
+}: {
+  source: Source;
+  mode: Mode;
+  sourceMenuOpen: boolean;
+  onCycleSource: () => void;
+  onOpenSourceMenu: (anchor: { top: number; left: number }) => void;
+  taskForm: TaskForm;
+  onFormChange: (form: TaskForm) => void;
+  onToggle: (task: TaskItem) => void;
+  onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
+  tasks: TaskItem[];
+  emptyLabel: string;
+  header?: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
+  return (
+    <View>
+      <View style={styles.sectionHead}>
+        <SourceToggle
+          source={source}
+          mode={mode}
+          menuOpen={sourceMenuOpen}
+          onCycle={onCycleSource}
+          onOpenMenu={onOpenSourceMenu}
+        />
+        <View style={styles.sectionSpacer} />
+        <FormToggle form={taskForm} onChange={onFormChange} />
+      </View>
+      {header}
+      {taskForm === "rows" ? (
+        tasks.length > 0 ? (
+          tasks.map((task, index) => (
+            <View
+              key={task.uri}
+              style={index > 0 ? styles.groupRow : undefined}
+              onPointerDown={(e) => onDragStart(task, e)}
+            >
+              <TaskRow task={task} onToggle={onToggle} grip />
+            </View>
+          ))
+        ) : (
+          <Text style={styles.empty}>{emptyLabel}</Text>
+        )
+      ) : (
+        <>
+          <TaskPills tasks={tasks} onDragStart={onDragStart} />
+          {tasks.length === 0 ? (
+            <Text style={styles.empty}>{emptyLabel}</Text>
+          ) : null}
+        </>
+      )}
+      {footer}
+    </View>
+  );
+}
+
 function DaySpread({
   date,
   today,
@@ -594,6 +774,8 @@ function DaySpread({
   onCycleSource,
   onOpenSourceMenu,
   sourceMenuOpen,
+  taskForm,
+  onFormChange,
   onMode,
   onSelectStrip,
   onToggle,
@@ -607,6 +789,8 @@ function DaySpread({
   onCycleSource: () => void;
   onOpenSourceMenu: (anchor: { top: number; left: number }) => void;
   sourceMenuOpen: boolean;
+  taskForm: TaskForm;
+  onFormChange: (form: TaskForm) => void;
   onMode: (mode: Mode) => void;
   onSelectStrip: (date: Date) => void;
   onToggle: (task: TaskItem) => void;
@@ -650,11 +834,17 @@ function DaySpread({
     : sortOpenFirst(tasksForDayAll(tasks, date));
   const timed = dayTasks.filter(hasTime);
 
-  // The list pane's rows follow the chosen source.
+  // The list pane's rows follow the chosen source. In the pills form
+  // the overdue group folds into the pool, so the data set is the
+  // same both ways.
   const listRows =
     source === "due-period"
       ? dayTasks
       : sortOpenFirst(tasks.filter((task) => inSourceList(task, source)));
+  const sectionTasks =
+    taskForm === "pills" && source === "due-period"
+      ? sortOpenFirst([...overdue, ...listRows])
+      : listRows;
 
   const maxTimeline = Math.max(rootHeight - drag.minPane, drag.minPane);
 
@@ -732,7 +922,6 @@ function DaySpread({
         mode="day"
         selected={date}
         today={today}
-        tasks={openTasks}
         onSelect={onSelectStrip}
         onMode={onMode}
       />
@@ -801,50 +990,49 @@ function DaySpread({
         </Pressable>
       </View>
 
-      {/* The task list pane: its source picks the rows. Dragging a
-          row up into the ruler sets its time. */}
+      {/* The task list pane: the shared bottom-half section. Its
+          source picks the rows; dragging a row up into the ruler
+          sets its time. */}
       <View style={styles.paneList}>
-        <SourceToggle
-          source={source}
-          mode="day"
-          menuOpen={sourceMenuOpen}
-          onCycle={onCycleSource}
-          onOpenMenu={onOpenSourceMenu}
-        />
         <ScrollView
           style={styles.paneScroll}
           showsVerticalScrollIndicator={false}
         >
-          {source === "due-period" && overdue.length > 0 ? (
-            <View style={styles.overdueBlock}>
-              <Text style={styles.overdueLabel}>Overdue  {overdue.length}</Text>
-              {overdue.map((task) => (
-                <View
-                  key={task.uri}
-                  onPointerDown={(e) => startTaskDrag(task, e)}
-                >
-                  <TaskRow task={task} onToggle={guardedToggle} />
-                </View>
-              ))}
-            </View>
-          ) : null}
-          {listRows.length > 0 ? (
-            listRows.map((task, index) => (
-              <View
-                key={task.uri}
-                style={index > 0 ? styles.groupRow : undefined}
-                onPointerDown={(e) => startTaskDrag(task, e)}
-              >
-                <TaskRow task={task} onToggle={guardedToggle} />
-              </View>
-            ))
-          ) : (
-            <Text style={styles.empty}>
-              {source === "due-period"
+          <TaskListSection
+            source={source}
+            mode="day"
+            sourceMenuOpen={sourceMenuOpen}
+            onCycleSource={onCycleSource}
+            onOpenSourceMenu={onOpenSourceMenu}
+            taskForm={taskForm}
+            onFormChange={onFormChange}
+            onToggle={guardedToggle}
+            onDragStart={startTaskDrag}
+            tasks={sectionTasks}
+            emptyLabel={
+              source === "due-period"
                 ? "Nothing scheduled today."
-                : `Nothing on ${source} yet.`}
-            </Text>
-          )}
+                : `Nothing on ${source} yet.`
+            }
+            header={
+              taskForm === "rows" && source === "due-period" &&
+              overdue.length > 0 ? (
+                <View style={styles.overdueBlock}>
+                  <Text style={styles.overdueLabel}>
+                    Overdue  {overdue.length}
+                  </Text>
+                  {overdue.map((task) => (
+                    <View
+                      key={task.uri}
+                      onPointerDown={(e) => startTaskDrag(task, e)}
+                    >
+                      <TaskRow task={task} onToggle={guardedToggle} grip />
+                    </View>
+                  ))}
+                </View>
+              ) : undefined
+            }
+          />
         </ScrollView>
       </View>
 
@@ -1096,6 +1284,8 @@ function MonthView({
   onCycleSource,
   onOpenSourceMenu,
   sourceMenuOpen,
+  taskForm,
+  onFormChange,
   onToggle,
   onOpenDay,
   dragActive,
@@ -1110,6 +1300,8 @@ function MonthView({
   onCycleSource: () => void;
   onOpenSourceMenu: (anchor: { top: number; left: number }) => void;
   sourceMenuOpen: boolean;
+  taskForm: TaskForm;
+  onFormChange: (form: TaskForm) => void;
   onToggle: (task: TaskItem) => void;
   onOpenDay: (day: Date) => void;
   dragActive: boolean;
@@ -1216,69 +1408,77 @@ function MonthView({
                 >
                   {day.getDate()}
                 </Text>
-                {byDay.has(isoOf(day)) ? <View style={styles.monthDot} /> : null}
+                {/* The dot slot is always reserved, so every number
+                    sits on one baseline with or without a dot. */}
+                <View style={styles.monthDotSlot}>
+                  {byDay.has(isoOf(day)) ? <View style={styles.monthDot} /> : null}
+                </View>
               </Pressable>
             ),
           )}
         </View>
       </View>
 
-      {/* The list beneath the card, following the source. Its rows
-          drag onto a day cell above to move their due date. */}
+      {/* The list beneath the card: the shared bottom-half section.
+          Its rows drag onto a day cell above to move their due
+          date. The tapped day stays a group header; the month keeps
+          its open-in-day-view link. */}
       <View style={styles.monthDayPanel}>
-        <SourceToggle
+        <TaskListSection
           source={source}
           mode="month"
-          menuOpen={sourceMenuOpen}
-          onCycle={onCycleSource}
-          onOpenMenu={onOpenSourceMenu}
-        />
-        {pickedTasks ? (
-          <View style={styles.monthPickedBlock}>
-            <Text style={styles.sectionLabel}>
-              {WEEKDAYS_FULL[picked!.day.getDay()]} {picked!.day.getDate()}
-              {"  "}
-              {pickedTasks.length}
-            </Text>
-            {pickedTasks.length > 0 ? (
-              pickedTasks.map((task) => (
-                <View key={task.uri} onPointerDown={(e) => onDragTask(task, e)}>
-                  <TaskRow task={task} onToggle={onToggle} />
-                </View>
-              ))
-            ) : (
-              <Text style={styles.monthDayEmpty}>Nothing scheduled.</Text>
-            )}
-            <Pressable
-              style={({ pressed }) => [
-                styles.monthDayOpen,
-                pressed && styles.detailsPressed,
-              ]}
-              onPress={() => onOpenDay(picked!.day)}
-              accessibilityRole="button"
-              accessibilityLabel="open this day"
-            >
-              <Text style={styles.monthDayOpenText}>Open in day view</Text>
-            </Pressable>
-          </View>
-        ) : null}
-        {listRows.length > 0 ? (
-          listRows.map((task, index) => (
-            <View
-              key={task.uri}
-              style={index > 0 ? styles.groupRow : undefined}
-              onPointerDown={(e) => onDragTask(task, e)}
-            >
-              <TaskRow task={task} onToggle={onToggle} />
-            </View>
-          ))
-        ) : (
-          <Text style={styles.monthDayEmpty}>
-            {source === "due-period"
+          sourceMenuOpen={sourceMenuOpen}
+          onCycleSource={onCycleSource}
+          onOpenSourceMenu={onOpenSourceMenu}
+          taskForm={taskForm}
+          onFormChange={onFormChange}
+          onToggle={onToggle}
+          onDragStart={onDragTask}
+          tasks={listRows}
+          emptyLabel={
+            source === "due-period"
               ? "Nothing scheduled this month."
-              : `Nothing on ${source} yet.`}
-          </Text>
-        )}
+              : `Nothing on ${source} yet.`
+          }
+          header={
+            pickedTasks ? (
+              <View style={styles.monthPickedBlock}>
+                <Text style={styles.sectionLabel}>
+                  {WEEKDAYS_FULL[picked!.day.getDay()]} {picked!.day.getDate()}
+                  {"  "}
+                  {pickedTasks.length}
+                </Text>
+                {pickedTasks.length > 0 ? (
+                  pickedTasks.map((task) => (
+                    <View
+                      key={task.uri}
+                      onPointerDown={(e) => onDragTask(task, e)}
+                    >
+                      <TaskRow task={task} onToggle={onToggle} grip />
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.monthDayEmpty}>Nothing scheduled.</Text>
+                )}
+              </View>
+            ) : undefined
+          }
+          footer={
+            pickedTasks ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.monthDayOpen,
+                  pressed && styles.detailsPressed,
+                ]}
+                onPress={() => onOpenDay(picked!.day)}
+                accessibilityRole="button"
+                accessibilityLabel="open this day"
+              >
+                <Text style={styles.monthDayOpenText}>Open in day view</Text>
+              </Pressable>
+            ) : undefined
+          }
+        />
       </View>
     </View>
   );
@@ -1312,13 +1512,11 @@ function PeriodStrip({
   mode,
   selected,
   today,
-  tasks,
   onSelect,
 }: {
   mode: Mode;
   selected: Date;
   today: Date;
-  tasks: TaskItem[];
   onSelect: (date: Date) => void;
 }) {
   const todayStart = startOfDay(today).getTime();
@@ -1326,12 +1524,6 @@ function PeriodStrip({
 
   if (mode === "day") {
     const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(today, offset));
-    const busy = new Set(
-      tasks
-        .map((task) => (task.data?.due ? parseStoredDate(task.data.due) : null))
-        .filter((due) => due != null)
-        .map((due) => isoOf(due!.date)),
-    );
     return (
       <View style={styles.strip}>
         {days.map((day) => {
@@ -1364,7 +1556,6 @@ function PeriodStrip({
                   styles.stripNum,
                   active && styles.stripNumActive,
                   isToday && !active && styles.stripNumToday,
-                  !active && busy.has(isoOf(day)) ? styles.stripNumBusy : null,
                 ]}
               >
                 {day.getDate()}
@@ -1680,8 +1871,68 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontWeight: "700",
   },
-  stripNumBusy: {
-    fontWeight: "600",
+
+  // shared bottom-half section: source left, form toggle right
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.s,
+  },
+  sectionSpacer: {
+    flex: 1,
+  },
+  formToggle: {
+    flexDirection: "row",
+    gap: 2,
+    padding: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radius,
+    backgroundColor: colors.surface,
+  },
+  formSegment: {
+    width: 32,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius - 2,
+  },
+  formSegmentActive: {
+    backgroundColor: colors.accent,
+  },
+  formSegmentPressed: {
+    backgroundColor: colors.pressed,
+  },
+  formGlyphRows: {
+    alignItems: "flex-start",
+    gap: 3,
+  },
+  formGlyphBar: {
+    width: 14,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.inkMuted,
+  },
+  formGlyphBarShort: {
+    width: 9,
+  },
+  formGlyphBarActive: {
+    backgroundColor: colors.onAccent,
+  },
+  formGlyphPill: {
+    width: 16,
+    height: 9,
+    borderRadius: 4.5,
+    borderWidth: 1.5,
+    borderColor: colors.inkMuted,
+  },
+  formGlyphPillActive: {
+    borderColor: colors.onAccent,
+  },
+  monthDotSlot: {
+    height: 4,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // segmented toggle, E's tighter spacing
@@ -1955,7 +2206,6 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.s,
     paddingRight: spacing.s,
     borderRadius: radius,
-    marginBottom: spacing.s,
   },
   sourceToggleHot: {
     backgroundColor: colors.pressed,
@@ -2038,7 +2288,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     borderRadius: radii.pill,
-    paddingLeft: spacing.s,
+    paddingLeft: spacing.m,
     paddingRight: spacing.m,
     paddingVertical: spacing.s,
     maxWidth: "100%" as const,

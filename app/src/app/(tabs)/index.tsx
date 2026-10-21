@@ -348,9 +348,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.s,
     marginBottom: spacing.l,
-    // Optical alignment: the header shares the task rows' content
-    // edges, inset by the row's own padding.
-    paddingHorizontal: spacing.m,
   },
   tabChip: {
     minHeight: 36,

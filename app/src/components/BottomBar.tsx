@@ -1,6 +1,7 @@
 import * as React from "react";
 import {
   Animated,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -9,11 +10,13 @@ import {
   View,
   useWindowDimensions,
   type TextStyle,
+  type ViewStyle,
 } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { parseCapture, type ParsedCapture } from "../features/capture/parse";
 import type { CaptureTarget } from "../features/capture/write";
+import { parseStoredDate } from "../lib/dates";
 import {
   colors,
   fonts,
@@ -67,6 +70,8 @@ export function BottomBar({
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const [expand] = React.useState(() => new Animated.Value(0));
+  // The navbar's lift: 1 visible, 0 slid away while capture is open.
+  const [barLift] = React.useState(() => new Animated.Value(1));
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [barHeight, setBarHeight] = React.useState(64);
 
@@ -76,7 +81,12 @@ export function BottomBar({
       duration: 200,
       useNativeDriver: false,
     }).start();
-  }, [expand, open]);
+    Animated.timing(barLift, {
+      toValue: open ? 0 : 1,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [barLift, expand, open]);
 
   React.useEffect(
     () => () => {
@@ -127,14 +137,17 @@ export function BottomBar({
 
   return (
     <View style={styles.root}>
-      {/* Scrim over the content; the navbar below stays uncovered. */}
+      {/* Scrim over the content; it follows the navbar's collapse. */}
       {mounted ? (
         <Animated.View
           pointerEvents={open ? "auto" : "none"}
           style={[
             styles.scrim,
             {
-              bottom: barHeight,
+              bottom: barLift.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, barHeight],
+              }),
               height: Math.max(window.height - barHeight, 0),
               opacity: expand,
             },
@@ -149,32 +162,42 @@ export function BottomBar({
         </Animated.View>
       ) : null}
 
-      {/* The floating sheet, just above the navbar. */}
+      {/* The floating sheet, docked where the navbar was; on device
+          the keyboard-avoiding view lifts it to the keyboard's top. */}
       {mounted ? (
-        <Animated.View
-          pointerEvents={open ? "auto" : "none"}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          pointerEvents="box-none"
           style={[
-            styles.sheet,
+            styles.sheetDock,
             {
-              bottom: barHeight + spacing.s,
-              opacity: expand,
-              transform: [
-                {
-                  translateY: expand.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [16, 0],
-                  }),
-                },
-                {
-                  scale: expand.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.96, 1],
-                  }),
-                },
-              ],
-            },
+              bottom: open ? spacing.s : barHeight + spacing.s,
+            } as unknown as ViewStyle,
           ]}
         >
+          <Animated.View
+            pointerEvents={open ? "auto" : "none"}
+            style={[
+              styles.sheet,
+              {
+                opacity: expand,
+                transform: [
+                  {
+                    translateY: expand.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [16, 0],
+                    }),
+                  },
+                  {
+                    scale: expand.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.96, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
           <TextInput
             style={styles.sheetInput}
             placeholder="Add a task"
@@ -187,12 +210,39 @@ export function BottomBar({
             autoFocus
             selectionColor={colors.accent}
           />
-          {/* Parse feedback only when something parsed; the panel
-              stays as clean as possible otherwise. */}
-          {parsed && parsed.matches != null && parsed.matches.length > 0 ? (
-            <Text style={styles.sheetParse} numberOfLines={1}>
-              {`parsed: ${parsed.matches.map((m) => m.text).join(", ")} -> ${parsed.name}`}
-            </Text>
+          {/* Parse feedback as icon chips, rendered from the parse
+              result object, never from text spans. */}
+          {parsed?.due ? (
+            <View style={styles.chipRow}>
+              <View style={styles.parseChip}>
+                <View style={styles.glyphMiniCalendar}>
+                  <View style={styles.glyphMiniCalendarTop} />
+                  <View style={styles.glyphMiniCalendarDot} />
+                </View>
+                <Text style={styles.parseChipText}>
+                  {dueChipLabel(parsed.due)}
+                </Text>
+              </View>
+              {parsed.reminders != null && parsed.reminders.length > 0 ? (
+                <View style={styles.parseChip}>
+                  <View style={styles.glyphMiniClock}>
+                    <View style={styles.glyphMiniClockHand} />
+                    <View style={styles.glyphMiniClockHandV} />
+                  </View>
+                  <Text style={styles.parseChipText}>
+                    {timeChipLabel(parsed.due)}
+                  </Text>
+                </View>
+              ) : null}
+              {parsed.recurrence ? (
+                <View style={styles.parseChip}>
+                  <Text style={styles.parseGlyph}>{"↻"}</Text>
+                  <Text style={styles.parseChipText}>
+                    {recurrenceKeyword(parsed.recurrence)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           ) : null}
           <View style={styles.sheetActions}>
             <Pressable
@@ -226,18 +276,38 @@ export function BottomBar({
               <Text
                 style={[styles.sendText, !canSend && styles.sendTextDisabled]}
               >
-                Add
+                {"↑"}
               </Text>
             </Pressable>
           </View>
-        </Animated.View>
+          </Animated.View>
+        </KeyboardAvoidingView>
       ) : null}
 
-      {/* The navbar: measured so the sheet anchors to its top. */}
-      <View
-        style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}
-        onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}
+      {/* The navbar: slides away while capture is open, and returns
+          on close. The inner view carries the natural height measure
+          so the collapse target stays stable. */}
+      <Animated.View
+        style={[
+          styles.barClip,
+          {
+            maxHeight: barLift.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, barHeight],
+            }),
+            opacity: barLift,
+          },
+        ]}
       >
+        <View
+          style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}
+          onLayout={(event) => {
+            const height = event.nativeEvent.layout.height;
+            if (height > 0) {
+              setBarHeight(height);
+            }
+          }}
+        >
         <View style={styles.row}>
           <IconTab
             label="Lists"
@@ -275,7 +345,8 @@ export function BottomBar({
             <Text style={styles.captureLabel}>Add</Text>
           </Pressable>
         </View>
-      </View>
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -311,6 +382,35 @@ function targetLabel(target: CaptureTarget): string {
   return target.kind === "main" ? "Main" : target.name;
 }
 
+const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function dueChipLabel(due: string): string {
+  const parsedDue = parseStoredDate(due);
+  if (!parsedDue) {
+    return "";
+  }
+  return `${WEEKDAYS_SHORT[parsedDue.date.getDay()]} ${parsedDue.date.getDate()}`;
+}
+
+function timeChipLabel(due: string): string {
+  const parsedDue = parseStoredDate(due);
+  if (!parsedDue) {
+    return "";
+  }
+  return formatClock(parsedDue.date);
+}
+
+function formatClock(date: Date): string {
+  const h = date.getHours() % 12 || 12;
+  const ampm = date.getHours() >= 12 ? "PM" : "AM";
+  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
+}
+
+function recurrenceKeyword(rule: string): string {
+  const match = /FREQ=([A-Z]+)/.exec(rule);
+  return match ? match[1].toLowerCase() : "";
+}
+
 /** Simple glyphs built from hairline views; no icon font. */
 function ListGlyph({ active }: { active: boolean }) {
   const color = active ? colors.accent : colors.inkMuted;
@@ -335,6 +435,11 @@ function CalendarGlyph({ active }: { active: boolean }) {
 
 const styles = StyleSheet.create({
   root: {},
+  // The navbar's collapse wrapper: the bar slides away under this
+  // clip while capture is open.
+  barClip: {
+    overflow: "hidden" as const,
+  },
   bar: {
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -463,10 +568,14 @@ const styles = StyleSheet.create({
   },
 
   // The floating capture sheet.
-  sheet: {
+  // The sheet's dock: absolute placement lives here; the visual
+  // panel is the child.
+  sheetDock: {
     position: "absolute" as const,
     left: spacing.m,
     right: spacing.m,
+  },
+  sheet: {
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
@@ -495,6 +604,78 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: fonts.body,
     color: colors.inkMuted,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.s,
+  },
+  parseChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius,
+    paddingHorizontal: spacing.s,
+    height: 24,
+  },
+  parseChipText: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: fonts.body,
+    color: colors.accent,
+    fontWeight: "600",
+  },
+  parseGlyph: {
+    fontSize: 12,
+    lineHeight: 14,
+    color: colors.accent,
+    fontWeight: "700",
+  },
+  glyphMiniCalendar: {
+    width: 11,
+    height: 11,
+    borderWidth: 1.5,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  glyphMiniCalendarTop: {
+    height: 3,
+    width: "100%",
+    backgroundColor: colors.accent,
+  },
+  glyphMiniCalendarDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    marginLeft: 2,
+    marginTop: 2,
+    backgroundColor: colors.accent,
+  },
+  glyphMiniClock: {
+    width: 11,
+    height: 11,
+    borderRadius: radii.pill,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+  },
+  glyphMiniClockHand: {
+    position: "absolute",
+    left: 4,
+    top: 1.5,
+    width: 1.5,
+    height: 4,
+    borderRadius: 1,
+    backgroundColor: colors.accent,
+  },
+  glyphMiniClockHandV: {
+    position: "absolute",
+    left: 5.5,
+    top: 4,
+    width: 3,
+    height: 1.5,
+    borderRadius: 1,
+    backgroundColor: colors.accent,
   },
   sheetActions: {
     flexDirection: "row",
@@ -526,15 +707,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // The save control: a solid accent button at the row's right edge.
+  // The save control: an icon-only circle, same height as the pill,
+  // so the row reads as two matching rounded forms.
   send: {
-    backgroundColor: colors.accent,
-    borderRadius: radius,
-    paddingHorizontal: spacing.l,
-    minHeight: 32,
+    width: 32,
+    height: 32,
+    borderRadius: radii.pill,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-  },  sendPressed: {
+    backgroundColor: colors.accent,
+  },
+  sendPressed: {
     backgroundColor: colors.accentDeep,
   },
   sendDisabled: {
@@ -542,10 +725,10 @@ const styles = StyleSheet.create({
   },
   sendText: {
     color: colors.onAccent,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 18,
     fontFamily: fonts.body,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   sendTextDisabled: {
     color: colors.inkFaint,
