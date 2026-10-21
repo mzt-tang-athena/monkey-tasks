@@ -353,9 +353,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.s,
     marginBottom: spacing.l,
-    // Full width: the header runs edge to edge while the list below
-    // keeps the page gutter.
+    // Full-width bar (breaks out of the page gutter), with the page
+    // grid applied to its own content: labels and icons sit at the
+    // gutter on both sides.
     marginHorizontal: -pageGutter,
+    paddingHorizontal: pageGutter,
   },
   tabChip: {
     minHeight: 36,
