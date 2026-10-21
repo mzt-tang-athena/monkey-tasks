@@ -7,6 +7,7 @@ import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
+import { DropZoneMap, touchNoScroll } from "../../lib/dropzone";
 import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth, pageGutter } from "../../theme/tokens";
@@ -107,6 +108,11 @@ export default function PlannerScreen() {
   const [hoveredDay, setHoveredDay] = React.useState<Date | null>(null);
   const moved = React.useRef(false);
 
+  // The shared drop-zone registry: week columns and month cells
+  // register their rects; pointer moves hit-test page coordinates
+  // so touch drags land exactly like mouse drags.
+  const [dropZones] = React.useState(() => new DropZoneMap());
+
   React.useEffect(() => {
     let cancelled = false;
     loadMockTasks()
@@ -201,6 +207,7 @@ export default function PlannerScreen() {
       const travel = Math.abs(x - pending.x) + Math.abs(y - pending.y);
       if (travel > drag.threshold) {
         moved.current = true;
+        dropZones.measureAll();
         setDragging({ task: pending.task, x, y });
         setPending(null);
       }
@@ -208,6 +215,15 @@ export default function PlannerScreen() {
     }
     if (dragging) {
       setDragging({ ...dragging, x, y });
+      // Hit-test the pointer against the registered drop zones:
+      // enter/leave events do not fire on touch under capture.
+      const hit = dropZones.hit(x, y);
+      const dayTarget = hit?.startsWith("day:")
+        ? parseStoredDate(hit.slice(4))?.date ?? null
+        : null;
+      if (!isSameDay(dayTarget, hoveredDay)) {
+        setHoveredDay(dayTarget);
+      }
     }
   };
 
@@ -293,7 +309,7 @@ export default function PlannerScreen() {
                 onDragTask={startDayDrag}
                 dragActive={dragging != null}
                 hoveredDay={hoveredDay}
-                onHoverDay={setHoveredDay}
+                dropZones={dropZones}
               />
               {/* Week's foot: the shared section in its own scrolling
                   pane, fed the week's placement pool. */}
@@ -341,9 +357,9 @@ export default function PlannerScreen() {
               }}
               onShiftMonth={shiftMonth}
               pressGuard={suppressClick}
+              dropZones={dropZones}
               dragActive={dragging != null}
               hoveredDay={hoveredDay}
-              onHoverDay={setHoveredDay}
               onDragTask={startDayDrag}
             />
           ) : null}
@@ -675,7 +691,7 @@ function TaskPills({
       {tasks.map((task) => (
         <View
           key={task.uri}
-          style={styles.pillChip}
+          style={[styles.pillChip, touchNoScroll]}
           onPointerDown={(e) => onDragStart(task, e)}
         >
           <View style={styles.pillGrip}>
@@ -829,7 +845,7 @@ function TaskListSection({
           tasks.map((task, index) => (
             <View
               key={task.uri}
-              style={index > 0 ? styles.groupRow : undefined}
+              style={[index > 0 ? styles.groupRow : undefined, touchNoScroll]}
               onPointerDown={(e) => onDragStart(task, e)}
             >
               <TaskRow task={task} onToggle={onToggle} />
@@ -917,6 +933,9 @@ function DaySpread({
   const [swipe] = React.useState(() =>
     makeSwipeController((dir) => onShiftDay(dir === "left" ? 1 : -1)),
   );
+  // Ruler rows register under their hour; moves hit-test these
+  // rects, since touch capture suppresses enter/leave events.
+  const [hourZones] = React.useState(() => new DropZoneMap());
 
   const sameDay = startOfDay(today).getTime() === startOfDay(date).getTime();
   const groups = groupByDue(tasks, today);
@@ -979,6 +998,7 @@ function DaySpread({
       const travel = Math.abs(x - pending.x) + Math.abs(y - pending.y);
       if (travel > drag.threshold) {
         moved.current = true;
+        hourZones.measureAll();
         setDragging({ task: pending.task, x, y });
         setPending(null);
       }
@@ -986,6 +1006,11 @@ function DaySpread({
     }
     if (dragging) {
       setDragging({ ...dragging, x, y });
+      const hit = hourZones.hit(x, y);
+      const hour = hit?.startsWith("hour:") ? Number(hit.slice(5)) : null;
+      if (hour !== hoverHour) {
+        setHoverHour(hour);
+      }
     }
   };
 
@@ -1067,7 +1092,7 @@ function DaySpread({
             now={today}
             dragActive={dragging != null}
             hoverHour={hoverHour}
-            onHoverSlot={setHoverHour}
+            zones={hourZones}
             onToggle={guardedToggle}
             onDragStart={startTaskDrag}
           />
@@ -1146,6 +1171,7 @@ function DaySpread({
                   {overdue.map((task) => (
                     <View
                       key={task.uri}
+                      style={touchNoScroll}
                       onPointerDown={(e) => startTaskDrag(task, e)}
                     >
                       <TaskRow task={task} onToggle={guardedToggle} />
@@ -1183,7 +1209,7 @@ function Timeline({
   now,
   dragActive,
   hoverHour,
-  onHoverSlot,
+  zones,
   onToggle,
   onDragStart,
 }: {
@@ -1192,7 +1218,8 @@ function Timeline({
   now: Date;
   dragActive: boolean;
   hoverHour: number | null;
-  onHoverSlot: (hour: number | null) => void;
+  /** Rows register under their hour; moves hit-test these rects. */
+  zones: DropZoneMap;
   onToggle: (task: TaskItem) => void;
   onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
 }) {
@@ -1210,7 +1237,7 @@ function Timeline({
   }
 
   return (
-    <View style={styles.ruler} onPointerLeave={() => onHoverSlot(null)}>
+    <View style={styles.ruler}>
       {hours.map((slotTasks, hour) => {
         const children: React.ReactNode[] = [];
         let placedNow = false;
@@ -1239,15 +1266,13 @@ function Timeline({
         return (
           <View
             key={hour}
+            ref={(node) => {
+              zones.set(`hour:${hour}`, node);
+            }}
             style={[
               styles.rulerRow,
               dragActive && hoverHour === hour && styles.rulerRowHover,
             ]}
-            onPointerEnter={() => {
-              if (dragActive) {
-                onHoverSlot(hour);
-              }
-            }}
           >
             <Text style={styles.rulerMark}>{labelHour(hour)}</Text>
             <View style={styles.rulerSlot}>{children}</View>
@@ -1277,7 +1302,7 @@ function HourTask({
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
       onPointerDown={(e) => onDragStart(task, e)}
-      style={[styles.hourTask, hover && styles.hourTaskHover]}
+      style={[styles.hourTask, touchNoScroll, hover && styles.hourTaskHover]}
     >
       <View style={[styles.taskBar, done && styles.taskBarDone]} />
       <Pressable
@@ -1322,7 +1347,7 @@ function WeekView({
   onDragTask,
   dragActive,
   hoveredDay,
-  onHoverDay,
+  dropZones,
 }: {
   tasks: TaskItem[];
   today: Date;
@@ -1332,7 +1357,9 @@ function WeekView({
   onDragTask: (task: TaskItem, e: RNPointerEvent) => void;
   dragActive: boolean;
   hoveredDay: Date | null;
-  onHoverDay: (day: Date | null) => void;
+  /** The columns register here; moves hit-test instead of relying
+      on enter/leave events, which touch never delivers. */
+  dropZones: DropZoneMap;
 }) {
   const todayStart = startOfDay(today).getTime();
   // The strip picks the week; its seven columns start on Sunday.
@@ -1361,12 +1388,10 @@ function WeekView({
               isHovered && styles.weekColHovered,
               pressed && styles.pressedFill,
             ]}
-            onPress={() => onSelect(day)}
-            onPointerEnter={() => {
-              if (dragActive) {
-                onHoverDay(day);
-              }
+            ref={(node) => {
+              dropZones.set(`day:${isoOf(day)}`, node);
             }}
+            onPress={() => onSelect(day)}
             accessibilityRole="button"
             accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
           >
@@ -1383,7 +1408,7 @@ function WeekView({
               items.map((task) => (
                 <View
                   key={task.uri}
-                  style={styles.weekTask}
+                  style={[styles.weekTask, touchNoScroll]}
                   onPointerDown={(e) => onDragTask(task, e)}
                 >
                   <View style={styles.taskBar} />
@@ -1420,9 +1445,9 @@ function MonthView({
   onOpenDay,
   onShiftMonth,
   pressGuard,
+  dropZones,
   dragActive,
   hoveredDay,
-  onHoverDay,
   onDragTask,
 }: {
   viewMonth: Date;
@@ -1440,9 +1465,10 @@ function MonthView({
   onShiftMonth: (delta: 1 | -1) => void;
   /** Drag drops that land on a cell suppress that cell's pick. */
   pressGuard?: { current: boolean };
+  /** Cells register here for move-based hit testing. */
+  dropZones: DropZoneMap;
   dragActive: boolean;
   hoveredDay: Date | null;
-  onHoverDay: (day: Date | null) => void;
   onDragTask: (task: TaskItem, e: RNPointerEvent) => void;
 }) {
   // The picked day carries the month key it belongs to, so a new
@@ -1543,10 +1569,8 @@ function MonthView({
                   }
                   setPicked({ key: monthKey, day });
                 }}
-                onPointerEnter={() => {
-                  if (dragActive) {
-                    onHoverDay(day);
-                  }
+                ref={(node) => {
+                  dropZones.set(`day:${isoOf(day)}`, node);
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
@@ -1608,6 +1632,7 @@ function MonthView({
                   pickedTasks.map((task) => (
                     <View
                       key={task.uri}
+                      style={touchNoScroll}
                       onPointerDown={(e) => onDragTask(task, e)}
                     >
                       <TaskRow task={task} onToggle={onToggle} />
@@ -2072,6 +2097,8 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.paper,
+    // Drags must not start native text selection in the web preview.
+    userSelect: "none" as const,
   },
   // week and month: the fixed frame. Header and calendar sit still;
   // only the bottom pane scrolls.

@@ -369,6 +369,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.paper,
+    // The lists screen shares the planner's no-selection rule: a
+    // row drag or tab swipe must not start text selection.
+    userSelect: "none" as const,
   },
   body: {
     flex: 1,
