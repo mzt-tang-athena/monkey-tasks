@@ -5,12 +5,8 @@ import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
-import {
-  inMockFocus,
-  inMockMain,
-  loadMockTasks,
-  toggleMockCompleted,
-} from "../../lib/mock";
+import { inMockFocus, inMockMain } from "../../lib/mock";
+import { useTasks } from "../../store/tasks";
 import { dayLabel } from "../../lib/dates";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
 
@@ -28,10 +24,9 @@ const TARGETS: CaptureTarget[] = [
 ];
 
 export default function ListsScreen() {
-  const [tasks, setTasks] = React.useState<TaskItem[] | null>(null);
-  const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
-    "loading",
-  );
+  const store = useTasks();
+  const tasks = store.tasks;
+  const status = store.status;
   const [tab, setTab] = React.useState<ListTab>("Main");
   const [menu, setMenu] = React.useState<{
     open: boolean;
@@ -54,34 +49,8 @@ export default function ListsScreen() {
     ),
   );
 
-  // Mock load. Status changes only in async callbacks, so the effect
-  // does not set state synchronously. Loading starts as the initial
-  // state, and the error state stays a real code path.
-  React.useEffect(() => {
-    let cancelled = false;
-    loadMockTasks()
-      .then((loaded) => {
-        if (!cancelled) {
-          setTasks(loaded);
-          setStatus("ready");
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setStatus("error");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const toggle = (task: TaskItem) => {
-    setTasks((current) =>
-      (current ?? []).map((item) =>
-        item.uri === task.uri ? toggleMockCompleted(item) : item,
-      ),
-    );
+    void store.toggle(task);
   };
 
   // A real reload: the loader can fail when it talks to the vault,
@@ -91,15 +60,11 @@ export default function ListsScreen() {
   const reload = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      const loaded = await loadMockTasks();
-      setTasks(loaded);
-      setStatus("ready");
-    } catch {
-      setStatus("error");
+      await store.refresh();
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [store]);
 
   const visible = inTabTasks(tasks, tab);
   const groups = groupByDue(visible, new Date());
@@ -296,7 +261,7 @@ export default function ListsScreen() {
         key={tab}
         targets={TARGETS}
         defaultTargetIndex={tab === "Focus" ? 0 : 1}
-        onSend={() => undefined}
+        onSend={(parsed, target) => store.capture(parsed, target)}
       />
     </View>
   );

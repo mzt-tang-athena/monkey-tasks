@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import * as Notifications from "expo-notifications";
+import { TasksProvider } from "../store/tasks";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -12,9 +13,11 @@ Notifications.setNotificationHandler({
 
 export default function RootLayout() {
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
-    </Stack>
+    <TasksProvider>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
+      </Stack>
+    </TasksProvider>
   );
 }

@@ -8,7 +8,7 @@ import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { DropZoneMap, touchNoScroll } from "../../lib/dropzone";
-import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
+import { useTasks } from "../../store/tasks";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth, weekCanvasHeight, pageGutter, periodStep } from "../../theme/tokens";
 import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
@@ -65,10 +65,9 @@ const RULER_END = 22;
 
 export default function PlannerScreen() {
   const params = useLocalSearchParams<{ mode?: string }>();
-  const [tasks, setTasks] = React.useState<TaskItem[] | null>(null);
-  const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
-    "loading",
-  );
+  const store = useTasks();
+  const tasks: TaskItem[] = store.tasks;
+  const status = store.status;
   const [mode, setMode] = React.useState<Mode>(() =>
     params.mode === "week" || params.mode === "month"
       ? (params.mode as Mode)
@@ -157,42 +156,14 @@ export default function PlannerScreen() {
     promote: promotePending,
   });
 
-  React.useEffect(() => {
-    let cancelled = false;
-    loadMockTasks()
-      .then((loaded) => {
-        if (!cancelled) {
-          setTasks(loaded);
-          setStatus("ready");
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setStatus("error");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const toggle = (task: TaskItem) => {
-    setTasks((current) =>
-      (current ?? []).map((item) =>
-        item.uri === task.uri ? toggleMockCompleted(item) : item,
-      ),
-    );
+    void store.toggle(task);
   };
 
-  // Drag-and-drop writes due dates and times through here.
+  // Drag-and-drop writes due dates and times through here: the store
+  // applies locally, then rewrites the note in vault mode.
   const updateTask = (task: TaskItem, patch: Partial<TaskFrontmatter>) => {
-    setTasks((current) =>
-      (current ?? []).map((item) =>
-        item.uri === task.uri
-          ? { ...item, data: { ...(item.data as TaskFrontmatter), ...patch } }
-          : item,
-      ),
-    );
+    void store.writeFields(task, patch);
   };
 
   const all = tasks ?? [];
@@ -489,11 +460,14 @@ export default function PlannerScreen() {
         </React.Fragment>
       ) : null}
 
-      {/* One bottom bar: nav left, capture button right. */}
+      {/* One bottom bar: nav left, capture button right. The planner
+          preselects the viewed day as the default due date. */}
       <BottomBar
         targets={TARGETS}
         defaultTargetIndex={1}
-        onSend={() => undefined}
+        onSend={(parsed, target) =>
+          store.capture(parsed, target, isoOf(selected))
+        }
       />
     </View>
   );
