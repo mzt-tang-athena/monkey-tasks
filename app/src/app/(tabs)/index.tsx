@@ -253,8 +253,13 @@ export default function ListsScreen() {
         </View>
       ) : null}
 
-      {/* One bottom bar: nav left, capture button right. */}
+      {/* One bottom bar: nav left, capture button right. Keyed by the
+          active list tab: the bar initializes its target pill from
+          defaultTargetIndex only once at mount, so a remount is what
+          re-reads the current tab when it changes. Focus preselects
+          Focus; Main remains the default when no list tab owns it. */}
       <BottomBar
+        key={tab}
         targets={TARGETS}
         defaultTargetIndex={tab === "Focus" ? 0 : 1}
         onSend={() => undefined}
