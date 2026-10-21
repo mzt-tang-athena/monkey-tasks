@@ -142,6 +142,15 @@ export default function PlannerScreen() {
     setDragging({ task: pending.task, x, y });
     setPending(null);
   }, [dropZones]);
+  const lifted = React.useMemo<LiftState>(
+    () =>
+      pending != null
+        ? { task: pending.task, phase: "hold" }
+        : dragging != null
+          ? { task: dragging.task, phase: "picked" }
+          : null,
+    [pending, dragging],
+  );
   useTouchDragGate(rootRef, {
     busy: gateRef,
     pending: pendingRef,
@@ -370,6 +379,7 @@ export default function PlannerScreen() {
                 dragActive={dragging != null}
                 hoveredDay={hoveredDay}
                 dropZones={dropZones}
+                lifted={lifted}
               />
               {/* Week's foot: the shared section in its own scrolling
                   pane, fed the week's placement pool. */}
@@ -389,6 +399,7 @@ export default function PlannerScreen() {
                     onToggle={guardedToggle}
                     onDragStart={startDayDrag}
                     tasks={weekPool}
+                    lifted={lifted}
                     emptyLabel={
                       source === "due-period"
                         ? "Nothing to place this week."
@@ -420,6 +431,7 @@ export default function PlannerScreen() {
               dropZones={dropZones}
               dragActive={dragging != null}
               hoveredDay={hoveredDay}
+              lifted={lifted}
               onDragTask={startDayDrag}
             />
           ) : null}
@@ -567,6 +579,21 @@ function railStartIdx(anchorIdx: number, selIdx: number, count: number): number 
     return selIdx;
   }
   return anchorIdx;
+}
+
+type LiftState = { task: TaskItem; phase: "hold" | "picked" } | null;
+
+/** Rows carry the lift: a quiet tint through the hold, then a
+    scale-plus-shadow pickup once the drag owns the pointer. Empty
+    when no drag concerns this row. */
+function liftStyleOf(
+  lifted: LiftState,
+  task: TaskItem,
+): (typeof styles.liftHold | typeof styles.liftPicked)[] {
+  if (lifted == null || lifted.task.uri !== task.uri) {
+    return [];
+  }
+  return [lifted.phase === "hold" ? styles.liftHold : styles.liftPicked];
 }
 
 /** Open tasks first, by due time, then completed ones behind them.
@@ -748,9 +775,11 @@ function SourceToggle({
 function TaskPills({
   tasks,
   onDragStart,
+  lifted,
 }: {
   tasks: TaskItem[];
   onDragStart: (task: TaskItem, e: RNPointerEvent, kind?: "pill" | "row") => void;
+  lifted?: LiftState;
 }) {
   if (tasks.length === 0) {
     return null;
@@ -760,7 +789,7 @@ function TaskPills({
       {tasks.map((task) => (
         <View
           key={task.uri}
-          style={styles.pillChip}
+          style={[styles.pillChip, ...liftStyleOf(lifted ?? null, task)]}
           onPointerDown={(e) => onDragStart(task, e, "pill")}
         >
           <View style={styles.pillGrip}>
@@ -880,6 +909,7 @@ function TaskListSection({
   emptyLabel,
   header,
   footer,
+  lifted,
 }: {
   source: Source;
   mode: Mode;
@@ -894,6 +924,7 @@ function TaskListSection({
   emptyLabel: string;
   header?: React.ReactNode;
   footer?: React.ReactNode;
+  lifted?: LiftState;
 }) {
   return (
     <View>
@@ -914,7 +945,10 @@ function TaskListSection({
           tasks.map((task, index) => (
             <View
               key={task.uri}
-              style={index > 0 ? styles.groupRow : undefined}
+              style={[
+                index > 0 ? styles.groupRow : undefined,
+                ...liftStyleOf(lifted ?? null, task),
+              ]}
               onPointerDown={(e) => onDragStart(task, e)}
             >
               <TaskRow task={task} onToggle={onToggle} />
@@ -925,7 +959,7 @@ function TaskListSection({
         )
       ) : (
         <>
-          <TaskPills tasks={tasks} onDragStart={onDragStart} />
+          <TaskPills tasks={tasks} onDragStart={onDragStart} lifted={lifted ?? null} />
           {tasks.length === 0 ? (
             <Text style={styles.empty}>{emptyLabel}</Text>
           ) : null}
@@ -1054,6 +1088,17 @@ function DaySpread({
     pending: dayPendingRef,
     promote: promoteDayPending,
   });
+  // DaySpread's own lift: the source row tints through the hold and
+  // lifts once the drag owns the pointer.
+  const lifted = React.useMemo<LiftState>(
+    () =>
+      pending != null
+        ? { task: pending.task, phase: "hold" }
+        : dragging != null
+          ? { task: dragging.task, phase: "picked" }
+          : null,
+    [pending, dragging],
+  );
 
   const sameDay = startOfDay(today).getTime() === startOfDay(date).getTime();
   const groups = groupByDue(tasks, today);
@@ -1254,6 +1299,7 @@ function DaySpread({
             dragActive={dragging != null}
             hoverHour={hoverHour}
             zones={hourZones}
+            lifted={lifted}
             onToggle={guardedToggle}
             onDragStart={startTaskDrag}
           />
@@ -1318,6 +1364,7 @@ function DaySpread({
             onToggle={guardedToggle}
             onDragStart={startTaskDrag}
             tasks={sectionTasks}
+            lifted={lifted}
             emptyLabel={
               source === "due-period"
                 ? "Nothing scheduled today."
@@ -1333,6 +1380,10 @@ function DaySpread({
                   {overdue.map((task) => (
                     <View
                       key={task.uri}
+                      style={[
+                        touchNoScroll,
+                        ...liftStyleOf(lifted ?? null, task),
+                      ]}
                       onPointerDown={(e) => startTaskDrag(task, e)}
                     >
                       <TaskRow task={task} onToggle={guardedToggle} />
@@ -1371,6 +1422,7 @@ function Timeline({
   dragActive,
   hoverHour,
   zones,
+  lifted,
   onToggle,
   onDragStart,
 }: {
@@ -1381,6 +1433,7 @@ function Timeline({
   hoverHour: number | null;
   /** Rows register under their hour; moves hit-test these rects. */
   zones: DropZoneMap;
+  lifted: LiftState;
   onToggle: (task: TaskItem) => void;
   onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
 }) {
@@ -1416,11 +1469,11 @@ function Timeline({
             <HourTask
               key={task.uri}
               task={task}
+              lifted={lifted}
               onToggle={onToggle}
               onDragStart={onDragStart}
             />,
-          );
-        }
+          );        }
         if (isToday && hour === now.getHours() && !placedNow) {
           children.push(<NowLine key="now" />);
         }
@@ -1446,10 +1499,12 @@ function Timeline({
 
 function HourTask({
   task,
+  lifted,
   onToggle,
   onDragStart,
 }: {
   task: TaskItem;
+  lifted: LiftState;
   onToggle: (task: TaskItem) => void;
   onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
 }) {
@@ -1463,7 +1518,11 @@ function HourTask({
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
       onPointerDown={(e) => onDragStart(task, e)}
-      style={[styles.hourTask, hover && styles.hourTaskHover]}
+      style={[
+        styles.hourTask,
+        hover && styles.hourTaskHover,
+        ...liftStyleOf(lifted ?? null, task),
+      ]}
     >
       <View style={[styles.taskBar, done && styles.taskBarDone]} />
       <Pressable
@@ -1509,6 +1568,7 @@ function WeekView({
   dragActive,
   hoveredDay,
   dropZones,
+  lifted,
 }: {
   tasks: TaskItem[];
   today: Date;
@@ -1521,6 +1581,7 @@ function WeekView({
   /** The columns register here; moves hit-test instead of relying
       on enter/leave events, which touch never delivers. */
   dropZones: DropZoneMap;
+  lifted: LiftState;
 }) {
   const todayStart = startOfDay(today).getTime();
   // The strip picks the week; its seven columns start on Sunday.
@@ -1569,7 +1630,7 @@ function WeekView({
               items.map((task) => (
                 <View
                   key={task.uri}
-                  style={styles.weekTask}
+                  style={[styles.weekTask, ...liftStyleOf(lifted, task)]}
                   onPointerDown={(e) => onDragTask(task, e)}
                 >
                   <View style={styles.taskBar} />
@@ -1609,6 +1670,7 @@ function MonthView({
   dropZones,
   dragActive,
   hoveredDay,
+  lifted,
   onDragTask,
 }: {
   viewMonth: Date;
@@ -1628,6 +1690,7 @@ function MonthView({
   pressGuard?: { current: boolean };
   /** Cells register here for move-based hit testing. */
   dropZones: DropZoneMap;
+  lifted: LiftState;
   dragActive: boolean;
   hoveredDay: Date | null;
   onDragTask: (task: TaskItem, e: RNPointerEvent) => void;
@@ -1775,6 +1838,7 @@ function MonthView({
           onToggle={onToggle}
           onDragStart={onDragTask}
           tasks={listRows}
+          lifted={lifted}
           emptyLabel={
             source === "due-period"
               ? "Nothing scheduled this month."
@@ -1792,6 +1856,7 @@ function MonthView({
                   pickedTasks.map((task) => (
                     <View
                       key={task.uri}
+                      style={[touchNoScroll, ...liftStyleOf(lifted ?? null, task)]}
                       onPointerDown={(e) => onDragTask(task, e)}
                     >
                       <TaskRow task={task} onToggle={onToggle} />
@@ -2839,7 +2904,7 @@ const styles = StyleSheet.create({
   pillChip: {
     flexDirection: "row",
     alignItems: "center" as const,
-    gap: spacing.s,
+    gap: spacing.xs,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
@@ -2848,6 +2913,21 @@ const styles = StyleSheet.create({
     paddingRight: spacing.m,
     paddingVertical: spacing.s,
     maxWidth: "100%" as const,
+  },
+  // The pickup feedback: a quiet tint while the hold is running,
+  // then a visible lift (scale and shadow) once the drag owns the
+  // pointer. The ghost carries the motion after that.
+  liftHold: {
+    backgroundColor: colors.accentSoft,
+  },
+  liftPicked: {
+    backgroundColor: colors.accentSoft,
+    transform: [{ scale: 1.03 }],
+    shadowColor: colors.ink,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
   },
   pillGrip: {
     alignItems: "center" as const,
