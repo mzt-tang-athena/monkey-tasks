@@ -2,6 +2,7 @@ import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "../features/tasks/query";
 import { parseStoredDate } from "../lib/dates";
+import { taskIsDone } from "@monkey-tasks/schemas";
 import { colors, fonts, spacing, radii } from "../theme/tokens";
 
 export function TaskRow({
@@ -15,7 +16,7 @@ export function TaskRow({
   timeAlign?: "under" | "right";
 }) {
   const [hot, setHot] = React.useState(false);
-  const done = task.data?.completed != null && task.data.completed !== "";
+  const done = task.data != null && taskIsDone(task.data);
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
   const overdue =
     !done && due != null && due.date.getTime() < startOfToday();

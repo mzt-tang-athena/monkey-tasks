@@ -1,4 +1,4 @@
-import type { TaskFrontmatter } from "@monkey-tasks/schemas";
+import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "../features/tasks/query";
 import { addDays, formatLocal, startOfDay } from "./dates";
 
@@ -58,7 +58,7 @@ export function loadMockTasks(): Promise<TaskItem[]> {
 /** Flip a mock task's completed date in place, for local toggling.
     Unticking drops the property, matching the real write path. */
 export function toggleMockCompleted(item: TaskItem): TaskItem {
-  const done = item.data?.completed != null && item.data.completed !== "";
+  const done = item.data != null && taskIsDone(item.data);
   if (!item.data) {
     return item;
   }

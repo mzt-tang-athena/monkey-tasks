@@ -158,6 +158,13 @@ export const measure = 720;
  */
 export const weekColWidth = 144;
 
+/**
+ * The period strip's scroll step: one strip pill plus one gap. Keep
+ * in sync with the styles: stripDay is 44 wide and the rail gap is
+ * spacing.s. The rail alignment math consumes this.
+ */
+export const periodStep = 52;
+
 /** The page's side margin, shared by every screen. */
 export const pageGutter = 20;
 

@@ -3,14 +3,14 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
-import type { TaskFrontmatter } from "@monkey-tasks/schemas";
+import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { DropZoneMap, touchNoScroll } from "../../lib/dropzone";
 import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
-import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth, pageGutter } from "../../theme/tokens";
+import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth, pageGutter, periodStep } from "../../theme/tokens";
 import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
 import type { PointerEvent as RNPointerEvent } from "react-native";
 
@@ -481,8 +481,9 @@ function inSourceList(task: TaskItem, list: string): boolean {
   return task.data?.lists?.includes(`[[${list}]]`) ?? false;
 }
 
+/** A task is done exactly per the contracts rule. */
 function isDone(task: TaskItem): boolean {
-  return task.data?.completed != null && task.data.completed !== "";
+  return task.data == null ? false : taskIsDone(task.data);
 }
 
 /* ------------------------------------------------------------- strips */
@@ -508,15 +509,23 @@ function railStartIdx(anchorIdx: number, selIdx: number, count: number): number 
   return anchorIdx;
 }
 
-/** Open tasks first, by due time, then completed ones behind them. */
+/** Open tasks first, by due time, then completed ones behind them.
+    Decorate-time parse: sorting re-parses nothing per comparison. */
 function sortOpenFirst(items: TaskItem[]): TaskItem[] {
-  const timeValue = (task: TaskItem): number =>
+  const stamp = (task: TaskItem): number =>
     task.data?.due ? (parseStoredDate(task.data.due)?.date.getTime() ?? 0) : 0;
-  const byTime = (a: TaskItem, b: TaskItem) =>
-    timeValue(a) - timeValue(b) || a.name.localeCompare(b.name);
+  const stamped = items.map((task) => ({ task, time: stamp(task) }));
+  const byTime = (a: { task: TaskItem; time: number }, b: { task: TaskItem; time: number }) =>
+    a.time - b.time || a.task.name.localeCompare(b.task.name);
   return [
-    ...items.filter((task) => !isDone(task)).sort(byTime),
-    ...items.filter(isDone).sort(byTime),
+    ...stamped
+      .filter((entry) => !isDone(entry.task))
+      .sort(byTime)
+      .map((entry) => entry.task),
+    ...stamped
+      .filter((entry) => isDone(entry.task))
+      .sort(byTime)
+      .map((entry) => entry.task),
   ];
 }
 
@@ -1489,8 +1498,7 @@ function MonthView({
   for (const task of tasks) {
     if (task.data?.due == null || isDone(task)) {
       continue;
-    }
-    const iso = task.data.due.slice(0, 10);
+    }    const iso = task.data.due.slice(0, 10);
     const bucket = byDay.get(iso);
     if (bucket) {
       bucket.push(task);
@@ -1697,26 +1705,29 @@ function PeriodRail({
   activeIdx: number;
   renderItem: (index: number) => React.ReactNode;
 }) {
-  // stripDay 44 + one gap 8: the rail's cell step.
-  const STEP = 52;
+  // stripDay 44 + one gap 8: the rail's cell step. The token keeps
+  // the alignment math honest when a pill tune lands.
+  const STEP = periodStep;
   const scroller = React.useRef<React.ComponentRef<typeof ScrollView>>(null);
   const viewport = React.useRef(0);
   const railX = React.useRef(0);
 
   // Align only when the active cell sits outside the viewport: the
-  // rail never moves on its own otherwise.
+  // rail never moves on its own otherwise. Cells live at
+  // pageGutter + i * STEP inside the padded rail content, so both
+  // the boundary test and the targets carry the gutter offset.
   const alignToActive = React.useCallback(() => {
     if (viewport.current <= 0) {
       return;
     }
-    const lo = Math.floor(railX.current / STEP);
-    const hi = Math.floor((railX.current + viewport.current) / STEP);
+    const lo = Math.floor((railX.current - pageGutter) / STEP);
+    const hi = Math.floor((railX.current - pageGutter + viewport.current) / STEP);
     if (activeIdx < lo) {
-      const x = activeIdx * STEP;
+      const x = pageGutter + activeIdx * STEP;
       railX.current = x;
       scroller.current?.scrollTo({ x, animated: false });
     } else if (activeIdx > hi - 1) {
-      const x = Math.max((activeIdx + 1) * STEP - viewport.current, 0);
+      const x = Math.max(pageGutter + (activeIdx + 1) * STEP - viewport.current, 0);
       railX.current = x;
       scroller.current?.scrollTo({ x, animated: false });
     }
@@ -1732,7 +1743,7 @@ function PeriodRail({
     scroller.current?.scrollTo({ x: 0, animated: false });
     railX.current = 0;
   }, []);
-  React.useLayoutEffect(alignToActive, [activeIdx, alignToActive]);
+  React.useLayoutEffect(alignToActive, [activeIdx, alignToActive, STEP]);
 
   return (
     <ScrollView
@@ -1956,7 +1967,7 @@ function tasksForDay(tasks: TaskItem[], day: Date): TaskItem[] {
     (task) =>
       task.data?.due != null &&
       task.data.due.slice(0, 10) === iso &&
-      !(task.data?.completed != null && task.data.completed !== ""),
+      !(task.data != null && isDone(task)),
   );
 }
 
