@@ -121,13 +121,32 @@ export default function PlannerScreen() {
   const [dropZones] = React.useState(() => new DropZoneMap());
 
   // The screen root carries the scroll gate: when a drag owns the
-  // pointer, pane scrolling loses the gesture.
+  // pointer, pane scrolling loses the gesture. The gate owns touch
+  // promotions since touchmove outraces pointermove.
   const rootRef = React.useRef<HTMLElement | null>(null);
-  const gateActive = React.useRef(false);
+  const gateRef = React.useRef(false);
+  const pendingRef = React.useRef(pending);
   React.useEffect(() => {
-    gateActive.current = dragging != null;
+    pendingRef.current = pending;
+  }, [pending]);
+  React.useEffect(() => {
+    gateRef.current = dragging != null;
   }, [dragging]);
-  useTouchGate(rootRef, gateActive);
+  const promotePending = React.useCallback((x: number, y: number) => {
+    const pending = pendingRef.current;
+    if (!pending || pending.task == null) {
+      return;
+    }
+    moved.current = true;
+    dropZones.measureAll();
+    setDragging({ task: pending.task, x, y });
+    setPending(null);
+  }, [dropZones]);
+  useTouchDragGate(rootRef, {
+    busy: gateRef,
+    pending: pendingRef,
+    promote: promotePending,
+  });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -229,16 +248,17 @@ export default function PlannerScreen() {
     if (pending) {
       const travel = Math.abs(x - pending.x) + Math.abs(y - pending.y);
       if (pending.touch) {
-        // Touch: movement before the hold means the user is
-        // scrolling. Cancel the pending pickup and let the browser
-        // own the gesture. Pills get a shorter hold: their section
-        // has free space to scroll from without touching them.
-        if (travel > drag.threshold) {
-          setPending(null);
-          return;
-        }
+        // Touch grammar: movement while still holding is a scroll.
+        // Movement AFTER the hold completed is a drag, however far
+        // it jumps between move events. Pills hold for less: their
+        // section has free space to scroll from without touching
+        // them.
         const hold = pending.kind === "pill" ? drag.pillPickMs : drag.pickMs;
         if (performance.now() - pending.t < hold) {
+          if (travel > drag.threshold) {
+            setPending(null);
+            return;
+          }
           return;
         }
       } else if (travel <= drag.threshold) {
@@ -989,17 +1009,51 @@ function DaySpread({
   );
   const dividerHeight = 28;
   // Ruler rows register under their hour; moves hit-test these
-  // rects, since touch capture suppresses enter/leave events.
+  // rects, since touch capture suppresses enter/leave events. The
+  // hit band clips to the pane's visible area: scroll-folded rows
+  // stretch nowhere.
   const [hourZones] = React.useState(() => new DropZoneMap());
+  const paneRef = React.useRef<HTMLElement | null>(null);
 
   // DaySpread also gates scrolling while a drag or the grabber owns
   // the pointer, so the split resize survives on touch.
+  // DaySpread also gates scrolling while a drag or the grabber owns
+  // the pointer, so the split resize survives on touch. The gate
+  // promotes the ruler pickup at the touchmove level, per the same
+  // ordering rule as the screen root.
   const dayRootRef = React.useRef<HTMLElement | null>(null);
   const dayGate = React.useRef(false);
+  const dayPendingRef = React.useRef(pending);
+  React.useEffect(() => {
+    dayPendingRef.current = pending;
+  }, [pending]);
   React.useEffect(() => {
     dayGate.current = dragging != null || resizing != null;
   }, [dragging, resizing]);
-  useTouchGate(dayRootRef, dayGate);
+  const promoteDayPending = React.useCallback((x: number, y: number) => {
+    const pending = dayPendingRef.current;
+    if (!pending || pending.task == null) {
+      return;
+    }
+    moved.current = true;
+    hourZones.measureAll(() => {
+      const node = paneRef.current as unknown as {
+        measureInWindow?: (cb: (px: number, py: number, pw: number, ph: number) => void) => void;
+      } | null;
+      if (node?.measureInWindow) {
+        node.measureInWindow((px, py, pw, ph) => {
+          hourZones.setClip({ x: px, y: py, w: pw, h: ph });
+        });
+      }
+    });
+    setDragging({ task: pending.task, x, y });
+    setPending(null);
+  }, [hourZones]);
+  useTouchDragGate(dayRootRef, {
+    busy: dayGate,
+    pending: dayPendingRef,
+    promote: promoteDayPending,
+  });
 
   const sameDay = startOfDay(today).getTime() === startOfDay(date).getTime();
   const groups = groupByDue(tasks, today);
@@ -1073,18 +1127,29 @@ function DaySpread({
     if (pending) {
       const travel = Math.abs(x - pending.x) + Math.abs(y - pending.y);
       if (pending.touch) {
-        if (travel > drag.threshold) {
-          setPending(null);
-          return;
-        }
+        // Same touch grammar as the screen root: hold first, then
+        // movement is a drag no matter how far it jumps.
         if (performance.now() - pending.t < drag.pickMs) {
+          if (travel > drag.threshold) {
+            setPending(null);
+            return;
+          }
           return;
         }
       } else if (travel <= drag.threshold) {
         return;
       }
       moved.current = true;
-      hourZones.measureAll();
+      hourZones.measureAll(() => {
+        const node = paneRef.current as unknown as {
+          measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void;
+        } | null;
+        if (node?.measureInWindow) {
+          node.measureInWindow((x, y, w, h) => {
+            hourZones.setClip({ x, y, w, h });
+          });
+        }
+      });
       setDragging({ task: pending.task, x, y });
       setPending(null);
       return;
@@ -1169,6 +1234,9 @@ function DaySpread({
 
       {/* The timeline pane: the ruler, resizable by the grabber. */}
       <View
+        ref={(node) => {
+          paneRef.current = node as HTMLElement | null;
+        }}
         style={[styles.pane, { height: timelineHeight }]}
         onLayout={(e) => {
           setPaneTop(e.nativeEvent.layout.y);
@@ -2136,9 +2204,33 @@ function labelHour(hour: number): string {
  * listener is read per event, so preventDefault wins mid-gesture.
  * Mounts once per drag root; the ref flips as gestures come alive.
  */
-function useTouchGate(
+/**
+ * The touch gate. Listens non-passively at a drag root, and owns the
+ * touch pickup decision because touchmove runs before pointermove:
+ * by the time the browser sees the move, the promotion is already
+ * made and its scroll is prevented, so panes cannot steal the
+ * pointer mid-gesture.
+ *
+ * Per touchmove: while a drag or grab holds the pointer, scrolling
+ * is prevented outright. When a touch pickup has held long enough,
+ * its first move promotes the drag right here and the event is
+ * prevented. Movement before then cancels the pickup and releases
+ * the gesture to the browser's scrolling.
+ */
+function useTouchDragGate(
   ref: React.RefObject<HTMLElement | null>,
-  active: React.RefObject<boolean>,
+  opts: {
+    busy: React.RefObject<boolean>;
+    pending: React.RefObject<{
+      task: TaskItem;
+      x: number;
+      y: number;
+      t: number;
+      touch: boolean;
+      kind?: "pill" | "row";
+    } | null>;
+    promote: (x: number, y: number) => void;
+  },
 ) {
   React.useEffect(() => {
     const node = ref.current;
@@ -2146,15 +2238,35 @@ function useTouchGate(
       return;
     }
     const onMove = (e: TouchEvent) => {
-      if (active.current) {
+      if (opts.busy.current) {
         e.preventDefault();
+        return;
+      }
+      const pending = opts.pending.current;
+      const touch = e.changedTouches?.[0] ?? e.touches[0];
+      if (pending && touch != null) {
+        const travel =
+          Math.abs(touch.pageX - pending.x) +
+          Math.abs(touch.pageY - pending.y);
+        const hold =
+          pending.kind === "pill" ? drag.pillPickMs : drag.pickMs;
+        const held = performance.now() - pending.t >= hold;
+        if (held) {
+          e.preventDefault();
+          opts.promote(touch.pageX, touch.pageY);
+          return;
+        }
+        // Still holding: movement is a scroll. Let it through.
+        if (travel > drag.threshold) {
+          return;
+        }
       }
     };
     node.addEventListener("touchmove", onMove, { passive: false });
     return () => {
       node.removeEventListener("touchmove", onMove);
     };
-  }, [ref, active]);
+  }, [ref, opts.busy, opts.pending, opts.promote]);
 }
 
 function formatTime(date: Date): string {
