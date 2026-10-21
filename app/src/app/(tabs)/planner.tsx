@@ -1028,13 +1028,11 @@ function DaySpread({
       ? sortOpenFirst([...overdue, ...listRows])
       : listRows;
 
-  // The divider's travel limit: the timeline may grow until the
-  // list pane keeps its minimum, with the top block's height and
-  // the bottom bar's zone respected - so the grabber can never
-  // slide under the navbar where a finger could not reach it.
-  const barZone = 96;
+  // The divider's travel limit: it may run until its bottom edge
+  // touches the dayRoot's bottom edge - which is exactly where the
+  // bottom bar begins - and never past it.
   const maxTimeline = Math.max(
-    rootHeight - paneTop - dividerHeight - drag.minPane - barZone,
+    rootHeight - paneTop - dividerHeight,
     drag.minPane,
   );
 
