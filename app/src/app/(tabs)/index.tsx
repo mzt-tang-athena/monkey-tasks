@@ -11,7 +11,7 @@ import {
   toggleMockCompleted,
 } from "../../lib/mock";
 import { dayLabel } from "../../lib/dates";
-import { colors, fonts, spacing, radius, radiusFloating, radii, measure } from "../../theme/tokens";
+import { colors, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
 
 /**
  * Variant D Lists tab, mock-driven for the design exploration.
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     alignSelf: "center" as const,
     width: "100%" as const,
     // F's centered feel: real page margins, rows never touch the edge.
-    paddingHorizontal: 26,
+    paddingHorizontal: pageGutter,
     paddingTop: spacing.l,
     paddingBottom: spacing.xl,
   },
@@ -353,6 +353,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.s,
     marginBottom: spacing.l,
+    // Full width: the header runs edge to edge while the list below
+    // keeps the page gutter.
+    marginHorizontal: -pageGutter,
   },
   tabChip: {
     minHeight: 36,

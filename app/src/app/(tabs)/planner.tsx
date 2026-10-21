@@ -7,7 +7,7 @@ import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
 import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
-import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth } from "../../theme/tokens";
+import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth, pageGutter } from "../../theme/tokens";
 import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
 import type { PointerEvent as RNPointerEvent } from "react-native";
 
@@ -456,13 +456,20 @@ function PlannerHeader({
 
       {/* E's economy: the toggle pills lead the header block. */}
       <View style={styles.segmented}>
-        {(["day", "week", "month"] as Mode[]).map((option) => (
+        {(["day", "week", "month"] as Mode[]).map((option, index) => (
           <Pressable
             key={option}
             style={({ pressed }) => [
               styles.segment,
               mode === option && styles.segmentActive,
               pressed && styles.pressedFill,
+              // Square corners on the selected segment's open sides.
+              mode === option &&
+                (index === 0
+                  ? styles.segmentFirst
+                  : index === 2
+                    ? styles.segmentLast
+                    : styles.segmentMiddle),
             ]}
             onPress={() => onMode(option)}
             accessibilityRole="tab"
@@ -638,13 +645,15 @@ function FormToggle({
           { key: "rows", label: "list form" },
           { key: "pills", label: "pill form" },
         ] as const
-      ).map((segment) => (
+      ).map((segment, index) => (
         <Pressable
           key={segment.key}
           style={({ pressed }) => [
             styles.formSegment,
             form === segment.key && styles.formSegmentActive,
             pressed && form !== segment.key && styles.formSegmentPressed,
+            form === segment.key &&
+              (index === 0 ? styles.segmentFirst : styles.segmentLast),
           ]}
           onPress={() => onChange(segment.key)}
           accessibilityRole="tab"
@@ -1807,7 +1816,7 @@ const styles = StyleSheet.create({
     maxWidth: measure,
     alignSelf: "center" as const,
     width: "100%" as const,
-    paddingHorizontal: 26,
+    paddingHorizontal: pageGutter,
     paddingTop: spacing.m,
     paddingBottom: spacing.xl,
   },
@@ -1902,6 +1911,22 @@ const styles = StyleSheet.create({
   },
   formSegmentPressed: {
     backgroundColor: colors.pressed,
+  },
+  // Square corners on a selected segment's open sides; the closed
+  // sides keep the shared radius.
+  segmentFirst: {
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  segmentMiddle: {
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  segmentLast: {
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
   },
   formGlyphRows: {
     alignItems: "flex-start",
@@ -2112,7 +2137,7 @@ const styles = StyleSheet.create({
     width: "100%" as const,
     maxWidth: measure,
     alignSelf: "center" as const,
-    paddingHorizontal: 26,
+    paddingHorizontal: pageGutter,
     paddingTop: spacing.m,
   },
   pane: {},

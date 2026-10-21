@@ -36,6 +36,13 @@ const noFocusOutline = Platform.select({
   default: {},
 });
 
+// The input follows its text both ways (grow and shrink) natively
+// via CSS field sizing; the max-height cap scrolls past the cap.
+const autoSizedInput = Platform.select({
+  web: { fieldSizing: "content" } as unknown as TextStyle,
+  default: {},
+});
+
 /**
  * The single bottom bar, shared by both tabs. Left: the Lists and
  * Planner nav items, icon plus label, selection carried by weight
@@ -65,10 +72,8 @@ export function BottomBar({
   const [text, setText] = React.useState("");
   const [targetIndex, setTargetIndex] = React.useState(defaultTargetIndex);
   const [sending, setSending] = React.useState(false);
-  // Collapsed-to-expanded input: measured content height on web, where
-  // the host textarea does not grow by itself. Growth is clamped to
-  // sheetMaxShare of the window; past the cap the input scrolls.
-  const [inputContentHeight, setInputContentHeight] = React.useState(0);
+  // The input's cap: sheetMaxShare of the window; the input follows
+  // its text both ways inside it.
   const maxInputHeight = Math.round(window.height * sheetMaxShare);
 
   // Open is the user intent; mounted keeps the sheet on screen while
@@ -106,22 +111,6 @@ export function BottomBar({
   const parsed = text.trim() ? parseCapture(text) : null;
   const canSend = text.trim() !== "" && !sending;
 
-  // The growth cap clamps the input on every platform. Web adds the
-  // measured height: the empty input reports its own 2-line box, which
-  // is the collapsed state; long wraps push the box up to the 40% cap,
-  // and the host's own overflow scrolls past it. Native multiline
-  // inputs grow by themselves, so only the cap applies there.
-  const inputHeightStyle =
-    maxInputHeight > 0
-      ? {
-          maxHeight: maxInputHeight,
-          height:
-            Platform.OS === "web" && inputContentHeight > 0
-              ? Math.min(inputContentHeight, maxInputHeight)
-              : undefined,
-        }
-      : null;
-
   const send = () => {
     const capture = parsed;
     if (!capture || sending) {
@@ -130,9 +119,6 @@ export function BottomBar({
     setSending(true);
     onSend(capture, targets[targetIndex] ?? targets[0]);
     setText("");
-    // The programmatic clear fires no content size event on web, so
-    // the next open would inherit the sent draft's expanded height.
-    setInputContentHeight(0);
     setSending(false);
     close();
   };
@@ -224,16 +210,15 @@ export function BottomBar({
             ]}
           >
           <TextInput
-            style={[styles.sheetInput, inputHeightStyle]}
+            style={[
+              styles.sheetInput,
+              autoSizedInput,
+              { maxHeight: maxInputHeight },
+            ]}
             placeholder="Add a task"
             placeholderTextColor={colors.inkFaint}
             value={text}
             onChangeText={setText}
-            onContentSizeChange={(event) => {
-              if (Platform.OS === "web") {
-                setInputContentHeight(event.nativeEvent.contentSize.height);
-              }
-            }}
             onSubmitEditing={send}
             returnKeyType="send"
             multiline
@@ -492,7 +477,7 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 44,
+    minHeight: 36,
     minWidth: 52,
     paddingHorizontal: spacing.xs,
     borderRadius: radius,

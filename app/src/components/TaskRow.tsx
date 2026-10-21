@@ -96,9 +96,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     // The circle top-anchors to the first text line; the block below
-    // may wrap or grow without moving it.
+    // may wrap or grow without moving it. The row hugs its content,
+    // so single-line tasks sit exactly centered.
     alignItems: "flex-start",
-    minHeight: 48,
     paddingHorizontal: spacing.m,
     paddingVertical: spacing.s,
   },
