@@ -755,7 +755,7 @@ function TaskListSection({
               style={index > 0 ? styles.groupRow : undefined}
               onPointerDown={(e) => onDragStart(task, e)}
             >
-              <TaskRow task={task} onToggle={onToggle} grip />
+              <TaskRow task={task} onToggle={onToggle} />
             </View>
           ))
         ) : (
@@ -1035,7 +1035,7 @@ function DaySpread({
                       key={task.uri}
                       onPointerDown={(e) => startTaskDrag(task, e)}
                     >
-                      <TaskRow task={task} onToggle={guardedToggle} grip />
+                      <TaskRow task={task} onToggle={guardedToggle} />
                     </View>
                   ))}
                 </View>
@@ -1463,7 +1463,7 @@ function MonthView({
                       key={task.uri}
                       onPointerDown={(e) => onDragTask(task, e)}
                     >
-                      <TaskRow task={task} onToggle={onToggle} grip />
+                      <TaskRow task={task} onToggle={onToggle} />
                     </View>
                   ))
                 ) : (
