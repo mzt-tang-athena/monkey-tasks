@@ -1684,6 +1684,7 @@ function PeriodRail({
       ref={scroller}
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.railBleed}
       contentContainerStyle={styles.stripScroll}
       onLayout={(e) => {
         viewport.current = e.nativeEvent.layout.width;
@@ -2022,7 +2023,8 @@ const styles = StyleSheet.create({
     maxWidth: measure,
     alignSelf: "center" as const,
     paddingHorizontal: pageGutter,
-    paddingTop: spacing.m,
+    // No top padding: the selected strip tab hangs from the screen's
+    // top edge, and the content below gains the space.
   },
   pressedFill: {
     backgroundColor: colors.pressed,
@@ -2032,24 +2034,33 @@ const styles = StyleSheet.create({
   strip: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-end",
     marginBottom: spacing.s,
   },
   stripScroll: {
     flexDirection: "row",
     gap: spacing.s,
+    alignItems: "flex-end",
     // The same bottom spacing the day strip has, so the wide strips
-    // never touch the pills.
+    // never touch the pills. Page grid inside, screen-edge bleed
+    // outside: the rail cuts at the display, not the gutter.
     marginBottom: spacing.s,
-    paddingRight: spacing.s,
+    paddingLeft: pageGutter,
+    paddingRight: pageGutter,
   },
   stripDay: {
     alignItems: "center",
     justifyContent: "center",
     width: 44,
-    height: 52,
+    height: 44,
     borderRadius: radius,
   },
   stripDayActive: {
+    // The selected tab hangs from the screen's top edge: square top,
+    // rounded bottom, standing taller than its resting neighbours.
+    height: 52,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     backgroundColor: colors.accent,
   },
   stripDayToday: {
@@ -2342,7 +2353,8 @@ const styles = StyleSheet.create({
     maxWidth: measure,
     alignSelf: "center" as const,
     paddingHorizontal: pageGutter,
-    paddingTop: spacing.m,
+    // No top padding: the selected strip tab hangs from the screen's
+    // top edge, and the content below gains the space.
   },
   pane: {},
   paneList: {
@@ -2589,6 +2601,11 @@ const styles = StyleSheet.create({
     color: colors.inkFaint,
   },
 
+  // The period rail bleeds past the page gutter: cells cut at the
+  // display's edges, scrolling until the last one clears the grid.
+  railBleed: {
+    marginHorizontal: -pageGutter,
+  },
   // week canvas: horizontally scrolling day columns. The scroller
   // bleeds to the screen's edges: columns cut at the display, not
   // the page gutter, and scroll till the last one clears it.
