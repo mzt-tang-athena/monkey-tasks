@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type PointerEvent as RNPointerEvent, type StyleProp, type ViewStyle } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useLocalSearchParams } from "expo-router";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
@@ -7,12 +8,20 @@ import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
-import { DropZoneMap, touchNoScroll } from "../../lib/dropzone";
+import { DropZoneMap } from "../../lib/dropzone";
 import { useTasks } from "../../store/tasks";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth, weekCanvasHeight, pageGutter, periodStep } from "../../theme/tokens";
 import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
-import type { PointerEvent as RNPointerEvent } from "react-native";
+
+/*
+ * Gesture modules: the drag, swipe and resize closures below are
+ * created during render but only ever run on pointer events. The
+ * react-hooks/refs and react-hooks/purity rules cannot see that
+ * distinction, so they are disabled for this file; every ref write
+ * outside the gesture callbacks stays mirrored in effects.
+ */
+/* eslint-disable react-hooks/refs */
 
 /**
  * The consolidated Planner tab. Day mode is a fixed split: the
@@ -156,6 +165,56 @@ export default function PlannerScreen() {
     promote: promotePending,
   });
 
+  // Native drag sources drive the same machinery through here.
+  const dragApi = React.useMemo<DragApi>(() => {
+    const apply = () => {
+      const current = draggingRef.current;
+      if (current && hoveredRef.current != null) {
+        updateTaskRef.current?.(current.task, {
+          due: withKeptTime(
+            hoveredRef.current,
+            parseStoredDate(current.task.data?.due ?? ""),
+          ),
+        });
+      }
+      suppressClick.current = true;
+      setTimeout(() => {
+        suppressClick.current = false;
+      }, 350);
+      setDragging(null);
+      setHoveredDay(null);
+    };
+    return {
+      pickup: (task, x, y) => {
+        moved.current = false;
+        dropZones.measureAll();
+        setDragging({ task, x, y });
+      },
+      move: (x, y) => {
+        setDragging((current) => (current ? { ...current, x, y } : current));
+        const hit = dropZones.hit(x, y);
+        const dayTarget = hit?.startsWith("day:")
+          ? (parseStoredDate(hit.slice(4))?.date ?? null)
+          : null;
+        if (!isSameDay(dayTarget, hoveredRef.current)) {
+          setHoveredDay(dayTarget);
+        }
+      },
+      drop: apply,
+    };
+  }, [dropZones]);
+  const draggingRef = React.useRef(dragging);
+  const hoveredRef = React.useRef(hoveredDay);
+  React.useEffect(() => {
+    draggingRef.current = dragging;
+  }, [dragging]);
+  React.useEffect(() => {
+    hoveredRef.current = hoveredDay;
+  }, [hoveredDay]);
+  const updateTaskRef = React.useRef<
+    (task: TaskItem, patch: Partial<TaskFrontmatter>) => void
+  >(null);
+
   const toggle = (task: TaskItem) => {
     void store.toggle(task);
   };
@@ -165,6 +224,9 @@ export default function PlannerScreen() {
   const updateTask = (task: TaskItem, patch: Partial<TaskFrontmatter>) => {
     void store.writeFields(task, patch);
   };
+  React.useEffect(() => {
+    updateTaskRef.current = updateTask;
+  });
 
   const all = tasks ?? [];
   const groups = groupByDue(all, new Date());
@@ -351,6 +413,7 @@ export default function PlannerScreen() {
                 hoveredDay={hoveredDay}
                 dropZones={dropZones}
                 lifted={lifted}
+                api={dragApi}
               />
               {/* Week's foot: the shared section in its own scrolling
                   pane, fed the week's placement pool. */}
@@ -404,6 +467,7 @@ export default function PlannerScreen() {
               hoveredDay={hoveredDay}
               lifted={lifted}
               onDragTask={startDayDrag}
+              api={dragApi}
             />
           ) : null}
         </View>
@@ -568,6 +632,106 @@ function liftStyleOf(
     return [];
   }
   return [lifted.phase === "hold" ? styles.liftHold : styles.liftPicked];
+}
+
+/** The interaction layer's split: web reads the W3C pointer events
+    straight from React Native; Android gates those off, so its drag
+    sources ride the gesture library instead. */
+const pointerPickup = Platform.OS === "web";
+
+/** The contract a screen's drag machinery exposes to its sources:
+    pickup, move with the drop-zone hit-test, and the drop write. */
+type DragApi = {
+  pickup: (task: TaskItem, x: number, y: number, kind: "pill" | "row") => void;
+  move: (x: number, y: number) => void;
+  drop: () => void;
+};
+
+/** One drag source on native: the Pan activates after the hold, so
+    pane scrolling keeps every gesture that moves too early. */
+function NativeDragHandle({
+  task,
+  kind = "row",
+  api,
+  lift,
+  style,
+  children,
+}: {
+  task: TaskItem;
+  kind?: "pill" | "row";
+  api: DragApi;
+  lift?: LiftState;
+  style?: StyleProp<ViewStyle>;
+  children?: React.ReactNode;
+}) {
+  const hold = kind === "pill" ? drag.pillPickMs : drag.pickMs;
+  const pan = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .activateAfterLongPress(hold)
+        .onStart((e) => {
+          api.pickup(task, e.absoluteX, e.absoluteY, kind);
+        })
+        .onUpdate((e) => {
+          api.move(e.absoluteX, e.absoluteY);
+        })
+        .onEnd(() => {
+          api.drop();
+        })
+        .onFinalize(() => {
+          api.drop();
+        }),
+    [task, kind, hold, api],
+  );
+  return (
+    <GestureDetector gesture={pan}>
+      <View style={[style, ...liftStyleOf(lift ?? null, task)]}>
+        {children}
+      </View>
+    </GestureDetector>
+  );
+}
+
+/** A drag source's wrapper: the pointer contract on web, the gesture
+    library on native. One call site, both platforms. */
+function Pickup({
+  task,
+  kind = "row",
+  api,
+  lifted,
+  onPointerDown,
+  style,
+  children,
+}: {
+  task: TaskItem;
+  kind?: "pill" | "row";
+  api?: DragApi;
+  lifted?: LiftState;
+  onPointerDown?: (e: RNPointerEvent) => void;
+  style?: StyleProp<ViewStyle>;
+  children?: React.ReactNode;
+}) {
+  if (pointerPickup || api == null) {
+    return (
+      <View
+        style={[style, ...liftStyleOf(lifted ?? null, task)]}
+        onPointerDown={onPointerDown as never}
+      >
+        {children}
+      </View>
+    );
+  }
+  return (
+    <NativeDragHandle
+      task={task}
+      kind={kind}
+      api={api}
+      lift={lifted ?? null}
+      style={style}
+    >
+      {children}
+    </NativeDragHandle>
+  );
 }
 
 /** Open tasks first, by due time, then completed ones behind them.
@@ -750,10 +914,12 @@ function TaskPills({
   tasks,
   onDragStart,
   lifted,
+  api,
 }: {
   tasks: TaskItem[];
   onDragStart: (task: TaskItem, e: RNPointerEvent, kind?: "pill" | "row") => void;
   lifted?: LiftState;
+  api?: DragApi;
 }) {
   if (tasks.length === 0) {
     return null;
@@ -761,10 +927,14 @@ function TaskPills({
   return (
     <View style={styles.pillsWrap}>
       {tasks.map((task) => (
-        <View
+        <Pickup
           key={task.uri}
-          style={[styles.pillChip, ...liftStyleOf(lifted ?? null, task)]}
+          task={task}
+          kind="pill"
+          api={api}
+          lifted={lifted ?? null}
           onPointerDown={(e) => onDragStart(task, e, "pill")}
+          style={styles.pillChip}
         >
           <View style={styles.pillGrip}>
             <View style={styles.pillGripDot} />
@@ -777,7 +947,7 @@ function TaskPills({
           <Text style={styles.pillText} numberOfLines={1}>
             {task.name}
           </Text>
-        </View>
+        </Pickup>
       ))}
     </View>
   );
@@ -884,6 +1054,7 @@ function TaskListSection({
   header,
   footer,
   lifted,
+  api,
 }: {
   source: Source;
   mode: Mode;
@@ -899,6 +1070,7 @@ function TaskListSection({
   header?: React.ReactNode;
   footer?: React.ReactNode;
   lifted?: LiftState;
+  api?: DragApi;
 }) {
   return (
     <View>
@@ -917,23 +1089,23 @@ function TaskListSection({
       {taskForm === "rows" ? (
         tasks.length > 0 ? (
           tasks.map((task, index) => (
-            <View
+            <Pickup
               key={task.uri}
-              style={[
-                index > 0 ? styles.groupRow : undefined,
-                ...liftStyleOf(lifted ?? null, task),
-              ]}
+              task={task}
+              api={api}
+              lifted={lifted ?? null}
               onPointerDown={(e) => onDragStart(task, e)}
+              style={index > 0 ? styles.groupRow : undefined}
             >
               <TaskRow task={task} onToggle={onToggle} />
-            </View>
+            </Pickup>
           ))
         ) : (
           <Text style={styles.empty}>{emptyLabel}</Text>
         )
       ) : (
         <>
-          <TaskPills tasks={tasks} onDragStart={onDragStart} lifted={lifted ?? null} />
+          <TaskPills tasks={tasks} onDragStart={onDragStart} lifted={lifted ?? null} api={api} />
           {tasks.length === 0 ? (
             <Text style={styles.empty}>{emptyLabel}</Text>
           ) : null}
@@ -1074,6 +1246,121 @@ function DaySpread({
     [pending, dragging],
   );
 
+  // The divider's travel limit: it may run until its bottom edge
+  // touches the dayRoot's bottom edge - which is exactly where the
+  // bottom bar begins - and never past it.
+  const maxTimeline = Math.max(
+    rootHeight - paneTop - dividerHeight,
+    drag.minPane,
+  );
+
+  // Native drag sources drive the ruler machinery through here: the
+  // hit band clips to the pane's visible area, and the drop writes
+  // the slot's hour with the task's own minute.
+  const draggingRef = React.useRef(dragging);
+  const hoverHourRef = React.useRef(hoverHour);
+  React.useEffect(() => {
+    draggingRef.current = dragging;
+  }, [dragging]);
+  React.useEffect(() => {
+    hoverHourRef.current = hoverHour;
+  }, [hoverHour]);
+  const dayApi = React.useMemo<DragApi>(() => ({
+    pickup: (task, x, y) => {
+      moved.current = false;
+      hourZones.measureAll(() => {
+        const node = paneRef.current as unknown as {
+          measureInWindow?: (cb: (px: number, py: number, pw: number, ph: number) => void) => void;
+        } | null;
+        if (node?.measureInWindow) {
+          node.measureInWindow((px, py, pw, ph) => {
+            hourZones.setClip({ x: px, y: py, w: pw, h: ph });
+          });
+        }
+      });
+      setDragging({ task, x, y });
+    },
+    move: (x, y) => {
+      setDragging((current) => (current ? { ...current, x, y } : current));
+      const hit = hourZones.hit(x, y);
+      const hour = hit?.startsWith("hour:") ? Number(hit.slice(5)) : null;
+      if (hour !== hoverHourRef.current) {
+        setHoverHour(hour);
+      }
+    },
+    drop: () => {
+      const current = draggingRef.current;
+      if (current && hoverHourRef.current != null) {
+        onUpdate(current.task, {
+          due: withTime(date, hoverHourRef.current, minuteOf(current.task)),
+        });
+      }
+      // Swallow the click that follows a drop onto the source row.
+      suppressClick.current = true;
+      setTimeout(() => {
+        suppressClick.current = false;
+      }, 350);
+      setDragging(null);
+      setHoverHour(null);
+    },
+  }), [hourZones, date, onUpdate]);
+
+  // The grabber's native resize: immediate activation, any travel
+  // resizes the split.
+  const grabStart = React.useRef<{ y: number; height: number } | null>(null);
+  const timelineHeightRef = React.useRef(timelineHeight);
+  React.useEffect(() => {
+    timelineHeightRef.current = timelineHeight;
+  }, [timelineHeight]);
+  const grabberPan = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .minDistance(0)
+        .onStart((e) => {
+          grabStart.current = {
+            y: e.absoluteY,
+            height: timelineHeightRef.current,
+          };
+        })
+        .onUpdate((e) => {
+          const start = grabStart.current;
+          if (!start) {
+            return;
+          }
+          const grown = start.height + (e.absoluteY - start.y);
+          setTimelineHeight(
+            Math.min(
+              Math.max(grown, drag.minPane),
+              Math.max(maxTimeline, drag.minPane),
+            ),
+          );
+        })
+        .onEnd(() => {
+          grabStart.current = null;
+        })
+        .onFinalize(() => {
+          grabStart.current = null;
+        }),
+    [maxTimeline],
+  );
+
+  // The native day swipe: horizontal travel only, so vertical pane
+  // scrolling keeps every gesture.
+  const daySwipe = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-80, 80])
+        .failOffsetY([-24, 24])
+        .onEnd((e) => {
+          if (e.translationX <= -80) {
+            onShiftDay(1);
+          } else if (e.translationX >= 80) {
+            onShiftDay(-1);
+          }
+        }),
+    [onShiftDay],
+  );
+
   const sameDay = startOfDay(today).getTime() === startOfDay(date).getTime();
   const groups = groupByDue(tasks, today);
   const overdue = sameDay ? groups.overdue : [];
@@ -1100,14 +1387,6 @@ function DaySpread({
     taskForm === "pills" && source === "due-period"
       ? sortOpenFirst([...overdue, ...listRows])
       : listRows;
-
-  // The divider's travel limit: it may run until its bottom edge
-  // touches the dayRoot's bottom edge - which is exactly where the
-  // bottom bar begins - and never past it.
-  const maxTimeline = Math.max(
-    rootHeight - paneTop - dividerHeight,
-    drag.minPane,
-  );
 
   const startTaskDrag = (task: TaskItem, e: RNPointerEvent) => {
     moved.current = false;
@@ -1209,7 +1488,7 @@ function DaySpread({
     moved.current = false;
   };
 
-  return (
+  const dayRoot = (
     <View
       ref={(node) => {
         dayRootRef.current = node as HTMLElement | null;
@@ -1276,6 +1555,7 @@ function DaySpread({
             lifted={lifted}
             onToggle={guardedToggle}
             onDragStart={startTaskDrag}
+            api={dayApi}
           />
         </ScrollView>
       </View>
@@ -1289,34 +1569,43 @@ function DaySpread({
             (dragging != null || resizing != null) && styles.dividerActive,
           ]}
         />
-        <Pressable
-          style={({ pressed }) => [
-            styles.grabberHit,
-            touchNoScroll,
-            (grabHot || pressed) && styles.grabberHitHot,
-          ]}
-          onHoverIn={() => setGrabHot(true)}
-          onHoverOut={() => setGrabHot(false)}
-          onPointerDown={(e) => {
-            // The grabber claims the gesture too: resizing must
-            // never fire a day swipe.
-            taskTouched.current = true;
-            setResizing({
-              y: e.nativeEvent.pageY,
-              height: timelineHeight,
-            });
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="resize timeline"
-        >
-          <View
-            style={[
-              styles.grabberBar,
-              (grabHot || resizing != null || dragging != null) &&
-                styles.grabberBarActive,
-            ]}
-          />
-        </Pressable>
+        {(() => {
+          const grabber = (
+            <Pressable
+              style={({ pressed }) => [
+                styles.grabberHit,
+                (grabHot || pressed) && styles.grabberHitHot,
+              ]}
+              onHoverIn={() => setGrabHot(true)}
+              onHoverOut={() => setGrabHot(false)}
+              onPointerDown={(e) => {
+                // The grabber claims the gesture too: resizing must
+                // never fire a day swipe.
+                taskTouched.current = true;
+                setResizing({
+                  y: e.nativeEvent.pageY,
+                  height: timelineHeight,
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="resize timeline"
+            >
+              <View
+                style={[
+                  styles.grabberBar,
+                  (grabHot || resizing != null || dragging != null) &&
+                    styles.grabberBarActive,
+                ]}
+              />
+            </Pressable>
+          );
+          if (pointerPickup) {
+            return grabber;
+          }
+          return (
+            <GestureDetector gesture={grabberPan}>{grabber}</GestureDetector>
+          );
+        })()}
       </View>
 
       {/* The task list pane: the shared bottom-half section. Its
@@ -1352,16 +1641,15 @@ function DaySpread({
                     Overdue  {overdue.length}
                   </Text>
                   {overdue.map((task) => (
-                    <View
+                    <Pickup
                       key={task.uri}
-                      style={[
-                        touchNoScroll,
-                        ...liftStyleOf(lifted ?? null, task),
-                      ]}
+                      task={task}
+                      api={dayApi}
+                      lifted={lifted ?? null}
                       onPointerDown={(e) => startTaskDrag(task, e)}
                     >
                       <TaskRow task={task} onToggle={guardedToggle} />
-                    </View>
+                    </Pickup>
                   ))}
                 </View>
               ) : undefined
@@ -1386,6 +1674,11 @@ function DaySpread({
       ) : null}
     </View>
   );
+  return pointerPickup ? (
+    dayRoot
+  ) : (
+    <GestureDetector gesture={daySwipe}>{dayRoot}</GestureDetector>
+  );
 }
 
 /** The hour ruler: hour marks down the left, tasks pinned between. */
@@ -1399,6 +1692,7 @@ function Timeline({
   lifted,
   onToggle,
   onDragStart,
+  api,
 }: {
   tasks: TaskItem[];
   isToday: boolean;
@@ -1410,6 +1704,7 @@ function Timeline({
   lifted: LiftState;
   onToggle: (task: TaskItem) => void;
   onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
+  api?: DragApi;
 }) {
   const hours: TaskItem[][] = [];
   for (let h = RULER_START; h <= RULER_END; h++) {
@@ -1446,6 +1741,7 @@ function Timeline({
               lifted={lifted}
               onToggle={onToggle}
               onDragStart={onDragStart}
+              api={api}
             />,
           );        }
         if (isToday && hour === now.getHours() && !placedNow) {
@@ -1476,27 +1772,25 @@ function HourTask({
   lifted,
   onToggle,
   onDragStart,
+  api,
 }: {
   task: TaskItem;
   lifted: LiftState;
   onToggle: (task: TaskItem) => void;
   onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
+  api?: DragApi;
 }) {
-  const [hover, setHover] = React.useState(false);
   const done = isDone(task);
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
   // The chip body is selection only (no-op for now); its circle is
   // the done toggle. Done tasks stay in their slot, struck.
   return (
-    <View
-      onPointerEnter={() => setHover(true)}
-      onPointerLeave={() => setHover(false)}
+    <Pickup
+      task={task}
+      api={api}
+      lifted={lifted ?? null}
       onPointerDown={(e) => onDragStart(task, e)}
-      style={[
-        styles.hourTask,
-        hover && styles.hourTaskHover,
-        ...liftStyleOf(lifted ?? null, task),
-      ]}
+      style={styles.hourTask}
     >
       <View style={[styles.taskBar, done && styles.taskBarDone]} />
       <Pressable
@@ -1517,7 +1811,7 @@ function HourTask({
           </Text>
         ) : null}
       </View>
-    </View>
+    </Pickup>
   );
 }
 
@@ -1543,6 +1837,7 @@ function WeekView({
   hoveredDay,
   dropZones,
   lifted,
+  api,
 }: {
   tasks: TaskItem[];
   today: Date;
@@ -1550,6 +1845,7 @@ function WeekView({
   onSelect: (date: Date) => void;
   /** Week day cards drag between columns, like the pool rows do. */
   onDragTask: (task: TaskItem, e: RNPointerEvent) => void;
+  api?: DragApi;
   dragActive: boolean;
   hoveredDay: Date | null;
   /** The columns register here; moves hit-test instead of relying
@@ -1602,17 +1898,20 @@ function WeekView({
             <View style={styles.weekColRule} />
             {items.length > 0 ? (
               items.map((task) => (
-                <View
+                <Pickup
                   key={task.uri}
-                  style={[styles.weekTask, ...liftStyleOf(lifted, task)]}
+                  task={task}
+                  api={api}
+                  lifted={lifted}
                   onPointerDown={(e) => onDragTask(task, e)}
+                  style={styles.weekTask}
                 >
                   <View style={styles.taskBar} />
                   <Text style={styles.weekTaskText} numberOfLines={3}>
                     {hasTime(task) ? `${timeOf(task)}  ` : ""}
                     {task.name}
                   </Text>
-                </View>
+                </Pickup>
               ))
             ) : (
               <Text style={styles.weekFree}>free</Text>
@@ -1646,6 +1945,7 @@ function MonthView({
   hoveredDay,
   lifted,
   onDragTask,
+  api,
 }: {
   viewMonth: Date;
   today: Date;
@@ -1662,6 +1962,7 @@ function MonthView({
   onShiftMonth: (delta: 1 | -1) => void;
   /** Drag drops that land on a cell suppress that cell's pick. */
   pressGuard?: { current: boolean };
+  api?: DragApi;
   /** Cells register here for move-based hit testing. */
   dropZones: DropZoneMap;
   lifted: LiftState;
@@ -1813,6 +2114,7 @@ function MonthView({
           onDragStart={onDragTask}
           tasks={listRows}
           lifted={lifted}
+          api={api}
           emptyLabel={
             source === "due-period"
               ? "Nothing scheduled this month."
@@ -1828,13 +2130,15 @@ function MonthView({
                 </Text>
                 {pickedTasks.length > 0 ? (
                   pickedTasks.map((task) => (
-                    <View
+                    <Pickup
                       key={task.uri}
-                      style={[touchNoScroll, ...liftStyleOf(lifted ?? null, task)]}
+                      task={task}
+                      api={api}
+                      lifted={lifted ?? null}
                       onPointerDown={(e) => onDragTask(task, e)}
                     >
                       <TaskRow task={task} onToggle={onToggle} />
-                    </View>
+                    </Pickup>
                   ))
                 ) : (
                   <Text style={styles.monthDayEmpty}>Nothing scheduled.</Text>
