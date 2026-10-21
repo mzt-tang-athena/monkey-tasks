@@ -60,7 +60,12 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = React.useState<StoreStatus>("loading");
 
   const grant = React.useCallback(async () => {
-    const uri = await requestVaultAccess();
+    let uri: string | null = null;
+    try {
+      uri = await requestVaultAccess();
+    } catch {
+      uri = null;
+    }
     if (uri) {
       setRootUri(uri);
     }
@@ -87,10 +92,11 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  // Boot once: a saved folder flips the store into vault mode;
-  // otherwise the store serves the design-preview mock set. The
-  // saved-folder read goes through SAF, unavailable on web: it
-  // resolves to null there and the mock store serves the preview.
+  // Boot once: read the saved folder (SAF on Android; the read is
+  // unavailable on web, so it resolves to null and the mock store
+  // serves the design preview). Loads then follow rootUri, which is
+  // also how a fresh grant flips the store into vault mode.
+  const [booted, setBooted] = React.useState(false);
   React.useEffect(() => {
     let active = true;
     void (async () => {
@@ -103,14 +109,23 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
       if (!active) {
         return;
       }
-      const uri = saved ?? null;
-      setRootUri(uri);
-      await refresh(uri ?? undefined);
+      setRootUri(saved ?? null);
+      setBooted(true);
     })();
     return () => {
       active = false;
     };
-  }, [refresh]);
+  }, []);
+
+  React.useEffect(() => {
+    if (!booted) {
+      return;
+    }
+    // The store's boot load: state changes land after the awaited
+    // reads, never synchronously within this effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refresh(rootUri ?? undefined);
+  }, [booted, rootUri, refresh]);
 
   const toggle = React.useCallback(
     async (task: TaskItem) => {

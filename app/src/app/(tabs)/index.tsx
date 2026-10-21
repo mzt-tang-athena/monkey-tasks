@@ -118,6 +118,22 @@ export default function ListsScreen() {
         {/* The list tab bar sits ABOVE the scroller: the page's fixed
             chrome. Sections scroll beneath it, the bar never moves.
             A horizontal swipe on the body walks the tabs. */}
+        {store.mode === "mock" && Platform.OS !== "web" ? (
+          <Pressable
+            style={({ pressed }) => [
+              styles.grantRow,
+              pressed && styles.grantRowPressed,
+            ]}
+            onPress={() => void store.grant()}
+            accessibilityRole="button"
+            accessibilityLabel="connect vault folder"
+          >
+            <Text style={styles.grantTitle}>Connect your vault folder</Text>
+            <Text style={styles.grantHint}>
+              Pick the Obsidian vault to use this app with real tasks.
+            </Text>
+          </Pressable>
+        ) : null}
         <View style={styles.tabBar}>
           {(["Focus", "Main"] as ListTab[]).map((name) => (
             <Pressable
@@ -398,6 +414,30 @@ const styles = StyleSheet.create({
   },
   tabSpacer: {
     flex: 1,
+  },
+  grantRow: {
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    width: "100%" as const,
+    paddingHorizontal: pageGutter,
+    paddingTop: spacing.m,
+  },
+  grantRowPressed: {
+    opacity: 0.7,
+  },
+  grantTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    color: colors.accent,
+    fontWeight: "600",
+  },
+  grantHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    marginTop: 2,
   },
 
   // Quiet top-right controls: sort glyph and the three-dot overflow.

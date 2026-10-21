@@ -2577,6 +2577,11 @@ function useTouchDragGate(
 ) {
   const { busy, pending: pendingRef, promote } = opts;
   React.useEffect(() => {
+    // Web-only: the gate works through DOM listeners, which native
+    // views do not carry (the crash the phone caught).
+    if (!pointerPickup) {
+      return;
+    }
     const node = ref.current;
     if (!node) {
       return;
