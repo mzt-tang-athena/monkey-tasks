@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
@@ -61,11 +62,16 @@ const RULER_START = 7;
 const RULER_END = 22;
 
 export default function PlannerScreen() {
+  const params = useLocalSearchParams<{ mode?: string }>();
   const [tasks, setTasks] = React.useState<TaskItem[] | null>(null);
   const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
     "loading",
   );
-  const [mode, setMode] = React.useState<Mode>("day");
+  const [mode, setMode] = React.useState<Mode>(() =>
+    params.mode === "week" || params.mode === "month"
+      ? (params.mode as Mode)
+      : "day",
+  );
   const [selected, setSelected] = React.useState(() => startOfDay(new Date()));
 
   // The task source for the bottom list, shared by all three modes:
@@ -223,7 +229,10 @@ export default function PlannerScreen() {
           onUpdate={updateTask}
         />
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        // Week and month: a fixed frame. The header strip and the
+        // calendar sit still; ONLY the bottom task section scrolls,
+        // inside its own pane - like the day split above.
+        <View style={styles.frame}>
           <PlannerHeader
             mode={mode}
             selected={selected}
@@ -248,26 +257,31 @@ export default function PlannerScreen() {
                 hoveredDay={hoveredDay}
                 onHoverDay={setHoveredDay}
               />
-              {/* Week's foot: the shared section, fed the week's
-                  placement pool. */}
-              <View style={styles.pillsSection}>
-                <TaskListSection
-                  source={source}
-                  mode={mode}
-                  sourceMenuOpen={sourceMenu != null}
-                  onCycleSource={cycleSource(source, setSource)}
-                  onOpenSourceMenu={setSourceMenu}
-                  taskForm={taskForm}
-                  onFormChange={changeTaskForm}
-                  onToggle={guardedToggle}
-                  onDragStart={startDayDrag}
-                  tasks={weekPool}
-                  emptyLabel={
-                    source === "due-period"
-                      ? "Nothing to place this week."
-                      : `Nothing on ${source} yet.`
-                  }
-                />
+              {/* Week's foot: the shared section in its own scrolling
+                  pane, fed the week's placement pool. */}
+              <View style={styles.paneList}>
+                <ScrollView
+                  style={styles.paneScroll}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <TaskListSection
+                    source={source}
+                    mode={mode}
+                    sourceMenuOpen={sourceMenu != null}
+                    onCycleSource={cycleSource(source, setSource)}
+                    onOpenSourceMenu={setSourceMenu}
+                    taskForm={taskForm}
+                    onFormChange={changeTaskForm}
+                    onToggle={guardedToggle}
+                    onDragStart={startDayDrag}
+                    tasks={weekPool}
+                    emptyLabel={
+                      source === "due-period"
+                        ? "Nothing to place this week."
+                        : `Nothing on ${source} yet.`
+                    }
+                  />
+                </ScrollView>
               </View>
             </>
           ) : null}
@@ -293,7 +307,7 @@ export default function PlannerScreen() {
               onDragTask={startDayDrag}
             />
           ) : null}
-        </ScrollView>
+        </View>
       )}
 
       {/* The drag ghost for week and month drops. */}
@@ -1226,6 +1240,7 @@ function WeekView({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.weekScroller}
       contentContainerStyle={styles.weekCanvas}
     >
       {days.map((day) => {
@@ -1372,7 +1387,7 @@ function MonthView({
       : null;
 
   return (
-    <View>
+    <View style={styles.monthColumn}>
       <Text style={styles.monthTitle}>
         {MONTHS[monthIdx]} {year}
       </Text>
@@ -1428,11 +1443,15 @@ function MonthView({
         </View>
       </View>
 
-      {/* The list beneath the card: the shared bottom-half section.
-          Its rows drag onto a day cell above to move their due
-          date. The tapped day stays a group header; the month keeps
-          its open-in-day-view link. */}
+      {/* The list beneath the card: the shared bottom-half section in
+          its own scrolling pane. Its rows drag onto a day cell above
+          to move their due date. The tapped day stays a group header;
+          the month keeps its open-in-day-view link. */}
       <View style={styles.monthDayPanel}>
+        <ScrollView
+          style={styles.paneScroll}
+          showsVerticalScrollIndicator={false}
+        >
         <TaskListSection
           source={source}
           mode="month"
@@ -1488,6 +1507,7 @@ function MonthView({
             ) : undefined
           }
         />
+        </ScrollView>
       </View>
     </View>
   );
@@ -1812,13 +1832,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.paper,
   },
-  content: {
+  // week and month: the fixed frame. Header and calendar sit still;
+  // only the bottom pane scrolls.
+  frame: {
+    flex: 1,
+    width: "100%" as const,
     maxWidth: measure,
     alignSelf: "center" as const,
-    width: "100%" as const,
     paddingHorizontal: pageGutter,
     paddingTop: spacing.m,
-    paddingBottom: spacing.xl,
   },
   pressedFill: {
     backgroundColor: colors.pressed,
@@ -2295,11 +2317,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // week foot: round-1 tray pills, back as draggable chips
-  pillsSection: {
-    marginTop: spacing.m,
-    marginBottom: spacing.xl,
-  },
+  // week foot pills row
   pillsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -2389,7 +2407,11 @@ const styles = StyleSheet.create({
     color: colors.inkFaint,
   },
 
-  // week canvas: horizontally scrolling day columns
+  // week canvas: horizontally scrolling day columns. The horizontal
+  // scroller hugs its content: no flexGrow into the fixed frame.
+  weekScroller: {
+    flexGrow: 0,
+  },
   weekCanvas: {
     flexDirection: "row",
     gap: spacing.s,
@@ -2460,6 +2482,9 @@ const styles = StyleSheet.create({
   },
 
   // month view
+  monthColumn: {
+    flex: 1,
+  },
   monthTitle: {
     fontSize: 13,
     lineHeight: 16,
@@ -2524,7 +2549,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   monthDayPanel: {
-    marginBottom: spacing.xl,
+    flex: 1,
+    minHeight: drag.minPane,
   },
   monthDayEmpty: {
     fontSize: 14,

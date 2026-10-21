@@ -113,58 +113,57 @@ export default function ListsScreen() {
         />
       ) : null}
       <View style={styles.body}>
+        {/* The list tab bar sits ABOVE the scroller: the page's fixed
+            chrome. Sections scroll beneath it, the bar never moves. */}
+        <View style={styles.tabBar}>
+          {(["Focus", "Main"] as ListTab[]).map((name) => (
+            <Pressable
+              key={name}
+              style={({ pressed }) => [
+                styles.tabChip,
+                pressed && styles.chipPressed,
+              ]}
+              onPress={() => setTab(name)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: tab === name }}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  tab === name && styles.tabTextActive,
+                ]}
+              >
+                {name}
+              </Text>
+            </Pressable>
+          ))}
+          <View style={styles.tabSpacer} />
+          <IconButton label="sort list">
+            <View style={styles.glyphSort}>
+              <View style={[styles.glyphSortBar, { width: 16 }]} />
+              <View style={[styles.glyphSortBar, { width: 11 }]} />
+              <View style={[styles.glyphSortBar, { width: 6 }]} />
+            </View>
+          </IconButton>
+          <View ref={dotsRef}>
+            <IconButton
+              label="list menu"
+              active={menu?.open ?? false}
+              onPress={() => (menu?.open ? closeMenu() : openMenu())}
+            >
+              <View style={styles.glyphDots}>
+                <View style={styles.glyphDot} />
+                <View style={styles.glyphDot} />
+                <View style={styles.glyphDot} />
+              </View>
+            </IconButton>
+          </View>
+        </View>
         <FlatList
           contentContainerStyle={styles.content}
           data={[{ key: "lists" }]}
           renderItem={() => (
             <View>
-              {/* Clean top: the list tab bar, then the quiet
-                  sort and overflow controls on the right. */}
-              <View style={styles.tabBar}>
-                {(["Focus", "Main"] as ListTab[]).map((name) => (
-                  <Pressable
-                    key={name}
-                    style={({ pressed }) => [
-                      styles.tabChip,
-                      pressed && styles.chipPressed,
-                    ]}
-                    onPress={() => setTab(name)}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: tab === name }}
-                  >
-                    <Text
-                      style={[
-                        styles.tabText,
-                        tab === name && styles.tabTextActive,
-                      ]}
-                    >
-                      {name}
-                    </Text>
-                  </Pressable>
-                ))}
-                <View style={styles.tabSpacer} />
-                <IconButton label="sort list">
-                  <View style={styles.glyphSort}>
-                    <View style={[styles.glyphSortBar, { width: 16 }]} />
-                    <View style={[styles.glyphSortBar, { width: 11 }]} />
-                    <View style={[styles.glyphSortBar, { width: 6 }]} />
-                  </View>
-                </IconButton>
-                <View ref={dotsRef}>
-                  <IconButton
-                    label="list menu"
-                    active={menu?.open ?? false}
-                    onPress={() => (menu?.open ? closeMenu() : openMenu())}
-                  >
-                    <View style={styles.glyphDots}>
-                      <View style={styles.glyphDot} />
-                      <View style={styles.glyphDot} />
-                      <View style={styles.glyphDot} />
-                    </View>
-                  </IconButton>
-                </View>
-              </View>
-
               {status === "loading" ? <LoadingState /> : null}
               {status === "error" ? (
                 <EmptyState label="Something went wrong. Pull to retry." />
@@ -345,19 +344,22 @@ const styles = StyleSheet.create({
     width: "100%" as const,
     // F's centered feel: real page margins, rows never touch the edge.
     paddingHorizontal: pageGutter,
-    paddingTop: spacing.l,
+    paddingTop: spacing.m,
     paddingBottom: spacing.xl,
   },
   tabBar: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.s,
-    marginBottom: spacing.l,
-    // Full-width bar (breaks out of the page gutter), with the page
-    // grid applied to its own content: labels and icons sit at the
-    // gutter on both sides.
-    marginHorizontal: -pageGutter,
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    width: "100%" as const,
+    // Fixed chrome above the scroller: opaque over the paper, its
+    // content on the page grid, breathing room under it.
+    backgroundColor: colors.paper,
     paddingHorizontal: pageGutter,
+    paddingTop: spacing.l,
+    paddingBottom: spacing.m,
   },
   tabChip: {
     minHeight: 36,

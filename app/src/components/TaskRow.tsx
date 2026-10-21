@@ -14,7 +14,7 @@ export function TaskRow({
   onToggle?: (task: TaskItem) => void;
   timeAlign?: "under" | "right";
 }) {
-  const [pressed, setPressed] = React.useState(false);
+  const [hot, setHot] = React.useState(false);
   const done = task.data?.completed != null && task.data.completed !== "";
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
   const overdue =
@@ -23,33 +23,32 @@ export function TaskRow({
   const disabled = onToggle == null;
 
   return (
-    <Pressable
-      style={[
-        styles.row,
-        pressed && !disabled && styles.rowPressed,
-        disabled && styles.rowDisabled,
-      ]}
-      onPress={onToggle ? () => onToggle(task) : undefined}
-      disabled={disabled}
-      onHoverIn={() => setPressed(true)}
-      onHoverOut={() => setPressed(false)}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      accessibilityLabel={done ? "mark not done" : "mark done"}
-      accessibilityRole="button"
-    >
+    <View style={styles.row}>
       {timeAlign === "right" && due?.hasTime && !done ? (
         <Text style={[styles.gutterTime, overdue && styles.overdueText]}>
           {formatTime(due.date)}
         </Text>
       ) : null}
-      {/* The circle is visual only; the whole row is the toggle target.
-          It top-anchors to the FIRST text line: 22pt circle on a
+      {/* The row itself is inert; ONLY the circle toggles. It
+          top-anchors to the FIRST text line: 22pt circle on a
           22pt line box, so wrapped lines flow beneath without moving
           it (Google Tasks' rule). */}
-      <View style={[styles.circle, done && styles.circleDone]}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.circle,
+          done && styles.circleDone,
+          (hot || pressed) && !done && styles.circleHot,
+          pressed && done && styles.circlePressedDone,
+        ]}
+        onPress={onToggle ? () => onToggle(task) : undefined}
+        disabled={disabled}
+        onHoverIn={() => setHot(true)}
+        onHoverOut={() => setHot(false)}
+        accessibilityLabel={done ? "mark not done" : "mark done"}
+        accessibilityRole="button"
+      >
         {done ? <Text style={styles.check}>{"✓"}</Text> : null}
-      </View>
+      </Pressable>
 
       <View style={styles.textBlock}>
         <Text
@@ -68,7 +67,7 @@ export function TaskRow({
           {overdue ? <Text style={styles.overdueText}>overdue</Text> : null}
         </View>
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -93,11 +92,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.m,
     paddingVertical: spacing.s,
   },
-  rowPressed: {
+  circleHot: {
     backgroundColor: colors.pressed,
   },
-  rowDisabled: {
-    opacity: 0.6,
+  circlePressedDone: {
+    opacity: 0.7,
   },
   circle: {
     width: 22,
