@@ -99,6 +99,10 @@ export default function PlannerScreen() {
     task: TaskItem;
     x: number;
     y: number;
+    /** Gesture start time and input type: touch pickups wait out
+        drag.pickMs so list scrolling is never hijacked. */
+    t: number;
+    touch: boolean;
   } | null>(null);
   const [dragging, setDragging] = React.useState<{
     task: TaskItem;
@@ -112,6 +116,15 @@ export default function PlannerScreen() {
   // register their rects; pointer moves hit-test page coordinates
   // so touch drags land exactly like mouse drags.
   const [dropZones] = React.useState(() => new DropZoneMap());
+
+  // The screen root carries the scroll gate: when a drag owns the
+  // pointer, pane scrolling loses the gesture.
+  const rootRef = React.useRef<HTMLElement | null>(null);
+  const gateActive = React.useRef(false);
+  React.useEffect(() => {
+    gateActive.current = dragging != null;
+  }, [dragging]);
+  useTouchGate(rootRef, gateActive);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -197,7 +210,13 @@ export default function PlannerScreen() {
 
   const startDayDrag = (task: TaskItem, e: RNPointerEvent) => {
     moved.current = false;
-    setPending({ task, x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+    setPending({
+      task,
+      x: e.nativeEvent.pageX,
+      y: e.nativeEvent.pageY,
+      t: performance.now(),
+      touch: (e.nativeEvent as { pointerType?: string }).pointerType === "touch",
+    });
   };
 
   const onPointerMove = (e: RNPointerEvent) => {
@@ -205,12 +224,24 @@ export default function PlannerScreen() {
     const y = e.nativeEvent.pageY;
     if (pending) {
       const travel = Math.abs(x - pending.x) + Math.abs(y - pending.y);
-      if (travel > drag.threshold) {
-        moved.current = true;
-        dropZones.measureAll();
-        setDragging({ task: pending.task, x, y });
-        setPending(null);
+      if (pending.touch) {
+        // Touch: movement before the hold means the user is
+        // scrolling. Cancel the pending pickup and let the browser
+        // own the gesture.
+        if (travel > drag.threshold) {
+          setPending(null);
+          return;
+        }
+        if (performance.now() - pending.t < drag.pickMs) {
+          return;
+        }
+      } else if (travel <= drag.threshold) {
+        return;
       }
+      moved.current = true;
+      dropZones.measureAll();
+      setDragging({ task: pending.task, x, y });
+      setPending(null);
       return;
     }
     if (dragging) {
@@ -255,6 +286,9 @@ export default function PlannerScreen() {
 
   return (
     <View
+      ref={(node) => {
+        rootRef.current = node as HTMLElement | null;
+      }}
       style={styles.screen}
       onPointerDown={onPointerDownScreen}
       onPointerMove={onPointerMove}
@@ -700,7 +734,7 @@ function TaskPills({
       {tasks.map((task) => (
         <View
           key={task.uri}
-          style={[styles.pillChip, touchNoScroll]}
+          style={styles.pillChip}
           onPointerDown={(e) => onDragStart(task, e)}
         >
           <View style={styles.pillGrip}>
@@ -854,7 +888,7 @@ function TaskListSection({
           tasks.map((task, index) => (
             <View
               key={task.uri}
-              style={[index > 0 ? styles.groupRow : undefined, touchNoScroll]}
+              style={index > 0 ? styles.groupRow : undefined}
               onPointerDown={(e) => onDragStart(task, e)}
             >
               <TaskRow task={task} onToggle={onToggle} />
@@ -918,6 +952,8 @@ function DaySpread({
     task: TaskItem;
     x: number;
     y: number;
+    t: number;
+    touch: boolean;
   } | null>(null);
   const [dragging, setDragging] = React.useState<{
     task: TaskItem;
@@ -945,6 +981,15 @@ function DaySpread({
   // Ruler rows register under their hour; moves hit-test these
   // rects, since touch capture suppresses enter/leave events.
   const [hourZones] = React.useState(() => new DropZoneMap());
+
+  // DaySpread also gates scrolling while a drag or the grabber owns
+  // the pointer, so the split resize survives on touch.
+  const dayRootRef = React.useRef<HTMLElement | null>(null);
+  const dayGate = React.useRef(false);
+  React.useEffect(() => {
+    dayGate.current = dragging != null || resizing != null;
+  }, [dragging, resizing]);
+  useTouchGate(dayRootRef, dayGate);
 
   const sameDay = startOfDay(today).getTime() === startOfDay(date).getTime();
   const groups = groupByDue(tasks, today);
@@ -980,7 +1025,13 @@ function DaySpread({
     // Claim the gesture against the day swipe, synchronously, before
     // the root's pointerdown reads the flag.
     taskTouched.current = true;
-    setPending({ task, x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+    setPending({
+      task,
+      x: e.nativeEvent.pageX,
+      y: e.nativeEvent.pageY,
+      t: performance.now(),
+      touch: (e.nativeEvent as { pointerType?: string }).pointerType === "touch",
+    });
   };
 
   // A drag that ends back on its source must not also toggle it.
@@ -1005,12 +1056,21 @@ function DaySpread({
     }
     if (pending) {
       const travel = Math.abs(x - pending.x) + Math.abs(y - pending.y);
-      if (travel > drag.threshold) {
-        moved.current = true;
-        hourZones.measureAll();
-        setDragging({ task: pending.task, x, y });
-        setPending(null);
+      if (pending.touch) {
+        if (travel > drag.threshold) {
+          setPending(null);
+          return;
+        }
+        if (performance.now() - pending.t < drag.pickMs) {
+          return;
+        }
+      } else if (travel <= drag.threshold) {
+        return;
       }
+      moved.current = true;
+      hourZones.measureAll();
+      setDragging({ task: pending.task, x, y });
+      setPending(null);
       return;
     }
     if (dragging) {
@@ -1051,6 +1111,9 @@ function DaySpread({
 
   return (
     <View
+      ref={(node) => {
+        dayRootRef.current = node as HTMLElement | null;
+      }}
       style={styles.dayRoot}
       onLayout={(e) => {
         setRootHeight(e.nativeEvent.layout.height);
@@ -1120,6 +1183,7 @@ function DaySpread({
         <Pressable
           style={({ pressed }) => [
             styles.grabberHit,
+            touchNoScroll,
             (grabHot || pressed) && styles.grabberHitHot,
           ]}
           onHoverIn={() => setGrabHot(true)}
@@ -1180,7 +1244,6 @@ function DaySpread({
                   {overdue.map((task) => (
                     <View
                       key={task.uri}
-                      style={touchNoScroll}
                       onPointerDown={(e) => startTaskDrag(task, e)}
                     >
                       <TaskRow task={task} onToggle={guardedToggle} />
@@ -1311,7 +1374,7 @@ function HourTask({
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
       onPointerDown={(e) => onDragStart(task, e)}
-      style={[styles.hourTask, touchNoScroll, hover && styles.hourTaskHover]}
+      style={[styles.hourTask, hover && styles.hourTaskHover]}
     >
       <View style={[styles.taskBar, done && styles.taskBarDone]} />
       <Pressable
@@ -1417,7 +1480,7 @@ function WeekView({
               items.map((task) => (
                 <View
                   key={task.uri}
-                  style={[styles.weekTask, touchNoScroll]}
+                  style={styles.weekTask}
                   onPointerDown={(e) => onDragTask(task, e)}
                 >
                   <View style={styles.taskBar} />
@@ -1640,7 +1703,6 @@ function MonthView({
                   pickedTasks.map((task) => (
                     <View
                       key={task.uri}
-                      style={touchNoScroll}
                       onPointerDown={(e) => onDragTask(task, e)}
                     >
                       <TaskRow task={task} onToggle={onToggle} />
@@ -2044,6 +2106,34 @@ function withKeptTime(
 function labelHour(hour: number): string {
   const h = hour % 12 || 12;
   return `${h} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+/**
+ * While a drag or grab owns the pointer, the browser must keep its
+ * hands off the pane scrolling: touch-action is read once at the
+ * gesture's start and cannot change, but a non-passive touchmove
+ * listener is read per event, so preventDefault wins mid-gesture.
+ * Mounts once per drag root; the ref flips as gestures come alive.
+ */
+function useTouchGate(
+  ref: React.RefObject<HTMLElement | null>,
+  active: React.RefObject<boolean>,
+) {
+  React.useEffect(() => {
+    const node = ref.current;
+    if (!node) {
+      return;
+    }
+    const onMove = (e: TouchEvent) => {
+      if (active.current) {
+        e.preventDefault();
+      }
+    };
+    node.addEventListener("touchmove", onMove, { passive: false });
+    return () => {
+      node.removeEventListener("touchmove", onMove);
+    };
+  }, [ref, active]);
 }
 
 function formatTime(date: Date): string {

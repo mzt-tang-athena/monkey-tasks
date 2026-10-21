@@ -145,6 +145,8 @@ export const drag = {
   threshold: 8,
   minPane: 150,
   holdMs: 450,
+  /** Touch pickups wait out this hold; scrolling never gets hijacked. */
+  pickMs: 300,
 } as const;
 
 /** Reading measure: screens cap their content width on wide screens. */
