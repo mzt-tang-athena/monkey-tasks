@@ -4,6 +4,7 @@ import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
+import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import {
   inMockFocus,
   inMockMain,
@@ -38,6 +39,20 @@ export default function ListsScreen() {
     left: number;
   } | null>(null);
   const dotsRef = React.useRef<React.ComponentRef<typeof View>>(null);
+
+  // Swipe left for the next list tab (Focus -> Main), right for the
+  // previous one; two tabs, so the edges hold. Created once; the
+  // functional setTab keeps the callback render-independent.
+  const [swipe] = React.useState(() =>
+    makeSwipeController((dir) =>
+      setTab((current) => {
+        if (dir === "left") {
+          return current === "Main" ? current : "Main";
+        }
+        return current === "Focus" ? current : "Focus";
+      }),
+    ),
+  );
 
   // Mock load. Status changes only in async callbacks, so the effect
   // does not set state synchronously. Loading starts as the initial
@@ -112,9 +127,10 @@ export default function ListsScreen() {
           accessibilityRole="button"
         />
       ) : null}
-      <View style={styles.body}>
+      <View style={styles.body} {...swipeProps(swipe)}>
         {/* The list tab bar sits ABOVE the scroller: the page's fixed
-            chrome. Sections scroll beneath it, the bar never moves. */}
+            chrome. Sections scroll beneath it, the bar never moves.
+            A horizontal swipe on the body walks the tabs. */}
         <View style={styles.tabBar}>
           {(["Focus", "Main"] as ListTab[]).map((name) => (
             <Pressable

@@ -6,6 +6,7 @@ import type { CaptureTarget } from "../../features/capture/write";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
+import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { loadMockTasks, toggleMockCompleted } from "../../lib/mock";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth, pageGutter } from "../../theme/tokens";
@@ -153,8 +154,8 @@ export default function PlannerScreen() {
 
   const weekPool = pillsForSource(all, source, startOfWeek(selected));
 
-  // A week drop that lands back on its source row must not also
-  // toggle it.
+  // Suppress press actions that follow a drag drop: the pointer-up
+  // lands inside a pressable that would otherwise act on it.
   const suppressClick = React.useRef(false);
   const guardedToggle = (task: TaskItem) => {
     if (suppressClick.current) {
@@ -163,6 +164,30 @@ export default function PlannerScreen() {
     }
     toggle(task);
   };
+  // Week columns select a day; a drop from a dragged task must not
+  // select the column it was released over.
+  const guardedSelect = (day: Date) => {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
+    setSelected(day);
+  };
+
+  // Left/right swipe on the background shifts the selected day, so
+  // the callback never reads render state.
+  const shiftDay = React.useCallback(
+    (delta: 1 | -1) => setSelected((current) => addDays(current, delta)),
+    [],
+  );
+  const shiftMonth = React.useCallback(
+    (delta: 1 | -1) =>
+      setSelected(
+        (current) =>
+          new Date(current.getFullYear(), current.getMonth() + delta, 1),
+      ),
+    [],
+  );
 
   const startDayDrag = (task: TaskItem, e: RNPointerEvent) => {
     moved.current = false;
@@ -225,6 +250,7 @@ export default function PlannerScreen() {
           onFormChange={changeTaskForm}
           onMode={setMode}
           onSelectStrip={setSelected}
+          onShiftDay={shiftDay}
           onToggle={toggle}
           onUpdate={updateTask}
         />
@@ -252,7 +278,8 @@ export default function PlannerScreen() {
                 tasks={open}
                 today={new Date()}
                 selected={selected}
-                onSelect={setSelected}
+                onSelect={guardedSelect}
+                onDragTask={startDayDrag}
                 dragActive={dragging != null}
                 hoveredDay={hoveredDay}
                 onHoverDay={setHoveredDay}
@@ -301,6 +328,8 @@ export default function PlannerScreen() {
                 setSelected(day);
                 setMode("day");
               }}
+              onShiftMonth={shiftMonth}
+              pressGuard={suppressClick}
               dragActive={dragging != null}
               hoveredDay={hoveredDay}
               onHoverDay={setHoveredDay}
@@ -801,6 +830,7 @@ function DaySpread({
   onFormChange,
   onMode,
   onSelectStrip,
+  onShiftDay,
   onToggle,
   onUpdate,
 }: {
@@ -816,6 +846,8 @@ function DaySpread({
   onFormChange: (form: TaskForm) => void;
   onMode: (mode: Mode) => void;
   onSelectStrip: (date: Date) => void;
+  /** Swipe left/right on the background shifts one day. */
+  onShiftDay: (delta: 1 | -1) => void;
   onToggle: (task: TaskItem) => void;
   onUpdate: (task: TaskItem, patch: Partial<TaskFrontmatter>) => void;
 }) {
@@ -841,6 +873,16 @@ function DaySpread({
   const [grabHot, setGrabHot] = React.useState(false);
   const moved = React.useRef(false);
   const suppressClick = React.useRef(false);
+
+  // The day swipe: armed only from a touch that did NOT start on a
+  // task row or the grabber. Rows set taskTouched on their own
+  // pointerdown, and the root's pointerdown reads it right after,
+  // so a drag start claims the whole gesture. Created once; the
+  // shift callback is a stable functional updater.
+  const taskTouched = React.useRef(false);
+  const [swipe] = React.useState(() =>
+    makeSwipeController((dir) => onShiftDay(dir === "left" ? 1 : -1)),
+  );
 
   const sameDay = startOfDay(today).getTime() === startOfDay(date).getTime();
   const groups = groupByDue(tasks, today);
@@ -873,6 +915,9 @@ function DaySpread({
 
   const startTaskDrag = (task: TaskItem, e: RNPointerEvent) => {
     moved.current = false;
+    // Claim the gesture against the day swipe, synchronously, before
+    // the root's pointerdown reads the flag.
+    taskTouched.current = true;
     setPending({ task, x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
   };
 
@@ -888,6 +933,7 @@ function DaySpread({
   const onPointerMove = (e: RNPointerEvent) => {
     const x = e.nativeEvent.pageX;
     const y = e.nativeEvent.pageY;
+    swipe.move(x, y);
     if (resizing) {
       const grown = resizing.height + (y - resizing.y);
       setTimelineHeight(
@@ -910,6 +956,7 @@ function DaySpread({
   };
 
   const onPointerUp = () => {
+    swipe.up();
     if (resizing) {
       setResizing(null);
       return;
@@ -936,6 +983,14 @@ function DaySpread({
       onLayout={(e) => {
         setRootHeight(e.nativeEvent.layout.height);
         setRootX(e.nativeEvent.layout.x);
+      }}
+      onPointerDown={(e) => {
+        swipe.down(
+          e.nativeEvent.pageX,
+          e.nativeEvent.pageY,
+          taskTouched.current,
+        );
+        taskTouched.current = false;
       }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -995,6 +1050,9 @@ function DaySpread({
           onHoverIn={() => setGrabHot(true)}
           onHoverOut={() => setGrabHot(false)}
           onPointerDown={(e) => {
+            // The grabber claims the gesture too: resizing must
+            // never fire a day swipe.
+            taskTouched.current = true;
             setResizing({
               y: e.nativeEvent.pageY,
               height: timelineHeight,
@@ -1220,6 +1278,7 @@ function WeekView({
   today,
   selected,
   onSelect,
+  onDragTask,
   dragActive,
   hoveredDay,
   onHoverDay,
@@ -1228,6 +1287,8 @@ function WeekView({
   today: Date;
   selected: Date;
   onSelect: (date: Date) => void;
+  /** Week day cards drag between columns, like the pool rows do. */
+  onDragTask: (task: TaskItem, e: RNPointerEvent) => void;
   dragActive: boolean;
   hoveredDay: Date | null;
   onHoverDay: (day: Date | null) => void;
@@ -1279,7 +1340,11 @@ function WeekView({
             <View style={styles.weekColRule} />
             {items.length > 0 ? (
               items.map((task) => (
-                <View key={task.uri} style={styles.weekTask}>
+                <View
+                  key={task.uri}
+                  style={styles.weekTask}
+                  onPointerDown={(e) => onDragTask(task, e)}
+                >
                   <View style={styles.taskBar} />
                   <Text style={styles.weekTaskText} numberOfLines={3}>
                     {hasTime(task) ? `${timeOf(task)}  ` : ""}
@@ -1312,6 +1377,8 @@ function MonthView({
   onFormChange,
   onToggle,
   onOpenDay,
+  onShiftMonth,
+  pressGuard,
   dragActive,
   hoveredDay,
   onHoverDay,
@@ -1328,6 +1395,10 @@ function MonthView({
   onFormChange: (form: TaskForm) => void;
   onToggle: (task: TaskItem) => void;
   onOpenDay: (day: Date) => void;
+  /** Swipe left/right on the fixed calendar shifts a whole month. */
+  onShiftMonth: (delta: 1 | -1) => void;
+  /** Drag drops that land on a cell suppress that cell's pick. */
+  pressGuard?: { current: boolean };
   dragActive: boolean;
   hoveredDay: Date | null;
   onHoverDay: (day: Date | null) => void;
@@ -1386,12 +1457,19 @@ function MonthView({
       ? (byDay.get(isoOf(picked.day)) ?? [])
       : null;
 
+  // Swipe left/right on the fixed calendar areas shifts one month.
+  // Created once; the shift callback is a stable functional updater.
+  const [calendarSwipe] = React.useState(() =>
+    makeSwipeController((dir) => onShiftMonth(dir === "left" ? 1 : -1)),
+  );
+
   return (
     <View style={styles.monthColumn}>
-      <Text style={styles.monthTitle}>
-        {MONTHS[monthIdx]} {year}
-      </Text>
-      <View style={styles.monthCard}>
+      <View style={styles.monthFixed} {...swipeProps(calendarSwipe)}>
+        <Text style={styles.monthTitle}>
+          {MONTHS[monthIdx]} {year}
+        </Text>
+        <View style={styles.monthCard}>
         <View style={styles.monthHead}>
           {WEEKDAYS.map((name) => (
             <Text key={name} style={styles.monthHeadCell}>
@@ -1415,7 +1493,15 @@ function MonthView({
                     isSameDay(day, hoveredDay) && styles.monthCellHovered,
                   pressed && styles.pressedFill,
                 ]}
-                onPress={() => setPicked({ key: monthKey, day })}
+                onPress={() => {
+                  // A drag drop that released over this cell
+                  // suppresses the accidental pick.
+                  if (pressGuard?.current) {
+                    pressGuard.current = false;
+                    return;
+                  }
+                  setPicked({ key: monthKey, day });
+                }}
                 onPointerEnter={() => {
                   if (dragActive) {
                     onHoverDay(day);
@@ -1440,6 +1526,7 @@ function MonthView({
               </Pressable>
             ),
           )}
+        </View>
         </View>
       </View>
 
@@ -2407,15 +2494,19 @@ const styles = StyleSheet.create({
     color: colors.inkFaint,
   },
 
-  // week canvas: horizontally scrolling day columns. The horizontal
-  // scroller hugs its content: no flexGrow into the fixed frame.
+  // week canvas: horizontally scrolling day columns. The scroller
+  // bleeds to the screen's edges: columns cut at the display, not
+  // the page gutter, and scroll till the last one clears it.
   weekScroller: {
     flexGrow: 0,
+    marginHorizontal: -pageGutter,
   },
   weekCanvas: {
     flexDirection: "row",
     gap: spacing.s,
     paddingVertical: spacing.xs,
+    paddingLeft: pageGutter,
+    paddingRight: pageGutter,
     marginBottom: spacing.xl,
   },
   weekCol: {
@@ -2484,6 +2575,11 @@ const styles = StyleSheet.create({
   // month view
   monthColumn: {
     flex: 1,
+  },
+  // The fixed half: title and grid card. Its own swipe zone shifts
+  // months without touching the row drags beneath.
+  monthFixed: {
+    flexShrink: 0,
   },
   monthTitle: {
     fontSize: 13,

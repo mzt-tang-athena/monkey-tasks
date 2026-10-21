@@ -153,10 +153,10 @@ export const measure = 720;
 /**
  * Week mode's day-column width. Sized so a 390pt phone still shows
  * three full columns plus a sliver of the fourth: viewport 350 after
- * the page gutters = 3 x 104 + 2 x 8 gaps + ~14 sliver. Tune the
+ * the page gutters = 3 x 120 + 2 x 8 gaps + ~50 sliver. Tune the
  * token, the arithmetic follows.
  */
-export const weekColWidth = 104;
+export const weekColWidth = 120;
 
 /** The page's side margin, shared by every screen. */
 export const pageGutter = 20;
