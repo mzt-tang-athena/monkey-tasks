@@ -163,3 +163,12 @@ export const weekColWidth = 96;
  * the parse line, and the action row.
  */
 export const sheetGap = 12;
+
+/**
+ * The capture input grows with its text. Growth stops at this share
+ * of the window height: below it the panel breathes upward with the
+ * wraps, past it the input scrolls inside its own box. Native text
+ * inputs grow by themselves, so the cap is what keeps a long capture
+ * from swallowing the page.
+ */
+export const sheetMaxShare = 0.4;
