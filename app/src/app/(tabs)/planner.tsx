@@ -1660,24 +1660,36 @@ function PeriodRail({
   const viewport = React.useRef(0);
   const railX = React.useRef(0);
 
-  React.useLayoutEffect(() => {
+  // Align only when the active cell sits outside the viewport: the
+  // rail never moves on its own otherwise.
+  const alignToActive = React.useCallback(() => {
     if (viewport.current <= 0) {
       return;
     }
     const lo = Math.floor(railX.current / STEP);
     const hi = Math.floor((railX.current + viewport.current) / STEP);
     if (activeIdx < lo) {
-      scroller.current?.scrollTo({
-        x: activeIdx * STEP,
-        animated: false,
-      });
+      const x = activeIdx * STEP;
+      railX.current = x;
+      scroller.current?.scrollTo({ x, animated: false });
     } else if (activeIdx > hi - 1) {
-      scroller.current?.scrollTo({
-        x: Math.max((activeIdx + 1) * STEP - viewport.current, 0),
-        animated: false,
-      });
+      const x = Math.max((activeIdx + 1) * STEP - viewport.current, 0);
+      railX.current = x;
+      scroller.current?.scrollTo({ x, animated: false });
     }
   }, [activeIdx]);
+
+  // Mount: week and month share this component, and several browser
+  // engines carry a stale horizontal offset into a remounted scroller.
+  // Start clean at the anchor, then align if the cell is already off.
+  // Mount: week and month share this component, and several browser
+  // engines carry a stale horizontal offset into a remounted scroller.
+  // Start clean at the anchor, then align if the cell is already off.
+  React.useLayoutEffect(() => {
+    scroller.current?.scrollTo({ x: 0, animated: false });
+    railX.current = 0;
+  }, []);
+  React.useLayoutEffect(alignToActive, [activeIdx, alignToActive]);
 
   return (
     <ScrollView
@@ -1688,6 +1700,8 @@ function PeriodRail({
       contentContainerStyle={styles.stripScroll}
       onLayout={(e) => {
         viewport.current = e.nativeEvent.layout.width;
+        // First real measurement may already need an alignment.
+        alignToActive();
       }}
       onScroll={(e) => {
         railX.current = e.nativeEvent.contentOffset.x;
@@ -1782,6 +1796,7 @@ function PeriodStrip({
     const railBase = startOfWeek(today);
     return (
       <PeriodRail
+        key="week"
         count={12}
         activeIdx={selWeekIdx - startIdx}
         renderItem={(index) => {
@@ -1837,17 +1852,15 @@ function PeriodStrip({
   const todayMonthIdx = today.getFullYear() * 12 + today.getMonth();
   // Indexes are relative to today's month, so the rebase rule never
   // sees calendar-sized offsets.
-  const startIdx = railStartIdx(
-    0,
-    selMonthIdx - todayMonthIdx,
-    12,
-  );
+  const selRelMonthIdx = selMonthIdx - todayMonthIdx;
+  const startIdx = railStartIdx(0, selRelMonthIdx, 12);
   const railYear = today.getFullYear();
   const railMonth = today.getMonth() + startIdx;
   return (
     <PeriodRail
+      key="month"
       count={12}
-      activeIdx={selMonthIdx - startIdx}
+      activeIdx={selRelMonthIdx - startIdx}
       renderItem={(index) => {
         const monthStartDay = new Date(railYear, railMonth + index, 1);
         const active =
