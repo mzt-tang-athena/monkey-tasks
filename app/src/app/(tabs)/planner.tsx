@@ -458,6 +458,29 @@ function isDone(task: TaskItem): boolean {
   return task.data?.completed != null && task.data.completed !== "";
 }
 
+/* ------------------------------------------------------------- strips */
+
+/** Whole-day index between two epoch times, DST-proof. */
+function dayIndexBetween(fromMs: number, toMs: number): number {
+  return Math.round((toMs - fromMs) / 86400000);
+}
+
+/**
+ * The lazy-follow rule for the period rails. A rail sits anchored to
+ * today; when the selected period walks off its end, the rail slides
+ * just enough that the selection lands on the edge cell: last when
+ * moving forward, first when moving backward.
+ */
+function railStartIdx(anchorIdx: number, selIdx: number, count: number): number {
+  if (selIdx > anchorIdx + count - 1) {
+    return selIdx - (count - 1);
+  }
+  if (selIdx < anchorIdx) {
+    return selIdx;
+  }
+  return anchorIdx;
+}
+
 /** Open tasks first, by due time, then completed ones behind them. */
 function sortOpenFirst(items: TaskItem[]): TaskItem[] {
   const timeValue = (task: TaskItem): number =>
@@ -1618,11 +1641,68 @@ const MONTHS_SHORT = [
 ];
 
 /**
+ * One horizontally scrolling period rail (weeks or months). It
+ * auto-scrolls only when the active cell leaves the viewport, so
+ * ordinary use never moves the rail without the user asking.
+ */
+function PeriodRail({
+  count,
+  activeIdx,
+  renderItem,
+}: {
+  count: number;
+  activeIdx: number;
+  renderItem: (index: number) => React.ReactNode;
+}) {
+  // stripDay 44 + one gap 8: the rail's cell step.
+  const STEP = 52;
+  const scroller = React.useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const viewport = React.useRef(0);
+  const railX = React.useRef(0);
+
+  React.useLayoutEffect(() => {
+    if (viewport.current <= 0) {
+      return;
+    }
+    const lo = Math.floor(railX.current / STEP);
+    const hi = Math.floor((railX.current + viewport.current) / STEP);
+    if (activeIdx < lo) {
+      scroller.current?.scrollTo({
+        x: activeIdx * STEP,
+        animated: false,
+      });
+    } else if (activeIdx > hi - 1) {
+      scroller.current?.scrollTo({
+        x: Math.max((activeIdx + 1) * STEP - viewport.current, 0),
+        animated: false,
+      });
+    }
+  }, [activeIdx]);
+
+  return (
+    <ScrollView
+      ref={scroller}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.stripScroll}
+      onLayout={(e) => {
+        viewport.current = e.nativeEvent.layout.width;
+      }}
+      onScroll={(e) => {
+        railX.current = e.nativeEvent.contentOffset.x;
+      }}
+      scrollEventThrottle={64}
+    >
+      {Array.from({ length: count }, (_, index) => renderItem(index))}
+    </ScrollView>
+  );
+}
+
+/**
  * The period strip above the pills. Day mode shows the seven days
- * from today; week mode shows the current week plus the upcoming
- * ones; month mode shows the current month plus the upcoming ones.
+ * containing the selected day; week and month show a scrolling rail.
  * The current period is tinted, the selected period is filled, and a
- * tap jumps to it.
+ * tap jumps to it. Selection drifts make the rails follow lazily.
  */
 function PeriodStrip({
   mode,
@@ -1639,7 +1719,14 @@ function PeriodStrip({
   const selStart = startOfDay(selected).getTime();
 
   if (mode === "day") {
-    const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(today, offset));
+    // The 7-day window containing the selected day: today-first
+    // while the selection stays inside today's block, then the rail
+    // walks one day per step off either edge.
+    const selIdx = dayIndexBetween(todayStart, selStart);
+    const startIdx = railStartIdx(0, selIdx, 7);
+    const days = [0, 1, 2, 3, 4, 5, 6].map((offset) =>
+      addDays(today, startIdx + offset),
+    );
     return (
       <View style={styles.strip}>
         {days.map((day) => {
@@ -1684,18 +1771,20 @@ function PeriodStrip({
   }
 
   if (mode === "week") {
-    // The current week first, then the upcoming ones, one swipe away.
-    // Cells match the day strip's size: a compact week shorthand.
-    const weeks = Array.from({ length: 12 }, (_, index) =>
-      startOfWeek(addDays(today, 7 * index)),
+    // One week per cell, current week first, rail rebasing per the
+    // lazy-follow rule when the selected week walks off its end.
+    const selWeekIdx = Math.round(
+      (startOfWeek(selected).getTime() - startOfWeek(today).getTime()) /
+        (7 * 86400000),
     );
+    const startIdx = railStartIdx(0, selWeekIdx, 12);
+    const railBase = startOfWeek(today);
     return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.stripScroll}
-      >
-        {weeks.map((weekStartDay) => {
+      <PeriodRail
+        count={12}
+        activeIdx={selWeekIdx - startIdx}
+        renderItem={(index) => {
+          const weekStartDay = addDays(railBase, 7 * (startIdx + index));
           const weekEnd = addDays(weekStartDay, 6);
           const startT = weekStartDay.getTime();
           const endT = weekEnd.getTime();
@@ -1734,26 +1823,32 @@ function PeriodStrip({
               </Text>
             </Pressable>
           );
-        })}
-      </ScrollView>
+        }}
+      />
     );
   }
 
-  // Month mode: the current month first, then the upcoming ones.
-  // Cells mirror the day strip's anatomy: the year small on top, the
-  // month word below it.
-  const months = Array.from(
-    { length: 12 },
-    (_, index) =>
-      new Date(today.getFullYear(), today.getMonth() + index, 1),
+  // Month mode: a rail of 12 months, current month first, rebasing
+  // per the lazy-follow rule. Cells mirror the day strip's anatomy:
+  // the year small on top, the month word below it.
+  const selMonthIdx =
+    selected.getFullYear() * 12 + selected.getMonth();
+  const todayMonthIdx = today.getFullYear() * 12 + today.getMonth();
+  // Indexes are relative to today's month, so the rebase rule never
+  // sees calendar-sized offsets.
+  const startIdx = railStartIdx(
+    0,
+    selMonthIdx - todayMonthIdx,
+    12,
   );
+  const railYear = today.getFullYear();
+  const railMonth = today.getMonth() + startIdx;
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.stripScroll}
-    >
-      {months.map((monthStartDay) => {
+    <PeriodRail
+      count={12}
+      activeIdx={selMonthIdx - startIdx}
+      renderItem={(index) => {
+        const monthStartDay = new Date(railYear, railMonth + index, 1);
         const active =
           selected.getFullYear() === monthStartDay.getFullYear() &&
           selected.getMonth() === monthStartDay.getMonth();
@@ -1793,8 +1888,8 @@ function PeriodStrip({
             </Text>
           </Pressable>
         );
-      })}
-    </ScrollView>
+      }}
+    />
   );
 }
 
