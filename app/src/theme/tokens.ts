@@ -96,7 +96,9 @@ export function setDevTheme(name: ThemeName): void {
   } catch {
     // Ignore: the swatch is dev-only decoration without storage.
   }
-  if (typeof window !== "undefined") {
+  // Web reloads so the module constants re-read. Native has no
+  // location; the swatch stays a no-op there.
+  if (typeof window !== "undefined" && window.location?.reload) {
     window.location.reload();
   }
 }
