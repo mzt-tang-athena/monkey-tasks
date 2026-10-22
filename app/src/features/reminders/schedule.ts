@@ -57,6 +57,10 @@ export async function cancelAllScheduled(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
+export async function cancelScheduled(id: string): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(id);
+}
+
 export async function listScheduled(): Promise<
   { id: string; title?: string; when?: number }[]
 > {

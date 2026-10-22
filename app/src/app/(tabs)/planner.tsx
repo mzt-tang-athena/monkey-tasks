@@ -217,9 +217,13 @@ export default function PlannerScreen() {
     (task: TaskItem, patch: Partial<TaskFrontmatter>) => void
   >(null);
 
-  const toggle = (task: TaskItem) => {
-    void store.toggle(task);
-  };
+  const storeToggle = store.toggle;
+  const toggle = React.useCallback(
+    (task: TaskItem) => {
+      void storeToggle(task);
+    },
+    [storeToggle],
+  );
 
   // Drag-and-drop writes due dates and times through here: the store
   // applies locally, then rewrites the note in vault mode.
