@@ -4,6 +4,13 @@ import { readNote } from "../vault/notes";
 import { parseStoredDate, startOfDay } from "../../lib/dates";
 
 export type TaskItem = {
+  /**
+   * The row's identity for rendering. It is the uri for a note read
+   * from the vault, and the provisional string for a capture that is
+   * still being written; it stays put when the real uri arrives, so
+   * the row keeps its place instead of remounting.
+   */
+  id: string;
   uri: string;
   /** File name with extension, as SAF reports it. */
   fileName: string;
@@ -26,6 +33,7 @@ export async function loadTasks(tasksDirUri: string): Promise<TaskItem[]> {
       const text = await readNote(file.uri);
       const result = validateNote(file.name, text, taskFrontmatter);
       return {
+        id: file.uri,
         uri: file.uri,
         fileName: file.name,
         name: displayName(file.uri).replace(/\.md$/, ""),

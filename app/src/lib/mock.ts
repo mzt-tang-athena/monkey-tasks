@@ -16,6 +16,7 @@ function mock(
 ): TaskItem {
   const uri = `mock://vault/Tasks/${name}.md`;
   return {
+    id: uri,
     uri,
     fileName: `${name}.md`,
     name,

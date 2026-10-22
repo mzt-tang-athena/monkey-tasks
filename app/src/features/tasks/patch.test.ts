@@ -4,6 +4,7 @@ import type { TaskItem } from "./query";
 
 function task(text: string): TaskItem {
   return {
+    id: "content://vault/Tasks/Call.md",
     uri: "content://vault/Tasks/Call.md",
     fileName: "Call.md",
     name: "Call",

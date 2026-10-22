@@ -16,15 +16,18 @@ export class DropZoneMap {
 
   /**
    * Register a view node under a drop id. Call from ref callbacks.
-   * A null node unregisters the id, so unmounted cells never leave
-   * stale rects behind for a later hit test.
+   * A null node unregisters the view but keeps its rect: React
+   * re-invokes inline ref callbacks with null on every render, so
+   * dropping the rect here would wipe a live drag's measurements
+   * after its first move. Every pickup calls measureAll, which
+   * clears and rebuilds the rects, so a kept rect cannot outlive a
+   * drag.
    */
   set(id: string, node: { measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void } | null) {
     if (node != null) {
       this.views.set(id, node);
     } else {
       this.views.delete(id);
-      this.rects.delete(id);
     }
   }
 

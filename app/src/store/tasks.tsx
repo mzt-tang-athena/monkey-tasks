@@ -341,10 +341,12 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
           throw new Error(message);
         }
         // Web preview: append the parsed result to the in-memory set.
+        const mockUri = `mock://vault/Tasks/${draft.fileName}`;
         applyTasks([
           ...tasksRef.current,
           {
-            uri: `mock://vault/Tasks/${draft.fileName}`,
+            id: mockUri,
+            uri: mockUri,
             fileName: draft.fileName,
             name: draft.name,
             text: draft.content,
@@ -357,6 +359,10 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
 
       const provisional = `pending://${(pendingSeq += 1)}`;
       const item: TaskItem = {
+        // The row's identity is the provisional string, and it stays
+        // that way once the file lands: only the uri changes, so the
+        // row never remounts under the closing sheet.
+        id: provisional,
         uri: provisional,
         fileName: draft.fileName,
         name: draft.name,
@@ -379,7 +385,8 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
         applyTasks(tasksRef.current.filter((row) => row.uri !== provisional));
         const message = `capture write: ${String(error)}`;
         setLastError(message);
-        // The sheet keeps the draft and shows the reason.
+        // The promise rejects so the bar can offer the same capture
+        // again from its toast; the failed row is gone from the list.
         throw new Error(message);
       }
     },
