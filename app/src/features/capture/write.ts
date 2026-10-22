@@ -1,6 +1,5 @@
 import { todayIso } from "../../lib/dates";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import { createNote } from "../vault/notes";
 import type { ParsedCapture } from "./parse";
 
 /** The frontmatter-only content of a captured task note. */
@@ -81,19 +80,4 @@ export function captureDraft(
       ...(parsed.recurrence ? { recurrence: parsed.recurrence } : {}),
     },
   };
-}
-
-/**
- * Write a captured task. Main targets write no lists property;
- * a list target adds its wikilink natively to the frontmatter.
- */
-export async function writeCapture(
-  tasksDirUri: string,
-  parsed: ParsedCapture,
-  target: CaptureTarget,
-  preselectedDue?: string,
-): Promise<{ uri: string; fileName: string }> {
-  const draft = captureDraft(parsed, target, preselectedDue);
-  const uri = await createNote(tasksDirUri, draft.fileName, draft.content);
-  return { uri, fileName: draft.fileName };
 }

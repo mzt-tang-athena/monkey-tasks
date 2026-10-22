@@ -180,6 +180,28 @@ export default function ListsScreen() {
             </IconButton>
           </View>
         </View>
+        {/* A failed tick or field write leaves the list usable, so the
+            message is a quiet banner over it, not the error state. */}
+        {store.lastError != null && status !== "error" ? (
+          <View style={styles.bannerSlot}>
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText} numberOfLines={3}>
+                {store.lastError}
+              </Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.errorDismiss,
+                  pressed && styles.errorDismissPressed,
+                ]}
+                onPress={store.clearError}
+                accessibilityRole="button"
+                accessibilityLabel="dismiss error"
+              >
+                <Text style={styles.errorDismissText}>Dismiss</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
         <FlatList
           contentContainerStyle={styles.content}
           onRefresh={reload}
@@ -455,6 +477,47 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     color: colors.inkMuted,
     marginTop: 2,
+  },
+
+  // A failed write that leaves the screen usable: a compact strip on
+  // the page grid, dismissed by hand.
+  bannerSlot: {
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    width: "100%" as const,
+    paddingHorizontal: pageGutter,
+    paddingTop: spacing.m,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.m,
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius,
+    paddingVertical: spacing.s,
+    paddingHorizontal: spacing.m,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.danger,
+  },
+  errorDismiss: {
+    paddingVertical: 2,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius,
+  },
+  errorDismissPressed: {
+    backgroundColor: colors.pressed,
+  },
+  errorDismissText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    fontWeight: "600",
+    color: colors.danger,
   },
 
   // Quiet top-right controls: sort glyph and the three-dot overflow.

@@ -263,6 +263,10 @@ export function BottomBar({
             onChangeText={setText}
             onSubmitEditing={send}
             returnKeyType="send"
+            // A multiline input defaults to newline on Android, which
+            // swallows the send action. Submit keeps the sheet able to
+            // grow and still fires onSubmitEditing.
+            submitBehavior="submit"
             multiline
             autoFocus
             selectionColor={colors.accent}

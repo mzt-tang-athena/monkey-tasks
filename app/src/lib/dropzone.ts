@@ -14,16 +14,18 @@ export class DropZoneMap {
   private rects = new Map<string, { x: number; y: number; w: number; h: number }>();
   private clip: { x: number; y: number; w: number; h: number } | null = null;
 
-  /** Register a view node under a drop id. Call from ref callbacks. */
+  /**
+   * Register a view node under a drop id. Call from ref callbacks.
+   * A null node unregisters the id, so unmounted cells never leave
+   * stale rects behind for a later hit test.
+   */
   set(id: string, node: { measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void } | null) {
     if (node != null) {
       this.views.set(id, node);
+    } else {
+      this.views.delete(id);
+      this.rects.delete(id);
     }
-  }
-
-  /** True when any rects are measured for the active drag. */
-  get measured(): boolean {
-    return this.rects.size > 0;
   }
 
   /**
@@ -52,6 +54,9 @@ export class DropZoneMap {
           onRect();
         });
       } else {
+        // A view that lost its node cannot report a rect, so drop it
+        // rather than let a dead entry stall the pending count.
+        this.views.delete(id);
         onRect();
       }
     }
@@ -89,13 +94,3 @@ export class DropZoneMap {
   }
 }
 
-/**
- * Web-only style: a drag starting on a task card belongs to the
- * card, not to the browser's scroll consumer. Without it, touch
- * drags hand off to the pane's pan-y/pan-x scrolling after the
- * first move, and pointer events stop arriving. Sans effect on
- * native, where the Android gesture library owns routing.
- */
-export const touchNoScroll = {
-  touchAction: "none",
-} as unknown as import("react-native").ViewStyle;
