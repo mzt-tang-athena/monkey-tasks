@@ -186,12 +186,12 @@ export function BottomBar({
           physical build, switch Android to behavior="padding". */}
       {mounted ? (
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
           pointerEvents="box-none"
           style={[
             styles.sheetDock,
             {
-              bottom: open ? spacing.s : barHeight + spacing.s,
+              bottom: open ? spacing.s + insets.bottom : barHeight + spacing.s + insets.bottom,
             } as unknown as ViewStyle,
           ]}
         >

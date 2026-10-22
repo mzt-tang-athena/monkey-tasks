@@ -2,6 +2,7 @@ import * as React from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type PointerEvent as RNPointerEvent, type StyleProp, type ViewStyle } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
@@ -77,6 +78,7 @@ export default function PlannerScreen() {
   const store = useTasks();
   const tasks: TaskItem[] = store.tasks;
   const status = store.status;
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = React.useState<Mode>(() =>
     params.mode === "week" || params.mode === "month"
       ? (params.mode as Mode)
@@ -357,7 +359,7 @@ export default function PlannerScreen() {
       ref={(node) => {
         rootRef.current = node as HTMLElement | null;
       }}
-      style={styles.screen}
+      style={[styles.screen, { paddingTop: insets.top }]}
       onPointerDown={onPointerDownScreen}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

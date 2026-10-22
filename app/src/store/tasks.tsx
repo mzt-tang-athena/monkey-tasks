@@ -23,6 +23,8 @@ export type StoreStatus = "loading" | "ready" | "error";
 
 export type TaskStore = {
   mode: "mock" | "vault";
+  /** The last failed operation's text, for diagnostics. */
+  lastError: string | null;
   tasks: TaskItem[];
   tasksDir: string | null;
   rootUri: string | null;
@@ -58,6 +60,7 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
   const [tasksDir, setTasksDir] = React.useState<string | null>(null);
   const [rootUri, setRootUri] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<StoreStatus>("loading");
+  const [lastError, setLastError] = React.useState<string | null>(null);
 
   const grant = React.useCallback(async () => {
     let uri: string | null = null;
@@ -85,8 +88,10 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
         setTasksDir(folder);
         setTasks(loaded);
         setStatus("ready");
-      } catch {
+        setLastError(null);
+      } catch (error) {
         setStatus("error");
+        setLastError(`vault read: ${String(error)}`);
       }
     },
     [],
@@ -137,8 +142,13 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
         );
         return;
       }
-      await setCompleted(task, task.data != null && !taskIsDone(task.data));
-      await refresh(tasksDir);
+      try {
+        await setCompleted(task, task.data != null && !taskIsDone(task.data));
+        await refresh(tasksDir);
+        setLastError(null);
+      } catch (error) {
+        setLastError(`toggle write: ${String(error)}`);
+      }
     },
     [tasksDir, refresh],
   );
@@ -164,7 +174,9 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
           const raw = value as string | string[] | undefined;
           await setProperty(task, key, raw ?? null);
         }
-      } catch {
+        setLastError(null);
+      } catch (error) {
+        setLastError(`field write: ${String(error)}`);
         void refresh(tasksDir);
       }
     },
@@ -206,8 +218,13 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
         ]);
         return;
       }
-      await writeCapture(tasksDir, parsed, target, preselectedDue);
-      await refresh(tasksDir);
+      try {
+        await writeCapture(tasksDir, parsed, target, preselectedDue);
+        await refresh(tasksDir);
+        setLastError(null);
+      } catch (error) {
+        setLastError(`capture write: ${String(error)}`);
+      }
     },
     [tasksDir, refresh],
   );
@@ -219,13 +236,14 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
       tasksDir,
       rootUri,
       status,
+      lastError,
       grant,
       refresh: () => refresh(tasksDir ?? undefined),
       toggle,
       writeFields,
       capture,
     }),
-    [tasks, tasksDir, rootUri, status, grant, refresh, toggle, writeFields, capture],
+    [tasks, tasksDir, rootUri, status, lastError, grant, refresh, toggle, writeFields, capture],
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

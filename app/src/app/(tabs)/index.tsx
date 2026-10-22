@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Platform, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
@@ -27,6 +28,7 @@ export default function ListsScreen() {
   const store = useTasks();
   const tasks = store.tasks;
   const status = store.status;
+  const insets = useSafeAreaInsets();
   const [tab, setTab] = React.useState<ListTab>("Main");
   const [menu, setMenu] = React.useState<{
     open: boolean;
@@ -101,7 +103,7 @@ export default function ListsScreen() {
   const closeMenu = () => setMenu(null);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       {menu?.open ? (
         // The backdrop sits under the menu card and swallows taps
         // anywhere else, closing the menu.
