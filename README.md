@@ -48,13 +48,13 @@ npm test
 ## Plan
 
 The app is Expo SDK 58 with React Native 0.88 and expo-router, in
-TypeScript (ADR 0001). The vault folder is read and written over Android
+TypeScript (ADR 0001). The app reads and writes the vault folder over Android
 SAF with `expo-file-system/legacy` (ADR 0002). No backend (ADR 0003).
 Notifications fire on the device with `expo-notifications` (ADR 0004).
-Capture parses natural-language dates with chrono-node. Recurrence is
-stored as a bare RRULE value and expanded with `rrule`.
+Capture parses natural-language dates with chrono-node. The app stores recurrence
+as a bare RRULE value and expands it with `rrule`.
 
-There are two tabs: Lists and Planner. The Lists tab shows Focus and
+The app has two tabs: Lists and Planner. The Lists tab shows Focus and
 Main. Main is the catch-all: every task that is not on Focus, including
 tasks tagged with a list that has no tab (ADR 0015).
 
@@ -63,7 +63,7 @@ Phases:
 1. Spike: bare app reads a task note from the vault folder, edits it, and
    the change appears in Obsidian on desktop after sync (0001).
 2. Vault vocabulary: lightweight task notes in `Tasks/`, list notes in
-   `Tasks/Lists/`, deeds unchanged. Task done is derived from a
+   `Tasks/Lists/`, deeds unchanged. The app derives done from a
    `completed` date; reminders are a list; recurrence is an RRULE
    string (0004).
 3. Schema package: Zod models for task, deed, and list notes mirroring
