@@ -45,6 +45,12 @@ jobs:
       - name: Generate the native project
         working-directory: app
         run: npx expo prebuild --platform android --no-install
+      # Caches the Gradle distribution, the dependency cache and the
+      # build cache, which turns a 45 minute cold build into a few
+      # minutes after the first run.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
       - name: Build the release APK
         working-directory: app/android
         run: ./gradlew assembleRelease --no-daemon
