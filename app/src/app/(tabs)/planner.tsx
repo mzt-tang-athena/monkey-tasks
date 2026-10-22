@@ -179,10 +179,14 @@ export default function PlannerScreen() {
           ),
         });
       }
-      suppressClick.current = true;
-      setTimeout(() => {
-        suppressClick.current = false;
-      }, 350);
+      // Only a pointer gesture delivers a click after the drop, so
+      // only the web path arms the guard. Native taps must land.
+      if (pointerPickup) {
+        suppressClick.current = true;
+        setTimeout(() => {
+          suppressClick.current = false;
+        }, 350);
+      }
       setDragging(null);
       setHoveredDay(null);
     };
@@ -440,6 +444,7 @@ export default function PlannerScreen() {
                     onDragStart={startDayDrag}
                     tasks={weekPool}
                     lifted={lifted}
+                    api={dragApi}
                     emptyLabel={
                       source === "due-period"
                         ? "Nothing to place this week."
@@ -671,21 +676,33 @@ function NativeDragHandle({
   children?: React.ReactNode;
 }) {
   const hold = kind === "pill" ? drag.pillPickMs : drag.pickMs;
+  // The pan's own flag: onEnd is the one drop, onFinalize the reset.
+  const active = React.useRef(false);
   const pan = React.useMemo(
     () =>
       Gesture.Pan()
+        // The callbacks touch plain JS state and the store, so they
+        // must stay on the JS thread, not the UI runtime.
+        .runOnJS(true)
         .activateAfterLongPress(hold)
         .onStart((e) => {
+          active.current = true;
           api.pickup(task, e.absoluteX, e.absoluteY, kind);
         })
         .onUpdate((e) => {
           api.move(e.absoluteX, e.absoluteY);
         })
         .onEnd(() => {
+          active.current = false;
           api.drop();
         })
         .onFinalize(() => {
-          api.drop();
+          // A cancelled pan finalizes without an end, so clear the
+          // drag it left behind. An ended pan already dropped.
+          if (active.current) {
+            active.current = false;
+            api.drop();
+          }
         }),
     [task, kind, hold, api],
   );
@@ -1157,7 +1174,9 @@ function DaySpread({
   onUpdate: (task: TaskItem, patch: Partial<TaskFrontmatter>) => void;
 }) {
   const [rootHeight, setRootHeight] = React.useState(0);
-  const [rootX, setRootX] = React.useState(0);
+  // The day root's page-space origin: the drag ghost lives inside it
+  // but rides page coordinates from the gesture.
+  const [rootPos, setRootPos] = React.useState({ x: 0, y: 0 });
   // The pane's top edge inside the root, measured at layout: the
   // divider may never travel past it plus a minimum list pane.
   const [paneTop, setPaneTop] = React.useState(200);
@@ -1305,11 +1324,14 @@ function DaySpread({
           due: withTime(date, hoverHourRef.current, minuteOf(current.task)),
         });
       }
-      // Swallow the click that follows a drop onto the source row.
-      suppressClick.current = true;
-      setTimeout(() => {
-        suppressClick.current = false;
-      }, 350);
+      // Only the web pointer path sees a click after the drop, so
+      // only it arms the guard. A native tap must land.
+      if (pointerPickup) {
+        suppressClick.current = true;
+        setTimeout(() => {
+          suppressClick.current = false;
+        }, 350);
+      }
       setDragging(null);
       setHoverHour(null);
     },
@@ -1325,6 +1347,8 @@ function DaySpread({
   const grabberPan = React.useMemo(
     () =>
       Gesture.Pan()
+        // Resizing reads refs and sets React state: JS thread only.
+        .runOnJS(true)
         .minDistance(0)
         .onStart((e) => {
           // Resizing the split is not a swipe.
@@ -1493,7 +1517,12 @@ function DaySpread({
       style={styles.dayRoot}
       onLayout={(e) => {
         setRootHeight(e.nativeEvent.layout.height);
-        setRootX(e.nativeEvent.layout.x);
+        // Layout x is parent relative and carries no y at all, so
+        // the ghost's offsets come from a page-space measure.
+        const node = dayRootRef.current as unknown as {
+          measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void;
+        } | null;
+        node?.measureInWindow?.((x, y) => setRootPos({ x, y }));
       }}
       {...(pointerPickup
         ? {
@@ -1640,6 +1669,7 @@ function DaySpread({
             onDragStart={startTaskDrag}
             tasks={sectionTasks}
             lifted={lifted}
+            api={dayApi}
             emptyLabel={
               source === "due-period"
                 ? "Nothing scheduled today."
@@ -1674,7 +1704,7 @@ function DaySpread({
       {dragging ? (
         <View
           pointerEvents="none"
-          style={[styles.dragGhost, { left: dragging.x - rootX - 100, top: dragging.y - 40 }]}
+          style={[styles.dragGhost, { left: dragging.x - rootPos.x - 100, top: dragging.y - rootPos.y - 40 }]}
         >
           <View style={styles.dragGhostChip}>
             <View style={styles.ghostBar} />

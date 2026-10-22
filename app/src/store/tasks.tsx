@@ -42,6 +42,8 @@ export type TaskStore = {
   tasksDir: string | null;
   rootUri: string | null;
   status: StoreStatus;
+  /** Drop the last failure once the user has seen it. */
+  clearError: () => void;
   grant: () => Promise<void>;
   refresh: () => Promise<void>;
   toggle: (task: TaskItem) => Promise<void>;
@@ -106,6 +108,12 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     };
     void next.then(settle, settle);
     return next;
+  }, []);
+
+  // A failure the screen can shrug off: the message is cleared by the
+  // banner's dismiss, not by the next render.
+  const clearError = React.useCallback(() => {
+    setLastError(null);
   }, []);
 
   const grant = React.useCallback(async () => {
@@ -386,13 +394,14 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
       rootUri,
       status,
       lastError,
+      clearError,
       grant,
       refresh: () => load(),
       toggle,
       writeFields,
       capture,
     }),
-    [tasks, tasksDir, rootUri, status, lastError, grant, load, toggle, writeFields, capture],
+    [tasks, tasksDir, rootUri, status, lastError, clearError, grant, load, toggle, writeFields, capture],
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;
