@@ -1,9 +1,6 @@
 import * as React from "react";
 import {
   Animated,
-  Dimensions,
-  Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -14,6 +11,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { parseCapture, type ParsedCapture } from "../features/capture/parse";
@@ -86,44 +84,24 @@ export function BottomBar({
   // The navbar's lift: 1 visible, 0 slid away while capture is open.
   const [barLift] = React.useState(() => new Animated.Value(1));
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [barHeight, setBarHeight] = React.useState(64);
+  // The row's height, measured where the collapse clip cannot reach it.
+  const [rowHeight, setRowHeight] = React.useState(36);
+  // The navbar's height: its row plus its own padding. It is computed
+  // rather than measured, because the collapse clip clamps the height
+  // it would measure, and the bar would lose its bottom padding.
+  const barHeight = rowHeight + spacing.s + insets.bottom + 8;
   // The last failure of a send, shown inside the sheet so a failed
   // write never looks like a successful one.
   const [sendError, setSendError] = React.useState<string | null>(null);
 
-  // The keyboard's height, and the window height measured while no
-  // keyboard was up.
-  const [keyboard, setKeyboard] = React.useState(() => ({
-    height: 0,
-    base: Dimensions.get("window").height,
-  }));
-
-  React.useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", (event) => {
-      setKeyboard((current) => ({
-        height: event.endCoordinates.height,
-        base: current.base,
-      }));
-    });
-    const hide = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboard({
-        height: 0,
-        base: Dimensions.get("window").height,
-      });
-    });
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
-
-  const keyboardUp = keyboard.height > 0;
-  // A window that shrank for the keyboard already ends above it, so
-  // the sheet only needs a lift when the window stayed full height.
-  const windowResized = keyboardUp && window.height < keyboard.base - 1;
-  const lift = keyboardUp && !windowResized ? keyboard.height : 0;
-  // The system navigation bar sits behind the keyboard while it is up.
-  const bottomInset = keyboardUp ? 0 : insets.bottom;
+  // The dock's distance from the bottom of the window. Open, the
+  // sheet sits just above the keyboard: Android pans the whole window
+  // up for the keyboard, so the window's bottom edge is the
+  // keyboard's top edge. Closed, it sits above the navbar.
+  const dockBottom = expand.interpolate({
+    inputRange: [0, 1],
+    outputRange: [barHeight + spacing.s + insets.bottom, spacing.s],
+  });
 
   React.useEffect(() => {
     Animated.timing(expand, {
@@ -229,25 +207,18 @@ export function BottomBar({
         </Animated.View>
       ) : null}
 
-      {/* The floating sheet, docked where the navbar was. On device
-          the dock lifts by the keyboard's height, so the sheet always
-          floats above the keyboard. The keyboard-avoiding view only
-          runs on iOS: Android lifts the dock itself, and letting both
-          lift at once would push the sheet off the screen. */}
+      {/* The floating sheet, docked where the navbar was. The
+          keyboard-avoiding view lifts the dock by the real keyboard
+          height, which the platform reports even though the window
+          itself does not resize for the keyboard. */}
       {mounted ? (
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
           pointerEvents="box-none"
           style={[
             styles.sheetDock,
-            {
-              bottom:
-                lift +
-                (open
-                  ? spacing.s + bottomInset
-                  : barHeight + spacing.s + bottomInset),
-            } as unknown as ViewStyle,
-          ]}
+            { bottom: dockBottom },
+          ] as unknown as ViewStyle}
         >
           <Animated.View
             pointerEvents={open ? "auto" : "none"}
@@ -385,14 +356,16 @@ export function BottomBar({
       >
         <View
           style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}
+        >
+        <View
+          style={styles.row}
           onLayout={(event) => {
             const height = event.nativeEvent.layout.height;
             if (height > 0) {
-              setBarHeight(height);
+              setRowHeight(height);
             }
           }}
         >
-        <View style={styles.row}>
           <IconTab
             label="Lists"
             active={pathname === "/"}
