@@ -1,11 +1,11 @@
 import * as React from "react";
 import { Platform, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { groupByDue, inList, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
+import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { BottomBar } from "../../components/BottomBar";
 import { useTasks } from "../../store/tasks";
 import { dayLabel } from "../../lib/dates";
@@ -35,21 +35,18 @@ export default function ListsScreen() {
   } | null>(null);
   const dotsRef = React.useRef<React.ComponentRef<typeof View>>(null);
 
-  // Native tab swipe: the pan activates on real horizontal travel,
-  // so vertical list scrolling keeps every gesture.
-  const tabSwipe = React.useMemo(
-    () =>
-      Gesture.Pan()
-        .activeOffsetX([-80, 80])
-        .failOffsetY([-24, 24])
-        .onEnd((e) => {
-          if (e.translationX <= -80) {
-            setTab((current) => (current === "Focus" ? "Main" : current));
-          } else if (e.translationX >= 80) {
-            setTab((current) => (current === "Main" ? "Focus" : current));
-          }
-        }),
-    [],
+  // The tab swipe: horizontal travel on the list body walks Focus and
+  // Main. Touch events, not a gesture handler, because a handler on the
+  // parent of a scrolling list never sees the moves on Android.
+  const [tabSwipe] = React.useState(() =>
+    makeSwipeController((dir) => {
+      setTab((current) => {
+        if (dir === "left") {
+          return current === "Focus" ? "Main" : current;
+        }
+        return current === "Main" ? "Focus" : current;
+      });
+    }),
   );
 
   const storeToggle = store.toggle;
@@ -118,7 +115,7 @@ export default function ListsScreen() {
       ) : null}
       {(() => {
         const body = (
-        <View style={styles.body}>
+        <View style={styles.body} {...swipeProps(tabSwipe)}>
         {/* The list tab bar sits ABOVE the scroller: the page's fixed
             chrome. Sections scroll beneath it, the bar never moves.
             A horizontal swipe on the body walks the tabs. */}
@@ -242,10 +239,7 @@ export default function ListsScreen() {
         />
       </View>
         );
-        const nativeSwipe = (
-          <GestureDetector gesture={tabSwipe}>{body}</GestureDetector>
-        );
-        return Platform.OS === "web" ? body : nativeSwipe;
+        return body;
       })()}
       {/* The overflow menu, anchored to the dots button. */}
       {menu?.open ? (

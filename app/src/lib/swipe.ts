@@ -1,18 +1,21 @@
+import { Platform } from "react-native";
+
 /**
- * A horizontal swipe tripwire for pointer events. It arms only when
- * the pointer's travel is clearly horizontal and long enough, so
- * vertical scrollers and row drags never trip it. A gesture that
- * starts on a drag source (a task row, the resize grabber) stays
- * claimed forever: the swipe drops it.
+ * A horizontal swipe tripwire. It arms only when the travel is clearly
+ * horizontal and long enough, so vertical scrollers and row drags
+ * never trip it. A gesture that starts on a drag source stays claimed
+ * for its whole length: the swipe drops it.
  */
 export type SwipeController = {
-  /** Call on pointer down. `claimed` marks a touch that started on a
-      drag source, which disables the tripwire for the whole gesture. */
+  /** Call on pointer or touch down. `claimed` marks a touch that
+      started on a drag source, which disables the tripwire. */
   down: (x: number, y: number, claimed?: boolean) => void;
-  /** Call on pointer move. */
+  /** Call on move. */
   move: (x: number, y: number) => void;
-  /** Call on pointer up: fires the swipe if one was armed. */
+  /** Call on up: fires the swipe if one was armed. */
   up: () => void;
+  /** Disable the current gesture: a drag picked it up after the down. */
+  claim: () => void;
 };
 
 export function makeSwipeController(onSwipe: (dir: "left" | "right") => void): SwipeController {
@@ -46,18 +49,44 @@ export function makeSwipeController(onSwipe: (dir: "left" | "right") => void): S
       claimed = false;
       armed = null;
     },
+    claim() {
+      claimed = true;
+      armed = null;
+    },
   };
 }
 
-/** The three pointer handlers, spread onto a View. Wiring order
-    note: create the controller once with `useState`, so the handler
-    object stays stable across renders. */
-export function swipeProps(controller: SwipeController) {
+type Point = { nativeEvent: { pageX: number; pageY: number } };
+
+/** Touch events, the native equivalent of the pointer pair. A view
+    receives them while a child scroller scrolls, so the tripwire works
+    over a list. */
+export function touchSwipeProps(controller: SwipeController) {
   return {
-    onPointerDown: (e: { nativeEvent: { pageX: number; pageY: number } }) =>
+    onTouchStart: (e: Point) =>
       controller.down(e.nativeEvent.pageX, e.nativeEvent.pageY),
-    onPointerMove: (e: { nativeEvent: { pageX: number; pageY: number } }) =>
+    onTouchMove: (e: Point) =>
+      controller.move(e.nativeEvent.pageX, e.nativeEvent.pageY),
+    onTouchEnd: () => controller.up(),
+    onTouchCancel: () => controller.up(),
+  };
+}
+
+/**
+ * The handler pair for the current platform. The browser reads pointer
+ * events; React Native reads touch events. Spreading both would fire
+ * the tripwire twice on web.
+ */
+export function swipeProps(controller: SwipeController) {
+  if (Platform.OS !== "web") {
+    return touchSwipeProps(controller);
+  }
+  return {
+    onPointerDown: (e: Point) =>
+      controller.down(e.nativeEvent.pageX, e.nativeEvent.pageY),
+    onPointerMove: (e: Point) =>
       controller.move(e.nativeEvent.pageX, e.nativeEvent.pageY),
     onPointerUp: () => controller.up(),
+    onPointerCancel: () => controller.up(),
   };
 }

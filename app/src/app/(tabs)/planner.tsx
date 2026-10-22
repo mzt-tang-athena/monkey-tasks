@@ -8,7 +8,7 @@ import type { CaptureTarget } from "../../features/capture/write";
 import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
-import { makeSwipeController, swipeProps } from "../../lib/swipe";
+import { makeSwipeController, swipeProps, touchSwipeProps } from "../../lib/swipe";
 import { DropZoneMap } from "../../lib/dropzone";
 import { useTasks } from "../../store/tasks";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
@@ -1273,6 +1273,9 @@ function DaySpread({
   }, [hoverHour]);
   const dayApi = React.useMemo<DragApi>(() => ({
     pickup: (task, x, y) => {
+      // The hold already fired; a sideways drag must not also shift
+      // the day when it ends.
+      swipe.claim();
       moved.current = false;
       hourZones.measureAll(() => {
         const node = paneRef.current as unknown as {
@@ -1309,7 +1312,7 @@ function DaySpread({
       setDragging(null);
       setHoverHour(null);
     },
-  }), [hourZones, date, onUpdate]);
+  }), [hourZones, date, onUpdate, swipe]);
 
   // The grabber's native resize: immediate activation, any travel
   // resizes the split.
@@ -1323,6 +1326,8 @@ function DaySpread({
       Gesture.Pan()
         .minDistance(0)
         .onStart((e) => {
+          // Resizing the split is not a swipe.
+          swipe.claim();
           grabStart.current = {
             y: e.absoluteY,
             height: timelineHeightRef.current,
@@ -1347,24 +1352,7 @@ function DaySpread({
         .onFinalize(() => {
           grabStart.current = null;
         }),
-    [maxTimeline],
-  );
-
-  // The native day swipe: horizontal travel only, so vertical pane
-  // scrolling keeps every gesture.
-  const daySwipe = React.useMemo(
-    () =>
-      Gesture.Pan()
-        .activeOffsetX([-80, 80])
-        .failOffsetY([-24, 24])
-        .onEnd((e) => {
-          if (e.translationX <= -80) {
-            onShiftDay(1);
-          } else if (e.translationX >= 80) {
-            onShiftDay(-1);
-          }
-        }),
-    [onShiftDay],
+    [maxTimeline, swipe],
   );
 
   const sameDay = startOfDay(today).getTime() === startOfDay(date).getTime();
@@ -1518,6 +1506,10 @@ function DaySpread({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      // Android gets no pointer events, so the same tripwire reads
+      // touch events there. Touch events reach the parent while a
+      // child pane scrolls, which a gesture handler would not.
+      {...(pointerPickup ? {} : touchSwipeProps(swipe))}
     >
       <PlannerHeader
         mode="day"
@@ -1680,11 +1672,7 @@ function DaySpread({
       ) : null}
     </View>
   );
-  return pointerPickup ? (
-    dayRoot
-  ) : (
-    <GestureDetector gesture={daySwipe}>{dayRoot}</GestureDetector>
-  );
+  return dayRoot;
 }
 
 /** The hour ruler: hour marks down the left, tasks pinned between. */
