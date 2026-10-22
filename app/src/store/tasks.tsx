@@ -4,7 +4,8 @@ import { todayIso } from "../lib/dates";
 import { loadMockTasks, toggleMockCompleted } from "../lib/mock";
 import { getSavedVaultUri, requestVaultAccess } from "../features/vault/grant";
 import { ensureSubfolder } from "../features/vault/scan";
-import { loadTasks, type TaskItem } from "../features/tasks/query";
+import { loadVaultTasks } from "../features/vault/session";
+import { type TaskItem } from "../features/tasks/query";
 import { setCompleted, setProperty } from "../features/tasks/mutate";
 import { writeCapture, type CaptureTarget } from "../features/capture/write";
 import type { ParsedCapture } from "../features/capture/parse";
@@ -74,28 +75,33 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const refresh = React.useCallback(
-    async (uri?: string) => {
-      if (!uri) {
-        const loaded = await loadMockTasks();
-        setTasks(loaded);
-        setStatus("ready");
-        return;
-      }
-      try {
-        const folder = await ensureSubfolder(uri, "Tasks");
-        const loaded = await loadTasks(folder);
-        setTasksDir(folder);
-        setTasks(loaded);
-        setStatus("ready");
-        setLastError(null);
-      } catch (error) {
-        setStatus("error");
-        setLastError(`vault read: ${String(error)}`);
-      }
-    },
-    [],
-  );
+  /**
+   * Load the task list for the granted root. The root is the folder
+   * the user picked; the Tasks folder inside it is derived on every
+   * load, so a reload can never read from the wrong place. With no
+   * root there is no vault yet, so the mock set serves the design
+   * preview.
+   */
+  const load = React.useCallback(async () => {
+    const root = rootUri;
+    if (!root) {
+      const loaded = await loadMockTasks();
+      setTasks(loaded);
+      setTasksDir(null);
+      setStatus("ready");
+      return;
+    }
+    try {
+      const { tasksDir: folder, tasks: loaded } = await loadVaultTasks(root);
+      setTasksDir(folder);
+      setTasks(loaded);
+      setStatus("ready");
+      setLastError(null);
+    } catch (error) {
+      setStatus("error");
+      setLastError(`vault read: ${String(error)}`);
+    }
+  }, [rootUri]);
 
   // Boot once: read the saved folder (SAF on Android; the read is
   // unavailable on web, so it resolves to null and the mock store
@@ -129,12 +135,12 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     // The store's boot load: state changes land after the awaited
     // reads, never synchronously within this effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void refresh(rootUri ?? undefined);
-  }, [booted, rootUri, refresh]);
+    void load();
+  }, [booted, rootUri, load]);
 
   const toggle = React.useCallback(
     async (task: TaskItem) => {
-      if (!tasksDir) {
+      if (!rootUri) {
         setTasks((current) =>
           current.map((item) =>
             item.uri === task.uri ? toggleMockCompleted(item) : item,
@@ -142,25 +148,33 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
         );
         return;
       }
+      if (!tasksDir) {
+        setLastError("toggle: the vault folder is not ready yet");
+        return;
+      }
       try {
         await setCompleted(task, task.data != null && !taskIsDone(task.data));
-        await refresh(tasksDir);
+        await load();
         setLastError(null);
       } catch (error) {
         setLastError(`toggle write: ${String(error)}`);
       }
     },
-    [tasksDir, refresh],
+    [rootUri, tasksDir, load],
   );
 
   const writeFields = React.useCallback(
     async (task: TaskItem, patch: Partial<TaskFrontmatter>) => {
-      if (!tasksDir) {
+      if (!rootUri) {
         setTasks((current) =>
           current.map((item) =>
             item.uri === task.uri ? patchItem(item, patch) : item,
           ),
         );
+        return;
+      }
+      if (!tasksDir) {
+        setLastError("field write: the vault folder is not ready yet");
         return;
       }
       // Optimistic local apply; the vault note is rewritten behind it.
@@ -174,13 +188,14 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
           const raw = value as string | string[] | undefined;
           await setProperty(task, key, raw ?? null);
         }
+        await load();
         setLastError(null);
       } catch (error) {
         setLastError(`field write: ${String(error)}`);
-        void refresh(tasksDir);
+        void load();
       }
     },
-    [tasksDir, refresh],
+    [rootUri, tasksDir, load],
   );
 
   const capture = React.useCallback(
@@ -190,7 +205,7 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
       preselectedDue?: string,
     ) => {
       const due = preselectedDue && !parsed.due ? preselectedDue : parsed.due;
-      if (!tasksDir) {
+      if (!rootUri) {
         // Mock mode: append the parsed result to the in-memory set.
         setTasks(current => [
           ...current,
@@ -219,31 +234,37 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       try {
-        await writeCapture(tasksDir, parsed, target, preselectedDue);
-        await refresh(tasksDir);
+        // The Tasks folder is derived from the root, so a capture still
+        // lands in the right place when the first load failed.
+        const folder = tasksDir ?? (await ensureSubfolder(rootUri, "Tasks"));
+        await writeCapture(folder, parsed, target, preselectedDue);
+        await load();
         setLastError(null);
       } catch (error) {
-        setLastError(`capture write: ${String(error)}`);
+        const message = `capture write: ${String(error)}`;
+        setLastError(message);
+        // The sheet keeps the draft and shows the reason.
+        throw new Error(message);
       }
     },
-    [tasksDir, refresh],
+    [rootUri, tasksDir, load],
   );
 
   const value = React.useMemo<TaskStore>(
     () => ({
-      mode: tasksDir ? "vault" : "mock",
+      mode: rootUri ? "vault" : "mock",
       tasks,
       tasksDir,
       rootUri,
       status,
       lastError,
       grant,
-      refresh: () => refresh(tasksDir ?? undefined),
+      refresh: () => load(),
       toggle,
       writeFields,
       capture,
     }),
-    [tasks, tasksDir, rootUri, status, lastError, grant, refresh, toggle, writeFields, capture],
+    [tasks, tasksDir, rootUri, status, lastError, grant, load, toggle, writeFields, capture],
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

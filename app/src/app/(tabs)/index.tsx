@@ -120,7 +120,8 @@ export default function ListsScreen() {
         {/* The list tab bar sits ABOVE the scroller: the page's fixed
             chrome. Sections scroll beneath it, the bar never moves.
             A horizontal swipe on the body walks the tabs. */}
-        {store.mode === "mock" && Platform.OS !== "web" ? (
+        {(store.mode === "mock" || store.status === "error") &&
+        Platform.OS !== "web" ? (
           <Pressable
             style={({ pressed }) => [
               styles.grantRow,
@@ -189,7 +190,9 @@ export default function ListsScreen() {
             <View>
               {status === "loading" ? <LoadingState /> : null}
               {status === "error" ? (
-                <EmptyState label="Something went wrong. Pull to retry." />
+                <EmptyState
+                  label={store.lastError ?? "Something went wrong. Pull to retry."}
+                />
               ) : null}
               {status === "ready" && shown.length === 0 ? (
                 <EmptyState label="Nothing on this list yet." />

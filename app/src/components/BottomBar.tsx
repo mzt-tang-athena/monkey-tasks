@@ -1,6 +1,8 @@
 import * as React from "react";
 import {
   Animated,
+  Dimensions,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -85,6 +87,43 @@ export function BottomBar({
   const [barLift] = React.useState(() => new Animated.Value(1));
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [barHeight, setBarHeight] = React.useState(64);
+  // The last failure of a send, shown inside the sheet so a failed
+  // write never looks like a successful one.
+  const [sendError, setSendError] = React.useState<string | null>(null);
+
+  // The keyboard's height, and the window height measured while no
+  // keyboard was up.
+  const [keyboard, setKeyboard] = React.useState(() => ({
+    height: 0,
+    base: Dimensions.get("window").height,
+  }));
+
+  React.useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (event) => {
+      setKeyboard((current) => ({
+        height: event.endCoordinates.height,
+        base: current.base,
+      }));
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboard({
+        height: 0,
+        base: Dimensions.get("window").height,
+      });
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  const keyboardUp = keyboard.height > 0;
+  // A window that shrank for the keyboard already ends above it, so
+  // the sheet only needs a lift when the window stayed full height.
+  const windowResized = keyboardUp && window.height < keyboard.base - 1;
+  const lift = keyboardUp && !windowResized ? keyboard.height : 0;
+  // The system navigation bar sits behind the keyboard while it is up.
+  const bottomInset = keyboardUp ? 0 : insets.bottom;
 
   React.useEffect(() => {
     Animated.timing(expand, {
@@ -119,11 +158,13 @@ export function BottomBar({
     setSending(true);
     try {
       await onSend(capture, targets[targetIndex] ?? targets[0]);
+      setSendError(null);
       setText("");
       close();
-    } catch {
+    } catch (error) {
       // The draft stays in the input and the sheet stays open on a
       // failed write, so nothing the user typed is ever lost.
+      setSendError(String(error));
     } finally {
       setSending(false);
     }
@@ -134,6 +175,7 @@ export function BottomBar({
       clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
+    setSendError(null);
     setMounted(true);
     setOpen(true);
   };
@@ -179,19 +221,23 @@ export function BottomBar({
         </Animated.View>
       ) : null}
 
-      {/* The floating sheet, docked where the navbar was; on device
-          the keyboard-avoiding view lifts it to the keyboard's top.
-          TODO(device-verify): Android 15 edge-to-edge may not resize
-          for the IME; if the sheet hides behind the keyboard on the
-          physical build, switch Android to behavior="padding". */}
+      {/* The floating sheet, docked where the navbar was. On device
+          the dock lifts by the keyboard's height, so the sheet always
+          floats above the keyboard. The keyboard-avoiding view only
+          runs on iOS: Android lifts the dock itself, and letting both
+          lift at once would push the sheet off the screen. */}
       {mounted ? (
         <KeyboardAvoidingView
-          behavior="padding"
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           pointerEvents="box-none"
           style={[
             styles.sheetDock,
             {
-              bottom: open ? spacing.s + insets.bottom : barHeight + spacing.s + insets.bottom,
+              bottom:
+                lift +
+                (open
+                  ? spacing.s + bottomInset
+                  : barHeight + spacing.s + bottomInset),
             } as unknown as ViewStyle,
           ]}
         >
@@ -267,6 +313,11 @@ export function BottomBar({
                 </View>
               ) : null}
             </View>
+          ) : null}
+          {/* A failed write says so here, on the sheet, with the
+              draft still in the input. */}
+          {sendError ? (
+            <Text style={styles.sheetError}>{sendError}</Text>
           ) : null}
           <View style={styles.sheetActions}>
             <Pressable
@@ -628,6 +679,13 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: fonts.body,
     color: colors.inkMuted,
+  },
+  // A failed write, in the danger tone, on the sheet itself.
+  sheetError: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.danger,
   },
   chipRow: {
     flexDirection: "row",
