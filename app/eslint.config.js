@@ -20,6 +20,27 @@ module.exports = defineConfig([
     },
   },
   {
+    // The lib layer is shared: features and routes may import it, but
+    // it never reaches back into them. Type-only imports pass because
+    // they carry no runtime dependency.
+    files: ['src/lib/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/features/*', '**/features/**', '**/app/*', '**/app/**'],
+              message:
+                'Shared code must not depend on a feature or a route. Move the shared piece into lib instead.',
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     ignores: ['dist/*'],
   },
 ]);

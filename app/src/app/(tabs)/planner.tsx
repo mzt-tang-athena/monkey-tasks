@@ -5,15 +5,41 @@ import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
-import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
+import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { DropZoneMap } from "../../lib/dropzone";
 import { useTasks } from "../../store/tasks";
-import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
+import { addDays, parseStoredDate, startOfDay } from "../../lib/dates";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, drag, weekColWidth, weekCanvasHeight, pageGutter, periodStep } from "../../theme/tokens";
 import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
+import {
+  cycleSource,
+  dayIndexBetween,
+  formatTime,
+  hasTime,
+  hourOf,
+  inSourceList,
+  isDone,
+  isoOf,
+  isoWeek,
+  minuteOf,
+  pillsForSource,
+  railStartIdx,
+  sortOpenFirst,
+  sourceLabel,
+  startOfMonth,
+  startOfWeek,
+  tasksForDay,
+  tasksForDayAll,
+  timeOf,
+  withKeptTime,
+  withTime,
+  SOURCES,
+  type Mode,
+  type Source,
+} from "../../features/planner/model";
 
 /*
  * Gesture modules: the drag, swipe and resize closures below are
@@ -23,21 +49,6 @@ import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
  * outside the gesture callbacks stays mirrored in effects.
  */
 /* eslint-disable react-hooks/refs */
-
-/**
- * The consolidated Planner tab. Day mode is a fixed split: the
- * hour-ruler timeline on top, the dashed drop line as the divider
- * between it and the full today-list below, and a grabber on the
- * line that resizes the two panes. Tasks drag between the list and
- * the ruler; a drop writes the slot's hour onto the task. Week is
- * F's horizontal canvas of day columns; month stays a card with
- * dots and lists a day's tasks on tap.
- */
-type Mode = "day" | "week" | "month";
-
-/** Where the bottom list's tasks come from. */
-type Source = "due-period" | "Focus" | "Main";
-const SOURCES: Source[] = ["due-period", "Focus", "Main"];
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_FULL = [
@@ -65,7 +76,7 @@ const MONTHS = [
 ];
 
 const TARGETS: CaptureTarget[] = [
-  { kind: "list", name: "Focus", uri: "mock://vault/Tasks/Lists/Focus.md" },
+  { kind: "list", name: "Focus" },
   { kind: "main" },
 ];
 
@@ -73,6 +84,17 @@ const TARGETS: CaptureTarget[] = [
 const RULER_START = 7;
 const RULER_END = 22;
 
+/**
+ * The consolidated Planner tab. Day mode is a fixed split: the
+ * hour-ruler timeline on top, the dashed drop line as the divider
+ * between it and the full today-list below, and a grabber on the
+ * line that resizes the two panes. Tasks drag between the list and
+ * the ruler; a drop writes the slot's hour onto the task. Week is
+ * F's horizontal canvas of day columns; month stays a card with
+ * dots and lists a day's tasks on tap.
+ *
+ * The pure rules behind these modes live in features/planner/model.
+ */
 export default function PlannerScreen() {
   const params = useLocalSearchParams<{ mode?: string }>();
   const store = useTasks();
@@ -408,7 +430,7 @@ export default function PlannerScreen() {
 
           {status === "loading" ? <LoadingState /> : null}
           {status === "error" ? (
-            <EmptyState label="Something went wrong. Pull to retry." />
+            <ErrorState onRetry={() => void store.refresh()} />
           ) : null}
 
           {status === "ready" && mode === "week" ? (
@@ -548,87 +570,7 @@ export default function PlannerScreen() {
   );
 }
 
-/** The source cycle: due period, then each named list, then back. */
-function cycleSource(
-  source: Source,
-  setSource: (next: Source) => void,
-): () => void {
-  return () => {
-    const index = SOURCES.indexOf(source);
-    setSource(SOURCES[(index + 1) % SOURCES.length]);
-  };
-}
-
-function sourceLabel(source: Source, mode: Mode): string {
-  if (source === "due-period") {
-    return mode === "day"
-      ? "Due today"
-      : mode === "week"
-        ? "Due this week"
-        : "Due this month";
-  }
-  return source;
-}
-
-/**
- * Week foot pills: every open task of the chosen source, dated or
- * not - dragging moves a date, it never removes membership.
- */
-function pillsForSource(
-  tasks: TaskItem[],
-  source: Source,
-  weekStart: Date,
-): TaskItem[] {
-  const startIso = isoOf(weekStart);
-  const endIso = isoOf(addDays(weekStart, 6));
-  const open = tasks.filter((task) => !isDone(task));
-  if (source === "due-period") {
-    return sortOpenFirst(
-      open.filter(
-        (task) =>
-          task.data?.due == null ||
-          (task.data.due.slice(0, 10) >= startIso &&
-            task.data.due.slice(0, 10) <= endIso),
-      ),
-    );
-  }
-  return sortOpenFirst(open.filter((task) => inSourceList(task, source)));
-}
-
-function inSourceList(task: TaskItem, list: string): boolean {
-  if (list === "Main") {
-    return task.data == null || !task.data.lists?.length;
-  }
-  return task.data?.lists?.includes(`[[${list}]]`) ?? false;
-}
-
-/** A task is done exactly per the contracts rule. */
-function isDone(task: TaskItem): boolean {
-  return task.data == null ? false : taskIsDone(task.data);
-}
-
-/* ------------------------------------------------------------- strips */
-
-/** Whole-day index between two epoch times, DST-proof. */
-function dayIndexBetween(fromMs: number, toMs: number): number {
-  return Math.round((toMs - fromMs) / 86400000);
-}
-
-/**
- * The lazy-follow rule for the period rails. A rail sits anchored to
- * today; when the selected period walks off its end, the rail slides
- * just enough that the selection lands on the edge cell: last when
- * moving forward, first when moving backward.
- */
-function railStartIdx(anchorIdx: number, selIdx: number, count: number): number {
-  if (selIdx > anchorIdx + count - 1) {
-    return selIdx - (count - 1);
-  }
-  if (selIdx < anchorIdx) {
-    return selIdx;
-  }
-  return anchorIdx;
-}
+/* -------------------------------------------------------- interaction */
 
 type LiftState = { task: TaskItem; phase: "hold" | "picked" } | null;
 
@@ -755,26 +697,6 @@ function Pickup({
       {children}
     </NativeDragHandle>
   );
-}
-
-/** Open tasks first, by due time, then completed ones behind them.
-    Decorate-time parse: sorting re-parses nothing per comparison. */
-function sortOpenFirst(items: TaskItem[]): TaskItem[] {
-  const stamp = (task: TaskItem): number =>
-    task.data?.due ? (parseStoredDate(task.data.due)?.date.getTime() ?? 0) : 0;
-  const stamped = items.map((task) => ({ task, time: stamp(task) }));
-  const byTime = (a: { task: TaskItem; time: number }, b: { task: TaskItem; time: number }) =>
-    a.time - b.time || a.task.name.localeCompare(b.task.name);
-  return [
-    ...stamped
-      .filter((entry) => !isDone(entry.task))
-      .sort(byTime)
-      .map((entry) => entry.task),
-    ...stamped
-      .filter((entry) => isDone(entry.task))
-      .sort(byTime)
-      .map((entry) => entry.task),
-  ];
 }
 
 /* ------------------------------------------------------------- header */
@@ -2493,86 +2415,6 @@ function PeriodStrip({
   );
 }
 
-function tasksForDay(tasks: TaskItem[], day: Date): TaskItem[] {
-  const iso = isoOf(day);
-  return tasks.filter(
-    (task) =>
-      task.data?.due != null &&
-      task.data.due.slice(0, 10) === iso &&
-      !(task.data != null && isDone(task)),
-  );
-}
-
-/** Every task touching the day, completed ones included. */
-function tasksForDayAll(tasks: TaskItem[], day: Date): TaskItem[] {
-  const iso = isoOf(day);
-  return tasks.filter(
-    (task) => task.data?.due != null && task.data.due.slice(0, 10) === iso,
-  );
-}
-
-function hasTime(task: TaskItem): boolean {
-  return task.data?.due
-    ? (parseStoredDate(task.data.due)?.hasTime ?? false)
-    : false;
-}
-
-function timeOf(task: TaskItem): string {
-  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
-  if (!due) {
-    return "";
-  }
-  return formatTime(due.date);
-}
-
-function hourOf(task: TaskItem): number | null {
-  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
-  return due?.hasTime ? due.date.getHours() : null;
-}
-
-function minuteOf(task: TaskItem): number {
-  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
-  return due?.date.getMinutes() ?? 0;
-}
-
-/**
- * The due string a timeline drop writes: the shown day at the
- * slot's hour, keeping the task's own minute.
- */
-function withTime(
-  day: Date,
-  hour: number,
-  minute = 0,
-): string {
-  return formatLocal(
-    new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute),
-    true,
-  );
-}
-
-/**
- * The due string an all-day move writes: the target day with the
- * task's previous time of day when it had one.
- */
-function withKeptTime(
-  day: Date,
-  previous: { date: Date; hasTime: boolean } | null,
-): string {
-  if (!previous?.hasTime) {
-    return formatLocal(day, false);
-  }
-  return formatLocal(
-    new Date(
-      day.getFullYear(),
-      day.getMonth(),
-      day.getDate(),
-      previous.date.getHours(),
-      previous.date.getMinutes(),
-    ),
-    true,
-  );
-}
-
 function labelHour(hour: number): string {
   const h = hour % 12 || 12;
   return `${h} ${hour >= 12 ? "PM" : "AM"}`;
@@ -2656,44 +2498,11 @@ function useTouchDragGate(
   }, [ref, busy, pendingRef, promote]);
 }
 
-function formatTime(date: Date): string {
-  const h = date.getHours() % 12 || 12;
-  const ampm = date.getHours() >= 12 ? "PM" : "AM";
-  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
-}
-
-function isoOf(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
 function isSameDay(a: Date | null, b: Date | null): boolean {
   if (a == null || b == null) {
     return false;
   }
   return startOfDay(a).getTime() === startOfDay(b).getTime();
-}
-
-/** Sunday of the week holding date. */
-function startOfWeek(date: Date): Date {
-  return addDays(date, -date.getDay());
-}
-
-/** The first of the month holding date. */
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-/** The ISO week number of the week holding date. */
-function isoWeek(date: Date): number {
-  const probe = startOfDay(date);
-  probe.setDate(probe.getDate() + 3 - ((probe.getDay() + 6) % 7));
-  const firstThu = new Date(probe.getFullYear(), 0, 4);
-  firstThu.setDate(firstThu.getDate() - ((firstThu.getDay() + 6) % 7));
-  return (
-    1 +
-    Math.round((probe.getTime() - firstThu.getTime()) / (7 * 86400000))
-  );
 }
 
 function LoadingState() {
@@ -2706,10 +2515,23 @@ function LoadingState() {
   );
 }
 
-function EmptyState({ label }: { label: string }) {
+/** The load failed. The button runs the same load again, so the
+    screen never asks for a pull gesture it does not have. */
+function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <View style={styles.holder}>
-      <Text style={styles.empty}>{label}</Text>
+      <Text style={styles.empty}>Something went wrong.</Text>
+      <Pressable
+        style={({ pressed }) => [
+          styles.retry,
+          pressed && styles.retryPressed,
+        ]}
+        onPress={onRetry}
+        accessibilityRole="button"
+        accessibilityLabel="Retry loading tasks"
+      >
+        <Text style={styles.retryText}>Retry</Text>
+      </Pressable>
     </View>
   );
 }
@@ -3531,5 +3353,24 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     color: colors.inkMuted,
     textAlign: "center",
+  },
+  retry: {
+    alignSelf: "center",
+    minHeight: 36,
+    justifyContent: "center",
+    marginTop: spacing.m,
+    paddingHorizontal: spacing.l,
+    borderRadius: radius,
+    backgroundColor: colors.accent,
+  },
+  retryPressed: {
+    backgroundColor: colors.accentDeep,
+  },
+  retryText: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    fontWeight: "600",
+    color: colors.onAccent,
   },
 });

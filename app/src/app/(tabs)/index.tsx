@@ -18,7 +18,7 @@ import { colors, fonts, spacing, radius, radiusFloating, radii, measure, pageGut
 type ListTab = "Focus" | "Main";
 
 const TARGETS: CaptureTarget[] = [
-  { kind: "list", name: "Focus", uri: "mock://vault/Tasks/Lists/Focus.md" },
+  { kind: "list", name: "Focus" },
   { kind: "main" },
 ];
 
@@ -113,9 +113,7 @@ export default function ListsScreen() {
           accessibilityRole="button"
         />
       ) : null}
-      {(() => {
-        const body = (
-        <View style={styles.body} {...swipeProps(tabSwipe)}>
+      <View style={styles.body} {...swipeProps(tabSwipe)}>
         {/* The list tab bar sits ABOVE the scroller: the page's fixed
             chrome. Sections scroll beneath it, the bar never moves.
             A horizontal swipe on the body walks the tabs. */}
@@ -260,9 +258,6 @@ export default function ListsScreen() {
           )}
         />
       </View>
-        );
-        return body;
-      })()}
       {/* The overflow menu, anchored to the dots button. */}
       {menu?.open ? (
         <View style={[styles.menu, { top: menu.top, left: menu.left }]}>
