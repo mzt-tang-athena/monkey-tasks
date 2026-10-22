@@ -33,6 +33,23 @@ export type CaptureTarget =
   | { kind: "list"; name: string; uri: string };
 
 /**
+ * A file name a document provider accepts. A task name is free text,
+ * so it can carry a slash or a colon; a document provider refuses
+ * those and the write fails. Illegal characters become spaces, and a
+ * name with nothing left becomes "task".
+ */
+export function safeFileName(name: string): string {
+  const cleaned = name
+    .replace(/[\\/:*?"<>|]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^\.+/, "")
+    .slice(0, 80)
+    .trim();
+  return cleaned === "" ? "task" : cleaned;
+}
+
+/**
  * Write a captured task. Main targets write no lists property;
  * a list target adds its wikilink natively to the frontmatter.
  */
@@ -47,7 +64,7 @@ export async function writeCapture(
     { ...parsed, due },
     target.kind === "list" ? target.name : undefined,
   );
-  const fileName = `${parsed.name}.md`;
+  const fileName = `${safeFileName(parsed.name)}.md`;
   const uri = await createNote(tasksDirUri, fileName, content);
   return { uri, fileName };
 }

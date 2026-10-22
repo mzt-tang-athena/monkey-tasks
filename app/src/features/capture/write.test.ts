@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, type Mock } from "vitest";
-import { captureContent, writeCapture } from "./write";
+import { captureContent, safeFileName, writeCapture } from "./write";
 import { todayIso } from "../../lib/dates";
 import { createNote } from "../vault/notes";
 import type { ParsedCapture } from "./parse";
@@ -80,5 +80,32 @@ describe("writeCapture", () => {
     const content = mockCreate.mock.calls[0][2] as string;
     expect(content).toContain("due: 2026-10-25");
     expect(content).not.toContain("lists:");
+  });
+
+  it("writes a file name a document provider accepts", async () => {
+    const result = await writeCapture(
+      "mock://vault/Tasks",
+      { name: "milk/eggs: buy" },
+      { kind: "main" },
+    );
+    expect(result.fileName).toBe("milk eggs buy.md");
+  });
+});
+
+describe("safeFileName", () => {
+  it("drops the characters a provider refuses", () => {
+    expect(safeFileName("a/b\\c:d*e?f")).toBe("a b c d e f");
+  });
+
+  it("keeps dots inside a name", () => {
+    expect(safeFileName("version 2.0")).toBe("version 2.0");
+  });
+
+  it("falls back to a plain name when nothing is left", () => {
+    expect(safeFileName("///")).toBe("task");
+  });
+
+  it("keeps the name short enough for a file system", () => {
+    expect(safeFileName("x".repeat(200))).toHaveLength(80);
   });
 });
