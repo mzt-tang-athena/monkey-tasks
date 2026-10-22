@@ -1,0 +1,60 @@
+name: android
+
+# Builds a sideloadable APK on a GitHub runner, which already has the
+# Android SDK and NDK. The release build signs with the debug key that
+# prebuild generates, which is enough to install by hand on a phone.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - ".github/workflows/android.yml"
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Check out the contracts submodule
+        env:
+          CONTRACTS_TOKEN: ${{ secrets.CONTRACTS_TOKEN }}
+        run: |
+          if [ -n "$CONTRACTS_TOKEN" ]; then
+            git config --global url."https://x-access-token:${CONTRACTS_TOKEN}@github.com/".insteadOf "git@github.com:"
+          fi
+          git submodule update --init --recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix app
+      - name: Generate the native project
+        working-directory: app
+        run: npx expo prebuild --platform android --no-install
+      - name: Build the release APK
+        working-directory: app/android
+        run: ./gradlew assembleRelease --no-daemon
+      - name: Name the artifact
+        run: |
+          mkdir -p dist
+          cp app/android/app/build/outputs/apk/release/app-release.apk "dist/monkey-tasks-${GITHUB_SHA::7}.apk"
+          ls -lh dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monkey-tasks-apk
+          path: dist/*.apk
+          if-no-files-found: error
