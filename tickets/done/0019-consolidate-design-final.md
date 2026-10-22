@@ -4,7 +4,7 @@ title: Consolidate design-final and fix the device bugs it carried
 created: 2026-10-22
 priority: high
 assignee: omp
-pr:
+pr: 11
 depends: [0009, 0016]
 ---
 
@@ -42,13 +42,28 @@ Known defects at the start of this ticket:
 
 ## Acceptance
 
-- [ ] a clean clone builds and runs: `npm ci` at the root, `npm ci`
+- [x] a clean clone builds and runs: `npm ci` at the root, `npm ci`
       in `app`, `npx expo export --platform android` succeeds
-- [ ] `npx tsc --noEmit` and `npx vitest run` pass in `app`
-- [ ] reminders are scheduled on device for tasks that carry one
-- [ ] ticking a recurring task moves its due date forward
-- [ ] no task is invisible: Main is the catch-all list tab
-- [ ] CI runs typecheck, both test suites, and an Android bundle
+- [x] `npx tsc --noEmit` and `npx vitest run` pass in `app`
+- [x] reminders are scheduled on device for tasks that carry one
+- [x] ticking a recurring task moves its due date forward
+- [x] no task is invisible: Main is the catch-all list tab
+- [x] CI runs typecheck, both test suites, and an Android bundle
 
 ## Outcome
 
+PR 11. `main` fast-forwarded to `design-final`, then the port defects
+were fixed on top. The zod pin is the one that mattered most: a clean
+`npm ci` in `app/` installed zod 3 through an Expo transitive, so
+`@monkey-tasks/schemas` threw `z.object(...).loose is not a function`
+at module load and every screen that imported it failed. The bundle
+now carries zod 4 only.
+
+Verified: `npx tsc --noEmit` clean, 47 app tests and 21 schema tests
+pass, `npx expo export --platform android` produces a 5.5 MB bundle,
+and `npm ci` succeeds at the root and in `app/`.
+
+Left open on purpose: the capture parser still titles a bare date
+phrase ("tomorrow") with the phrase itself, and a recurring task with
+no usable due date completes instead of rolling. Both need a product
+decision, not a mechanical fix.
