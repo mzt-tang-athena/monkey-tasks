@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
   type TextStyle,
 } from "react-native";
-import { useKeyboardState } from "react-native-keyboard-controller";
+import { useKeyboardAnimation } from "react-native-keyboard-controller";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { parseCapture, type ParsedCapture } from "../features/capture/parse";
@@ -55,6 +55,13 @@ const autoSizedInput = Platform.select({
  * focus ring: the elevated panel is the focus, carried by the accent
  * caret and placeholder alone. There is no second capture view; the
  * panel is the whole flow.
+ *
+ * Saving leaves in one motion: the input drops focus and the sheet
+ * starts its exit on the same frame, the dock riding the keyboard's
+ * own height as it goes, and the note is written behind all of it. A
+ * failed write is reported in a toast above the navbar, which keeps
+ * the capture and offers to run it again; the sheet itself never
+ * reopens for an error.
  */
 export function BottomBar({
   targets,
@@ -82,55 +89,69 @@ export function BottomBar({
   const [expand] = React.useState(() => new Animated.Value(0));
   // The navbar's lift: 1 visible, 0 slid away while capture is open.
   const [barLift] = React.useState(() => new Animated.Value(1));
-  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // The row's height, measured where the collapse clip cannot reach it.
   const [rowHeight, setRowHeight] = React.useState(36);
   // The navbar's height: its row plus its own padding. It is computed
   // rather than measured, because the collapse clip clamps the height
   // it would measure, and the bar would lose its bottom padding.
   const barHeight = rowHeight + spacing.s + insets.bottom + 8;
-  // The last failure of a send, shown inside the sheet so a failed
-  // write never looks like a successful one.
-  const [sendError, setSendError] = React.useState<string | null>(null);
+  // The input, so send can drop focus, and with it the keyboard, in
+  // the same frame the sheet starts to close.
+  const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
+  // The capture that failed to write, kept whole so Retry repeats what
+  // the user sent rather than what the input holds by then.
+  const [failure, setFailure] = React.useState<{
+    message: string;
+    capture: ParsedCapture;
+    target: CaptureTarget;
+  } | null>(null);
 
+  // The keyboard's height as an Animated node the platform moves frame
+  // by frame. The dock rides it directly, so the sheet and the
+  // keyboard travel together instead of the sheet waiting for a
+  // reported height. Android runs edge to edge and never resizes the
+  // window for the keyboard, so this node is the only source of it.
+  const { height: keyboardHeight } = useKeyboardAnimation();
   // The dock's distance from the bottom of the window. Closed, it sits
-  // above the navbar; open, just above the keyboard. The keyboard
-  // height is added on top, because Android runs edge to edge and the
-  // window does not shrink when the keyboard opens.
-  const keyboardHeight = useKeyboardState((state) => state.height);
-  const dockBottom = expand.interpolate({
-    inputRange: [0, 1],
-    outputRange: [barHeight + spacing.s + insets.bottom, spacing.s],
-  });
-  // One node for the whole session: the sheet re-renders on every
-  // keystroke, and a fresh Animated node each time would attach and
-  // detach listeners while the user types.
-  const dockOffset = React.useMemo(
-    () => Animated.add(dockBottom, keyboardHeight),
-    [dockBottom, keyboardHeight],
+  // above the navbar; open, just above the keyboard. One node for the
+  // whole session: the sheet re-renders on every keystroke, and a
+  // fresh node each time would attach and detach listeners while the
+  // user types.
+  const dockBottom = React.useMemo(
+    () =>
+      expand.interpolate({
+        inputRange: [0, 1],
+        outputRange: [barHeight + spacing.s + insets.bottom, spacing.s],
+      }),
+    [expand, barHeight, insets.bottom],
   );
 
   React.useEffect(() => {
-    Animated.timing(expand, {
-      toValue: open ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-    Animated.timing(barLift, {
-      toValue: open ? 0 : 1,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [barLift, expand, open]);
-
-  React.useEffect(
-    () => () => {
-      if (closeTimer.current != null) {
-        clearTimeout(closeTimer.current);
+    // One clock for the sheet's travel and the navbar's collapse: both
+    // start and finish on the same frame, so the close reads as a
+    // single motion.
+    const animation = Animated.parallel([
+      Animated.timing(expand, {
+        toValue: open ? 1 : 0,
+        duration: 220,
+        useNativeDriver: false,
+      }),
+      Animated.timing(barLift, {
+        toValue: open ? 0 : 1,
+        duration: 220,
+        useNativeDriver: false,
+      }),
+    ]);
+    animation.start(({ finished }) => {
+      // The sheet leaves the tree when its exit has played, not on a
+      // timer: the closing frame keeps the input's height, and a
+      // reopened sheet cancels the unmount.
+      if (finished && !open) {
+        setMounted(false);
       }
-    },
-    [],
-  );
+    });
+    return () => animation.stop();
+  }, [barLift, expand, open]);
 
   // The target pill follows the screen's list tab. The bar itself
   // never remounts, so switching tabs does not make it jump.
@@ -140,49 +161,88 @@ export function BottomBar({
     setTargetIndex(defaultTargetIndex);
   }
 
-  const parsed = text.trim() ? parseCapture(text) : null;
-  const canSend = text.trim() !== "" && !sending;
+  // The chips follow the text a render behind: parsing is the one
+  // expensive step in this sheet, and typing never waits for it.
+  // Sending parses the raw text once, at the tap.
+  const deferredText = React.useDeferredValue(text);
+  const parsed = React.useMemo(
+    () => (deferredText.trim() ? parseCapture(deferredText) : null),
+    [deferredText],
+  );
+  const canSend = text.trim() !== "";
 
-  const send = async () => {
-    const capture = parsed;
-    if (!capture || sending) {
+  // The write behind a send, run after the sheet is already on its way
+  // out. A failure lands in the toast with the same capture kept for
+  // Retry; the sheet is not reopened for it.
+  const submit = (capture: ParsedCapture, target: CaptureTarget) => {
+    setSending(true);
+    let write: void | Promise<void>;
+    try {
+      write = onSend(capture, target);
+    } catch (error) {
+      setFailure({
+        message: error instanceof Error ? error.message : String(error),
+        capture,
+        target,
+      });
+      setSending(false);
       return;
     }
-    setSending(true);
-    try {
-      await onSend(capture, targets[targetIndex] ?? targets[0]);
-      setSendError(null);
-      setText("");
-      close();
-    } catch (error) {
-      // The draft stays in the input and the sheet stays open on a
-      // failed write, so nothing the user typed is ever lost.
-      setSendError(String(error));
-    } finally {
-      setSending(false);
+    void Promise.resolve(write).then(
+      () => setSending(false),
+      (error: unknown) => {
+        setFailure({
+          message: error instanceof Error ? error.message : String(error),
+          capture,
+          target,
+        });
+        setSending(false);
+      },
+    );
+  };
+
+  const send = () => {
+    // The latch only stops a second tap on the same draft. It never
+    // holds the sheet open and never greys the arrow for the write.
+    if (sending || text.trim() === "") {
+      return;
     }
+    const capture = parseCapture(text);
+    if (capture == null) {
+      return;
+    }
+    const target = targets[targetIndex] ?? targets[0];
+    // The keyboard and the sheet leave in one frame: blur starts the
+    // keyboard down, close starts the sheet down, and the write runs
+    // behind both of them.
+    inputRef.current?.blur();
+    close();
+    submit(capture, target);
   };
 
   const openCapture = () => {
-    if (closeTimer.current != null) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-    setSendError(null);
+    setFailure(null);
+    // The sent draft is cleared here, not on send, so the closing frame
+    // keeps the input's height and the sheet never jumps as it leaves.
+    setText("");
     setMounted(true);
     setOpen(true);
   };
 
+  const retry = () => {
+    if (failure == null || sending) {
+      return;
+    }
+    const { capture, target } = failure;
+    setFailure(null);
+    submit(capture, target);
+  };
+
   const close = () => {
     setOpen(false);
-    closeTimer.current = setTimeout(() => setMounted(false), 220);
   };
 
   const closeNow = () => {
-    if (closeTimer.current != null) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
     setOpen(false);
     setMounted(false);
   };
@@ -216,137 +276,145 @@ export function BottomBar({
 
       {/* The floating sheet, docked where the navbar was. Android runs
           edge to edge, so the window never resizes for the keyboard:
-          the dock has to lift by the height the platform reports, or
-          the sheet stays under the keyboard. The lift rides the same
-          Animated node as the open/close travel, so one view owns the
-          whole position. */}
+          the sheet has to ride the keyboard's own height or it stays
+          under it. That height is a natively driven node, while the
+          open/close travel below is not, and one style cannot mix the
+          two drivers, so the lift is its own view: the outer one
+          carries the keyboard, the inner one the travel. */}
       {mounted ? (
         <Animated.View
           pointerEvents="box-none"
           style={[
-            styles.sheetDock,
-            { bottom: dockOffset },
+            styles.sheetLift,
+            {
+              height: window.height,
+              transform: [{ translateY: keyboardHeight }],
+            },
           ]}
         >
           <Animated.View
-            pointerEvents={open ? "auto" : "none"}
-            style={[
-              styles.sheet,
-              {
-                opacity: expand,
-                transform: [
-                  {
-                    translateY: expand.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [16, 0],
-                    }),
-                  },
-                  {
-                    scale: expand.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.96, 1],
-                    }),
-                  },
-                ],
-              },
-            ]}
+            pointerEvents="box-none"
+            style={[styles.sheetDock, { bottom: dockBottom }]}
           >
-          <TextInput
-            style={[
-              styles.sheetInput,
-              autoSizedInput,
-              { maxHeight: maxInputHeight },
-            ]}
-            placeholder="Add a task"
-            placeholderTextColor={colors.inkFaint}
-            value={text}
-            onChangeText={setText}
-            onSubmitEditing={send}
-            returnKeyType="send"
-            // A multiline input defaults to newline on Android, which
-            // swallows the send action. Submit keeps the sheet able to
-            // grow and still fires onSubmitEditing.
-            submitBehavior="submit"
-            multiline
-            autoFocus
-            selectionColor={colors.accent}
-          />
-          {/* Parse feedback as icon chips, rendered from the parse
-              result object, never from text spans. */}
-          {parsed?.due ? (
-            <View style={styles.chipRow}>
-              <View style={styles.parseChip}>
-                <View style={styles.glyphMiniCalendar}>
-                  <View style={styles.glyphMiniCalendarTop} />
-                  <View style={styles.glyphMiniCalendarDot} />
-                </View>
-                <Text style={styles.parseChipText}>
-                  {dueChipLabel(parsed.due)}
-                </Text>
-              </View>
-              {parsed.reminders != null && parsed.reminders.length > 0 ? (
-                <View style={styles.parseChip}>
-                  <View style={styles.glyphMiniClock}>
-                    <View style={styles.glyphMiniClockHand} />
-                    <View style={styles.glyphMiniClockHandV} />
+            <Animated.View
+              pointerEvents={open ? "auto" : "none"}
+              style={[
+                styles.sheet,
+                {
+                  opacity: expand,
+                  transform: [
+                    {
+                      translateY: expand.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [16, 0],
+                      }),
+                    },
+                    {
+                      scale: expand.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.96, 1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <TextInput
+                ref={inputRef}
+                style={[
+                  styles.sheetInput,
+                  autoSizedInput,
+                  { maxHeight: maxInputHeight },
+                ]}
+                placeholder="Add a task"
+                placeholderTextColor={colors.inkFaint}
+                value={text}
+                onChangeText={setText}
+                onSubmitEditing={send}
+                returnKeyType="send"
+                // A multiline input defaults to newline on Android, which
+                // swallows the send action. Submit keeps the sheet able to
+                // grow and still fires onSubmitEditing.
+                submitBehavior="submit"
+                multiline
+                autoFocus
+                selectionColor={colors.accent}
+              />
+              {/* Parse feedback as icon chips, rendered from the parse
+                  result object, never from text spans. */}
+              {parsed?.due ? (
+                <View style={styles.chipRow}>
+                  <View style={styles.parseChip}>
+                    <View style={styles.glyphMiniCalendar}>
+                      <View style={styles.glyphMiniCalendarTop} />
+                      <View style={styles.glyphMiniCalendarDot} />
+                    </View>
+                    <Text style={styles.parseChipText}>
+                      {dueChipLabel(parsed.due)}
+                    </Text>
                   </View>
-                  <Text style={styles.parseChipText}>
-                    {timeChipLabel(parsed.due)}
-                  </Text>
+                  {parsed.reminders != null && parsed.reminders.length > 0 ? (
+                    <View style={styles.parseChip}>
+                      <View style={styles.glyphMiniClock}>
+                        <View style={styles.glyphMiniClockHand} />
+                        <View style={styles.glyphMiniClockHandV} />
+                      </View>
+                      <Text style={styles.parseChipText}>
+                        {timeChipLabel(parsed.due)}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {parsed.recurrence ? (
+                    <View style={styles.parseChip}>
+                      <Text style={styles.parseGlyph}>{"↻"}</Text>
+                      <Text style={styles.parseChipText}>
+                        {recurrenceKeyword(parsed.recurrence)}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               ) : null}
-              {parsed.recurrence ? (
-                <View style={styles.parseChip}>
-                  <Text style={styles.parseGlyph}>{"↻"}</Text>
-                  <Text style={styles.parseChipText}>
-                    {recurrenceKeyword(parsed.recurrence)}
+              <View style={styles.sheetActions}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.pill,
+                    pressed && styles.pillPressed,
+                  ]}
+                  onPress={() =>
+                    setTargetIndex((index) => (index + 1) % targets.length)
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel="target list"
+                >
+                  <Text style={styles.pillText}>
+                    {targetLabel(targets[targetIndex] ?? targets[0])}
                   </Text>
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-          {/* A failed write says so here, on the sheet, with the
-              draft still in the input. */}
-          {sendError ? (
-            <Text style={styles.sheetError}>{sendError}</Text>
-          ) : null}
-          <View style={styles.sheetActions}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.pill,
-                pressed && styles.pillPressed,
-              ]}
-              onPress={() =>
-                setTargetIndex((index) => (index + 1) % targets.length)
-              }
-              accessibilityRole="button"
-              accessibilityLabel="target list"
-            >
-              <Text style={styles.pillText}>
-                {targetLabel(targets[targetIndex] ?? targets[0])}
-              </Text>
-            </Pressable>
-            <View style={styles.sheetSpacer} />
-            <Pressable
-              style={({ pressed }) => [
-                styles.send,
-                pressed && canSend && styles.sendPressed,
-                !canSend && styles.sendDisabled,
-              ]}
-              onPress={() => void send()}
-              disabled={!canSend}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel="send task"
-              accessibilityState={{ disabled: !canSend, busy: sending }}
-            >
-              <Text
-                style={[styles.sendText, !canSend && styles.sendTextDisabled]}
-              >
-                {"↑"}
-              </Text>
-            </Pressable>
-          </View>
+                </Pressable>
+                <View style={styles.sheetSpacer} />
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.send,
+                    pressed && canSend && styles.sendPressed,
+                    !canSend && styles.sendDisabled,
+                  ]}
+                  onPress={send}
+                  disabled={!canSend}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel="send task"
+                  accessibilityState={{ disabled: !canSend, busy: sending }}
+                >
+                  <Text
+                    style={[
+                      styles.sendText,
+                      !canSend && styles.sendTextDisabled,
+                    ]}
+                  >
+                    {"↑"}
+                  </Text>
+                </Pressable>
+              </View>
+            </Animated.View>
           </Animated.View>
         </Animated.View>
       ) : null}
@@ -416,6 +484,40 @@ export function BottomBar({
         </View>
         </View>
       </Animated.View>
+
+      {/* A failed write reports here, above the navbar, with the same
+          capture kept for Retry. The sheet stays closed: the toast
+          takes its place instead of reopening it, and opening the sheet
+          again clears the toast. */}
+      {failure != null ? (
+        <View style={[styles.toast, { bottom: barHeight + spacing.s }]}>
+          <Text style={styles.toastMessage} numberOfLines={3}>
+            {failure.message}
+          </Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.toastAction,
+              pressed && styles.toastActionPressed,
+            ]}
+            onPress={retry}
+            accessibilityRole="button"
+            accessibilityLabel="retry capture"
+          >
+            <Text style={styles.toastActionText}>Retry</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.toastAction,
+              pressed && styles.toastActionPressed,
+            ]}
+            onPress={() => setFailure(null)}
+            accessibilityRole="button"
+            accessibilityLabel="dismiss capture failure"
+          >
+            <Text style={styles.toastDismissText}>Dismiss</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -644,6 +746,15 @@ const styles = StyleSheet.create({
     left: spacing.m,
     right: spacing.m,
   },
+  // The keyboard lift: the dock rides this view, which carries nothing
+  // but the keyboard's own height, so the two drivers never meet in
+  // one style.
+  sheetLift: {
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   sheet: {
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
@@ -672,13 +783,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: fonts.body,
     color: colors.inkMuted,
-  },
-  // A failed write, in the danger tone, on the sheet itself.
-  sheetError: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: fonts.body,
-    color: colors.danger,
   },
   chipRow: {
     flexDirection: "row",
@@ -807,5 +911,56 @@ const styles = StyleSheet.create({
   },
   sendTextDisabled: {
     color: colors.inkFaint,
+  },
+
+  // The failure toast: a floating surface above the navbar, in the
+  // sheet's own language, carrying the reason and the two actions.
+  toast: {
+    position: "absolute" as const,
+    left: spacing.m,
+    right: spacing.m,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.s,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radiusFloating,
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.s,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  toastMessage: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.danger,
+  },
+  toastAction: {
+    minHeight: 32,
+    justifyContent: "center" as const,
+    paddingHorizontal: spacing.s,
+    borderRadius: radius,
+  },
+  toastActionPressed: {
+    backgroundColor: colors.pressed,
+  },
+  toastActionText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.accent,
+    fontWeight: "600",
+  },
+  toastDismissText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
   },
 });

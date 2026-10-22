@@ -11,8 +11,10 @@ import {
 } from "./model";
 
 function task(name: string, data: TaskFrontmatter | null): TaskItem {
+  const uri = `content://vault/Tasks/${name}.md`;
   return {
-    uri: `content://vault/Tasks/${name}.md`,
+    id: uri,
+    uri,
     fileName: `${name}.md`,
     name,
     text: "",

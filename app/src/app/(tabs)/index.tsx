@@ -229,7 +229,7 @@ export default function ListsScreen() {
                       </Text>
                       {section.items.map((task, index) => (
                         <View
-                          key={task.uri}
+                          key={task.id}
                           style={index > 0 ? styles.groupRow : undefined}
                         >
                           <TaskRow task={task} onToggle={toggle} />
@@ -246,7 +246,7 @@ export default function ListsScreen() {
                   </Text>
                   {groups.completed.map((task, index) => (
                     <View
-                      key={task.uri}
+                      key={task.id}
                       style={index > 0 ? styles.groupRow : undefined}
                     >
                       <TaskRow task={task} onToggle={toggle} />

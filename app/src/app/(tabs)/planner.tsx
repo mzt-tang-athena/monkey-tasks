@@ -225,6 +225,9 @@ export default function PlannerScreen() {
           ? (parseStoredDate(hit.slice(4))?.date ?? null)
           : null;
         if (!isSameDay(dayTarget, hoveredRef.current)) {
+          // The ref leads the state: a drop reads it before React
+          // commits the render that carries the new hover.
+          hoveredRef.current = dayTarget;
           setHoveredDay(dayTarget);
         }
       },
@@ -252,13 +255,20 @@ export default function PlannerScreen() {
   );
 
   // Drag-and-drop writes due dates and times through here: the store
-  // applies locally, then rewrites the note in vault mode.
-  const updateTask = (task: TaskItem, patch: Partial<TaskFrontmatter>) => {
-    void store.writeFields(task, patch);
-  };
+  // applies locally, then rewrites the note in vault mode. The
+  // callback keeps its identity for the store's lifetime: dayApi is
+  // keyed on it, and a fresh identity every render would rebuild the
+  // native pan on every move.
+  const writeFields = store.writeFields;
+  const updateTask = React.useCallback(
+    (task: TaskItem, patch: Partial<TaskFrontmatter>) => {
+      void writeFields(task, patch);
+    },
+    [writeFields],
+  );
   React.useEffect(() => {
     updateTaskRef.current = updateTask;
-  });
+  }, [updateTask]);
 
   const all = tasks ?? [];
   const groups = groupByDue(all, new Date());
@@ -391,9 +401,13 @@ export default function PlannerScreen() {
       }}
       style={[styles.screen, { paddingTop: insets.top }]}
       onPointerDown={onPointerDownScreen}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      {...(pointerPickup
+        ? {
+            onPointerMove,
+            onPointerUp,
+            onPointerCancel: onPointerUp,
+          }
+        : {})}
     >
       {status === "ready" && mode === "day" ? (
         // Day mode leaves the page scroll: it is a fixed split of
@@ -873,7 +887,7 @@ function TaskPills({
     <View style={styles.pillsWrap}>
       {tasks.map((task) => (
         <Pickup
-          key={task.uri}
+          key={task.id}
           task={task}
           kind="pill"
           api={api}
@@ -1035,7 +1049,7 @@ function TaskListSection({
         tasks.length > 0 ? (
           tasks.map((task, index) => (
             <Pickup
-              key={task.uri}
+              key={task.id}
               task={task}
               api={api}
               lifted={lifted ?? null}
@@ -1219,16 +1233,18 @@ function DaySpread({
       // the day when it ends.
       swipe.claim();
       moved.current = false;
-      hourZones.measureAll(() => {
-        const node = paneRef.current as unknown as {
-          measureInWindow?: (cb: (px: number, py: number, pw: number, ph: number) => void) => void;
-        } | null;
-        if (node?.measureInWindow) {
-          node.measureInWindow((px, py, pw, ph) => {
-            hourZones.setClip({ x: px, y: py, w: pw, h: ph });
-          });
-        }
-      });
+      // Measure the pane's clip straight from its node: waiting for
+      // measureAll's completion callback means one zone that never
+      // calls back leaves the hour band unclipped for the whole drag.
+      const pane = paneRef.current as unknown as {
+        measureInWindow?: (cb: (px: number, py: number, pw: number, ph: number) => void) => void;
+      } | null;
+      if (pane?.measureInWindow) {
+        pane.measureInWindow((px, py, pw, ph) => {
+          hourZones.setClip({ x: px, y: py, w: pw, h: ph });
+        });
+      }
+      hourZones.measureAll();
       setDragging({ task, x, y });
     },
     move: (x, y) => {
@@ -1236,6 +1252,9 @@ function DaySpread({
       const hit = hourZones.hit(x, y);
       const hour = hit?.startsWith("hour:") ? Number(hit.slice(5)) : null;
       if (hour !== hoverHourRef.current) {
+        // The ref leads the state, so the drop reads this move's hour
+        // even before React commits the hover.
+        hoverHourRef.current = hour;
         setHoverHour(hour);
       }
     },
@@ -1606,7 +1625,7 @@ function DaySpread({
                   </Text>
                   {overdue.map((task) => (
                     <Pickup
-                      key={task.uri}
+                      key={task.id}
                       task={task}
                       api={dayApi}
                       lifted={lifted ?? null}
@@ -1696,7 +1715,7 @@ function Timeline({
           }
           children.push(
             <HourTask
-              key={task.uri}
+              key={task.id}
               task={task}
               lifted={lifted}
               onToggle={onToggle}
@@ -1859,7 +1878,7 @@ function WeekView({
             {items.length > 0 ? (
               items.map((task) => (
                 <Pickup
-                  key={task.uri}
+                  key={task.id}
                   task={task}
                   api={api}
                   lifted={lifted}
@@ -2091,7 +2110,7 @@ function MonthView({
                 {pickedTasks.length > 0 ? (
                   pickedTasks.map((task) => (
                     <Pickup
-                      key={task.uri}
+                      key={task.id}
                       task={task}
                       api={api}
                       lifted={lifted ?? null}
