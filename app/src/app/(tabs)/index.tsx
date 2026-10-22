@@ -52,9 +52,13 @@ export default function ListsScreen() {
     [],
   );
 
-  const toggle = (task: TaskItem) => {
-    void store.toggle(task);
-  };
+  const storeToggle = store.toggle;
+  const toggle = React.useCallback(
+    (task: TaskItem) => {
+      void storeToggle(task);
+    },
+    [storeToggle],
+  );
 
   // A real reload: the loader can fail when it talks to the vault,
   // so the error state keeps its retry affordance (also wired to

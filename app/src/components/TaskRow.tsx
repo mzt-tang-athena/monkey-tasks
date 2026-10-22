@@ -5,7 +5,7 @@ import { parseStoredDate } from "../lib/dates";
 import { taskIsDone } from "@monkey-tasks/schemas";
 import { colors, fonts, spacing, radii } from "../theme/tokens";
 
-export function TaskRow({
+function TaskRowBase({
   task,
   onToggle,
   /** "under" puts the time below the name; "right" adds a planner gutter. */
@@ -180,3 +180,9 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
 });
+
+/**
+ * Rows are pure over their task. A tick replaces one row, so the rest
+ * must not re-render; the store keeps every other row's identity.
+ */
+export const TaskRow = React.memo(TaskRowBase);

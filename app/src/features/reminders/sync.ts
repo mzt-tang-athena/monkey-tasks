@@ -4,11 +4,44 @@ import { parseStoredDate } from "../../lib/dates";
 import type { TaskItem } from "../tasks/query";
 import {
   cancelAllScheduled,
+  cancelScheduled,
   ensureNotificationPermission,
   scheduleAt,
 } from "./schedule";
 
-type PendingReminder = { when: Date; title: string };
+type PendingReminder = { uri: string; when: Date; title: string };
+
+/**
+ * Which alarm ids belong to which task note, so a tick can cancel that
+ * task's alarms without touching the rest. Rebuilt by `syncReminders`.
+ */
+const alarmIds = new Map<string, string[]>();
+
+/** The future reminders on an open task, in order. */
+function reminderTimes(task: TaskItem | null): number[] {
+  const data = task?.data;
+  // A completed task keeps its reminders in the note but rings no
+  // alarm; an unreadable note has no reminders to trust either.
+  if (data == null || taskIsDone(data)) {
+    return [];
+  }
+  const now = Date.now();
+  return (data.reminders ?? [])
+    .map((value) => parseStoredDate(value))
+    .filter(
+      (parsed): parsed is NonNullable<typeof parsed> =>
+        parsed != null && parsed.date.getTime() > now,
+    )
+    .map((parsed) => parsed.date.getTime())
+    .sort((a, b) => a - b);
+}
+
+function sameTimes(before: number[], after: number[]): boolean {
+  return (
+    before.length === after.length &&
+    before.every((value, index) => value === after[index])
+  );
+}
 
 /**
  * Rebuild the OS alarm list from the task list: one exact alarm per
@@ -27,21 +60,10 @@ export async function syncReminders(
     return { scheduled: 0, skipped: true };
   }
 
-  const now = Date.now();
   const pending: PendingReminder[] = [];
   for (const task of tasks) {
-    const data = task.data;
-    // A completed task keeps its reminders in the note but rings no
-    // alarm; an unreadable note has no reminders to trust either.
-    if (data == null || taskIsDone(data)) {
-      continue;
-    }
-    for (const value of data.reminders ?? []) {
-      const parsed = parseStoredDate(value);
-      if (parsed == null || parsed.date.getTime() <= now) {
-        continue;
-      }
-      pending.push({ when: parsed.date, title: task.name });
+    for (const ms of reminderTimes(task)) {
+      pending.push({ uri: task.uri, when: new Date(ms), title: task.name });
     }
   }
 
@@ -60,12 +82,68 @@ export async function syncReminders(
       }
     }
     await cancelAllScheduled();
+    alarmIds.clear();
     for (const reminder of pending) {
-      await scheduleAt(reminder.when, reminder.title, "Task reminder");
+      const id = await scheduleAt(reminder.when, reminder.title, "Task reminder");
+      const ids = alarmIds.get(reminder.uri) ?? [];
+      ids.push(id);
+      alarmIds.set(reminder.uri, ids);
       scheduled += 1;
     }
     return { scheduled, skipped: pending.length === 0 };
   } catch {
     return { scheduled, skipped: true };
+  }
+}
+
+/**
+ * Move one task's alarms to match its new state. A tick cancels that
+ * task's alarms and schedules its new ones; the rest of the list is
+ * untouched, so a tap no longer rebuilds every alarm in the vault.
+ *
+ * Same contract as `syncReminders`: best effort, never throws.
+ */
+export async function syncTaskReminders(
+  before: TaskItem | null,
+  after: TaskItem | null,
+): Promise<void> {
+  if (Platform.OS === "web") {
+    return;
+  }
+  const uri = after?.uri ?? before?.uri;
+  if (uri == null) {
+    return;
+  }
+  const was = reminderTimes(before);
+  const now = reminderTimes(after);
+  if (sameTimes(was, now)) {
+    return;
+  }
+
+  const stale = alarmIds.get(uri) ?? [];
+  alarmIds.delete(uri);
+  for (const id of stale) {
+    try {
+      await cancelScheduled(id);
+    } catch {
+      // An id the OS already dropped needs no second cancel.
+    }
+  }
+  if (after == null || now.length === 0) {
+    return;
+  }
+
+  try {
+    const granted = await ensureNotificationPermission();
+    if (!granted) {
+      return;
+    }
+    const ids: string[] = [];
+    for (const ms of now) {
+      ids.push(await scheduleAt(new Date(ms), after.name, "Task reminder"));
+    }
+    alarmIds.set(uri, ids);
+  } catch {
+    // Best effort: a missing channel or permission leaves the task open.
   }
 }

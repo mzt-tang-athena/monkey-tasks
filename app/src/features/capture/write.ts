@@ -1,4 +1,5 @@
 import { todayIso } from "../../lib/dates";
+import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { createNote } from "../vault/notes";
 import type { ParsedCapture } from "./parse";
 
@@ -50,6 +51,39 @@ export function safeFileName(name: string): string {
 }
 
 /**
+ * The row a capture makes, before the file exists: the name, the file
+ * name, the note text, and the frontmatter the row renders from. One
+ * source for the optimistic row and the write, so the two cannot drift.
+ */
+export function captureDraft(
+  parsed: ParsedCapture,
+  target: CaptureTarget,
+  preselectedDue?: string,
+): {
+  name: string;
+  fileName: string;
+  content: string;
+  data: TaskFrontmatter;
+} {
+  const due = preselectedDue && !parsed.due ? preselectedDue : parsed.due;
+  const listName = target.kind === "list" ? target.name : undefined;
+  const content = captureContent({ ...parsed, due }, listName);
+  return {
+    name: parsed.name,
+    fileName: `${safeFileName(parsed.name)}.md`,
+    content,
+    data: {
+      kind: "[[tasks]]",
+      created: todayIso(),
+      ...(due ? { due } : {}),
+      ...(listName ? { lists: [`[[${listName}]]`] } : {}),
+      ...(parsed.reminders?.length ? { reminders: parsed.reminders } : {}),
+      ...(parsed.recurrence ? { recurrence: parsed.recurrence } : {}),
+    },
+  };
+}
+
+/**
  * Write a captured task. Main targets write no lists property;
  * a list target adds its wikilink natively to the frontmatter.
  */
@@ -59,12 +93,7 @@ export async function writeCapture(
   target: CaptureTarget,
   preselectedDue?: string,
 ): Promise<{ uri: string; fileName: string }> {
-  const due = preselectedDue && !parsed.due ? preselectedDue : parsed.due;
-  const content = captureContent(
-    { ...parsed, due },
-    target.kind === "list" ? target.name : undefined,
-  );
-  const fileName = `${safeFileName(parsed.name)}.md`;
-  const uri = await createNote(tasksDirUri, fileName, content);
-  return { uri, fileName };
+  const draft = captureDraft(parsed, target, preselectedDue);
+  const uri = await createNote(tasksDirUri, draft.fileName, draft.content);
+  return { uri, fileName: draft.fileName };
 }
