@@ -9,9 +9,8 @@ import {
   View,
   useWindowDimensions,
   type TextStyle,
-  type ViewStyle,
 } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { useKeyboardState } from "react-native-keyboard-controller";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { parseCapture, type ParsedCapture } from "../features/capture/parse";
@@ -94,10 +93,11 @@ export function BottomBar({
   // write never looks like a successful one.
   const [sendError, setSendError] = React.useState<string | null>(null);
 
-  // The dock's distance from the bottom of the window. Open, the
-  // sheet sits just above the keyboard: Android pans the whole window
-  // up for the keyboard, so the window's bottom edge is the
-  // keyboard's top edge. Closed, it sits above the navbar.
+  // The dock's distance from the bottom of the window. Closed, it sits
+  // above the navbar; open, just above the keyboard. The keyboard
+  // height is added on top, because Android runs edge to edge and the
+  // window does not shrink when the keyboard opens.
+  const keyboardHeight = useKeyboardState((state) => state.height);
   const dockBottom = expand.interpolate({
     inputRange: [0, 1],
     outputRange: [barHeight + spacing.s + insets.bottom, spacing.s],
@@ -207,18 +207,19 @@ export function BottomBar({
         </Animated.View>
       ) : null}
 
-      {/* The floating sheet, docked where the navbar was. The
-          keyboard-avoiding view lifts the dock by the real keyboard
-          height, which the platform reports even though the window
-          itself does not resize for the keyboard. */}
+      {/* The floating sheet, docked where the navbar was. Android runs
+          edge to edge, so the window never resizes for the keyboard:
+          the dock has to lift by the height the platform reports, or
+          the sheet stays under the keyboard. The lift rides the same
+          Animated node as the open/close travel, so one view owns the
+          whole position. */}
       {mounted ? (
-        <KeyboardAvoidingView
-          behavior="padding"
+        <Animated.View
           pointerEvents="box-none"
           style={[
             styles.sheetDock,
-            { bottom: dockBottom },
-          ] as unknown as ViewStyle}
+            { bottom: Animated.add(dockBottom, keyboardHeight) },
+          ]}
         >
           <Animated.View
             pointerEvents={open ? "auto" : "none"}
@@ -336,7 +337,7 @@ export function BottomBar({
             </Pressable>
           </View>
           </Animated.View>
-        </KeyboardAvoidingView>
+        </Animated.View>
       ) : null}
 
       {/* The navbar: slides away while capture is open, and returns
