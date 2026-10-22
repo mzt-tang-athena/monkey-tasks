@@ -45,6 +45,23 @@ Run the schema tests from `contracts/packages/schemas`:
 npm test
 ```
 
+## Install it on a phone
+
+The `android` workflow builds a sideloadable APK on a GitHub runner,
+because a phone needs a native build and the runner already has the
+Android SDK. Run it from Actions, or from the CLI:
+
+```bash
+gh workflow run android
+gh run watch
+gh run download --name monkey-tasks-apk
+```
+
+The APK signs with the debug key that `expo prebuild` generates, so
+Android asks once for permission to install from the browser or file
+manager. The build is a release: JavaScript rides inside the APK, so the app
+runs without Metro.
+
 ## Plan
 
 The app is Expo SDK 58 with React Native 0.88 and expo-router, in

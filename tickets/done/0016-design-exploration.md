@@ -40,7 +40,11 @@ iterated through 38 rounds on `design-final` and consolidated onto
 `main` on 2026-10-22. The locked theme is `app/src/theme/tokens.ts`
 (colors, fonts, spacing, radii, measures), and the screens consume it.
 
-The design branches stay as history: `design-a-todoist`,
-`design-b-notebook`, `design-c-darkstudio`, `design-d-budgetgreen`,
-`design-e-todoistwarm`, `design-f-quietcustom`. Screenshots moved out
-of the repo on 2026-10-22 (`.openchamber/` is ignored).
+The design branches are archived as annotated tags, then deleted:
+`archive/design-a-todoist`, `archive/design-b-notebook`,
+`archive/design-c-darkstudio`, `archive/design-d-budgetgreen`,
+`archive/design-e-todoistwarm`, `archive/design-f-quietcustom`,
+`archive/design-f13-capture`, `archive/design-final`. A tag keeps the
+commits reachable without leaving a branch to maintain, and it stays
+out of the pull request list. Screenshots moved out of the repo on
+2026-10-22 (`.openchamber/` is ignored).
