@@ -7,6 +7,7 @@ import {
   exactAlarmState,
   scheduleAt,
 } from "../features/reminders/schedule";
+import { insightLines, useInsights } from "../lib/insights";
 import { THEMES, colors, radius, setDevTheme, type ThemeName } from "../theme/tokens";
 
 /**
@@ -19,6 +20,7 @@ export default function DevScreen() {
     { id: string; title?: string; when?: number }[]
   >([]);
   const [message, setMessage] = React.useState("");
+  const insights = useInsights();
 
   const refresh = React.useCallback(async () => {
     setAlarm((await exactAlarmState()) ? "exact alarms granted" : "exact alarms DENIED");
@@ -69,6 +71,13 @@ export default function DevScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
+      <Text style={styles.label}>layout</Text>
+      {insightLines(insights).map((line) => (
+        <Text key={line} style={styles.line}>
+          {line}
+        </Text>
+      ))}
+      <Text style={styles.label}>alarms</Text>
       <Text style={styles.line}>{alarm}</Text>
       <Text style={styles.line}>{scheduled.length} notification(s) scheduled</Text>
       {scheduled.map((item) => (
@@ -125,6 +134,15 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     gap: 8,
+  },
+  label: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: "monospace",
+    color: colors.inkFaint,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    marginTop: 8,
   },
   line: {
     fontSize: 14,

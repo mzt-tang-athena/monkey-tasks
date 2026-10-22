@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Platform, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { groupByDue, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
@@ -257,6 +258,7 @@ export default function ListsScreen() {
                 label: "Delete all completed tasks",
                 danger: true,
               },
+              { key: "diagnostics", label: "Diagnostics", danger: false },
             ] as const
           ).map((action) => (
             <Pressable
@@ -265,8 +267,14 @@ export default function ListsScreen() {
                 styles.menuItem,
                 pressed && styles.menuItemPressed,
               ]}
-              // Visual only for this round: a tap just closes.
-              onPress={closeMenu}
+              // The list actions are visual only this round: a tap
+              // just closes. Diagnostics opens the dev screen.
+              onPress={() => {
+                closeMenu();
+                if (action.key === "diagnostics") {
+                  router.push("/dev");
+                }
+              }}
               accessibilityRole="button"
               accessibilityLabel={action.label}
             >
@@ -283,13 +291,12 @@ export default function ListsScreen() {
         </View>
       ) : null}
 
-      {/* One bottom bar: nav left, capture button right. Keyed by the
-          active list tab: the bar initializes its target pill from
-          defaultTargetIndex only once at mount, so a remount is what
-          re-reads the current tab when it changes. Focus preselects
-          Focus; Main remains the default when no list tab owns it. */}
+      {/* One bottom bar: nav left, capture button right. The target
+          pill follows the active list tab: the bar re-reads the
+          default target when the tab changes, so the bar itself never
+          remounts and never jumps. Focus preselects Focus; Main
+          remains the default when no list tab owns it. */}
       <BottomBar
-        key={tab}
         targets={TARGETS}
         defaultTargetIndex={tab === "Focus" ? 0 : 1}
         onSend={(parsed, target) => store.capture(parsed, target)}

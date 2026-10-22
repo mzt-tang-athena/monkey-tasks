@@ -147,6 +147,14 @@ export function BottomBar({
     [],
   );
 
+  // The target pill follows the screen's list tab. The bar itself
+  // never remounts, so switching tabs does not make it jump.
+  const [lastDefault, setLastDefault] = React.useState(defaultTargetIndex);
+  if (lastDefault !== defaultTargetIndex) {
+    setLastDefault(defaultTargetIndex);
+    setTargetIndex(defaultTargetIndex);
+  }
+
   const parsed = text.trim() ? parseCapture(text) : null;
   const canSend = text.trim() !== "" && !sending;
 
