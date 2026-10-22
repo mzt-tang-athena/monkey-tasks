@@ -8,7 +8,7 @@ import type { CaptureTarget } from "../../features/capture/write";
 import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
-import { makeSwipeController, swipeProps, touchSwipeProps } from "../../lib/swipe";
+import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { DropZoneMap } from "../../lib/dropzone";
 import { useTasks } from "../../store/tasks";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
@@ -1181,6 +1181,7 @@ function DaySpread({
     height: number;
   } | null>(null);
   const [grabHot, setGrabHot] = React.useState(false);
+  const [grabbing, setGrabbing] = React.useState(false);
   const moved = React.useRef(false);
   const suppressClick = React.useRef(false);
 
@@ -1328,6 +1329,7 @@ function DaySpread({
         .onStart((e) => {
           // Resizing the split is not a swipe.
           swipe.claim();
+          setGrabbing(true);
           grabStart.current = {
             y: e.absoluteY,
             height: timelineHeightRef.current,
@@ -1351,6 +1353,7 @@ function DaySpread({
         })
         .onFinalize(() => {
           grabStart.current = null;
+          setGrabbing(false);
         }),
     [maxTimeline, swipe],
   );
@@ -1492,24 +1495,28 @@ function DaySpread({
         setRootHeight(e.nativeEvent.layout.height);
         setRootX(e.nativeEvent.layout.x);
       }}
-      onPointerDown={(e) => {
-        // A fresh gesture clears drag-end suppression, like the
-        // screen root does for its own drops.
-        suppressClick.current = false;
-        swipe.down(
-          e.nativeEvent.pageX,
-          e.nativeEvent.pageY,
-          taskTouched.current,
-        );
-        taskTouched.current = false;
-      }}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      // Android gets no pointer events, so the same tripwire reads
-      // touch events there. Touch events reach the parent while a
-      // child pane scrolls, which a gesture handler would not.
-      {...(pointerPickup ? {} : touchSwipeProps(swipe))}
+      {...(pointerPickup
+        ? {
+            onPointerDown: (e: RNPointerEvent) => {
+              // A fresh gesture clears drag-end suppression, like the
+              // screen root does for its own drops.
+              suppressClick.current = false;
+              swipe.down(
+                e.nativeEvent.pageX,
+                e.nativeEvent.pageY,
+                taskTouched.current,
+              );
+              taskTouched.current = false;
+            },
+            onPointerMove,
+            onPointerUp,
+            onPointerCancel: onPointerUp,
+          }
+        : // Android gets no pointer events, so the same tripwire reads
+          // the responder system there. A responder on the parent of a
+          // scroller still sees the moves, which a gesture handler
+          // would not.
+          swipeProps(swipe))}
     >
       <PlannerHeader
         mode="day"
@@ -1568,34 +1575,41 @@ function DaySpread({
           ]}
         />
         {(() => {
+          // A plain View: a Pressable takes the responder and the
+          // native pan then never sees the drag.
           const grabber = (
-            <Pressable
-              style={({ pressed }) => [
+            <View
+              style={[
                 styles.grabberHit,
-                (grabHot || pressed) && styles.grabberHitHot,
+                (grabHot || grabbing || resizing != null) &&
+                  styles.grabberHitHot,
               ]}
-              onHoverIn={() => setGrabHot(true)}
-              onHoverOut={() => setGrabHot(false)}
-              onPointerDown={(e) => {
-                // The grabber claims the gesture too: resizing must
-                // never fire a day swipe.
-                taskTouched.current = true;
-                setResizing({
-                  y: e.nativeEvent.pageY,
-                  height: timelineHeight,
-                });
-              }}
               accessibilityRole="button"
               accessibilityLabel="resize timeline"
+              {...(pointerPickup
+                ? {
+                    onHoverIn: () => setGrabHot(true),
+                    onHoverOut: () => setGrabHot(false),
+                    onPointerDown: (e: RNPointerEvent) => {
+                      // The grabber claims the gesture too: resizing
+                      // must never fire a day swipe.
+                      taskTouched.current = true;
+                      setResizing({
+                        y: e.nativeEvent.pageY,
+                        height: timelineHeight,
+                      });
+                    },
+                  }
+                : {})}
             >
               <View
                 style={[
                   styles.grabberBar,
-                  (grabHot || resizing != null || dragging != null) &&
+                  (grabHot || grabbing || resizing != null || dragging != null) &&
                     styles.grabberBarActive,
                 ]}
               />
-            </Pressable>
+            </View>
           );
           if (pointerPickup) {
             return grabber;

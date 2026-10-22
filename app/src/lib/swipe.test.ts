@@ -4,9 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 // month planner. It used to read pointer events only, which Android
 // never delivers, so every swipe was dead on the phone.
 
-vi.mock("react-native", () => ({ Platform: { OS: "android" } }));
+vi.mock("react-native", () => ({
+  Platform: { OS: "android" },
+  PanResponder: {
+    create: (config: unknown) => ({ panHandlers: { config } }),
+  },
+}));
 
-import { makeSwipeController, touchSwipeProps } from "./swipe";
+import { makeSwipeController, swipeProps } from "./swipe";
 
 function moves() {
   const fired: ("left" | "right")[] = [];
@@ -69,16 +74,41 @@ describe("makeSwipeController", () => {
   });
 });
 
-describe("touchSwipeProps", () => {
-  it("drives the tripwire from native touch events", () => {
+describe("swipeProps", () => {
+  type Config = {
+    onStartShouldSetPanResponderCapture: (e: unknown) => boolean;
+    onMoveShouldSetPanResponderCapture: (
+      e: unknown,
+      g: { dx: number; dy: number },
+    ) => boolean;
+    onPanResponderMove: (e: unknown) => void;
+    onPanResponderRelease: () => void;
+  };
+  const at = (pageX: number, pageY: number) => ({
+    nativeEvent: { pageX, pageY },
+  });
+  const config = (controller: ReturnType<typeof makeSwipeController>) =>
+    (swipeProps(controller) as unknown as { config: Config }).config;
+
+  it("takes the gesture only for a horizontal move", () => {
+    const { controller } = moves();
+    const pan = config(controller);
+    expect(pan.onMoveShouldSetPanResponderCapture(at(0, 0), { dx: 30, dy: 4 })).toBe(true);
+    expect(pan.onMoveShouldSetPanResponderCapture(at(0, 0), { dx: 6, dy: 2 })).toBe(false);
+    expect(pan.onMoveShouldSetPanResponderCapture(at(0, 0), { dx: 30, dy: 60 })).toBe(false);
+  });
+
+  it("drives the tripwire from the responder events", () => {
     const { fired, controller } = moves();
-    const props = touchSwipeProps(controller);
-    const at = (pageX: number, pageY: number) => ({
-      nativeEvent: { pageX, pageY },
-    });
-    props.onTouchStart(at(300, 400));
-    props.onTouchMove(at(190, 400));
-    props.onTouchEnd();
+    const pan = config(controller);
+    pan.onStartShouldSetPanResponderCapture(at(300, 400));
+    pan.onPanResponderMove(at(190, 400));
+    pan.onPanResponderRelease();
     expect(fired).toEqual(["left"]);
+  });
+
+  it("builds the handlers once per controller", () => {
+    const { controller } = moves();
+    expect(swipeProps(controller)).toBe(swipeProps(controller));
   });
 });

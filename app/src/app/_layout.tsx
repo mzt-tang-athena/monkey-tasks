@@ -4,6 +4,7 @@ import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { TasksProvider } from "../store/tasks";
+import { installErrorAlert } from "../lib/errors";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -13,6 +14,10 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+// Before anything renders: a release build closes on the first
+// uncaught error, and a closed app cannot report what broke.
+installErrorAlert();
 
 export default function RootLayout() {
   return (

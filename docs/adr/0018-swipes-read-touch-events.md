@@ -49,3 +49,28 @@ same tree.
 **A pager component.** `react-native-pager-view` would give native page
 transitions, but the list is one FlatList, not pages, and the planner
 panes are not pages either.
+
+## Amendment 2026-10-22: the responder system, not touch props
+
+The first version read `onTouchStart`, `onTouchMove`, and `onTouchEnd`.
+On the device the day and month swipes crashed the app. The touch props
+are part of the View contract but not a path this app should lean on
+over a scroller.
+
+We now use `PanResponder`. It is the same tripwire, fed by the responder
+system instead of raw touch props. The capture phase is what takes the
+touch away from the scroller: `onMoveShouldSetPanResponderCapture`
+returns true only for travel that is 12 points long and 1.6 times more
+horizontal than vertical. The start point is recorded in
+`onStartShouldSetPanResponderCapture`, which returns false so the touch
+keeps flowing until the swipe is clear.
+
+The grabber changed with it. It was a `Pressable` with pointer handlers
+inside a gesture detector. A `Pressable` takes the responder, so the
+native pan never saw the drag, and the pointer handlers never fired on
+Android. It is a plain `View` now: the pan resizes, the pointer path
+reserves the same gesture on web.
+
+The root layout installs a global error handler. A release build closes
+on the first uncaught error, and a closed app reports nothing. The
+handler shows the message and the first frames of the stack instead.
