@@ -42,7 +42,15 @@ describe("parseCapture", () => {
   it("parses every-phrases with intervals", () => {
     const result = parseCapture("water the plants every other day", now);
     expect(result?.name).toBe("water the plants");
-    expect(result?.recurrence).toBe("FREQ=DAYS;INTERVAL=2");
+    expect(result?.recurrence).toBe("FREQ=DAILY;INTERVAL=2");
+  });
+
+  it("parses bare every-phrases into RFC frequencies", () => {
+    expect(parseCapture("call mum every week", now)?.recurrence).toBe("FREQ=WEEKLY");
+    expect(parseCapture("water the plants every other week", now)?.recurrence).toBe(
+      "FREQ=WEEKLY;INTERVAL=2",
+    );
+    expect(parseCapture("bath the dog every month", now)?.recurrence).toBe("FREQ=MONTHLY");
   });
 
   it("parses every weekday", () => {

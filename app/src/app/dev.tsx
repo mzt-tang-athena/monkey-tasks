@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { getSavedVaultUri, requestVaultAccess } from "../features/vault/grant";
 import { listDirectory } from "../features/vault/scan";
 import {
@@ -7,6 +7,8 @@ import {
   exactAlarmState,
   scheduleAt,
 } from "../features/reminders/schedule";
+import { insightLines, useInsights } from "../lib/insights";
+import { THEMES, colors, radius, setDevTheme, type ThemeName } from "../theme/tokens";
 
 /**
  * Dev-only diagnostics from the spike: alarm state, scheduled
@@ -18,6 +20,7 @@ export default function DevScreen() {
     { id: string; title?: string; when?: number }[]
   >([]);
   const [message, setMessage] = React.useState("");
+  const insights = useInsights();
 
   const refresh = React.useCallback(async () => {
     setAlarm((await exactAlarmState()) ? "exact alarms granted" : "exact alarms DENIED");
@@ -68,6 +71,13 @@ export default function DevScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
+      <Text style={styles.label}>layout</Text>
+      {insightLines(insights).map((line) => (
+        <Text key={line} style={styles.line}>
+          {line}
+        </Text>
+      ))}
+      <Text style={styles.label}>alarms</Text>
       <Text style={styles.line}>{alarm}</Text>
       <Text style={styles.line}>{scheduled.length} notification(s) scheduled</Text>
       {scheduled.map((item) => (
@@ -95,7 +105,28 @@ export default function DevScreen() {
         <Text style={styles.buttonText}>Grant vault folder</Text>
       </Pressable>
       <Text style={styles.line}>{message}</Text>
+      <ThemeSwitcher />
     </ScrollView>
+  );
+}
+
+/** Dev-only theme switcher: three swatches, one per named theme. */
+function ThemeSwitcher() {
+  return (
+    <View style={styles.switcher}>
+      <Text style={styles.switcherLabel}>theme (reload applies)</Text>
+      <View style={styles.swatchRow}>
+        {(Object.keys(THEMES) as ThemeName[]).map((name) => (
+          <Pressable
+            key={name}
+            style={[styles.swatch, { backgroundColor: THEMES[name].accent }]}
+            onPress={() => setDevTheme(name)}
+            accessibilityRole="button"
+            accessibilityLabel={`theme ${name}`}
+          />
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -104,26 +135,56 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
   },
+  label: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: "monospace",
+    color: colors.inkFaint,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    marginTop: 8,
+  },
   line: {
     fontSize: 14,
     fontFamily: "monospace",
+    color: colors.ink,
   },
   sub: {
     fontSize: 12,
     fontFamily: "monospace",
-    color: "#555555",
+    color: colors.inkMuted,
     marginLeft: 12,
   },
   button: {
     alignSelf: "flex-start",
-    backgroundColor: "#1d3fbf",
-    borderRadius: 8,
+    backgroundColor: colors.accent,
+    borderRadius: radius,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 4,
   },
   buttonText: {
-    color: "#ffffff",
+    color: colors.onAccent,
     fontWeight: "600",
+  },
+  switcher: {
+    marginTop: 16,
+    gap: 8,
+  },
+  switcherLabel: {
+    fontSize: 12,
+    fontFamily: "monospace",
+    color: colors.inkMuted,
+  },
+  swatchRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  swatch: {
+    width: 32,
+    height: 32,
+    borderRadius: radius,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
   },
 });

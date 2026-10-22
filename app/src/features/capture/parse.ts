@@ -17,8 +17,10 @@ export type ParsedCapture = {
   reminders?: string[];
   /** One RRULE string, for example FREQ=MONTHLY. */
   recurrence?: string;
-  /** Character spans of matched text, for the highlighting preview. */
-  matches?: { kind: "date" | "recurrence"; text: string; index: number }[];
+  /** The matched phrases, so callers can show what was consumed.
+      Spans were dropped: stripping and squashing between matches
+      made input indices drift, and no caller used them. */
+  matches?: { kind: "date" | "recurrence"; text: string }[];
 };
 
 const RECURRENCE_WORDS: Record<string, string> = {
@@ -37,6 +39,13 @@ const WEEKDAY_CODES: Record<string, string> = {
   friday: "FR",
   saturday: "SA",
   sunday: "SU",
+};
+
+const FREQ_BY_UNIT: Record<string, string> = {
+  day: "DAILY",
+  week: "WEEKLY",
+  month: "MONTHLY",
+  year: "YEARLY",
 };
 
 const RECURRENCE_PATTERNS: {
@@ -58,11 +67,11 @@ const RECURRENCE_PATTERNS: {
   },
   {
     pattern: /\bevery\s+other\s+(day|week|month|year)\b/i,
-    rule: (m) => `FREQ=${m[1].toUpperCase()}S;INTERVAL=2`,
+    rule: (m) => `FREQ=${FREQ_BY_UNIT[m[1]]};INTERVAL=2`,
   },
   {
     pattern: /\b(?:every|each)\s+(day|week|month|year)\b/i,
-    rule: (m) => `FREQ=${m[1].toUpperCase()}S`,
+    rule: (m) => `FREQ=${FREQ_BY_UNIT[m[1]]}`,
   },
 ];
 
@@ -86,21 +95,21 @@ export function parseCapture(
   }
   let text = original;
   let recurrence: string | undefined;
-  const matches: { kind: "date" | "recurrence"; text: string; index: number }[] = [];
+  const matches: { "kind": "date" | "recurrence"; "text": string }[] = [];
 
   const repeatMatch = /\b(?:repeats?|recurs?|recurring)\s+(daily|weekly|monthly|yearly|annually)\b/i.exec(
     text,
   );
   if (repeatMatch) {
     recurrence = RECURRENCE_WORDS[repeatMatch[1].toLowerCase()];
-    matches.push({ kind: "recurrence", text: repeatMatch[0], index: repeatMatch.index });
+    matches.push({ kind: "recurrence", text: repeatMatch[0] });
     text = squash(strip(text, repeatMatch.index, repeatMatch[0].length));
   } else {
     for (const entry of RECURRENCE_PATTERNS) {
       const match = entry.pattern.exec(text);
       if (match) {
         recurrence = entry.rule(match);
-        matches.push({ kind: "recurrence", text: match[0], index: match.index });
+        matches.push({ kind: "recurrence", text: match[0] });
         text = squash(strip(text, match.index, match[0].length));
         break;
       }
@@ -117,7 +126,7 @@ export function parseCapture(
     if (hasTime) {
       reminders = [due];
     }
-    matches.push({ kind: "date", text: first.text, index: first.index });
+    matches.push({ kind: "date", text: first.text });
     text = squash(strip(text, first.index, first.text.length));
   }
 
@@ -132,6 +141,8 @@ export function parseCapture(
   if (recurrence) {
     result.recurrence = recurrence;
   }
-  result.matches = matches.sort((a, b) => a.index - b.index);
+  result.matches = matches.sort(
+    (a, b) => (a.kind === b.kind ? a.text.localeCompare(b.text) : 0),
+  );
   return result;
 }

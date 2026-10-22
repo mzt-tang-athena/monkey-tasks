@@ -28,8 +28,8 @@ export function useVault() {
     }
     try {
       const tasksFolder = await ensureSubfolder(rootUri, "Tasks");
-      setTasksDir(tasksFolder);
       const loaded = await loadTasks(tasksFolder);
+      setTasksDir(tasksFolder);
       setTasks(loaded);
       setStatus(`${loaded.length} tasks`);
     } catch (error) {

@@ -19,7 +19,9 @@ export type TaskItem = {
 export async function loadTasks(tasksDirUri: string): Promise<TaskItem[]> {
   const entries: Entry[] = await listDirectory(tasksDirUri);
   const files = entries.filter((entry) => entry.isFile && entry.name.endsWith(".md"));
-  const items = await Promise.all(
+  // One unreadable entry (a folder named "Notes.md", a revoked grant)
+  // must not blank the whole list, so failures are dropped per file.
+  const settled = await Promise.allSettled(
     files.map(async (file): Promise<TaskItem> => {
       const text = await readNote(file.uri);
       const result = validateNote(file.name, text, taskFrontmatter);
@@ -33,12 +35,9 @@ export async function loadTasks(tasksDirUri: string): Promise<TaskItem[]> {
       };
     }),
   );
-  return items;
-}
-
-/** A task with no lists property is on Main. */
-export function onMain(items: TaskItem[]): TaskItem[] {
-  return items.filter((item) => item.data == null || !item.data.lists?.length);
+  return settled.flatMap((outcome) =>
+    outcome.status === "fulfilled" ? [outcome.value] : [],
+  );
 }
 
 export function inList(items: TaskItem[], listName: string): TaskItem[] {
@@ -98,13 +97,13 @@ export function groupByDue(items: TaskItem[], now: Date): DateGroups {
     }
   }
   const title = (a: TaskItem, b: TaskItem) => a.name.localeCompare(b.name);
-  const byTime = (a: TaskItem, b: TaskItem) => {
-    const ta = a.data?.due ? parseStoredDate(a.data.due) : null;
-    const tb = b.data?.due ? parseStoredDate(b.data.due) : null;
-    const at = ta ? ta.date.getTime() : 0;
-    const bt = tb ? tb.date.getTime() : 0;
-    return at - bt || title(a, b);
-  };
+  // Decorate-time parse: sorting re-parses nothing per comparison.
+  const stamp = (a: TaskItem): number =>
+    a.data?.due ? (parseStoredDate(a.data.due)?.date.getTime() ?? 0) : 0;
+  const sortable = [...groups.overdue, ...groups.today, ...groups.undated];
+  const stamps = new Map(sortable.map((item) => [item.uri, stamp(item)]));
+  const byTime = (a: TaskItem, b: TaskItem) =>
+    (stamps.get(a.uri) ?? 0) - (stamps.get(b.uri) ?? 0) || title(a, b);
   groups.overdue.sort(byTime);
   groups.today.sort(byTime);
   groups.undated.sort(title);

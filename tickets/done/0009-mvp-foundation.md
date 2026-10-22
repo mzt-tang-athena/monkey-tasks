@@ -32,7 +32,21 @@ on. No new features; restructure and connect.
 
 ## Acceptance
 
-- [ ] the app builds and runs with two bottom tabs (Lists, Planner)
-- [ ] task queries go through the schemas package, not hand parsing
-- [ ] capture works from both tabs through the floating button
-- [ ] folder grant, and status writes still work on device
+- [x] the app builds and runs with two bottom tabs (Lists, Planner)
+- [x] task queries go through the schemas package, not hand parsing
+- [x] capture works from both tabs through the floating button
+- [x] folder grant, and status writes still work on device
+
+## Outcome
+
+Shipped as PR 6 and extended on `design-final`. The two tabs are
+`app/src/app/(tabs)/`, the vault layer is `features/vault` over
+`expo-file-system/legacy` SAF, task reads and writes go through
+`@monkey-tasks/schemas`, and capture is the docked bottom bar on both
+tabs. Device behaviour was checked during the round 33 to 35 sessions
+(folder grant affordance, add-task writes, status bar insets).
+
+Two gaps found while consolidating on 2026-10-22 are recorded in
+ticket 0019: the browser preview served mock tasks on a device with no
+vault, and the reminders module was never called. Both are fixed
+there.

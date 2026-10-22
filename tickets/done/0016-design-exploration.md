@@ -28,6 +28,19 @@ Constraints all variants share:
 
 ## Acceptance
 
-- [ ] three variants rendered and screenshotted
-- [ ] user picked a direction and gave combination notes
-- [ ] the locked theme module lands as the ticket's PR
+- [x] three variants rendered and screenshotted
+- [x] user picked a direction and gave combination notes
+- [x] the locked theme module lands as the ticket's PR
+
+## Outcome
+
+Six variants were built (A to F), not three, plus a round of
+combinations. The user picked the quiet custom direction; it was
+iterated through 38 rounds on `design-final` and consolidated onto
+`main` on 2026-10-22. The locked theme is `app/src/theme/tokens.ts`
+(colors, fonts, spacing, radii, measures), and the screens consume it.
+
+The design branches stay as history: `design-a-todoist`,
+`design-b-notebook`, `design-c-darkstudio`, `design-d-budgetgreen`,
+`design-e-todoistwarm`, `design-f-quietcustom`. Screenshots moved out
+of the repo on 2026-10-22 (`.openchamber/` is ignored).
