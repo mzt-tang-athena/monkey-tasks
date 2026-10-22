@@ -31,3 +31,8 @@ The re-read moved into the bar, and the key is gone. The bar now reads the
 default target when that prop changes. The key made the whole bar remount
 on a tab switch, and the bar jumped for a frame while it came back. The
 re-read is a small state update instead, so the bar stays where it is.
+
+## Amendment, 2026-10-22 (capture target)
+
+The Focus capture target now comes from the active list tab. Main is the
+catch-all (ADR 0015).

@@ -29,3 +29,9 @@ The preview and the APK must feel the same; the port at APK time moves the
 same gesture rules to the library's API. Nothing in the locked design
 changes.
 
+## Amendment, 2026-10-22
+
+The root layout was missing `GestureHandlerRootView`, so `GestureDetector`
+never received touches on Android. The root layout now wraps the app in
+`GestureHandlerRootView` with `flex: 1`.
+

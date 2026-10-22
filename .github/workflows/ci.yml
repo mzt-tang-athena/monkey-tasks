@@ -20,3 +20,37 @@ jobs:
           find . -maxdepth 1 -name '*.yml' | while read f; do grep -q extends "$f" || rm "$f"; done
       - name: Docs prose lint
         run: vale README.md docs/adr/*.md tickets/README.md
+
+  code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The schemas package lives in the contracts submodule; root and app installs depend on it.
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
+      # Root install brings in the file: schemas dependency (and its vitest) used by the schemas tests.
+      - name: Install root dependencies
+        run: npm ci
+      - name: Install app dependencies
+        run: npm ci
+        working-directory: app
+      - name: Typecheck app
+        run: npx tsc --noEmit
+        working-directory: app
+      - name: Test app
+        run: npx vitest run
+        working-directory: app
+      - name: Test schemas
+        run: npm test
+        working-directory: contracts/packages/schemas
+      # Runs last so type and test failures stop the job before the slower bundle build.
+      - name: Bundle app with Metro
+        run: npx expo export --platform android --output-dir /tmp/bundle
+        working-directory: app

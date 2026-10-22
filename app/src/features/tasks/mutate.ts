@@ -1,5 +1,6 @@
 import { updateProperty, writeNote } from "../vault/notes";
 import { todayIso } from "../../lib/dates";
+import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "./query";
 
 /**
@@ -17,13 +18,24 @@ export async function setCompleted(
   return text;
 }
 
-/** Write any single frontmatter property on a task note. */
-export async function setProperty(
+/**
+ * Write several frontmatter properties in one pass. Each key edits the
+ * text the previous key produced, and the file is written once, so a
+ * multi-key patch cannot drop the earlier edits.
+ */
+export async function setProperties(
   task: TaskItem,
-  key: string,
-  value: string | string[] | null,
+  patch: Partial<TaskFrontmatter>,
 ): Promise<string> {
-  const text = updateProperty(task.text, key, value);
-  await writeNote(task.uri, text);
+  let text = task.text;
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) {
+      continue;
+    }
+    text = updateProperty(text, key, value as string | string[] | null);
+  }
+  if (text !== task.text) {
+    await writeNote(task.uri, text);
+  }
   return text;
 }

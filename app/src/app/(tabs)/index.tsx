@@ -3,20 +3,17 @@ import { Platform, FlatList, Pressable, StyleSheet, Text, View } from "react-nat
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { groupByDue, type TaskItem } from "../../features/tasks/query";
+import { groupByDue, inList, type TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { BottomBar } from "../../components/BottomBar";
-import { inMockFocus, inMockMain } from "../../lib/mock";
 import { useTasks } from "../../store/tasks";
 import { dayLabel } from "../../lib/dates";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
 
 /**
- * Variant D Lists tab, mock-driven for the design exploration.
- * The list tab bar sits at the very top, the brain breathes between
- * plain group headers, and capture is the inline composer docked
- * above the bottom bar.
+ * Lists tab: the Focus list and a catch-all Main list, with capture
+ * docked above the bottom bar.
  */
 type ListTab = "Focus" | "Main";
 
@@ -305,9 +302,19 @@ export default function ListsScreen() {
   );
 }
 
+/**
+ * Focus shows the Focus list. Main is the catch-all: every task that is
+ * not on Focus, so a task tagged with a list that has no tab yet (Work,
+ * Errands) still appears instead of vanishing.
+ */
 function inTabTasks(tasks: TaskItem[] | null, tab: ListTab): TaskItem[] {
   const all = tasks ?? [];
-  return tab === "Focus" ? inMockFocus(all) : inMockMain(all);
+  const focus = inList(all, "Focus");
+  if (tab === "Focus") {
+    return focus;
+  }
+  const onFocus = new Set(focus.map((item) => item.uri));
+  return all.filter((item) => !onFocus.has(item.uri));
 }
 
 /** A quiet 36pt glyph button: hover, pressed, and active states. */

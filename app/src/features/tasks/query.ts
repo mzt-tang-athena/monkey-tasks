@@ -19,7 +19,9 @@ export type TaskItem = {
 export async function loadTasks(tasksDirUri: string): Promise<TaskItem[]> {
   const entries: Entry[] = await listDirectory(tasksDirUri);
   const files = entries.filter((entry) => entry.isFile && entry.name.endsWith(".md"));
-  const items = await Promise.all(
+  // One unreadable entry (a folder named "Notes.md", a revoked grant)
+  // must not blank the whole list, so failures are dropped per file.
+  const settled = await Promise.allSettled(
     files.map(async (file): Promise<TaskItem> => {
       const text = await readNote(file.uri);
       const result = validateNote(file.name, text, taskFrontmatter);
@@ -33,12 +35,9 @@ export async function loadTasks(tasksDirUri: string): Promise<TaskItem[]> {
       };
     }),
   );
-  return items;
-}
-
-/** A task with no lists property is on Main. */
-export function onMain(items: TaskItem[]): TaskItem[] {
-  return items.filter((item) => item.data == null || !item.data.lists?.length);
+  return settled.flatMap((outcome) =>
+    outcome.status === "fulfilled" ? [outcome.value] : [],
+  );
 }
 
 export function inList(items: TaskItem[], listName: string): TaskItem[] {

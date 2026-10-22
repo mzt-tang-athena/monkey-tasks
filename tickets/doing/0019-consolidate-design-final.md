@@ -1,0 +1,54 @@
+---
+id: 0019
+title: Consolidate design-final and fix the device bugs it carried
+created: 2026-10-22
+priority: high
+assignee: omp
+pr:
+depends: [0009, 0016]
+---
+
+## Spec
+
+The design work lived on `design-final` while `main` held the older
+foundation, so the app the user tested on a phone and the app on
+`main` were different programs. The port from the browser preview to
+the APK carried assumptions that only hold on web. Consolidate the
+branches and fix what the port broke.
+
+Known defects at the start of this ticket:
+
+- `@monkey-tasks/schemas` needs zod v4, but the app installed zod v3
+  (a transitive Expo dependency). Every screen that imported the
+  schemas package crashed at module load on a clean install.
+- `GestureHandlerRootView` was missing from the root layout, so
+  `GestureDetector` never received touches on Android.
+- The store wrote multiple frontmatter keys through `setProperty`,
+  which re-derived each write from the same stale file text. A
+  two-key patch kept only the last key.
+- With no vault granted, a phone showed the browser preview's mock
+  tasks, and ticking them did nothing.
+- The Lists tab filtered with the mock helpers, so a task tagged with
+  any other list appeared in neither tab.
+- A single unreadable entry in `Tasks/` rejected the whole load.
+- `isFile` guessed from a dot in the name, so a folder like
+  `Tasks 2.0` was never found and `ensureSubfolder` made a duplicate.
+- Frontmatter list continuation only recognised two spaces, so a
+  tab-indented list had the next key spliced into it.
+- `features/reminders/schedule.ts` had no caller: reminders were
+  stored in the note and never scheduled.
+- `rrule` was a dependency with no importer: completing a recurring
+  task deleted it instead of rolling it forward.
+
+## Acceptance
+
+- [ ] a clean clone builds and runs: `npm ci` at the root, `npm ci`
+      in `app`, `npx expo export --platform android` succeeds
+- [ ] `npx tsc --noEmit` and `npx vitest run` pass in `app`
+- [ ] reminders are scheduled on device for tasks that carry one
+- [ ] ticking a recurring task moves its due date forward
+- [ ] no task is invisible: Main is the catch-all list tab
+- [ ] CI runs typecheck, both test suites, and an Android bundle
+
+## Outcome
+

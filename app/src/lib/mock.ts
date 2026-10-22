@@ -37,17 +37,6 @@ function dueOn(offsetDays: number, time?: { h: number; m: number }): string {
   return formatLocal(date, time != null);
 }
 
-export const mockLists = ["Focus", "Main"] as const;
-
-/** The other real list, so the list tab bar has data behind it. */
-export function inMockFocus(items: TaskItem[]): TaskItem[] {
-  return items.filter((item) => item.data?.lists?.includes("[[Focus]]"));
-}
-
-export function inMockMain(items: TaskItem[]): TaskItem[] {
-  return items.filter((item) => item.data == null || !item.data.lists?.length);
-}
-
 /** A tiny delay so loading and error states are real code paths. */
 export function loadMockTasks(): Promise<TaskItem[]> {
   return new Promise((resolve) => {

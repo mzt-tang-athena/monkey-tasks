@@ -94,9 +94,12 @@ export function updateProperty(
     return replaceSpan(text, span, lines.join("\n"));
   }
   // Find the extent of the property: its line plus any block list
-  // items that follow it.
+  // items that follow it. Any indent counts, because Obsidian, other
+  // editors, and older versions of this app have written two spaces,
+  // four spaces, and tabs. Missing an item here would splice the next
+  // key into the middle of the list.
   let endIndex = keyIndex + 1;
-  while (endIndex < lines.length && /^ {2}- /.test(lines[endIndex])) {
+  while (endIndex < lines.length && /^[ \t]+- /.test(lines[endIndex])) {
     endIndex += 1;
   }
   if (value === null) {
