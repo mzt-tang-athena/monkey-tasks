@@ -102,6 +102,13 @@ export function BottomBar({
     inputRange: [0, 1],
     outputRange: [barHeight + spacing.s + insets.bottom, spacing.s],
   });
+  // One node for the whole session: the sheet re-renders on every
+  // keystroke, and a fresh Animated node each time would attach and
+  // detach listeners while the user types.
+  const dockOffset = React.useMemo(
+    () => Animated.add(dockBottom, keyboardHeight),
+    [dockBottom, keyboardHeight],
+  );
 
   React.useEffect(() => {
     Animated.timing(expand, {
@@ -218,7 +225,7 @@ export function BottomBar({
           pointerEvents="box-none"
           style={[
             styles.sheetDock,
-            { bottom: Animated.add(dockBottom, keyboardHeight) },
+            { bottom: dockOffset },
           ]}
         >
           <Animated.View
