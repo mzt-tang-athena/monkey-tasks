@@ -30,7 +30,7 @@ export function captureContent(
 
 export type CaptureTarget =
   | { kind: "main" }
-  | { kind: "list"; name: string; uri: string };
+  | { kind: "list"; name: string };
 
 /**
  * A file name a document provider accepts. A task name is free text,

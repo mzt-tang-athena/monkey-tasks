@@ -4,6 +4,7 @@ import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { TasksProvider } from "../store/tasks";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { installErrorAlert } from "../lib/errors";
 
 Notifications.setNotificationHandler({
@@ -28,10 +29,15 @@ export default function RootLayout() {
           the keyboard, so the app has to know the height itself. */}
       <KeyboardProvider>
         <TasksProvider>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
-          </Stack>
+          {/* Render errors inside a screen show the boundary panel
+              instead of unmounting to a blank app. installErrorAlert
+              above still covers errors thrown outside render. */}
+          <ErrorBoundary>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
+            </Stack>
+          </ErrorBoundary>
         </TasksProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
