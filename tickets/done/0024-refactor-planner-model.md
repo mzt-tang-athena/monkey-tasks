@@ -4,7 +4,7 @@ title: Pull the planner model out of the route
 created: 2026-10-22
 priority: normal
 assignee: omp
-pr:
+pr: 23
 depends: []
 ---
 

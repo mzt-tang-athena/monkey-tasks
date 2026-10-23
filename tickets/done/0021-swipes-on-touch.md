@@ -4,7 +4,7 @@ title: Swipes read touch events, not pointer events
 created: 2026-10-22
 priority: high
 assignee: omp
-pr:
+pr: 18
 depends: []
 ---
 
@@ -38,4 +38,10 @@ gesture, so a sideways drag does not also shift the day.
 
 ## Outcome
 
-(filled in before moving to done/)
+`lib/swipe.ts` uses `PanResponder` on native and pointer events on web.
+A capture-phase gate lets a drag or the grabber claim the gesture before
+the swipe sees it. The horizontal threshold and the diagonal rejection
+are unit tested.
+
+Verified: list, day, and month swipes work on the phone. Scrolling never
+changes the page.

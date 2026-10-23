@@ -4,7 +4,7 @@ title: Drops write, and capture closes before the write
 created: 2026-10-22
 priority: high
 assignee: omp
-pr:
+pr: 22
 depends: [0023]
 ---
 
@@ -60,4 +60,10 @@ Retry and never reopens the sheet.
 
 ## Outcome
 
-(filled in before moving to done/)
+The drop path from 0023 covers the write and the highlight. Capture
+closes in the tap's frame: the sheet rides `useKeyboardAnimation`'s
+continuous height, unmounts from the animation callback, and parses
+after the close. A failed write shows a toast with Retry (ADR 0021).
+
+Verified: drops write on week, month, and the day timeline. The sheet
+and keyboard leave together and the new row is under the closing sheet.

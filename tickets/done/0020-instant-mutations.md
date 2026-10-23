@@ -4,7 +4,7 @@ title: Make task mutations instant
 created: 2026-10-22
 priority: high
 assignee: omp
-pr:
+pr: 17
 depends: []
 ---
 
@@ -45,4 +45,13 @@ Make the local list the truth for the session and write the note behind it.
 
 ## Outcome
 
-(filled in before moving to done/)
+The row changes in the tap's frame and the note is written behind it
+through a per-note queue. A tick reads no note and rebuilds only the
+touched task's alarms. A read waits for in-flight writes before it
+scans, so a reload cannot read old text back over the row. The query
+cache is the single source of truth (ADR 0023).
+
+Verified: store tests cover the optimistic row, the serialized writes,
+the rollback, the capture row before its file, and that a mutation never
+re-reads the vault. Device: ticks feel instant and two fast taps on one
+circle end unticked.

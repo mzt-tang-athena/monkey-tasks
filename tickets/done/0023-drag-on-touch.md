@@ -4,7 +4,7 @@ title: Drag tasks on touch
 created: 2026-10-22
 priority: high
 assignee: omp
-pr:
+pr: 20
 depends: [0017]
 ---
 
@@ -48,4 +48,12 @@ Fix and gaps:
 
 ## Outcome
 
-(filled in before moving to done/)
+Drops write again. Inline zone refs are re-invoked with `null` on every
+render, and `DropZoneMap.set(id, null)` deleted the measured rect, so
+`hit()` returned null and the handler skipped the write. `set(id, null)`
+now unregisters the view and keeps the rect; only `measureAll` at pickup
+invalidates rects (ADR 0021).
+
+Verified: holding a row and dropping it on a day or an hour writes the
+note once, the ghost follows the finger, and a tap right after a drop
+lands.

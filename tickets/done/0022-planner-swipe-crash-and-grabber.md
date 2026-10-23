@@ -4,7 +4,7 @@ title: Planner swipes crash and the grabber does not resize
 created: 2026-10-22
 priority: high
 assignee: omp
-pr:
+pr: 19
 depends: [0021]
 ---
 
@@ -45,4 +45,11 @@ message and the first frames of the stack.
 
 ## Outcome
 
-(filled in before moving to done/)
+`babel-preset-expo` auto-adds `react-native-worklets/plugin`, which
+workletized the gesture callbacks. They ran on the UI runtime and threw
+`Tried to synchronously call a Remote Function`. Every gesture that
+touches state now calls `.runOnJS(true)` (ADR 0019). The grabber owns
+its pan and resizes the split.
+
+Verified: day and month swipes do not crash. The grabber resizes on the
+phone.
