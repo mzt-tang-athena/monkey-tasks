@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { parseFrontmatter } from "@monkey-tasks/schemas";
 import { useStoreMeta, useTaskList } from "../../store/task-state";
 import { useTaskActions } from "../../store/task-actions";
 import type { TaskItem } from "../tasks/query";
@@ -101,6 +102,16 @@ function findTask(tasks: TaskItem[], id: string): TaskItem | undefined {
   );
 }
 
+/**
+ * The editor writes task frontmatter, so only a note whose kind is the
+ * tasks wikilink may open in it. Save on any other note would rewrite
+ * a deed or a plain note as a task.
+ */
+function isTaskNote(task: TaskItem): boolean {
+  const kind: unknown = task.data?.kind;
+  return kind === "[[tasks]]";
+}
+
 export default function TaskEditorScreen() {
   const params = useLocalSearchParams();
   const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -125,23 +136,27 @@ export default function TaskEditorScreen() {
             </Text>
           </View>
         </>
-      ) : (
+      ) : isTaskNote(task) ? (
         // Keyed by id: another task remounts the form, so the draft
         // seeds from the task on screen and never needs resetting.
         <TaskEditorForm key={task.id} task={task} />
+      ) : (
+        <NoteViewer key={task.id} task={task} />
       )}
     </View>
   );
 }
 
-/** Cancel always; Save only once a task is loaded. */
+/** Cancel always; Save only where there is a task to write. */
 function EditorHeader({
   saving = false,
   canSave = false,
+  showSave = true,
   onSave,
 }: {
   saving?: boolean;
   canSave?: boolean;
+  showSave?: boolean;
   onSave?: () => void;
 }) {
   const blocked = saving || !canSave;
@@ -156,20 +171,72 @@ function EditorHeader({
         <Text style={styles.cancel}>Cancel</Text>
       </Pressable>
       <View style={styles.headerSpacer} />
-      <Pressable
-        style={({ pressed }) => [
-          styles.save,
-          pressed && !blocked && styles.savePressed,
-          blocked && styles.saveDisabled,
-        ]}
-        onPress={onSave}
-        disabled={blocked}
-        accessibilityRole="button"
-        accessibilityLabel="save task"
-      >
-        <Text style={styles.saveText}>{saving ? "Saving" : "Save"}</Text>
-      </Pressable>
+      {showSave ? (
+        <Pressable
+          style={({ pressed }) => [
+            styles.save,
+            pressed && !blocked && styles.savePressed,
+            blocked && styles.saveDisabled,
+          ]}
+          onPress={onSave}
+          disabled={blocked}
+          accessibilityRole="button"
+          accessibilityLabel="save task"
+        >
+          <Text style={styles.saveText}>{saving ? "Saving" : "Save"}</Text>
+        </Pressable>
+      ) : null}
     </View>
+  );
+}
+
+/**
+ * Frontmatter as the reader shows it: keys in file order with their
+ * values, lists joined on one line. The vault parser already reads
+ * the block between the --- fences, so a non-task note keeps every
+ * property it carries.
+ */
+function frontmatterEntries(text: string): [string, string][] {
+  const { values } = parseFrontmatter("", text);
+  return Object.entries(values).map(([key, value]): [string, string] => [
+    key,
+    Array.isArray(value) ? value.join(", ") : value ?? "",
+  ]);
+}
+
+/**
+ * A note that is not a task has no task fields to edit. It opens
+ * read-only: its name, its frontmatter as plain pairs, and its body,
+ * with no Save to rewrite it.
+ */
+function NoteViewer({ task }: { task: TaskItem }) {
+  const entries = React.useMemo(
+    () => frontmatterEntries(task.text),
+    [task.text],
+  );
+  return (
+    <>
+      <EditorHeader showSave={false} />
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.noteTitle}>{task.name}</Text>
+        <Text style={styles.noteHint}>
+          This note is not a task, so it opens read-only.
+        </Text>
+        <View style={styles.properties}>
+          {entries.map(([key, value]) => (
+            <View key={key} style={styles.propertyRow}>
+              <Text style={styles.propertyKey}>{key}</Text>
+              <Text style={styles.propertyValue}>{value}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={styles.noteBody}>{task.body}</Text>
+      </ScrollView>
+    </>
   );
 }
 
@@ -404,6 +471,51 @@ const styles = StyleSheet.create({
     width: "100%" as const,
     paddingHorizontal: pageGutter,
     paddingBottom: spacing.xxxl,
+  },
+  noteTitle: {
+    marginTop: spacing.l,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: fonts.body,
+    fontWeight: "600",
+    color: colors.ink,
+  },
+  noteHint: {
+    marginTop: spacing.s,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+  },
+  properties: {
+    marginTop: spacing.l,
+    gap: spacing.xs,
+  },
+  propertyRow: {
+    flexDirection: "row",
+    gap: spacing.s,
+  },
+  propertyKey: {
+    minWidth: 96,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    fontWeight: "600",
+    color: colors.inkMuted,
+  },
+  propertyValue: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    color: colors.ink,
+  },
+  noteBody: {
+    marginTop: spacing.xl,
+    fontSize: 16,
+    lineHeight: 24,
+    fontFamily: fonts.body,
+    color: colors.ink,
   },
   field: {
     marginTop: spacing.l,
