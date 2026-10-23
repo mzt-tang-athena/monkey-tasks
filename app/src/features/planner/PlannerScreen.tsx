@@ -1,31 +1,9 @@
 import * as React from "react";
-import { Pressable, Text, View, type PointerEvent as RNPointerEvent } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { TaskItem } from "../tasks/query";
 import type { CaptureTarget } from "../capture/write";
-import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { BottomBar } from "../../components/BottomBar";
-import { DropZoneMap } from "../../lib/dropzone";
-import { addDays, parseStoredDate, startOfDay, isSameDay } from "../../lib/dates";
-import { drag } from "../../theme/tokens";
-import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
-import { useTaskList, useStoreMeta } from "../../store/task-state";
-import { useTaskActions } from "../../store/task-actions";
-import { useOpenTasks } from "../../store/selectors";
-import {
-  cycleSource,
-  inSourceList,
-  isDone,
-  isoOf,
-  pillsForSource,
-  sortOpenFirst,
-  sourceLabel,
-  startOfMonth,
-  startOfWeek,
-  withKeptTime,
-  SOURCES,
-  type Source,
-} from "./model";
+import { isoOf, cycleSource, sourceLabel, SOURCES, type Source } from "./model";
 import { styles } from "./components/plannerStyles";
 import { DaySpread } from "./components/DaySpread";
 import { WeekView } from "./components/WeekView";
@@ -36,17 +14,15 @@ import {
 } from "./components/MonthView";
 import { PlannerHeader } from "./components/PlannerHeader";
 import { TaskListSection } from "./components/TaskListSection";
-import { pointerPickup, type DragApi, type LiftState } from "./components/drag";
+import { LoadingState, ErrorState } from "./components/PlannerStates";
+import { pointerPickup } from "./components/drag";
+import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
+import { useTaskList, useStoreMeta } from "../../store/task-state";
+import { useTaskActions } from "../../store/task-actions";
+import { useOpenTasks } from "../../store/selectors";
 import { usePlannerRoute } from "./hooks/usePlannerRoute";
-import { useTouchDragGate, type PendingDrag } from "./hooks/useTouchDragGate";
-
-/*
- * Pointer modules: the drag closures below are created during render
- * but only ever run on pointer events. The react-hooks/refs and
- * react-hooks/purity rules cannot see that distinction, so they are
- * disabled for this file; every ref write outside the gesture
- * callbacks stays mirrored in effects.
- */
+import { usePlannerGestures } from "./hooks/usePlannerGestures";
+import { usePlannerMonth } from "./hooks/usePlannerMonth";
 
 const TARGETS: CaptureTarget[] = [
   { kind: "list", name: "Focus" },
@@ -62,7 +38,9 @@ const TARGETS: CaptureTarget[] = [
  * F's horizontal canvas of day columns; month stays a card with
  * dots and lists a day's tasks on tap.
  *
- * The pure rules behind these modes live in features/planner/model.
+ * The pure rules behind these modes live in features/planner/model;
+ * the gestures in hooks/usePlannerGestures and the month state in
+ * hooks/usePlannerMonth.
  */
 export default function PlannerScreen() {
   // The mode and the day live in the URL: a link, a tap on another
@@ -91,300 +69,44 @@ export default function PlannerScreen() {
     saveTaskForm(form);
   };
 
-  // The pill/list drag that targets week columns and month cells.
-  const [pending, setPending] = React.useState<PendingDrag | null>(null);
-  const [dragging, setDragging] = React.useState<{
-    task: TaskItem;
-    x: number;
-    y: number;
-  } | null>(null);
-  const [hoveredDay, setHoveredDay] = React.useState<Date | null>(null);
-  const moved = React.useRef(false);
-
-  // The shared drop-zone registry: week columns and month cells
-  // register their rects; pointer moves hit-test page coordinates
-  // so touch drags land exactly like mouse drags.
-  const [dropZones] = React.useState(() => new DropZoneMap());
-
-  // The screen root carries the scroll gate: when a drag owns the
-  // pointer, pane scrolling loses the gesture. The gate owns touch
-  // promotions since touchmove outraces pointermove.
-  const rootRef = React.useRef<HTMLElement | null>(null);
-  const gateRef = React.useRef(false);
-  const pendingRef = React.useRef(pending);
-  React.useEffect(() => {
-    pendingRef.current = pending;
-  }, [pending]);
-  React.useEffect(() => {
-    gateRef.current = dragging != null;
-  }, [dragging]);
-  const promotePending = React.useCallback((x: number, y: number) => {
-    const pending = pendingRef.current;
-    if (!pending || pending.task == null) {
-      return;
-    }
-    moved.current = true;
-    dropZones.measureAll();
-    setDragging({ task: pending.task, x, y });
-    setPending(null);
-  }, [dropZones]);
-  const lifted = React.useMemo<LiftState>(
-    () =>
-      pending != null
-        ? { task: pending.task, phase: "hold" }
-        : dragging != null
-          ? { task: dragging.task, phase: "picked" }
-          : null,
-    [pending, dragging],
-  );
-  useTouchDragGate(rootRef, {
-    busy: gateRef,
-    pending: pendingRef,
-    promote: promotePending,
+  // The pointer machinery: drags, drops, click guards and the swipes.
+  const {
+    rootRef,
+    dragging,
+    hoveredDay,
+    dropZones,
+    lifted,
+    dragApi,
+    toggle,
+    updateTask,
+    guardedToggle,
+    guardedSelect,
+    suppressClick,
+    shiftDay,
+    shiftMonth,
+    startDayDrag,
+    pointerHandlers,
+  } = usePlannerGestures({
+    day,
+    setDay,
+    toggle: actions.toggle,
+    writeFields: actions.writeFields,
+    pointerPickup,
   });
-
-  // Native drag sources drive the same machinery through here.
-  const dragApi = React.useMemo<DragApi>(() => {
-    const apply = () => {
-      const current = draggingRef.current;
-      if (current && hoveredRef.current != null) {
-        updateTaskRef.current?.(current.task, {
-          due: withKeptTime(
-            hoveredRef.current,
-            parseStoredDate(current.task.data?.due ?? ""),
-          ),
-        });
-      }
-      // Only a pointer gesture delivers a click after the drop, so
-      // only the web path arms the guard. Native taps must land.
-      if (pointerPickup) {
-        suppressClick.current = true;
-        setTimeout(() => {
-          suppressClick.current = false;
-        }, 350);
-      }
-      setDragging(null);
-      setHoveredDay(null);
-    };
-    return {
-      pickup: (task, x, y) => {
-        moved.current = false;
-        dropZones.measureAll();
-        setDragging({ task, x, y });
-      },
-      move: (x, y) => {
-        setDragging((current) => (current ? { ...current, x, y } : current));
-        const hit = dropZones.hit(x, y);
-        const dayTarget = hit?.startsWith("day:")
-          ? (parseStoredDate(hit.slice(4))?.date ?? null)
-          : null;
-        if (!isSameDay(dayTarget, hoveredRef.current)) {
-          // The ref leads the state: a drop reads it before React
-          // commits the render that carries the new hover.
-          hoveredRef.current = dayTarget;
-          setHoveredDay(dayTarget);
-        }
-      },
-      drop: apply,
-    };
-  }, [dropZones]);
-  const draggingRef = React.useRef(dragging);
-  const hoveredRef = React.useRef(hoveredDay);
-  React.useEffect(() => {
-    draggingRef.current = dragging;
-  }, [dragging]);
-  React.useEffect(() => {
-    hoveredRef.current = hoveredDay;
-  }, [hoveredDay]);
-  const updateTaskRef = React.useRef<
-    (task: TaskItem, patch: Partial<TaskFrontmatter>) => void
-  >(null);
-
-  const storeToggle = actions.toggle;
-  const toggle = React.useCallback(
-    (task: TaskItem) => {
-      void storeToggle(task);
-    },
-    [storeToggle],
-  );
-
-  // Drag-and-drop writes due dates and times through here: the store
-  // applies locally, then rewrites the note in vault mode. The
-  // callback keeps its identity for the store's lifetime: dayApi is
-  // keyed on it, and a fresh identity every render would rebuild the
-  // native pan on every move.
-  const writeFields = actions.writeFields;
-  const updateTask = React.useCallback(
-    (task: TaskItem, patch: Partial<TaskFrontmatter>) => {
-      void writeFields(task, patch);
-    },
-    [writeFields],
-  );
-  React.useEffect(() => {
-    updateTaskRef.current = updateTask;
-  }, [updateTask]);
 
   const openTasks = useOpenTasks();
 
-  const weekPool = pillsForSource(tasks, source, startOfWeek(day));
-
-  // The month card's picked day carries the month key it belongs to,
-  // so a new month from the strip invalidates the pick without an
-  // effect.
-  const [picked, setPicked] = React.useState<{
-    key: string;
-    day: Date;
-  } | null>(null);
-  const viewMonth = startOfMonth(day);
-  const monthKey = `${viewMonth.getFullYear()}-${viewMonth.getMonth()}`;
-  const pickedDay =
-    picked != null && picked.key === monthKey ? picked.day : null;
-
-  // The month pane follows the source until a day is picked; then it
-  // lists that day's tasks, with the day as its header and the
-  // day-view link as its footer.
-  const monthPrefix = `${viewMonth.getFullYear()}-${String(
-    viewMonth.getMonth() + 1,
-  ).padStart(2, "0")}`;
-  const monthRows = React.useMemo(
-    () =>
-      source === "due-period"
-        ? sortOpenFirst(
-            tasks.filter(
-              (task) =>
-                task.data?.due != null &&
-                task.data.due.slice(0, 7) === monthPrefix,
-            ),
-          )
-        : sortOpenFirst(tasks.filter((task) => inSourceList(task, source))),
-    [tasks, source, monthPrefix],
-  );
-  const pickedTasks = React.useMemo(
-    () =>
-      pickedDay == null
-        ? []
-        : tasks.filter(
-            (task) =>
-              task.data?.due != null &&
-              !isDone(task) &&
-              task.data.due.slice(0, 10) === isoOf(pickedDay),
-          ),
-    [tasks, pickedDay],
-  );
-
-  // Suppress press actions that follow a drag drop: the pointer-up
-  // lands inside a pressable that would otherwise act on it.
-  const suppressClick = React.useRef(false);
-  const guardedToggle = (task: TaskItem) => {
-    if (suppressClick.current) {
-      suppressClick.current = false;
-      return;
-    }
-    toggle(task);
-  };
-  // Week columns select a day; a drop from a dragged task must not
-  // select the column it was released over.
-  const guardedSelect = (next: Date) => {
-    if (suppressClick.current) {
-      suppressClick.current = false;
-      return;
-    }
-    setDay(next);
-  };
-
-  // Left/right swipe on the background shifts the day in the route.
-  // DaySpread and MonthView build their swipe controllers once on
-  // mount, so the shift reads the current day through a ref rather
-  // than a captured render value.
-  const dayRef = React.useRef(day);
-  React.useEffect(() => {
-    dayRef.current = day;
-  }, [day]);
-  const shiftDay = (delta: 1 | -1) => setDay(addDays(dayRef.current, delta));
-  const shiftMonth = (delta: 1 | -1) => {
-    const current = dayRef.current;
-    setDay(new Date(current.getFullYear(), current.getMonth() + delta, 1));
-  };
-
-  const startDayDrag = (task: TaskItem, e: RNPointerEvent, kind: "pill" | "row" = "row") => {
-    moved.current = false;
-    setPending({
-      task,
-      x: e.nativeEvent.pageX,
-      y: e.nativeEvent.pageY,
-      t: performance.now(),
-      touch: (e.nativeEvent as { pointerType?: string }).pointerType === "touch",
-      kind,
-    });
-  };
-
-  const onPointerMove = (e: RNPointerEvent) => {
-    const x = e.nativeEvent.pageX;
-    const y = e.nativeEvent.pageY;
-    if (pending) {
-      const travel = Math.abs(x - pending.x) + Math.abs(y - pending.y);
-      if (pending.touch) {
-        // Touch grammar: movement while still holding is a scroll.
-        // Movement AFTER the hold completed is a drag, however far
-        // it jumps between move events. Pills hold for less: their
-        // section has free space to scroll from without touching
-        // them.
-        const hold = pending.kind === "pill" ? drag.pillPickMs : drag.pickMs;
-        if (performance.now() - pending.t < hold) {
-          if (travel > drag.threshold) {
-            setPending(null);
-            return;
-          }
-          return;
-        }
-      } else if (travel <= drag.threshold) {
-        return;
-      }
-      moved.current = true;
-      dropZones.measureAll();
-      setDragging({ task: pending.task, x, y });
-      setPending(null);
-      return;
-    }
-    if (dragging) {
-      setDragging({ ...dragging, x, y });
-      // Hit-test the pointer against the registered drop zones:
-      // enter/leave events do not fire on touch under capture.
-      const hit = dropZones.hit(x, y);
-      const dayTarget = hit?.startsWith("day:")
-        ? parseStoredDate(hit.slice(4))?.date ?? null
-        : null;
-      if (!isSameDay(dayTarget, hoveredDay)) {
-        setHoveredDay(dayTarget);
-      }
-    }
-  };
-
-  const onPointerUp = () => {
-    if (dragging) {
-      if (hoveredDay != null) {
-        // A day move keeps the task's own time of day, per the
-        // approved rule: reschedule the date, never the clock.
-        updateTask(dragging.task, {
-          due: withKeptTime(hoveredDay, parseStoredDate(dragging.task.data?.due ?? "")),
-        });
-      }
-      suppressClick.current = true;
-      setTimeout(() => {
-        suppressClick.current = false;
-      }, 350);
-      setDragging(null);
-      setHoveredDay(null);
-    }
-    setPending(null);
-    moved.current = false;
-  };
-
-  const onPointerDownScreen = () => {
-    // A fresh gesture clears drag-end suppression; the 350ms timer
-    // stays as the fallback for engines that skip pointerdown.
-    suppressClick.current = false;
-  };
+  // The week's placement pool and the month card's state.
+  const {
+    weekPool,
+    picked,
+    setPicked,
+    viewMonth,
+    monthKey,
+    pickedDay,
+    monthRows,
+    pickedTasks,
+  } = usePlannerMonth({ tasks, source, day });
 
   return (
     <View
@@ -392,14 +114,7 @@ export default function PlannerScreen() {
         rootRef.current = node as HTMLElement | null;
       }}
       style={[styles.screen, { paddingTop: insets.top }]}
-      onPointerDown={onPointerDownScreen}
-      {...(pointerPickup
-        ? {
-            onPointerMove,
-            onPointerUp,
-            onPointerCancel: onPointerUp,
-          }
-        : {})}
+      {...pointerHandlers}
     >
       {status === "ready" && mode === "day" ? (
         // Day mode leaves the page scroll: it is a fixed split of
@@ -595,38 +310,3 @@ export default function PlannerScreen() {
     </View>
   );
 }
-
-/* ----------------------------------------------------------- helpers */
-
-
-function LoadingState() {
-  return (
-    <View style={styles.holder}>
-      <View style={[styles.skeleton, { width: "60%" as const, height: 28 }]} />
-      <View style={[styles.skeleton, { width: "85%" as const }]} />
-      <View style={[styles.skeleton, { width: "70%" as const }]} />
-    </View>
-  );
-}
-
-/** The load failed. The button runs the same load again, so the
-    screen never asks for a pull gesture it does not have. */
-function ErrorState({ onRetry }: { onRetry: () => void }) {
-  return (
-    <View style={styles.holder}>
-      <Text style={styles.empty}>Something went wrong.</Text>
-      <Pressable
-        style={({ pressed }) => [
-          styles.retry,
-          pressed && styles.retryPressed,
-        ]}
-        onPress={onRetry}
-        accessibilityRole="button"
-        accessibilityLabel="Retry loading tasks"
-      >
-        <Text style={styles.retryText}>Retry</Text>
-      </Pressable>
-    </View>
-  );
-}
-
