@@ -12,6 +12,7 @@ import { loadMockTasks, toggleMockCompleted } from "../lib/mock";
 import { getSavedVaultUri, requestVaultAccess } from "../features/vault/grant";
 import { ensureSubfolder } from "../features/vault/scan";
 import { loadVaultTasks } from "../features/vault/session";
+import { type ListItem } from "../features/lists/query";
 import { createNote, writeNote } from "../features/vault/notes";
 import { type TaskItem } from "../features/tasks/query";
 import { applyPatch } from "../features/tasks/patch";
@@ -49,10 +50,12 @@ import { TaskActionsContext, type TaskActions } from "./task-actions";
  * the foreground, never after a write. See ADR 0017.
  */
 
-/** What the list query caches: the folder the rows came from and the rows. */
+/** What the list query caches: the folder the rows came from, the rows,
+ * and the list notes that become the extra tabs. */
 export type TaskListData = {
   tasksDir: string | null;
   tasks: TaskItem[];
+  lists: ListItem[];
 };
 
 /** A row that exists only in memory until its file lands. */
@@ -60,6 +63,9 @@ let pendingSeq = 0;
 
 /** The empty list, shared so a store with no rows keeps one identity. */
 const NO_TASKS: TaskItem[] = [];
+
+/** The empty list-note set, shared for the same reason. */
+const NO_LISTS: ListItem[] = [];
 
 export function TasksProvider({ children }: { children: React.ReactNode }) {
   // The app mounts one client above the store; a tree that mounts the
@@ -138,6 +144,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
     queryFn: async (): Promise<TaskListData> => ({
       tasksDir: null,
       tasks: await loadMockTasks(),
+      lists: NO_LISTS,
     }),
     enabled: rootUri == null && Platform.OS === "web",
     refetchOnWindowFocus: "always",
@@ -147,6 +154,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
   const { refetch } = active;
   const tasks = active.data?.tasks ?? NO_TASKS;
   const tasksDir = active.data?.tasksDir ?? null;
+  const lists = active.data?.lists ?? NO_LISTS;
 
   // The cache entry a write lands in: the granted folder's list, or the
   // sample set standing in for it.
@@ -163,6 +171,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       queryClient.setQueryData<TaskListData>(activeKey, (old) => ({
         tasksDir: old?.tasksDir ?? null,
         tasks: next,
+        lists: old?.lists ?? NO_LISTS,
       }));
     },
     [queryClient, activeKey],
@@ -464,6 +473,11 @@ function TaskStore({ children }: { children: React.ReactNode }) {
     await refetch();
   }, [refetch]);
 
+  const listNames = React.useMemo(
+    () => lists.map((item) => item.name),
+    [lists],
+  );
+
   const meta = React.useMemo<StoreMeta>(
     () => ({
       mode: rootUri ? "vault" : "mock",
@@ -471,8 +485,9 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       lastError,
       tasksDir,
       rootUri,
+      lists: listNames,
     }),
-    [rootUri, status, lastError, tasksDir],
+    [rootUri, status, lastError, tasksDir, listNames],
   );
 
   // The actions never read a row, so their identity holds across task

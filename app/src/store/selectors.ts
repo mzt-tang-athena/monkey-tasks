@@ -1,13 +1,13 @@
 import * as React from "react";
 import { groupByDue, inList, type TaskItem } from "../features/tasks/query";
 import { dayLabel, parseStoredDate, todayIso } from "../lib/dates";
-import { useTaskList } from "./task-state";
+import { useStoreMeta, useTaskList } from "./task-state";
 
 /*
  * The pure layer over the store's rows: the planner's open pool, the
- * lists tab's two views, and the dated sections they render. Each
- * selector takes its `now` so tests pin the day; the hooks below feed
- * them the current day and memoise the result.
+ * lists tab's views, and the dated sections they render. Each selector
+ * takes its `now` so tests pin the day; the hooks below feed them the
+ * current day and memoise the result.
  */
 
 /** The tone a section header takes: failures, plain, and quiet. */
@@ -19,8 +19,11 @@ export type TaskSection = {
   tone: SectionTone;
 };
 
-/** The lists tab's two views: Focus and the catch-all Main. */
-export type ListTab = "Focus" | "Main";
+/**
+ * A tab name: Focus, Main, or the name of a list note in
+ * Tasks/Lists/. Any other string is a list tab.
+ */
+export type ListTab = string;
 
 /**
  * Every open task in one row: overdue, today, undated, then each
@@ -38,18 +41,19 @@ export function selectOpenTasks(tasks: TaskItem[], now: Date): TaskItem[] {
 
 /**
  * Focus shows the Focus list. Main is the catch-all: every task that is
- * not on Focus, so a task tagged with a list that has no tab yet (Work,
- * Errands) still appears instead of vanishing. See ADR 0015.
+ * not on Focus, so a task tagged with a list that has no tab still
+ * appears instead of vanishing. Any other tab is a list note, so it
+ * shows the tasks whose lists property carries [[that name]]. See ADR
+ * 0015.
  */
 export function selectTabTasks(
   tasks: TaskItem[],
   tab: ListTab,
 ): TaskItem[] {
-  const focus = inList(tasks, "Focus");
-  if (tab === "Focus") {
-    return focus;
+  if (tab !== "Main") {
+    return inList(tasks, tab);
   }
-  const onFocus = new Set(focus.map((item) => item.uri));
+  const onFocus = new Set(inList(tasks, "Focus").map((item) => item.uri));
   return tasks.filter((item) => !onFocus.has(item.uri));
 }
 
@@ -97,6 +101,23 @@ export function useOpenTasks(): TaskItem[] {
 export function useTabTasks(tab: ListTab): TaskItem[] {
   const tasks = useTaskList();
   return React.useMemo(() => selectTabTasks(tasks, tab), [tasks, tab]);
+}
+
+/**
+ * The tab bar's order: Focus and Main first, then every list note by
+ * name. A list note named Focus or Main cannot make a second tab.
+ */
+export function useListTabs(): string[] {
+  const { lists } = useStoreMeta();
+  return React.useMemo(() => {
+    const tabs = ["Focus", "Main"];
+    for (const name of lists) {
+      if (!tabs.includes(name)) {
+        tabs.push(name);
+      }
+    }
+    return tabs;
+  }, [lists]);
 }
 
 export function useTaskSections(visible: TaskItem[]): TaskSection[] {

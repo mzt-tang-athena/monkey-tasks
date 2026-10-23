@@ -34,6 +34,7 @@ vi.mock("../features/vault/session", () => ({
     loadCalls += 1;
     return {
       tasksDir: "content://vault/Tasks",
+      lists: [],
       tasks: [
         {
           uri: "content://vault/Tasks/Call.md",
