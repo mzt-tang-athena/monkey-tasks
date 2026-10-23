@@ -4,7 +4,7 @@ title: Capture titles and the recurrence fallback
 created: 2026-10-23
 priority: normal
 assignee: omp
-pr:
+pr: 26
 depends: []
 ---
 
@@ -35,4 +35,11 @@ value; both cases are pinned now.
 
 ## Outcome
 
-(filled in before moving to done/)
+`parseCapture` titles a date-only line with the phrase chrono consumed,
+in sentence case. `nextDue` already anchored on now for a missing due
+date; the unparseable case is pinned too.
+
+Verified: parse tests cover "tomorrow" to "Tomorrow", "next friday" to
+"Next friday", and a non-date line keeping its text. Recurrence tests
+cover a missing and an unparseable due date, and an unreadable rule
+still completing. 127 tests across 17 files.
