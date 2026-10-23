@@ -1,13 +1,13 @@
 import * as React from "react";
 import type { TaskItem } from "../../tasks/query";
+import { occurrencesBetween } from "../../tasks/recurrence";
 import {
   inSourceList,
-  isDone,
-  isoOf,
   pillsForSource,
   sortOpenFirst,
   startOfMonth,
   startOfWeek,
+  tasksForDay,
   type Source,
 } from "../model";
 
@@ -40,33 +40,24 @@ export function usePlannerMonth({ tasks, source, day }: PlannerMonthOptions) {
 
   // The month pane follows the source until a day is picked; then it
   // lists that day's tasks, with the day as its header and the
-  // day-view link as its footer.
-  const monthPrefix = `${viewMonth.getFullYear()}-${String(
-    viewMonth.getMonth() + 1,
-  ).padStart(2, "0")}`;
-  const monthRows = React.useMemo(
-    () =>
-      source === "due-period"
-        ? sortOpenFirst(
-            tasks.filter(
-              (task) =>
-                task.data?.due != null &&
-                task.data.due.slice(0, 7) === monthPrefix,
-            ),
-          )
-        : sortOpenFirst(tasks.filter((task) => inSourceList(task, source))),
-    [tasks, source, monthPrefix],
-  );
+  // day-view link as its footer. A task belongs to the month when it
+  // has an occurrence there, so a recurring task stored in an earlier
+  // month lists here as well as dotting the grid.
+  const monthYear = viewMonth.getFullYear();
+  const monthIndex = viewMonth.getMonth();
+  const monthRows = React.useMemo(() => {
+    const first = new Date(monthYear, monthIndex, 1);
+    const last = new Date(monthYear, monthIndex + 1, 0);
+    return sortOpenFirst(
+      tasks.filter(
+        (task) =>
+          (source === "due-period" || inSourceList(task, source)) &&
+          occurrencesBetween(task, first, last).length > 0,
+      ),
+    );
+  }, [tasks, source, monthYear, monthIndex]);
   const pickedTasks = React.useMemo(
-    () =>
-      pickedDay == null
-        ? []
-        : tasks.filter(
-            (task) =>
-              task.data?.due != null &&
-              !isDone(task) &&
-              task.data.due.slice(0, 10) === isoOf(pickedDay),
-          ),
+    () => (pickedDay == null ? [] : tasksForDay(tasks, pickedDay)),
     [tasks, pickedDay],
   );
 
@@ -77,7 +68,6 @@ export function usePlannerMonth({ tasks, source, day }: PlannerMonthOptions) {
     viewMonth,
     monthKey,
     pickedDay,
-    monthPrefix,
     monthRows,
     pickedTasks,
   };
