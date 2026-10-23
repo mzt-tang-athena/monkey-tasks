@@ -223,6 +223,35 @@ export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
+/*
+ * The URL contract: the route names a mode and a day, so a link can
+ * open the planner on any period. Params arrive as strings, or as a
+ * string array when the key repeats, so both shapes are accepted.
+ */
+
+/** The mode a URL param names; absence and unknown values mean day. */
+export function parseMode(value: string | string[] | undefined): Mode {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw === "week" || raw === "month" ? raw : "day";
+}
+
+/** The day a URL param names: local midnight, or the start of today
+    when it does not name a real date (2026-02-30 rolls, so it falls
+    back rather than filing the screen under the wrong month). */
+export function parsePlannerDay(
+  value: string | string[] | undefined,
+  today: Date,
+): Date {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const parsed = raw == null ? null : parseStoredDate(raw);
+  return parsed != null && !parsed.hasTime ? parsed.date : startOfDay(today);
+}
+
+/** The day param a route writes: the plain calendar date. */
+export function plannerDayParam(day: Date): string {
+  return isoOf(day);
+}
+
 /** The ISO week number of the week holding date. */
 export function isoWeek(date: Date): number {
   const probe = startOfDay(date);

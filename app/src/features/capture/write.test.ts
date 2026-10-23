@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { captureContent, safeFileName } from "./write";
+import { captureContent } from "./write";
 import { todayIso } from "../../lib/dates";
 import type { ParsedCapture } from "./parse";
 

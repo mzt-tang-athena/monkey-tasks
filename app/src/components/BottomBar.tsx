@@ -1,21 +1,18 @@
 import * as React from "react";
 import {
   Animated,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
   useWindowDimensions,
-  type TextStyle,
 } from "react-native";
-import { useKeyboardAnimation } from "react-native-keyboard-controller";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { parseCapture, type ParsedCapture } from "../features/capture/parse";
+import type { ParsedCapture } from "../features/capture/parse";
 import type { CaptureTarget } from "../features/capture/write";
-import { parseStoredDate } from "../lib/dates";
+import { CaptureSheet } from "../features/capture/components/CaptureSheet";
+import { useCaptureDraft } from "../features/capture/hooks/useCaptureDraft";
 import {
   colors,
   fonts,
@@ -23,44 +20,22 @@ import {
   radius,
   radiusFloating,
   radii,
-  sheetGap,
-  sheetMaxShare,
 } from "../theme/tokens";
-
-// The sheet input carries focus by caret and placeholder alone: no
-// app ring, and the browser's own focus outline is suppressed on
-// web so no UA ring can appear either.
-const noFocusOutline = Platform.select({
-  web: { outlineStyle: "none" } as unknown as TextStyle,
-  default: {},
-});
-
-// The input follows its text both ways (grow and shrink) natively
-// via CSS field sizing; the max-height cap scrolls past the cap.
-const autoSizedInput = Platform.select({
-  web: { fieldSizing: "content" } as unknown as TextStyle,
-  default: {},
-});
 
 /**
  * The single bottom bar, shared by both tabs. Left: the Lists and
  * Planner nav items, icon plus label, selection carried by weight
  * and color alone. Right: a compact capture button. Tapping it opens
- * a floating capture sheet over the page: a scrim dims the content
- * while a rounded panel rises just above the navbar, which stays
- * visible and interactive under it. The sheet holds a multi-line
- * input, the parse line, and an action row with the target pill and
- * the save control. Tapping outside, the Add button again, or the
- * save control closes it with a downward fade. The input shows no
- * focus ring: the elevated panel is the focus, carried by the accent
- * caret and placeholder alone. There is no second capture view; the
- * panel is the whole flow.
+ * the floating capture sheet over the page, while the bar slides
+ * away under it. The bar owns the open state and one animation clock
+ * for both, so the sheet and the navbar move as a single motion; the
+ * sheet itself is CaptureSheet, fed by the draft hook.
  *
  * Saving leaves in one motion: the input drops focus and the sheet
  * starts its exit on the same frame, the dock riding the keyboard's
  * own height as it goes, and the note is written behind all of it. A
  * failed write is reported in a toast above the navbar, which keeps
- * the capture and offers to run it again; the sheet itself never
+ * the draft and offers to run it again; the sheet itself never
  * reopens for an error.
  */
 export function BottomBar({
@@ -75,12 +50,29 @@ export function BottomBar({
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const window = useWindowDimensions();
-  const [text, setText] = React.useState("");
-  const [targetIndex, setTargetIndex] = React.useState(defaultTargetIndex);
-  const [sending, setSending] = React.useState(false);
-  // The input's cap: sheetMaxShare of the window; the input follows
-  // its text both ways inside it.
-  const maxInputHeight = Math.round(window.height * sheetMaxShare);
+
+  // The failure the user has not dismissed, or null. The message and
+  // the draft itself live in the capture hook; this only carries the
+  // toast, so Retry repeats the draft the hook still holds.
+  const [failure, setFailure] = React.useState<{
+    dismissed: boolean;
+  } | null>(null);
+
+  // The write behind a send, run after the sheet is already on its way
+  // out. A failure raises the toast and keeps the draft for Retry; a
+  // success clears the toast.
+  const write = React.useCallback(
+    async (parsed: ParsedCapture, target: CaptureTarget) => {
+      try {
+        await onSend(parsed, target);
+        setFailure(null);
+      } catch (error) {
+        setFailure({ dismissed: false });
+        throw error;
+      }
+    },
+    [onSend],
+  );
 
   // Open is the user intent; mounted keeps the sheet on screen while
   // the exit animation plays.
@@ -95,23 +87,7 @@ export function BottomBar({
   // rather than measured, because the collapse clip clamps the height
   // it would measure, and the bar would lose its bottom padding.
   const barHeight = rowHeight + spacing.s + insets.bottom + 8;
-  // The input, so send can drop focus, and with it the keyboard, in
-  // the same frame the sheet starts to close.
-  const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
-  // The capture that failed to write, kept whole so Retry repeats what
-  // the user sent rather than what the input holds by then.
-  const [failure, setFailure] = React.useState<{
-    message: string;
-    capture: ParsedCapture;
-    target: CaptureTarget;
-  } | null>(null);
 
-  // The keyboard's height as an Animated node the platform moves frame
-  // by frame. The dock rides it directly, so the sheet and the
-  // keyboard travel together instead of the sheet waiting for a
-  // reported height. Android runs edge to edge and never resizes the
-  // window for the keyboard, so this node is the only source of it.
-  const { height: keyboardHeight } = useKeyboardAnimation();
   // The dock's distance from the bottom of the window. Closed, it sits
   // above the navbar; open, just above the keyboard. One node for the
   // whole session: the sheet re-renders on every keystroke, and a
@@ -153,90 +129,39 @@ export function BottomBar({
     return () => animation.stop();
   }, [barLift, expand, open]);
 
-  // The target pill follows the screen's list tab. The bar itself
-  // never remounts, so switching tabs does not make it jump.
-  const [lastDefault, setLastDefault] = React.useState(defaultTargetIndex);
-  if (lastDefault !== defaultTargetIndex) {
-    setLastDefault(defaultTargetIndex);
-    setTargetIndex(defaultTargetIndex);
-  }
-
-  // The chips follow the text a render behind: parsing is the one
-  // expensive step in this sheet, and typing never waits for it.
-  // Sending parses the raw text once, at the tap.
-  const deferredText = React.useDeferredValue(text);
-  const parsed = React.useMemo(
-    () => (deferredText.trim() ? parseCapture(deferredText) : null),
-    [deferredText],
-  );
-  const canSend = text.trim() !== "";
-
-  // The write behind a send, run after the sheet is already on its way
-  // out. A failure lands in the toast with the same capture kept for
-  // Retry; the sheet is not reopened for it.
-  const submit = (capture: ParsedCapture, target: CaptureTarget) => {
-    setSending(true);
-    let write: void | Promise<void>;
-    try {
-      write = onSend(capture, target);
-    } catch (error) {
-      setFailure({
-        message: error instanceof Error ? error.message : String(error),
-        capture,
-        target,
-      });
-      setSending(false);
-      return;
-    }
-    void Promise.resolve(write).then(
-      () => setSending(false),
-      (error: unknown) => {
-        setFailure({
-          message: error instanceof Error ? error.message : String(error),
-          capture,
-          target,
-        });
-        setSending(false);
-      },
-    );
-  };
-
-  const send = () => {
-    // The latch only stops a second tap on the same draft. It never
-    // holds the sheet open and never greys the arrow for the write.
-    if (sending || text.trim() === "") {
-      return;
-    }
-    const capture = parseCapture(text);
-    if (capture == null) {
-      return;
-    }
-    const target = targets[targetIndex] ?? targets[0];
-    // The keyboard and the sheet leave in one frame: blur starts the
-    // keyboard down, close starts the sheet down, and the write runs
-    // behind both of them.
-    inputRef.current?.blur();
-    close();
-    submit(capture, target);
-  };
+  // The draft and its send lifecycle: the text, the target pill, the
+  // parse and the write behind a send all live in the hook, so the
+  // sheet only renders them and the bar only owns the open state.
+  const draft = useCaptureDraft({
+    targets,
+    defaultTargetIndex,
+    onSend: write,
+  });
 
   const openCapture = () => {
     setFailure(null);
     // The sent draft is cleared here, not on send, so the closing frame
     // keeps the input's height and the sheet never jumps as it leaves.
-    setText("");
+    draft.reset();
     setMounted(true);
     setOpen(true);
   };
 
   const retry = () => {
-    if (failure == null || sending) {
+    if (draft.sending) {
       return;
     }
-    const { capture, target } = failure;
-    setFailure(null);
-    submit(capture, target);
+    // The hook still holds the draft that failed, so a retry repeats
+    // what the user sent rather than what the input holds by now.
+    draft.send();
   };
+
+  const dismiss = () => {
+    setFailure((current) => (current == null ? null : { dismissed: true }));
+  };
+
+  const toastMessage =
+    failure != null && !failure.dismissed ? draft.error : null;
 
   const close = () => {
     setOpen(false);
@@ -249,174 +174,24 @@ export function BottomBar({
 
   return (
     <View style={styles.root}>
-      {/* Scrim over the content; it follows the navbar's collapse. */}
+      {/* The capture sheet: the scrim over the content, the dock riding
+          the keyboard, and the panel. It stays mounted while the exit
+          plays, and the scrim follows the navbar's collapse. */}
       {mounted ? (
-        <Animated.View
-          pointerEvents={open ? "auto" : "none"}
-          style={[
-            styles.scrim,
-            {
-              bottom: barLift.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, barHeight],
-              }),
-              height: Math.max(window.height - barHeight, 0),
-              opacity: expand,
-            },
-          ]}
-        >
-          <Pressable
-            style={styles.scrimFill}
-            onPress={close}
-            accessibilityRole="button"
-            accessibilityLabel="close capture"
-          />
-        </Animated.View>
-      ) : null}
-
-      {/* The floating sheet, docked where the navbar was. Android runs
-          edge to edge, so the window never resizes for the keyboard:
-          the sheet has to ride the keyboard's own height or it stays
-          under it. That height is a natively driven node, while the
-          open/close travel below is not, and one style cannot mix the
-          two drivers, so the lift is its own view: the outer one
-          carries the keyboard, the inner one the travel. */}
-      {mounted ? (
-        <Animated.View
-          pointerEvents="box-none"
-          style={[
-            styles.sheetLift,
-            {
-              height: window.height,
-              transform: [{ translateY: keyboardHeight }],
-            },
-          ]}
-        >
-          <Animated.View
-            pointerEvents="box-none"
-            style={[styles.sheetDock, { bottom: dockBottom }]}
-          >
-            <Animated.View
-              pointerEvents={open ? "auto" : "none"}
-              style={[
-                styles.sheet,
-                {
-                  opacity: expand,
-                  transform: [
-                    {
-                      translateY: expand.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [16, 0],
-                      }),
-                    },
-                    {
-                      scale: expand.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.96, 1],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <TextInput
-                ref={inputRef}
-                style={[
-                  styles.sheetInput,
-                  autoSizedInput,
-                  { maxHeight: maxInputHeight },
-                ]}
-                placeholder="Add a task"
-                placeholderTextColor={colors.inkFaint}
-                value={text}
-                onChangeText={setText}
-                onSubmitEditing={send}
-                returnKeyType="send"
-                // A multiline input defaults to newline on Android, which
-                // swallows the send action. Submit keeps the sheet able to
-                // grow and still fires onSubmitEditing.
-                submitBehavior="submit"
-                multiline
-                autoFocus
-                selectionColor={colors.accent}
-              />
-              {/* Parse feedback as icon chips, rendered from the parse
-                  result object, never from text spans. */}
-              {parsed?.due ? (
-                <View style={styles.chipRow}>
-                  <View style={styles.parseChip}>
-                    <View style={styles.glyphMiniCalendar}>
-                      <View style={styles.glyphMiniCalendarTop} />
-                      <View style={styles.glyphMiniCalendarDot} />
-                    </View>
-                    <Text style={styles.parseChipText}>
-                      {dueChipLabel(parsed.due)}
-                    </Text>
-                  </View>
-                  {parsed.reminders != null && parsed.reminders.length > 0 ? (
-                    <View style={styles.parseChip}>
-                      <View style={styles.glyphMiniClock}>
-                        <View style={styles.glyphMiniClockHand} />
-                        <View style={styles.glyphMiniClockHandV} />
-                      </View>
-                      <Text style={styles.parseChipText}>
-                        {timeChipLabel(parsed.due)}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {parsed.recurrence ? (
-                    <View style={styles.parseChip}>
-                      <Text style={styles.parseGlyph}>{"↻"}</Text>
-                      <Text style={styles.parseChipText}>
-                        {recurrenceKeyword(parsed.recurrence)}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
-              <View style={styles.sheetActions}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.pill,
-                    pressed && styles.pillPressed,
-                  ]}
-                  onPress={() =>
-                    setTargetIndex((index) => (index + 1) % targets.length)
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="target list"
-                >
-                  <Text style={styles.pillText}>
-                    {targetLabel(targets[targetIndex] ?? targets[0])}
-                  </Text>
-                </Pressable>
-                <View style={styles.sheetSpacer} />
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.send,
-                    pressed && canSend && styles.sendPressed,
-                    !canSend && styles.sendDisabled,
-                  ]}
-                  onPress={send}
-                  disabled={!canSend}
-                  hitSlop={6}
-                  accessibilityRole="button"
-                  accessibilityLabel="send task"
-                  accessibilityState={{ disabled: !canSend, busy: sending }}
-                >
-                  <Text
-                    style={[
-                      styles.sendText,
-                      !canSend && styles.sendTextDisabled,
-                    ]}
-                  >
-                    {"↑"}
-                  </Text>
-                </Pressable>
-              </View>
-            </Animated.View>
-          </Animated.View>
-        </Animated.View>
+        <CaptureSheet
+          open={open}
+          onClose={close}
+          draft={draft}
+          bottom={dockBottom}
+          scrim={{
+            bottom: barLift.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, barHeight],
+            }),
+            height: Math.max(window.height - barHeight, 0),
+          }}
+          progress={expand}
+        />
       ) : null}
 
       {/* The navbar: slides away while capture is open, and returns
@@ -485,14 +260,14 @@ export function BottomBar({
         </View>
       </Animated.View>
 
-      {/* A failed write reports here, above the navbar, with the same
-          capture kept for Retry. The sheet stays closed: the toast
-          takes its place instead of reopening it, and opening the sheet
-          again clears the toast. */}
-      {failure != null ? (
+      {/* A failed write reports here, above the navbar, with the draft
+          kept for Retry. The sheet stays closed: the toast takes its
+          place instead of reopening it, and opening the sheet again
+          clears the toast. */}
+      {toastMessage != null ? (
         <View style={[styles.toast, { bottom: barHeight + spacing.s }]}>
           <Text style={styles.toastMessage} numberOfLines={3}>
-            {failure.message}
+            {toastMessage}
           </Text>
           <Pressable
             style={({ pressed }) => [
@@ -510,7 +285,7 @@ export function BottomBar({
               styles.toastAction,
               pressed && styles.toastActionPressed,
             ]}
-            onPress={() => setFailure(null)}
+            onPress={dismiss}
             accessibilityRole="button"
             accessibilityLabel="dismiss capture failure"
           >
@@ -547,39 +322,6 @@ function IconTab({
       </Text>
     </Pressable>
   );
-}
-
-function targetLabel(target: CaptureTarget): string {
-  return target.kind === "main" ? "Main" : target.name;
-}
-
-const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function dueChipLabel(due: string): string {
-  const parsedDue = parseStoredDate(due);
-  if (!parsedDue) {
-    return "";
-  }
-  return `${WEEKDAYS_SHORT[parsedDue.date.getDay()]} ${parsedDue.date.getDate()}`;
-}
-
-function timeChipLabel(due: string): string {
-  const parsedDue = parseStoredDate(due);
-  if (!parsedDue) {
-    return "";
-  }
-  return formatClock(parsedDue.date);
-}
-
-function formatClock(date: Date): string {
-  const h = date.getHours() % 12 || 12;
-  const ampm = date.getHours() >= 12 ? "PM" : "AM";
-  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
-}
-
-function recurrenceKeyword(rule: string): string {
-  const match = /FREQ=([A-Z]+)/.exec(rule);
-  return match ? match[1].toLowerCase() : "";
 }
 
 /** Simple glyphs built from hairline views; no icon font. */
@@ -721,196 +463,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: fonts.body,
     fontWeight: "600",
-  },
-
-  // Scrim: covers the content above the navbar only.
-  scrim: {
-    position: "absolute" as const,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.scrim,
-  },
-  scrimFill: {
-    position: "absolute" as const,
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-
-  // The floating capture sheet.
-  // The sheet's dock: absolute placement lives here; the visual
-  // panel is the child.
-  sheetDock: {
-    position: "absolute" as const,
-    left: spacing.m,
-    right: spacing.m,
-  },
-  // The keyboard lift: the dock rides this view, which carries nothing
-  // but the keyboard's own height, so the two drivers never meet in
-  // one style.
-  sheetLift: {
-    position: "absolute" as const,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    borderRadius: radiusFloating,
-    padding: spacing.m,
-    gap: sheetGap,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
-  },
-  sheetInput: {
-    fontSize: 15,
-    lineHeight: 20,
-    fontFamily: fonts.body,
-    color: colors.ink,
-    minHeight: 40,
-    paddingHorizontal: spacing.s,
-    paddingVertical: spacing.s,
-    ...noFocusOutline,
-  },
-  sheetParse: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.s,
-  },
-  parseChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: colors.accentSoft,
-    borderRadius: radius,
-    paddingHorizontal: spacing.s,
-    height: 24,
-  },
-  parseChipText: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontFamily: fonts.body,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  parseGlyph: {
-    fontSize: 12,
-    lineHeight: 14,
-    color: colors.accent,
-    fontWeight: "700",
-  },
-  glyphMiniCalendar: {
-    width: 11,
-    height: 11,
-    borderWidth: 1.5,
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  glyphMiniCalendarTop: {
-    height: 3,
-    width: "100%",
-    backgroundColor: colors.accent,
-  },
-  glyphMiniCalendarDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    marginLeft: 2,
-    marginTop: 2,
-    backgroundColor: colors.accent,
-  },
-  glyphMiniClock: {
-    width: 11,
-    height: 11,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.accent,
-  },
-  glyphMiniClockHand: {
-    position: "absolute",
-    left: 4,
-    top: 1.5,
-    width: 1.5,
-    height: 4,
-    borderRadius: 1,
-    backgroundColor: colors.accent,
-  },
-  glyphMiniClockHandV: {
-    position: "absolute",
-    left: 5.5,
-    top: 4,
-    width: 3,
-    height: 1.5,
-    borderRadius: 1,
-    backgroundColor: colors.accent,
-  },
-  sheetActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-  },
-  sheetSpacer: {
-    flex: 1,
-  },
-
-  // Target list pill, inside the sheet's action row.
-  pill: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    backgroundColor: colors.accentSoft,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.m,
-    minHeight: 32,
-    justifyContent: "center",
-  },
-  pillPressed: {
-    backgroundColor: colors.pressed,
-  },
-  pillText: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-
-  // The save control: an icon-only circle, same height as the pill,
-  // so the row reads as two matching rounded forms.
-  send: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.pill,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    backgroundColor: colors.accent,
-  },
-  sendPressed: {
-    backgroundColor: colors.accentDeep,
-  },
-  sendDisabled: {
-    backgroundColor: colors.pressed,
-  },
-  sendText: {
-    color: colors.onAccent,
-    fontSize: 15,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    fontWeight: "700",
-  },
-  sendTextDisabled: {
-    color: colors.inkFaint,
   },
 
   // The failure toast: a floating surface above the navbar, in the

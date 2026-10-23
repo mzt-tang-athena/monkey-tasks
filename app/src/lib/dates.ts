@@ -69,3 +69,15 @@ export function dayLabel(date: Date, today: Date): string {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${names[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
 }
+
+/** Two dates fall on the same calendar day, null-safe. */
+export function isSameDay(a: Date | null, b: Date | null): boolean {
+  if (a == null || b == null) {
+    return false;
+  }
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}

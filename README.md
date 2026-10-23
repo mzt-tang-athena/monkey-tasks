@@ -62,6 +62,14 @@ Android asks once for permission to install from the browser or file
 manager. The build is a release: JavaScript rides inside the APK, so the app
 runs without Metro.
 
+## Layout
+
+Routes are thin: `app/(tabs)/planner.tsx` re-exports
+`features/planner/PlannerScreen`. A feature owns its model, components,
+hooks and pure helpers. Shared UI lives in `components/`, primitives in
+`components/ui/`, and the store splits state, actions and selectors
+(ADR 0022). `lib/` never imports a feature (ADR 0020).
+
 ## Plan
 
 The app is Expo SDK 58 with React Native 0.88 and expo-router, in
