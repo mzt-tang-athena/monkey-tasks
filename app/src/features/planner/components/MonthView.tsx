@@ -2,8 +2,9 @@ import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import type { TaskItem } from "../../tasks/query";
 import { DropZoneMap } from "../../../lib/dropzone";
-import { isSameDay } from "../../../lib/dates";
+import { addDays, isSameDay } from "../../../lib/dates";
 import { makeSwipeController, swipeProps } from "../../../lib/swipe";
+import { occurrencesBetween } from "../../tasks/recurrence";
 import { isDone, isoOf, startOfMonth } from "../model";
 import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "../lib/labels";
 import { styles } from "./plannerStyles";
@@ -53,16 +54,26 @@ export function MonthView({
   const lead = monthStart.getDay();
 
   const byDay = new Map<string, TaskItem[]>();
+  // One rule pass per task over the whole grid, lead blanks included.
+  // The range ends at the close of the last week row, so trailing
+  // cells keep their dots if the grid ever pads them.
+  const gridStart = addDays(monthStart, -lead);
+  const gridEnd = addDays(
+    gridStart,
+    Math.ceil((lead + daysInMonth) / 7) * 7 - 1,
+  );
   for (const task of tasks) {
-    if (task.data?.due == null || isDone(task)) {
+    if (isDone(task)) {
       continue;
     }
-    const iso = task.data.due.slice(0, 10);
-    const bucket = byDay.get(iso);
-    if (bucket) {
-      bucket.push(task);
-    } else {
-      byDay.set(iso, [task]);
+    for (const day of occurrencesBetween(task, gridStart, gridEnd)) {
+      const iso = isoOf(day);
+      const bucket = byDay.get(iso);
+      if (bucket) {
+        bucket.push(task);
+      } else {
+        byDay.set(iso, [task]);
+      }
     }
   }
   const cells: (Date | null)[] = [

@@ -1,6 +1,7 @@
 import { taskIsDone } from "@monkey-tasks/schemas";
 import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
 import type { TaskItem } from "../tasks/query";
+import { occursOn } from "../tasks/recurrence";
 
 /*
  * The planner's pure domain layer: the source vocabulary, the period
@@ -122,22 +123,15 @@ export function sortOpenFirst(items: TaskItem[]): TaskItem[] {
   ];
 }
 
+/** The open tasks touching the day: due that day, or an occurrence
+    their rule puts there. */
 export function tasksForDay(tasks: TaskItem[], day: Date): TaskItem[] {
-  const iso = isoOf(day);
-  return tasks.filter(
-    (task) =>
-      task.data?.due != null &&
-      task.data.due.slice(0, 10) === iso &&
-      !(task.data != null && isDone(task)),
-  );
+  return tasks.filter((task) => !isDone(task) && occursOn(task, day));
 }
 
 /** Every task touching the day, completed ones included. */
 export function tasksForDayAll(tasks: TaskItem[], day: Date): TaskItem[] {
-  const iso = isoOf(day);
-  return tasks.filter(
-    (task) => task.data?.due != null && task.data.due.slice(0, 10) === iso,
-  );
+  return tasks.filter((task) => occursOn(task, day));
 }
 
 export function hasTime(task: TaskItem): boolean {

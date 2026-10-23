@@ -8,6 +8,8 @@ import {
   parsePlannerDay,
   plannerDayParam,
   sortOpenFirst,
+  tasksForDay,
+  tasksForDayAll,
   timeOf,
   withKeptTime,
   withTime,
@@ -36,6 +38,15 @@ function doneDue(value: string): TaskFrontmatter {
     created: "2026-10-20",
     due: value,
     completed: "2026-10-21",
+  };
+}
+
+function recurringDue(value: string, recurrence: string): TaskFrontmatter {
+  return {
+    kind: "[[tasks]]",
+    created: "2026-10-20",
+    due: value,
+    recurrence,
   };
 }
 
@@ -211,5 +222,33 @@ describe("plannerDayParam", () => {
 
   it("drops the time of day", () => {
     expect(plannerDayParam(new Date(2026, 9, 24, 18, 30))).toBe("2026-10-24");
+  });
+});
+
+describe("tasksForDay", () => {
+  it("shows a recurring task on each occurrence, not only its due day", () => {
+    const daily = task("standup", recurringDue("2026-10-21", "FREQ=DAILY"));
+    expect(tasksForDay([daily], DAY).map((item) => item.name)).toEqual([
+      "standup",
+    ]);
+    expect(tasksForDay([daily], new Date(2026, 9, 24))).toHaveLength(1);
+    // The day before its start is not an occurrence.
+    expect(tasksForDay([daily], new Date(2026, 9, 20))).toEqual([]);
+  });
+
+  it("drops a done task from the open list but keeps it in tasksForDayAll", () => {
+    const shipped = task("shipped", doneDue("2026-10-22"));
+    expect(tasksForDay([shipped], DAY)).toEqual([]);
+    expect(tasksForDayAll([shipped], DAY).map((item) => item.name)).toEqual([
+      "shipped",
+    ]);
+  });
+
+  it("never shows a done recurring task on a later occurrence", () => {
+    const done = task("standup", {
+      ...recurringDue("2026-10-21", "FREQ=DAILY"),
+      completed: "2026-10-21",
+    });
+    expect(tasksForDayAll([done], DAY)).toEqual([]);
   });
 });
