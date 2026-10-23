@@ -1,5 +1,11 @@
 import * as React from "react";
-import { AppState, Platform } from "react-native";
+import { Platform } from "react-native";
+import {
+  QueryClientContext,
+  QueryClientProvider,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
 import { todayIso } from "../lib/dates";
 import { loadMockTasks, toggleMockCompleted } from "../lib/mock";
@@ -16,6 +22,7 @@ import {
   type CaptureTarget,
 } from "../features/capture/write";
 import type { ParsedCapture } from "../features/capture/parse";
+import { makeQueryClient } from "./query-client";
 import {
   StoreMetaContext,
   TaskListContext,
@@ -34,31 +41,138 @@ import { TaskActionsContext, type TaskActions } from "./task-actions";
  *   set, which still supports every interaction, including capture
  *   (tasks are appended in place so Enter works in the browser).
  *
- * Mutations are local first: the row changes in the same frame as the
- * tap, and the note is written behind it. The vault is read again on
- * boot, on refresh, on a new grant, and when the app returns to the
- * foreground, not after every write. See ADR 0017.
+ * The list itself lives in the query cache: the read hydrates it, and a
+ * mutation writes the optimistic row into it, so every row consumer
+ * reads one place. Mutations are local first: the row changes in the
+ * same frame as the tap, and the note is written behind it. The vault is
+ * read on boot, on refresh, on a new grant, and when the app returns to
+ * the foreground, never after a write. See ADR 0017.
  */
+
+/** What the list query caches: the folder the rows came from and the rows. */
+export type TaskListData = {
+  tasksDir: string | null;
+  tasks: TaskItem[];
+};
 
 /** A row that exists only in memory until its file lands. */
 let pendingSeq = 0;
 
+/** The empty list, shared so a store with no rows keeps one identity. */
+const NO_TASKS: TaskItem[] = [];
+
 export function TasksProvider({ children }: { children: React.ReactNode }) {
-  const [tasks, setTasks] = React.useState<TaskItem[]>([]);
-  const [tasksDir, setTasksDir] = React.useState<string | null>(null);
+  // The app mounts one client above the store; a tree that mounts the
+  // store on its own (a test, a preview) gets one of its own rather
+  // than reading rows from a client nobody provided.
+  const inherited = React.useContext(QueryClientContext);
+  if (inherited != null) {
+    return <TaskStore>{children}</TaskStore>;
+  }
+  return <OwnedTaskStore>{children}</OwnedTaskStore>;
+}
+
+function OwnedTaskStore({ children }: { children: React.ReactNode }) {
+  const [client] = React.useState(makeQueryClient);
+  return (
+    <QueryClientProvider client={client}>
+      <TaskStore>{children}</TaskStore>
+    </QueryClientProvider>
+  );
+}
+
+function TaskStore({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [rootUri, setRootUri] = React.useState<string | null>(null);
-  const [status, setStatus] = React.useState<StoreStatus>("loading");
+  const [booted, setBooted] = React.useState(false);
   const [lastError, setLastError] = React.useState<string | null>(null);
 
   // The list is read synchronously by mutations. A tap computes from
   // this ref, not from the last render, so two quick taps chain even
   // when React has not painted the first one yet.
-  const tasksRef = React.useRef<TaskItem[]>(tasks);
+  const tasksRef = React.useRef<TaskItem[]>(NO_TASKS);
 
-  const applyTasks = React.useCallback((next: TaskItem[]) => {
-    tasksRef.current = next;
-    setTasks(next);
-  }, []);
+  // One queue per note uri. A note is written in order, one write at a
+  // time, so two taps cannot interleave read-modify-write cycles.
+  const writes = React.useRef(new Map<string, Promise<void>>());
+
+  // A read waits for the notes still being written: a reload during a
+  // write would read the old text back over the row the user just
+  // changed. The wait replaces the old "skip this turn" check.
+  const readVault = React.useCallback(
+    async (root: string): Promise<TaskListData> => {
+      await Promise.all(
+        [...writes.current.values()].map((write) =>
+          write.catch(() => undefined),
+        ),
+      );
+      const loaded = await loadVaultTasks(root);
+      // A folder that reads is a folder that works again: the banner
+      // should not outlive the failure it reported.
+      setLastError(null);
+      return loaded;
+    },
+    [],
+  );
+
+  // The granted folder's list. The root is the folder the user picked;
+  // the Tasks folder inside it is derived on every load, so a reload can
+  // never read from the wrong place.
+  const vault = useQuery({
+    queryKey: ["tasks", rootUri],
+    queryFn: () => readVault(rootUri as string),
+    enabled: rootUri != null,
+    // A cache entry never goes stale on its own, so focus must ask for
+    // the read rather than wait for a staleness check to allow it: the
+    // return to the foreground is when the vault wins over the local
+    // list.
+    refetchOnWindowFocus: "always",
+  });
+
+  // The browser has no folder picker, so with no root it serves the
+  // sample set. A device shows an empty list and asks for a folder,
+  // because writing to a mock list on a phone looks like a working app
+  // that loses every edit.
+  const mock = useQuery({
+    queryKey: ["mock"],
+    queryFn: async (): Promise<TaskListData> => ({
+      tasksDir: null,
+      tasks: await loadMockTasks(),
+    }),
+    enabled: rootUri == null && Platform.OS === "web",
+    refetchOnWindowFocus: "always",
+  });
+
+  const active = rootUri != null ? vault : mock;
+  const { refetch } = active;
+  const tasks = active.data?.tasks ?? NO_TASKS;
+  const tasksDir = active.data?.tasksDir ?? null;
+
+  // The cache entry a write lands in: the granted folder's list, or the
+  // sample set standing in for it.
+  const activeKey = React.useMemo(
+    () => (rootUri != null ? ["tasks", rootUri] : ["mock"]),
+    [rootUri],
+  );
+
+  const applyTasks = React.useCallback(
+    (next: TaskItem[]) => {
+      tasksRef.current = next;
+      // The cache is the list. The optimistic row goes through it, so a
+      // consumer re-renders from the same place a reload would land.
+      queryClient.setQueryData<TaskListData>(activeKey, (old) => ({
+        tasksDir: old?.tasksDir ?? null,
+        tasks: next,
+      }));
+    },
+    [queryClient, activeKey],
+  );
+
+  // A fetch fills the cache directly, so the ref follows the rows it
+  // renders, not only the rows a mutation writes.
+  React.useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
 
   const patchOne = React.useCallback(
     (uri: string, change: (item: TaskItem) => TaskItem): TaskItem | null => {
@@ -70,10 +184,6 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     },
     [applyTasks],
   );
-
-  // One queue per note uri. A note is written in order, one write at a
-  // time, so two taps cannot interleave read-modify-write cycles.
-  const writes = React.useRef(new Map<string, Promise<void>>());
 
   const queueWrite = React.useCallback((uri: string, text: string) => {
     const previous = writes.current.get(uri) ?? Promise.resolve();
@@ -108,51 +218,12 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /**
-   * Load the task list for the granted root. The root is the folder
-   * the user picked; the Tasks folder inside it is derived on every
-   * load, so a reload can never read from the wrong place.
-   *
-   * With no root there is no vault. The browser has no folder picker,
-   * so web serves the sample set; a device shows an empty list and
-   * asks for a folder, because writing to a mock list on a phone looks
-   * like a working app that loses every edit.
-   */
-  const load = React.useCallback(async () => {
-    const root = rootUri;
-    if (!root) {
-      setTasksDir(null);
-      if (Platform.OS === "web") {
-        applyTasks(await loadMockTasks());
-      } else {
-        applyTasks([]);
-      }
-      setStatus("ready");
-      return;
-    }
-    try {
-      const { tasksDir: folder, tasks: loaded } = await loadVaultTasks(root);
-      setTasksDir(folder);
-      applyTasks(loaded);
-      setStatus("ready");
-      setLastError(null);
-      // The alarm list is rebuilt from the notes just read, so a capture,
-      // a tick or a drag all leave the schedule matching the vault. Fire
-      // and forget: notifications must never hold up the store.
-      void syncReminders(loaded).catch(() => undefined);
-    } catch (error) {
-      setStatus("error");
-      setLastError(`vault read: ${String(error)}`);
-    }
-  }, [rootUri, applyTasks]);
-
   // Boot once: read the saved folder (SAF on Android; the read is
   // unavailable on web, so it resolves to null and the mock store
-  // serves the design preview). Loads then follow rootUri, which is
-  // also how a fresh grant flips the store into vault mode.
-  const [booted, setBooted] = React.useState(false);
+  // serves the design preview). The queries then follow rootUri, which
+  // is also how a fresh grant flips the store into vault mode.
   React.useEffect(() => {
-    let active = true;
+    let live = true;
     void (async () => {
       let saved: string | null = null;
       try {
@@ -160,43 +231,57 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
       } catch {
         saved = null;
       }
-      if (!active) {
+      if (!live) {
         return;
       }
       setRootUri(saved ?? null);
       setBooted(true);
     })();
     return () => {
-      active = false;
+      live = false;
     };
   }, []);
 
+  // A read failure is reported where a write failure is: the banner.
+  const readError = active.error;
   React.useEffect(() => {
-    if (!booted) {
+    if (readError == null) {
       return;
     }
-    // The store's boot load: state changes land after the awaited
-    // reads, never synchronously within this effect.
+    // The message lands after the fetch has settled, never during a
+    // render.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
-  }, [booted, rootUri, load]);
+    setLastError(`vault read: ${String(readError)}`);
+  }, [readError]);
 
-  // Another app (Obsidian) can edit a note while this one is in the
-  // background. The local list is the truth while the app runs, so a
-  // return to the foreground is the moment to let the vault win again.
-  // A pending write would be read back stale, so it skips that turn.
-  React.useEffect(() => {
+  const status: StoreStatus = React.useMemo(() => {
     if (!booted) {
+      return "loading";
+    }
+    // No root on a device is a settled empty store, not a pending read:
+    // there is nothing to load until a folder is granted.
+    if (rootUri == null && Platform.OS !== "web") {
+      return "ready";
+    }
+    if (active.isError) {
+      return "error";
+    }
+    if (active.isPending) {
+      return "loading";
+    }
+    return "ready";
+  }, [booted, rootUri, active.isError, active.isPending]);
+
+  // The alarm list is rebuilt from the notes just read, so a capture, a
+  // tick or a drag all leave the schedule matching the list. Fire and
+  // forget: notifications must never hold up the store.
+  const loaded = vault.data;
+  React.useEffect(() => {
+    if (loaded == null) {
       return;
     }
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state !== "active" || writes.current.size > 0) {
-        return;
-      }
-      void load();
-    });
-    return () => subscription.remove();
-  }, [booted, load]);
+    void syncReminders(loaded.tasks).catch(() => undefined);
+  }, [loaded]);
 
   const toggle = React.useCallback(
     async (task: TaskItem) => {
@@ -373,6 +458,12 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     [rootUri, tasksDir, applyTasks, patchOne],
   );
 
+  // A refresh is a refetch of the list the store is showing: the vault
+  // when a folder is granted, the sample set on the browser.
+  const refresh = React.useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
   const meta = React.useMemo<StoreMeta>(
     () => ({
       mode: rootUri ? "vault" : "mock",
@@ -391,12 +482,12 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     () => ({
       clearError,
       grant,
-      refresh: () => load(),
+      refresh,
       toggle,
       writeFields,
       capture,
     }),
-    [clearError, grant, load, toggle, writeFields, capture],
+    [clearError, grant, refresh, toggle, writeFields, capture],
   );
 
   return (
