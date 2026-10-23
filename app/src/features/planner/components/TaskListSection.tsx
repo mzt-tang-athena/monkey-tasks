@@ -40,6 +40,7 @@ export function TaskListSection({
   taskForm,
   onFormChange,
   onToggle,
+  onOpen,
   onDragStart,
   tasks,
   emptyLabel,
@@ -57,6 +58,8 @@ export function TaskListSection({
   taskForm: TaskForm;
   onFormChange: (form: TaskForm) => void;
   onToggle: (task: TaskItem) => void;
+  /** A row body press opens the task; absent leaves the body inert. */
+  onOpen?: (task: TaskItem) => void;
   onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
   tasks: TaskItem[];
   emptyLabel: string;
@@ -78,7 +81,7 @@ export function TaskListSection({
           lifted={lifted ?? null}
           onPointerDown={(e) => onDragStart(item, e)}
         >
-          <TaskRow task={item} onToggle={onToggle} />
+          <TaskRow task={item} onToggle={onToggle} onOpen={onOpen} />
         </Pickup>
       )}
       ItemSeparatorComponent={RowSeparator}

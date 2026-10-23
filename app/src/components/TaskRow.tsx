@@ -8,11 +8,14 @@ import { colors, fonts, spacing, radii } from "../theme/tokens";
 function TaskRowBase({
   task,
   onToggle,
+  onOpen,
   /** "under" puts the time below the name; "right" adds a planner gutter. */
   timeAlign = "under",
 }: {
   task: TaskItem;
   onToggle?: (task: TaskItem) => void;
+  /** A press on the body opens the task; the circle stays the toggle. */
+  onOpen?: (task: TaskItem) => void;
   timeAlign?: "under" | "right";
 }) {
   const [hot, setHot] = React.useState(false);
@@ -23,6 +26,28 @@ function TaskRowBase({
   const recurring = task.data?.recurrence != null && task.data.recurrence !== "";
   const disabled = onToggle == null;
 
+  const body = (
+    <>
+      <Text style={[styles.name, done && styles.nameDone]} numberOfLines={2}>
+        {task.name}
+      </Text>
+      <View style={styles.metaRow}>
+        {timeAlign === "under" && due?.hasTime && !done ? (
+          <Text style={[styles.time, overdue && styles.overdueText]}>
+            {formatTime(due.date)}
+          </Text>
+        ) : null}
+        {!due && task.data?.due ? (
+          <Text style={[styles.badDate, overdue && styles.overdueText]}>
+            bad date
+          </Text>
+        ) : null}
+        {recurring ? <Text style={styles.recur}>repeats</Text> : null}
+        {overdue ? <Text style={styles.overdueText}>overdue</Text> : null}
+      </View>
+    </>
+  );
+
   return (
     <View style={styles.row}>
       {timeAlign === "right" && due?.hasTime && !done ? (
@@ -30,10 +55,10 @@ function TaskRowBase({
           {formatTime(due.date)}
         </Text>
       ) : null}
-      {/* The row itself is inert; ONLY the circle toggles. It
-          top-anchors to the FIRST text line: 22pt circle on a
-          22pt line box, so wrapped lines flow beneath without moving
-          it (Google Tasks' rule). */}
+      {/* The circle is the ONLY toggle. It top-anchors to the FIRST
+          text line: 22pt circle on a 22pt line box, so wrapped lines
+          flow beneath without moving it (Google Tasks' rule). The
+          body beside it opens the task when the caller wants that. */}
       <Pressable
         style={({ pressed }) => [
           styles.circle,
@@ -53,28 +78,21 @@ function TaskRowBase({
         {done ? <Text style={styles.check}>{"✓"}</Text> : null}
       </Pressable>
 
-      <View style={styles.textBlock}>
-        <Text
-          style={[styles.name, done && styles.nameDone]}
-          numberOfLines={2}
+      {onOpen == null ? (
+        <View style={styles.textBlock}>{body}</View>
+      ) : (
+        <Pressable
+          style={({ pressed }) => [
+            styles.textBlock,
+            pressed && styles.bodyPressed,
+          ]}
+          onPress={() => onOpen(task)}
+          accessibilityRole="button"
+          accessibilityLabel="open task"
         >
-          {task.name}
-        </Text>
-        <View style={styles.metaRow}>
-          {timeAlign === "under" && due?.hasTime && !done ? (
-            <Text style={[styles.time, overdue && styles.overdueText]}>
-              {formatTime(due.date)}
-            </Text>
-          ) : null}
-          {!due && task.data?.due ? (
-            <Text style={[styles.badDate, overdue && styles.overdueText]}>
-              bad date
-            </Text>
-          ) : null}
-          {recurring ? <Text style={styles.recur}>repeats</Text> : null}
-          {overdue ? <Text style={styles.overdueText}>overdue</Text> : null}
-        </View>
-      </View>
+          {body}
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -128,6 +146,9 @@ const styles = StyleSheet.create({
   },
   textBlock: {
     flex: 1,
+  },
+  bodyPressed: {
+    opacity: 0.6,
   },
   name: {
     fontSize: 16,

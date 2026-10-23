@@ -15,6 +15,7 @@ type PlannerGesturesOptions = {
   day: Date;
   setDay: (next: Date) => void;
   toggle: (task: TaskItem) => void;
+  open: (task: TaskItem) => void;
   writeFields: (task: TaskItem, patch: Partial<TaskFrontmatter>) => void;
   pointerPickup: boolean;
 };
@@ -38,6 +39,7 @@ export function usePlannerGestures({
   day,
   setDay,
   toggle: storeToggle,
+  open: storeOpen,
   writeFields,
   pointerPickup,
 }: PlannerGesturesOptions) {
@@ -154,6 +156,15 @@ export function usePlannerGestures({
     }
     toggle(task);
   };
+  // A row body press opens the task editor, under the same guard: a
+  // drop's leftover click must not open the editor either.
+  const guardedOpen = (task: TaskItem) => {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
+    storeOpen(task);
+  };
   // Week columns select a day; a drop from a dragged task must not
   // select the column it was released over.
   const guardedSelect = (next: Date) => {
@@ -251,7 +262,7 @@ export function usePlannerGestures({
 
   return {
     rootRef, dragging, hoveredDay, dropZones, lifted, dragApi, toggle,
-    updateTask, guardedToggle, guardedSelect, suppressClick, shiftDay,
+    updateTask, guardedToggle, guardedOpen, guardedSelect, suppressClick, shiftDay,
     shiftMonth, startDayDrag, pointerHandlers,
   };
 }
