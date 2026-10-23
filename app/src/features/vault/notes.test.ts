@@ -20,6 +20,13 @@ describe("updateProperty", () => {
     expect(result).toContain("lists:\n  - [[groceries]]");
   });
 
+  it("inserts a one-item array as a block, never inline", () => {
+    const minimal = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n';
+    const result = updateProperty(minimal, "reminders", ["2026-11-01T07:00"]);
+    expect(result).toContain("reminders:\n  - 2026-11-01T07:00");
+    expect(result).not.toContain("reminders:   -");
+  });
+
   it("removes a property and its block items", () => {
     const withDue =
       '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21T15:00\nreminders:\n  - 2026-10-21T15:00\n---\n';

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { validateNote, taskFrontmatter } from "@monkey-tasks/schemas";
 import { applyPatch } from "./patch";
 import type { TaskItem } from "./query";
 
@@ -53,5 +54,38 @@ describe("applyPatch", () => {
   it("leaves an unreadable note alone", () => {
     const broken: TaskItem = { ...task(note), data: null };
     expect(applyPatch(broken, { due: "2026-10-24" })).toBe(broken);
+  });
+});
+
+describe("applyPatch, recurring drag", () => {
+  it("keeps a note valid when a tick drops reminders and a drag adds one", () => {
+    const recurring = `---
+kind: "[[tasks]]"
+created: 2026-10-23
+due: 2026-10-23T07:00
+recurrence: FREQ=WEEKLY
+lists:
+  - [[Main]]
+reminders:
+  - 2026-10-23T07:00
+---
+`;
+    const start = task(recurring);
+    // A date-only next due carries no alarm, so the tick removes the
+    // property. The drag then writes a datetime reminder back.
+    const ticked = applyPatch(start, {
+      due: "2026-10-30",
+      reminders: null,
+    });
+    const dragged = applyPatch(ticked, {
+      due: "2026-11-01T07:00",
+      reminders: ["2026-11-01T07:00"],
+    });
+
+    expect(dragged.text).toContain("reminders:\n  - 2026-11-01T07:00");
+    expect(dragged.text).not.toContain("reminders:   -");
+    const note = validateNote("Call.md", dragged.text, taskFrontmatter);
+    expect(note.data).not.toBeNull();
+    expect(note.data?.reminders).toEqual(["2026-11-01T07:00"]);
   });
 });
