@@ -40,4 +40,13 @@ Also in this pass:
 
 ## Outcome
 
-(filled in before moving to done/)
+The pure helpers live in `features/planner/model.ts` with 13 tests. The
+route is a one-line re-export, the planner container is 639 lines, and
+the capture sheet has its own component and hook. The store exposes
+three hooks and its actions object is stable across ticks. `lib` cannot
+import a feature. The planner error state retries, and an error boundary
+wraps the stack.
+
+Verified: `tsc --noEmit` clean, 124 tests across 17 files, eslint 0
+errors. Device parity for the moved UI is checked on the next build.
+

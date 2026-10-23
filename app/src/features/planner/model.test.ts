@@ -4,6 +4,9 @@ import type { TaskItem } from "../tasks/query";
 import {
   hasTime,
   inSourceList,
+  parseMode,
+  parsePlannerDay,
+  plannerDayParam,
   sortOpenFirst,
   timeOf,
   withKeptTime,
@@ -137,5 +140,76 @@ describe("inSourceList", () => {
     const loose = task("Bravo", { kind: "[[tasks]]", created: "2026-10-20" });
     expect(inSourceList(loose, "Main")).toBe(true);
     expect(inSourceList(loose, "Focus")).toBe(false);
+  });
+});
+
+describe("parseMode", () => {
+  it("accepts the three modes", () => {
+    expect(parseMode("day")).toBe("day");
+    expect(parseMode("week")).toBe("week");
+    expect(parseMode("month")).toBe("month");
+  });
+
+  it("defaults to day when absent or unknown", () => {
+    expect(parseMode(undefined)).toBe("day");
+    expect(parseMode("year")).toBe("day");
+    expect(parseMode("")).toBe("day");
+  });
+
+  it("reads the first value of a repeated param", () => {
+    expect(parseMode(["week", "month"])).toBe("week");
+    expect(parseMode(["year"])).toBe("day");
+    expect(parseMode([])).toBe("day");
+  });
+});
+
+describe("parsePlannerDay", () => {
+  it("reads a date at local midnight", () => {
+    const day = parsePlannerDay("2026-10-24", DAY);
+    expect(day.getTime()).toBe(new Date(2026, 9, 24).getTime());
+    expect(day.getHours()).toBe(0);
+  });
+
+  it("falls back to the start of today for an impossible date", () => {
+    const now = new Date(2026, 9, 22, 15, 45);
+    expect(parsePlannerDay("2026-02-30", now).getTime()).toBe(
+      new Date(2026, 9, 22).getTime(),
+    );
+  });
+
+  it("falls back to the start of today when absent or malformed", () => {
+    const now = new Date(2026, 9, 22, 15, 45);
+    expect(parsePlannerDay(undefined, now).getTime()).toBe(
+      new Date(2026, 9, 22).getTime(),
+    );
+    expect(parsePlannerDay("tomorrow", now).getTime()).toBe(
+      new Date(2026, 9, 22).getTime(),
+    );
+    // A datetime is not a day param: only the plain date is accepted.
+    expect(parsePlannerDay("2026-10-22T09:00", now).getTime()).toBe(
+      new Date(2026, 9, 22).getTime(),
+    );
+  });
+
+  it("reads the first value of a repeated param", () => {
+    expect(parsePlannerDay(["2026-10-24"], DAY).getTime()).toBe(
+      new Date(2026, 9, 24).getTime(),
+    );
+    expect(parsePlannerDay(["2026-02-30"], DAY).getTime()).toBe(DAY.getTime());
+    expect(parsePlannerDay([], DAY).getTime()).toBe(DAY.getTime());
+  });
+});
+
+describe("plannerDayParam", () => {
+  it("writes the calendar date", () => {
+    expect(plannerDayParam(DAY)).toBe("2026-10-22");
+  });
+
+  it("pads single digit months and days", () => {
+    expect(plannerDayParam(new Date(2026, 0, 5))).toBe("2026-01-05");
+  });
+
+  it("drops the time of day", () => {
+    expect(plannerDayParam(new Date(2026, 9, 24, 18, 30))).toBe("2026-10-24");
   });
 });

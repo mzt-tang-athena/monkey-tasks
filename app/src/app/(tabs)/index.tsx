@@ -1,21 +1,32 @@
 import * as React from "react";
-import { Platform, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, SectionList, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { groupByDue, inList, type TaskItem } from "../../features/tasks/query";
+import type { TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { BottomBar } from "../../components/BottomBar";
-import { useTasks } from "../../store/tasks";
-import { dayLabel } from "../../lib/dates";
+import { useStoreMeta } from "../../store/task-state";
+import { useTaskActions } from "../../store/task-actions";
+import {
+  useTabTasks,
+  useTaskSections,
+  type ListTab,
+  type SectionTone,
+} from "../../store/selectors";
+import { IconButton } from "../../components/ui";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
 
 /**
  * Lists tab: the Focus list and a catch-all Main list, with capture
  * docked above the bottom bar.
  */
-type ListTab = "Focus" | "Main";
+type ListsSection = {
+  title: string;
+  tone: SectionTone | "faint";
+  data: TaskItem[];
+};
 
 const TARGETS: CaptureTarget[] = [
   { kind: "list", name: "Focus" },
@@ -23,9 +34,8 @@ const TARGETS: CaptureTarget[] = [
 ];
 
 export default function ListsScreen() {
-  const store = useTasks();
-  const tasks = store.tasks;
-  const status = store.status;
+  const { mode, status, lastError } = useStoreMeta();
+  const actions = useTaskActions();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = React.useState<ListTab>("Main");
   const [menu, setMenu] = React.useState<{
@@ -49,45 +59,100 @@ export default function ListsScreen() {
     }),
   );
 
-  const storeToggle = store.toggle;
+  const toggleTask = actions.toggle;
   const toggle = React.useCallback(
     (task: TaskItem) => {
-      void storeToggle(task);
+      void toggleTask(task);
     },
-    [storeToggle],
+    [toggleTask],
   );
 
   // A real reload: the loader can fail when it talks to the vault,
   // so the error state keeps its retry affordance (also wired to
-  // FlatList's pull-to-refresh).
+  // the list's pull-to-refresh).
   const [refreshing, setRefreshing] = React.useState(false);
+  const refresh = actions.refresh;
   const reload = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      await store.refresh();
+      await refresh();
     } finally {
       setRefreshing(false);
     }
-  }, [store]);
+  }, [refresh]);
 
-  const visible = inTabTasks(tasks, tab);
-  const groups = groupByDue(visible, new Date());
+  const visible = useTabTasks(tab);
+  const openSections = useTaskSections(visible);
+  const completed = React.useMemo(
+    () =>
+      visible
+        .filter((task) => task.data?.completed)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [visible],
+  );
 
-  const sections: {
-    title: string;
-    items: TaskItem[];
-    tone: "danger" | "muted" | "ink";
-  }[] = [
-    { title: "Past", items: groups.overdue, tone: "danger" },
-    { title: "Today", items: groups.today, tone: "ink" },
-    ...groups.upcoming.map((bucket) => ({
-      title: dayLabel(bucket.date, new Date()),
-      items: bucket.items,
-      tone: "muted" as const,
-    })),
-    { title: "No date", items: groups.undated, tone: "muted" },
-  ];
-  const shown = sections.filter((section) => section.items.length > 0);
+  const sections = React.useMemo<ListsSection[]>(() => {
+    if (status !== "ready") {
+      return [];
+    }
+    const next: ListsSection[] = openSections.map((section) => ({
+      title: section.title,
+      tone: section.tone,
+      data: section.items,
+    }));
+    if (completed.length > 0) {
+      next.push({ title: "Completed", tone: "faint", data: completed });
+    }
+    return next;
+  }, [status, openSections, completed]);
+
+  const renderSectionHeader = React.useCallback(
+    ({ section }: { section: ListsSection }) => {
+      if (section.tone === "faint") {
+        return (
+          <View style={[styles.group, styles.completedGroup]}>
+            <Text style={styles.completedLabel}>
+              {section.title}
+              {"  "}
+              {section.data.length}
+            </Text>
+          </View>
+        );
+      }
+      return (
+        <View style={styles.group}>
+          <Text style={[styles.groupLabel, toneLabel(section.tone)]}>
+            {section.title}
+            {"  "}
+            {section.data.length}
+          </Text>
+        </View>
+      );
+    },
+    [],
+  );
+
+  const renderItem = React.useCallback(
+    ({
+      item,
+      index,
+      section,
+    }: {
+      item: TaskItem;
+      index: number;
+      section: ListsSection;
+    }) => (
+      <View
+        style={[
+          index > 0 ? styles.groupRow : undefined,
+          section.tone === "faint" ? styles.completedRow : undefined,
+        ]}
+      >
+        <TaskRow task={item} onToggle={toggle} />
+      </View>
+    ),
+    [toggle],
+  );
 
   const openMenu = () => {
     dotsRef.current?.measureInWindow((x, y, width, height) => {
@@ -117,14 +182,14 @@ export default function ListsScreen() {
         {/* The list tab bar sits ABOVE the scroller: the page's fixed
             chrome. Sections scroll beneath it, the bar never moves.
             A horizontal swipe on the body walks the tabs. */}
-        {(store.mode === "mock" || store.status === "error") &&
+        {(mode === "mock" || status === "error") &&
         Platform.OS !== "web" ? (
           <Pressable
             style={({ pressed }) => [
               styles.grantRow,
               pressed && styles.grantRowPressed,
             ]}
-            onPress={() => void store.grant()}
+            onPress={() => void actions.grant()}
             accessibilityRole="button"
             accessibilityLabel="connect vault folder"
           >
@@ -180,18 +245,18 @@ export default function ListsScreen() {
         </View>
         {/* A failed tick or field write leaves the list usable, so the
             message is a quiet banner over it, not the error state. */}
-        {store.lastError != null && status !== "error" ? (
+        {lastError != null && status !== "error" ? (
           <View style={styles.bannerSlot}>
             <View style={styles.errorBanner}>
               <Text style={styles.errorText} numberOfLines={3}>
-                {store.lastError}
+                {lastError}
               </Text>
               <Pressable
                 style={({ pressed }) => [
                   styles.errorDismiss,
                   pressed && styles.errorDismissPressed,
                 ]}
-                onPress={store.clearError}
+                onPress={actions.clearError}
                 accessibilityRole="button"
                 accessibilityLabel="dismiss error"
               >
@@ -200,62 +265,35 @@ export default function ListsScreen() {
             </View>
           </View>
         ) : null}
-        <FlatList
+        <SectionList<TaskItem, ListsSection>
           contentContainerStyle={styles.content}
           onRefresh={reload}
           refreshing={refreshing}
-          data={[{ key: "lists" }]}
-          renderItem={() => (
-            <View>
-              {status === "loading" ? <LoadingState /> : null}
-              {status === "error" ? (
-                <EmptyState
-                  label={store.lastError ?? "Something went wrong. Pull to retry."}
-                />
-              ) : null}
-              {status === "ready" && shown.length === 0 ? (
-                <EmptyState label="Nothing on this list yet." />
-              ) : null}
-
-              {status === "ready"
-                ? shown.map((section) => (
-                    <View key={section.title} style={styles.group}>
-                      <Text
-                        style={[styles.groupLabel, toneLabel(section.tone)]}
-                      >
-                        {section.title}
-                        {"  "}
-                        {section.items.length}
-                      </Text>
-                      {section.items.map((task, index) => (
-                        <View
-                          key={task.id}
-                          style={index > 0 ? styles.groupRow : undefined}
-                        >
-                          <TaskRow task={task} onToggle={toggle} />
-                        </View>
-                      ))}
-                    </View>
-                  ))
-                : null}
-
-              {status === "ready" && groups.completed.length > 0 ? (
-                <View style={[styles.group, styles.completedGroup]}>
-                  <Text style={styles.completedLabel}>
-                    Completed  {groups.completed.length}
-                  </Text>
-                  {groups.completed.map((task, index) => (
-                    <View
-                      key={task.id}
-                      style={index > 0 ? styles.groupRow : undefined}
-                    >
-                      <TaskRow task={task} onToggle={toggle} />
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-            </View>
-          )}
+          sections={sections}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          renderSectionHeader={renderSectionHeader}
+          ItemSeparatorComponent={GroupRowSeparator}
+          ListHeaderComponent={
+            status === "ready" &&
+            openSections.length === 0 &&
+            completed.length > 0 ? (
+              <EmptyState label="Nothing on this list yet." />
+            ) : undefined
+          }
+          ListEmptyComponent={
+            status === "loading" ? (
+              <LoadingState />
+            ) : status === "error" ? (
+              <EmptyState
+                label={lastError ?? "Something went wrong. Pull to retry."}
+              />
+            ) : (
+              <EmptyState label="Nothing on this list yet." />
+            )
+          }
+          stickySectionHeadersEnabled={false}
+          removeClippedSubviews={false}
         />
       </View>
       {/* The overflow menu, anchored to the dots button. */}
@@ -311,56 +349,17 @@ export default function ListsScreen() {
       <BottomBar
         targets={TARGETS}
         defaultTargetIndex={tab === "Focus" ? 0 : 1}
-        onSend={(parsed, target) => store.capture(parsed, target)}
+        onSend={(parsed, target) => actions.capture(parsed, target)}
       />
     </View>
   );
 }
 
-/**
- * Focus shows the Focus list. Main is the catch-all: every task that is
- * not on Focus, so a task tagged with a list that has no tab yet (Work,
- * Errands) still appears instead of vanishing.
- */
-function inTabTasks(tasks: TaskItem[] | null, tab: ListTab): TaskItem[] {
-  const all = tasks ?? [];
-  const focus = inList(all, "Focus");
-  if (tab === "Focus") {
-    return focus;
-  }
-  const onFocus = new Set(focus.map((item) => item.uri));
-  return all.filter((item) => !onFocus.has(item.uri));
-}
+const keyExtractor = (item: TaskItem) => item.id;
 
-/** A quiet 36pt glyph button: hover, pressed, and active states. */
-function IconButton({
-  label,
-  active,
-  onPress,
-  children,
-}: {
-  label: string;
-  active?: boolean;
-  onPress?: () => void;
-  children: React.ReactNode;
-}) {
-  const [hover, setHover] = React.useState(false);
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.iconButton,
-        (hover || pressed) && styles.iconButtonHot,
-        active && styles.iconButtonActive,
-      ]}
-      onHoverIn={() => setHover(true)}
-      onHoverOut={() => setHover(false)}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      {children}
-    </Pressable>
-  );
+/** The hairline between rows in a group. */
+function GroupRowSeparator() {
+  return <View style={styles.groupRow} />;
 }
 
 const toneLabel = (() => {
@@ -516,19 +515,6 @@ const styles = StyleSheet.create({
   },
 
   // Quiet top-right controls: sort glyph and the three-dot overflow.
-  iconButton: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius,
-  },
-  iconButtonHot: {
-    backgroundColor: colors.pressed,
-  },
-  iconButtonActive: {
-    backgroundColor: colors.accentSoft,
-  },
   glyphSort: {
     alignItems: "flex-end" as const,
     gap: 3,
@@ -610,6 +596,9 @@ const styles = StyleSheet.create({
   completedGroup: {
     opacity: 0.55,
     marginTop: spacing.xl,
+  },
+  completedRow: {
+    opacity: 0.55,
   },
   completedLabel: {
     fontSize: 11,

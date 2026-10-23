@@ -16,6 +16,13 @@ import {
   type CaptureTarget,
 } from "../features/capture/write";
 import type { ParsedCapture } from "../features/capture/parse";
+import {
+  StoreMetaContext,
+  TaskListContext,
+  type StoreMeta,
+  type StoreStatus,
+} from "./task-state";
+import { TaskActionsContext, type TaskActions } from "./task-actions";
 
 /**
  * The one task store both tabs consume, with two modes:
@@ -32,33 +39,6 @@ import type { ParsedCapture } from "../features/capture/parse";
  * boot, on refresh, on a new grant, and when the app returns to the
  * foreground, not after every write. See ADR 0017.
  */
-export type StoreStatus = "loading" | "ready" | "error";
-
-export type TaskStore = {
-  mode: "mock" | "vault";
-  /** The last failed operation's text, for diagnostics. */
-  lastError: string | null;
-  tasks: TaskItem[];
-  tasksDir: string | null;
-  rootUri: string | null;
-  status: StoreStatus;
-  /** Drop the last failure once the user has seen it. */
-  clearError: () => void;
-  grant: () => Promise<void>;
-  refresh: () => Promise<void>;
-  toggle: (task: TaskItem) => Promise<void>;
-  writeFields: (
-    task: TaskItem,
-    patch: Partial<TaskFrontmatter>,
-  ) => Promise<void>;
-  capture: (
-    parsed: ParsedCapture,
-    target: CaptureTarget,
-    preselectedDue?: string,
-  ) => Promise<void>;
-};
-
-const Context = React.createContext<TaskStore | null>(null);
 
 /** A row that exists only in memory until its file lands. */
 let pendingSeq = 0;
@@ -393,14 +373,22 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     [rootUri, tasksDir, applyTasks, patchOne],
   );
 
-  const value = React.useMemo<TaskStore>(
+  const meta = React.useMemo<StoreMeta>(
     () => ({
       mode: rootUri ? "vault" : "mock",
-      tasks,
-      tasksDir,
-      rootUri,
       status,
       lastError,
+      tasksDir,
+      rootUri,
+    }),
+    [rootUri, status, lastError, tasksDir],
+  );
+
+  // The actions never read a row, so their identity holds across task
+  // changes; a row consumer re-renders on a tick, a callback holder
+  // does not.
+  const actions = React.useMemo<TaskActions>(
+    () => ({
       clearError,
       grant,
       refresh: () => load(),
@@ -408,16 +396,16 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
       writeFields,
       capture,
     }),
-    [tasks, tasksDir, rootUri, status, lastError, clearError, grant, load, toggle, writeFields, capture],
+    [clearError, grant, load, toggle, writeFields, capture],
   );
 
-  return <Context.Provider value={value}>{children}</Context.Provider>;
-}
-
-export function useTasks(): TaskStore {
-  const store = React.useContext(Context);
-  if (store == null) {
-    throw new Error("useTasks must run inside TasksProvider");
-  }
-  return store;
+  return (
+    <TaskListContext.Provider value={tasks}>
+      <StoreMetaContext.Provider value={meta}>
+        <TaskActionsContext.Provider value={actions}>
+          {children}
+        </TaskActionsContext.Provider>
+      </StoreMetaContext.Provider>
+    </TaskListContext.Provider>
+  );
 }

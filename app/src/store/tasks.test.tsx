@@ -1,3 +1,6 @@
+/* eslint-disable react-hooks/globals */
+// The Probe pattern: the test reads the provider's hooks through
+// module bindings, which is the shape the rule forbids in app code.
 import * as React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -65,13 +68,27 @@ vi.mock("../features/reminders/sync", () => ({
   syncTaskReminders: async () => undefined,
 }));
 
-import { TasksProvider, useTasks, type TaskStore } from "./tasks";
+import { TasksProvider } from "./tasks";
+import {
+  useStoreMeta,
+  useTaskList,
+  type StoreMeta,
+} from "./task-state";
+import { useTaskActions, type TaskActions } from "./task-actions";
 import type { TaskItem } from "../features/tasks/query";
 
-let latest: TaskStore | null = null;
+/** The three contexts read as one snapshot, for the assertions below. */
+type Snapshot = StoreMeta & TaskActions & { tasks: TaskItem[] };
+
+let latest: Snapshot | null = null;
+let latestActions: TaskActions | null = null;
 
 function Probe() {
-  latest = useTasks();
+  const tasks = useTaskList();
+  const meta = useStoreMeta();
+  const actions = useTaskActions();
+  latest = { ...meta, ...actions, tasks };
+  latestActions = actions;
   return null;
 }
 
@@ -107,12 +124,14 @@ beforeEach(() => {
   holdWrites = false;
   heldOnce = false;
   latest = null;
+  latestActions = null;
 });
 
 describe("TasksProvider", () => {
   it("ticks the row before the write lands, and does not read the vault", async () => {
     await mount();
     expect(loadCalls).toBe(1);
+    const actionsBeforeTick = latestActions;
     holdWrites = true;
 
     await act(async () => {
@@ -123,6 +142,8 @@ describe("TasksProvider", () => {
     expect(writes).toHaveLength(1);
     expect(row().data?.completed).toBeDefined();
     expect(row().text).toContain("completed:");
+    // The tick changed the rows, not the actions: their identity holds.
+    expect(latestActions).toBe(actionsBeforeTick);
     // No reload: the vault read count did not move.
     expect(loadCalls).toBe(1);
 
