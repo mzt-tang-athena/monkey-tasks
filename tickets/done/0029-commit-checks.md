@@ -4,7 +4,7 @@ title: Checks that run before a commit
 created: 2026-10-23
 priority: normal
 assignee: omp
-pr:
+pr: 31
 depends: []
 ---
 
@@ -35,4 +35,13 @@ Add a pre-commit hook and close the CI gap.
 
 ## Outcome
 
-(filled in before moving to done/)
+`.githooks/pre-commit` runs ESLint on staged app code and Vale on staged
+docs. `make hooks` installs it per clone. CI runs ESLint for the first
+time and lints every tracked markdown file, failing on warnings.
+
+Verified: the hook blocked a staged passive sentence and a clean commit
+passed in 2.9 seconds. The first CI run of the new prose gate caught one
+warning in AGENTS.md, which is fixed.
+
+The ESLint gate blocks on errors only. The config leaves warnings such
+as `import/first` in test files, and they do not fail CI.
