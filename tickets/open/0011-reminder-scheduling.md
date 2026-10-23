@@ -26,6 +26,12 @@ own: the upcoming strip idea was absorbed by the Planner's day view
 
 ## Acceptance
 
-- [ ] a task with `reminders` fires an on-device notification
-- [ ] changing or clearing reminders updates schedules
-- [ ] after a reboot, next app open restores lost schedules
+- [x] a task with `reminders` fires an on-device notification
+- [x] changing or clearing reminders updates schedules
+- [x] after a reboot, next app open restores lost schedules
+
+Landed with the local-first store: `syncTaskReminders` moves only the
+touched task's alarms, and every vault read runs a full `syncReminders`,
+which cancels and rebuilds the schedule set on boot.
+
+Still open: the user has not reported an alarm firing on the phone.

@@ -30,9 +30,15 @@ The first tab: Google Tasks-style lists, per the 2026-10-20 brainstorm.
 
 ## Acceptance
 
-- [ ] Focus and Main tabs exist; creating a list note adds a tab
-- [ ] capture from any screen lands on the chip's target; Main
+- [x] Focus and Main tabs exist
+- [ ] Creating a list note adds a tab. The tabs are the fixed pair
+      `"Focus" | "Main"` today; nothing reads `Tasks/Lists/`.
+- [x] capture from any screen lands on the chip's target; Main
       targets write no lists property
-- [ ] ticking writes `completed`, unticking removes it
-- [ ] Date sort groups Past (red), Today, upcoming days, No date,
+- [x] ticking writes `completed`, unticking removes it
+- [x] Date sort groups Past (red), Today, upcoming days, No date,
       with Completed faded last
+
+Remaining work: derive the tab set from the list notes in
+`Tasks/Lists/`, so a new note becomes a tab and a deleted note drops
+one.

@@ -26,8 +26,13 @@ The second tab: a Carnet-inspired planner over due dates, per the
 
 ## Acceptance
 
-- [ ] Day spread shows a task on its due day and only that day
-- [ ] swiping days works and capture from a day sets that due
-- [ ] a recurring task appears on each occurrence in view
-- [ ] Week and Month views render; day tap lists the day
+- [x] Day spread shows a task on its due day and only that day
+- [x] swiping days works and capture from a day sets that due
+- [ ] a recurring task appears on each occurrence in view. The rule
+      moves `due` forward on a tick; the planner never expands it.
+- [x] Week and Month views render; day tap lists the day
+
+Remaining work: expand a recurrence across the visible range, so a
+weekly task shows on each matching day, not only on its stored due
+date.
 
