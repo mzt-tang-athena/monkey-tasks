@@ -3,7 +3,7 @@
 Personal tasks, reminders, and calendar, built on the Obsidian vault. The
 phone vault folder `Documents/obsidian-vault` is the store. The app is a
 standalone Android app. See `docs/adr/` for the decisions and
-`tickets/open/` for the work queue.
+`tickets/open/` for the queue, with `doing/` and `done/` beside it.
 
 ## Run it
 
@@ -78,6 +78,19 @@ SAF with `expo-file-system/legacy` (ADR 0002). No backend (ADR 0003).
 Notifications fire on the device with `expo-notifications` (ADR 0004).
 Capture parses natural-language dates with chrono-node. The app stores recurrence
 as a bare RRULE value and expands it with `rrule`.
+
+## Next
+
+The bug queue is clear. Open feature tickets, in the order they are
+likely to land:
+
+- 0010 a list tab bar
+- 0012 planner week and month polish
+- 0013 a task editor and a note viewer
+- 0014 a my-order sort
+- 0017 a drag-to-schedule tray
+- 0018 a keep-style notes board
+- 0003, 0005, 0008, 0017 and 0018 carry the larger ideas.
 
 The app has two tabs: Lists and Planner. The Lists tab shows Focus and
 Main. Main is the catch-all: every task that is not on Focus, including
