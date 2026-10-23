@@ -84,12 +84,16 @@ export function updateProperty(
       return text;
     }
     const serialized = serializeValue(value);
-    const insert =
-      serialized === ""
+    // An array always goes on its own lines. A one-item array used to
+    // land inline ("reminders:   - 09:00"), which YAML reads as a
+    // string, so the note failed validation and its row vanished.
+    const insert = Array.isArray(value)
+      ? value.length === 0
         ? [`${key}:`]
-        : serialized.includes("\n")
-          ? [`${key}:`, serialized]
-          : [`${key}: ${serialized}`];
+        : [`${key}:`, serializeValue(value)]
+      : serialized === ""
+        ? [`${key}:`]
+        : [`${key}: ${serialized}`];
     lines.push(...insert);
     return replaceSpan(text, span, lines.join("\n"));
   }
