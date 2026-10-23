@@ -2,7 +2,7 @@ import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import type { TaskItem } from "../../tasks/query";
 import { DropZoneMap } from "../../../lib/dropzone";
-import { startOfDay, isSameDay } from "../../../lib/dates";
+import { isSameDay } from "../../../lib/dates";
 import { makeSwipeController, swipeProps } from "../../../lib/swipe";
 import { isDone, isoOf, startOfMonth } from "../model";
 import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "../lib/labels";

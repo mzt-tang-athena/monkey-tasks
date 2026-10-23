@@ -1,0 +1,33 @@
+#!/bin/sh
+# Fast checks on the staged files only. The slow gates (typecheck, tests,
+# bundle) stay in CI, so a commit stays under a few seconds.
+#
+# Install once per clone: make hooks
+set -e
+
+root=$(git rev-parse --show-toplevel)
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+code=$(printf '%s\n' "$staged" | grep -E '^app/src/.*\.(ts|tsx)$' || true)
+docs=$(printf '%s\n' "$staged" | grep -E '\.md$' || true)
+
+if [ -n "$code" ]; then
+  echo "eslint: $(printf '%s\n' "$code" | wc -l) file(s)"
+  (cd "$root/app" && printf '%s\n' "$code" | sed 's|^app/||' | xargs npx --no-install eslint)
+fi
+
+if [ -n "$docs" ]; then
+  if command -v vale >/dev/null 2>&1; then
+    echo "vale: $(printf '%s\n' "$docs" | wc -l) file(s)"
+    # Vale exits nonzero only on errors, so the warning threshold is
+    # enforced by checking the output instead.
+    alerts=$(cd "$root" && printf '%s\n' "$docs" | xargs vale --minAlertLevel=warning --output=line || true)
+    if [ -n "$alerts" ]; then
+      printf '%s\n' "$alerts"
+      echo "vale: fix the alerts above" >&2
+      exit 1
+    fi
+  else
+    echo "vale is not installed, skipping the prose check" >&2
+  fi
+fi

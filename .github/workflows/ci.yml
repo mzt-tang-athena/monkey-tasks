@@ -19,7 +19,14 @@ jobs:
           if [ -d write-good ]; then mv write-good/* .; rmdir write-good; fi
           find . -maxdepth 1 -name '*.yml' | while read f; do grep -q extends "$f" || rm "$f"; done
       - name: Docs prose lint
-        run: vale README.md docs/adr/*.md tickets/README.md
+        run: |
+          # Vale exits nonzero only on errors, so the warning threshold
+          # is enforced by checking the output instead.
+          alerts=$(git ls-files '*.md' | xargs vale --minAlertLevel=warning --output=line || true)
+          if [ -n "$alerts" ]; then
+            echo "$alerts"
+            exit 1
+          fi
 
   code:
     runs-on: ubuntu-latest
@@ -57,6 +64,9 @@ jobs:
         working-directory: app
       - name: Typecheck app
         run: npx tsc --noEmit
+        working-directory: app
+      - name: Lint app
+        run: npx eslint src
         working-directory: app
       - name: Test app
         run: npx vitest run

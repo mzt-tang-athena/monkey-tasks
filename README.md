@@ -45,6 +45,17 @@ Run the schema tests from `contracts/packages/schemas`:
 npm test
 ```
 
+## Commit checks
+
+Install the local hook once per clone:
+
+```bash
+make hooks
+```
+
+It runs ESLint on the staged app code and Vale on the staged docs. The
+typecheck, the tests and the bundle stay in CI.
+
 ## Install it on a phone
 
 The `android` workflow builds a sideloadable APK on a GitHub runner,
