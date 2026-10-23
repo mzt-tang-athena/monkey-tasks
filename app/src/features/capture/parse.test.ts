@@ -59,10 +59,22 @@ describe("parseCapture", () => {
     expect(result?.recurrence).toBe("FREQ=WEEKLY;BYDAY=WE");
   });
 
-  it("falls back to the whole line when everything matches", () => {
+  it("titles a date-only line with the date phrase", () => {
     const result = parseCapture("tomorrow", now);
-    expect(result?.name).toBe("tomorrow");
+    expect(result?.name).toBe("Tomorrow");
     expect(result?.due).toBe("2026-10-20");
+  });
+
+  it("titles a date-only line in sentence case, keeping the rest", () => {
+    const result = parseCapture("next friday", now);
+    expect(result?.name).toBe("Next friday");
+    expect(result?.due).toBe("2026-10-30");
+  });
+
+  it("keeps a word chrono does not read as a date", () => {
+    const result = parseCapture("daily", now);
+    expect(result?.name).toBe("daily");
+    expect(result?.due).toBeUndefined();
   });
 
   it("returns null for empty input", () => {
