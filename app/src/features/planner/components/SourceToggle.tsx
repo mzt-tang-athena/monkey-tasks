@@ -71,8 +71,14 @@ export function SourceToggle({
             holdTimer.current = null;
           }
         }}
-        // Tap cycles; a press that opened the chooser must not.
+        // Tap cycles; a press that opened the chooser must not. The
+        // preview ends with the action, not with the press-out: on
+        // Android a short tap calls onPress before the press-out it
+        // delays to its minimum press duration, so a still-pressed
+        // chip would render the source AFTER the one this tap chose -
+        // Due today would read Main right after landing on Focus.
         onPress={() => {
+          setPressed(false);
           if (held || menuOpen) {
             return;
           }
