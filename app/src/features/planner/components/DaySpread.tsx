@@ -44,6 +44,7 @@ export function DaySpread({
   onSelectStrip,
   onShiftDay,
   onToggle,
+  onOpen,
   onUpdate,
 }: {
   date: Date;
@@ -61,6 +62,8 @@ export function DaySpread({
   /** Swipe left/right on the background shifts one day. */
   onShiftDay: (delta: 1 | -1) => void;
   onToggle: (task: TaskItem) => void;
+  /** A row body press opens the task; absent leaves the body inert. */
+  onOpen?: (task: TaskItem) => void;
   onUpdate: (task: TaskItem, patch: Partial<TaskFrontmatter>) => void;
 }) {
   const [rootHeight, setRootHeight] = React.useState(0);
@@ -321,6 +324,18 @@ export function DaySpread({
     onToggle(task);
   };
 
+  // The same guard for the body press: a drop is a drag, not an open.
+  const guardedOpen =
+    onOpen == null
+      ? undefined
+      : (task: TaskItem) => {
+          if (suppressClick.current) {
+            suppressClick.current = false;
+            return;
+          }
+          onOpen(task);
+        };
+
   const onPointerMove = (e: RNPointerEvent) => {
     const x = e.nativeEvent.pageX;
     const y = e.nativeEvent.pageY;
@@ -552,6 +567,7 @@ export function DaySpread({
           taskForm={taskForm}
           onFormChange={onFormChange}
           onToggle={guardedToggle}
+          onOpen={guardedOpen}
           onDragStart={startTaskDrag}
           tasks={sectionTasks}
           lifted={lifted}
@@ -576,7 +592,11 @@ export function DaySpread({
                     lifted={lifted ?? null}
                     onPointerDown={(e) => startTaskDrag(task, e)}
                   >
-                    <TaskRow task={task} onToggle={guardedToggle} />
+                    <TaskRow
+                      task={task}
+                      onToggle={guardedToggle}
+                      onOpen={guardedOpen}
+                    />
                   </Pickup>
                 ))}
               </View>

@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "../features/tasks/query";
+import type { TaskEdit } from "../features/task-editor/save";
 import type { CaptureTarget } from "../features/capture/write";
 import type { ParsedCapture } from "../features/capture/parse";
 
@@ -20,6 +21,8 @@ export type TaskActions = {
     task: TaskItem,
     patch: Partial<TaskFrontmatter>,
   ): Promise<void>;
+  /** Write the editor's fields to the note. Rejects when the save fails. */
+  edit(task: TaskItem, edit: TaskEdit): Promise<void>;
   capture(
     parsed: ParsedCapture,
     target: CaptureTarget,

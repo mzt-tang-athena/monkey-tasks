@@ -6,20 +6,31 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
+import {
+  taskFrontmatter,
+  taskIsDone,
+  validateNote,
+  type TaskFrontmatter,
+} from "@monkey-tasks/schemas";
 import { todayIso } from "../lib/dates";
 import { loadMockTasks, toggleMockCompleted } from "../lib/mock";
 import { getSavedVaultUri, requestVaultAccess } from "../features/vault/grant";
 import { ensureSubfolder } from "../features/vault/scan";
 import { loadVaultTasks } from "../features/vault/session";
 import { type ListItem } from "../features/lists/query";
-import { createNote, writeNote } from "../features/vault/notes";
+import {
+  createNote,
+  updateProperty,
+  writeNote,
+} from "../features/vault/notes";
 import { type TaskItem } from "../features/tasks/query";
+import { saveTaskEdit, type TaskEdit } from "../features/task-editor/save";
 import { applyPatch } from "../features/tasks/patch";
 import { nextDue } from "../features/tasks/recurrence";
 import { syncReminders, syncTaskReminders } from "../features/reminders/sync";
 import {
   captureDraft,
+  safeFileName,
   type CaptureTarget,
 } from "../features/capture/write";
 import type { ParsedCapture } from "../features/capture/parse";
@@ -66,6 +77,92 @@ const NO_TASKS: TaskItem[] = [];
 
 /** The empty list-note set, shared for the same reason. */
 const NO_LISTS: ListItem[] = [];
+
+/** The frontmatter block that opens a note. */
+const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
+
+/**
+ * Write a list property in the vault's block style. `updateProperty`
+ * inserts a one-item array on the key's line when the key is missing,
+ * which parses as a scalar rather than a list, so the key is seeded
+ * empty first and then filled.
+ */
+function setBlockList(text: string, key: string, values: string[]): string {
+  if (values.length === 0) {
+    return updateProperty(text, key, null);
+  }
+  return updateProperty(updateProperty(text, key, []), key, values);
+}
+
+/**
+ * Replace everything below the frontmatter block. The fence keeps the
+ * newline that separates it from the body, so a body starting with a
+ * newline keeps its blank line.
+ */
+function replaceBody(text: string, body: string): string {
+  const match = FRONTMATTER.exec(text);
+  if (!match) {
+    throw new Error("note has no frontmatter block");
+  }
+  const fence = match[0];
+  if (body === "" || fence.endsWith("\n")) {
+    return `${fence}${body}`;
+  }
+  return `${fence}\n${body}`;
+}
+
+/**
+ * The editor's save without a file, for the browser preview. The same
+ * property writers the vault write runs, so the preview's rows move the
+ * way a real note does. A sample row carries no file text, so its
+ * frontmatter block is rebuilt from the parsed data first and the
+ * writers then have the note they expect.
+ */
+function editMockTask(item: TaskItem, edit: TaskEdit): TaskItem {
+  let text = item.text;
+  if (!FRONTMATTER.test(text)) {
+    if (item.data == null) {
+      throw new Error("note has no frontmatter block");
+    }
+    text = "---\n\n---\n";
+    for (const [key, value] of Object.entries(item.data)) {
+      if (typeof value === "string") {
+        text = updateProperty(text, key, value);
+      } else if (Array.isArray(value)) {
+        // The parsed values are storage strings; anything else is not
+        // a property this writer can put back.
+        text = setBlockList(
+          text,
+          key,
+          value.filter((entry): entry is string => typeof entry === "string"),
+        );
+      }
+    }
+  }
+  text = updateProperty(text, "due", edit.due);
+  text = updateProperty(text, "recurrence", edit.recurrence);
+  text = setBlockList(text, "reminders", edit.reminders);
+  text = setBlockList(
+    text,
+    "lists",
+    edit.lists.map((name) => `[[${name}]]`),
+  );
+  text = replaceBody(text, edit.body);
+
+  // No provider renames the file, so the row takes the name the editor
+  // asked for; the uri stays the row's identity.
+  const fileName = `${safeFileName(edit.name)}.md`;
+  const note = validateNote(fileName, text, taskFrontmatter);
+  return {
+    id: item.id,
+    uri: item.uri,
+    fileName,
+    name: edit.name,
+    text,
+    data: note.data,
+    body: note.note.body,
+  };
+}
 
 export function TasksProvider({ children }: { children: React.ReactNode }) {
   // The app mounts one client above the store; a tree that mounts the
@@ -400,6 +497,51 @@ function TaskStore({ children }: { children: React.ReactNode }) {
     [rootUri, tasksDir, patchOne, queueWrite],
   );
 
+  const edit = React.useCallback(
+    async (task: TaskItem, change: TaskEdit) => {
+      const current =
+        tasksRef.current.find((item) => item.id === task.id) ?? task;
+      try {
+        if (rootUri == null && Platform.OS === "web") {
+          // Browser preview: the row is the note, so the draft lands in
+          // memory. No file to write and no alarm to schedule.
+          const updated = editMockTask(current, change);
+          applyTasks(
+            tasksRef.current.map((item) =>
+              item.id === current.id ? updated : item,
+            ),
+          );
+          setLastError(null);
+          return;
+        }
+        const updated = await saveTaskEdit(current, change);
+        // A rename changes the uri, so the row is found by its render
+        // identity. The cache keeps its list tabs: only the rows move.
+        applyTasks(
+          tasksRef.current.map((item) =>
+            item.id === current.id ? updated : item,
+          ),
+        );
+        setLastError(null);
+        if (current.uri === updated.uri) {
+          void syncTaskReminders(current, updated);
+        } else {
+          // The alarm ids are keyed by uri, so a renamed note drops its
+          // old alarms before the new uri schedules its own.
+          void syncTaskReminders(current, null).then(() =>
+            syncTaskReminders(null, updated),
+          );
+        }
+      } catch (error) {
+        setLastError(`task edit: ${String(error)}`);
+        // The editor keeps its draft and shows the refusal, so the
+        // failure has to reach the caller as well as the banner.
+        throw error;
+      }
+    },
+    [rootUri, applyTasks],
+  );
+
   const capture = React.useCallback(
     async (
       parsed: ParsedCapture,
@@ -500,9 +642,10 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       refresh,
       toggle,
       writeFields,
+      edit,
       capture,
     }),
-    [clearError, grant, refresh, toggle, writeFields, capture],
+    [clearError, grant, refresh, toggle, writeFields, edit, capture],
   );
 
   return (

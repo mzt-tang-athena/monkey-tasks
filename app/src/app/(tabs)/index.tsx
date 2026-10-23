@@ -108,6 +108,12 @@ export default function ListsScreen() {
     [toggleTask],
   );
 
+  // A row body press opens the task editor. The id is a SAF uri, so
+  // it rides one encoded path segment.
+  const openTask = React.useCallback((task: TaskItem) => {
+    router.push(`/task/${encodeURIComponent(task.id)}`);
+  }, []);
+
   // A real reload: the loader can fail when it talks to the vault,
   // so the error state keeps its retry affordance (also wired to
   // the list's pull-to-refresh).
@@ -189,10 +195,10 @@ export default function ListsScreen() {
           section.tone === "faint" ? styles.completedRow : undefined,
         ]}
       >
-        <TaskRow task={item} onToggle={toggle} />
+        <TaskRow task={item} onToggle={toggle} onOpen={openTask} />
       </View>
     ),
-    [toggle],
+    [toggle, openTask],
   );
 
   const openMenu = () => {

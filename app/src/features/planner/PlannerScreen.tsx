@@ -1,6 +1,8 @@
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { TaskItem } from "../tasks/query";
 import type { CaptureTarget } from "../capture/write";
 import { BottomBar } from "../../components/BottomBar";
 import { isoOf, cycleSource, sourceLabel, SOURCES, type Source } from "./model";
@@ -69,6 +71,12 @@ export default function PlannerScreen() {
     saveTaskForm(form);
   };
 
+  // A row body press opens the task editor. The guard against a
+  // drop's leftover click lives in the gesture hook.
+  const openTask = React.useCallback((task: TaskItem) => {
+    router.push(`/task/${encodeURIComponent(task.id)}`);
+  }, []);
+
   // The pointer machinery: drags, drops, click guards and the swipes.
   const {
     rootRef,
@@ -80,6 +88,7 @@ export default function PlannerScreen() {
     toggle,
     updateTask,
     guardedToggle,
+    guardedOpen,
     guardedSelect,
     suppressClick,
     shiftDay,
@@ -90,6 +99,7 @@ export default function PlannerScreen() {
     day,
     setDay,
     toggle: actions.toggle,
+    open: openTask,
     writeFields: actions.writeFields,
     pointerPickup,
   });
@@ -134,6 +144,7 @@ export default function PlannerScreen() {
           onSelectStrip={setDay}
           onShiftDay={shiftDay}
           onToggle={toggle}
+          onOpen={guardedOpen}
           onUpdate={updateTask}
         />
       ) : (
@@ -181,6 +192,7 @@ export default function PlannerScreen() {
                   taskForm={taskForm}
                   onFormChange={changeTaskForm}
                   onToggle={guardedToggle}
+                  onOpen={guardedOpen}
                   onDragStart={startDayDrag}
                   tasks={weekPool}
                   lifted={lifted}
@@ -220,6 +232,7 @@ export default function PlannerScreen() {
                 taskForm={taskForm}
                 onFormChange={changeTaskForm}
                 onToggle={guardedToggle}
+                onOpen={guardedOpen}
                 onDragStart={startDayDrag}
                 tasks={pickedDay == null ? monthRows : pickedTasks}
                 lifted={lifted}
