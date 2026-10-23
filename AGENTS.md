@@ -19,6 +19,6 @@ decision record. The tickets in `tickets/` are the work queue.
    alternative only need a commit.
 3. Write docs in the ADR template's plain style: short sentences, active
    voice, plain words, no em dashes.
-4. Keep `README.md` current. It is the source of truth for what this
-   project is and what comes next.
+4. Keep `README.md` current. The README is the source of truth for what
+   this project is and what comes next.
 5. Never run sudo. Never commit secrets or tokens.
