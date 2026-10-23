@@ -3,7 +3,7 @@ id: 0010
 title: Lists route
 created: 2026-10-20
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [0009]
 ---

@@ -15,6 +15,8 @@ export type StoreMeta = {
   lastError: string | null;
   tasksDir: string | null;
   rootUri: string | null;
+  /** The list notes' names, sorted: the tabs after Focus and Main. */
+  lists: string[];
 };
 
 /**
@@ -30,6 +32,7 @@ const NO_META: StoreMeta = {
   lastError: null,
   tasksDir: null,
   rootUri: null,
+  lists: [],
 };
 
 export const TaskListContext = React.createContext<TaskItem[]>(NO_LIST);

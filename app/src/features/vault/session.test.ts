@@ -10,6 +10,11 @@ vi.mock("../tasks/query", () => ({
   loadTasks: vi.fn(async () => []),
 }));
 
+vi.mock("../lists/query", () => ({
+  loadLists: vi.fn(async () => []),
+}));
+
+import { loadLists } from "../lists/query";
 import { loadTasks } from "../tasks/query";
 import { ensureSubfolder } from "./scan";
 import { loadVaultTasks } from "./session";
@@ -26,5 +31,12 @@ describe("loadVaultTasks", () => {
     expect(ensureSubfolder).toHaveBeenCalledWith("content://root/vault", "Tasks");
     expect(loadTasks).toHaveBeenCalledWith("content://root/vault/Tasks");
     expect(result.tasksDir).toBe("content://root/vault/Tasks");
+  });
+
+  it("reads the list notes from the same Tasks folder", async () => {
+    const result = await loadVaultTasks("content://root/vault");
+
+    expect(loadLists).toHaveBeenCalledWith("content://root/vault/Tasks");
+    expect(result.lists).toEqual([]);
   });
 });

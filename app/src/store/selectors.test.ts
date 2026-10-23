@@ -102,6 +102,20 @@ describe("selectTabTasks", () => {
     ]);
   });
 
+  it("filters a named list tab by the wikilink in tasks", () => {
+    // Work is a list note now, so it gets a tab of its own; the tab
+    // name matches the wikilink, not the file name with an extension.
+    expect(names(selectTabTasks(tasks, "Work"))).toEqual([
+      "Buy milk",
+      "Deep work",
+    ]);
+    expect(names(selectTabTasks(tasks, "Errands"))).toEqual(["Errand"]);
+  });
+
+  it("shows nothing for a tab with no matching tasks", () => {
+    expect(selectTabTasks(tasks, "Someday")).toEqual([]);
+  });
+
   it("partitions the rows into two disjoint tabs", () => {
     const focus = selectTabTasks(tasks, "Focus");
     const main = selectTabTasks(tasks, "Main");

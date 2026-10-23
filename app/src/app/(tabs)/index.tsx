@@ -1,5 +1,13 @@
 import * as React from "react";
-import { Platform, Pressable, SectionList, StyleSheet, Text, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "../../features/tasks/query";
@@ -10,6 +18,7 @@ import { BottomBar } from "../../components/BottomBar";
 import { useStoreMeta } from "../../store/task-state";
 import { useTaskActions } from "../../store/task-actions";
 import {
+  useListTabs,
   useTabTasks,
   useTaskSections,
   type ListTab,
@@ -19,8 +28,8 @@ import { IconButton } from "../../components/ui";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
 
 /**
- * Lists tab: the Focus list and a catch-all Main list, with capture
- * docked above the bottom bar.
+ * Lists tab: Focus, the catch-all Main, and one tab per list note,
+ * with capture docked above the bottom bar.
  */
 type ListsSection = {
   title: string;
@@ -28,15 +37,11 @@ type ListsSection = {
   data: TaskItem[];
 };
 
-const TARGETS: CaptureTarget[] = [
-  { kind: "list", name: "Focus" },
-  { kind: "main" },
-];
-
 export default function ListsScreen() {
   const { mode, status, lastError } = useStoreMeta();
   const actions = useTaskActions();
   const insets = useSafeAreaInsets();
+  const tabs = useListTabs();
   const [tab, setTab] = React.useState<ListTab>("Main");
   const [menu, setMenu] = React.useState<{
     open: boolean;
@@ -45,19 +50,55 @@ export default function ListsScreen() {
   } | null>(null);
   const dotsRef = React.useRef<React.ComponentRef<typeof View>>(null);
 
-  // The tab swipe: horizontal travel on the list body walks Focus and
-  // Main. Touch events, not a gesture handler, because a handler on the
-  // parent of a scrolling list never sees the moves on Android.
+  // The capture targets follow the tab order: Focus, Main, then one
+  // list target per list note. Main stores nothing; a list target
+  // writes its name into the captured task's lists property.
+  const targets = React.useMemo<CaptureTarget[]>(
+    () =>
+      tabs.map((name) =>
+        name === "Main"
+          ? { kind: "main" as const }
+          : { kind: "list" as const, name },
+      ),
+    [tabs],
+  );
+
+  // The names can grow after a read. The swipe controller is created
+  // once, so it walks the current names through a ref instead of the
+  // pair it saw on the first render.
+  const tabsRef = React.useRef(tabs);
+  React.useEffect(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
+
+  // The tab swipe: horizontal travel on the list body walks the tab
+  // bar's order. Touch events, not a gesture handler, because a
+  // handler on the parent of a scrolling list never sees the moves on
+  // Android.
   const [tabSwipe] = React.useState(() =>
     makeSwipeController((dir) => {
       setTab((current) => {
-        if (dir === "left") {
-          return current === "Focus" ? "Main" : current;
+        const names = tabsRef.current;
+        const index = names.indexOf(current);
+        if (index === -1) {
+          return current;
         }
-        return current === "Main" ? "Focus" : current;
+        const next = dir === "left" ? index + 1 : index - 1;
+        return names[next] ?? current;
       });
     }),
   );
+
+  // The pill preselects the active tab's target; Main is the fallback
+  // when the tab has no target of its own.
+  const defaultTargetIndex = React.useMemo(() => {
+    const index = targets.findIndex((target) =>
+      tab === "Main"
+        ? target.kind === "main"
+        : target.kind === "list" && target.name === tab,
+    );
+    return index === -1 ? 1 : index;
+  }, [targets, tab]);
 
   const toggleTask = actions.toggle;
   const toggle = React.useCallback(
@@ -200,7 +241,15 @@ export default function ListsScreen() {
           </Pressable>
         ) : null}
         <View style={styles.tabBar}>
-          {(["Focus", "Main"] as ListTab[]).map((name) => (
+          {/* A vault can hold more lists than the bar fits, so the
+              chips scroll and the sort and menu buttons stay put. */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tabStrip}
+            contentContainerStyle={styles.tabStripContent}
+          >
+            {tabs.map((name) => (
             <Pressable
               key={name}
               style={({ pressed }) => [
@@ -219,8 +268,9 @@ export default function ListsScreen() {
               >
                 {name}
               </Text>
-            </Pressable>
-          ))}
+              </Pressable>
+            ))}
+          </ScrollView>
           <View style={styles.tabSpacer} />
           <IconButton label="sort list">
             <View style={styles.glyphSort}>
@@ -344,11 +394,11 @@ export default function ListsScreen() {
       {/* One bottom bar: nav left, capture button right. The target
           pill follows the active list tab: the bar re-reads the
           default target when the tab changes, so the bar itself never
-          remounts and never jumps. Focus preselects Focus; Main
-          remains the default when no list tab owns it. */}
+          remounts and never jumps. Main captures write no lists
+          property; every other tab preselects its own list. */}
       <BottomBar
-        targets={TARGETS}
-        defaultTargetIndex={tab === "Focus" ? 0 : 1}
+        targets={targets}
+        defaultTargetIndex={defaultTargetIndex}
         onSend={(parsed, target) => actions.capture(parsed, target)}
       />
     </View>
@@ -422,6 +472,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: pageGutter,
     paddingTop: spacing.l,
     paddingBottom: spacing.m,
+  },
+  tabStrip: {
+    flexShrink: 1,
+  },
+  tabStripContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.s,
   },
   tabChip: {
     minHeight: 36,
