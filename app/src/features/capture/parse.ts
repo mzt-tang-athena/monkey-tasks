@@ -83,6 +83,11 @@ function squash(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+/** Capitalizes the first letter and leaves the rest alone. */
+function sentenceCase(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 export function parseCapture(
   input: string,
   now: Date = new Date(),
@@ -119,8 +124,10 @@ export function parseCapture(
   const parsed = chrono.parse(text, now, { forwardDate: true });
   let due: string | undefined;
   let reminders: string[] | undefined;
+  let datePhrase: string | null = null;
   if (parsed.length > 0) {
     const first = parsed[0];
+    datePhrase = first.text;
     const hasTime = first.start.isCertain("hour");
     due = formatLocal(first.start.date(), hasTime);
     if (hasTime) {
@@ -130,7 +137,16 @@ export function parseCapture(
     text = squash(strip(text, first.index, first.text.length));
   }
 
-  const name = squash(text) === "" ? original : squash(text);
+  // A line that is only a date has no name left. Titled with the date
+  // phrase it consumed, sentence case: "tomorrow" becomes "Tomorrow"
+  // rather than a task called "tomorrow".
+  const remainder = squash(text);
+  const name =
+    remainder !== ""
+      ? remainder
+      : datePhrase != null
+        ? sentenceCase(datePhrase)
+        : original;
   const result: ParsedCapture = { name };
   if (due) {
     result.due = due;

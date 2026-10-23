@@ -58,4 +58,13 @@ describe("nextDue", () => {
       "2026-10-22",
     );
   });
+
+  it("anchors on now when the stored due date is unusable", () => {
+    expect(nextDue("FREQ=DAILY", "someday", new Date(2026, 9, 21, 9, 0))).toBe(
+      "2026-10-22",
+    );
+    expect(nextDue("FREQ=WEEKLY", "2026-13-01", new Date(2026, 9, 21))).toBe(
+      "2026-10-28",
+    );
+  });
 });
