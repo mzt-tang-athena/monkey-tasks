@@ -4,7 +4,7 @@ title: PlannerScreen becomes a composition root
 created: 2026-10-23
 priority: normal
 assignee: omp
-pr:
+pr: 28
 depends: [0024]
 ---
 
@@ -35,4 +35,14 @@ they are.
 
 ## Outcome
 
-(filled in before moving to done/)
+`PlannerScreen` is 312 lines: route, store reads, source and form
+state, JSX. `usePlannerGestures` holds the drag and swipe machinery,
+`usePlannerMonth` the month model, `PlannerStates` the two panes.
+
+The move is mechanical. Hook counts reconcile exactly against the old
+file: 8 state, 9 refs, 3 callbacks, 6 effects, 4 memos, in the same
+order.
+
+Verified: `tsc` clean, 130 tests across 18 files, eslint 0 errors. The
+new `TaskListSection` render test covers both names, the empty label,
+and each row's toggle wiring.
