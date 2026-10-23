@@ -4,7 +4,7 @@ title: React Query owns the vault read
 created: 2026-10-23
 priority: normal
 assignee: omp
-pr:
+pr: 24
 depends: [0024]
 ---
 
@@ -41,4 +41,14 @@ first.
 
 ## Outcome
 
-(filled in before moving to done/)
+TanStack Query owns the read. The cache key is `["tasks", rootUri]` and
+the value is `{ tasksDir, tasks }`. The client sets `staleTime` and
+`gcTime` to infinity and maps AppState onto the focus manager, because
+TanStack's default focus listener watches `visibilitychange`, which a
+device does not have. Writes stay local first through `setQueryData`,
+the per-note queue, and rollback. A read waits for in-flight writes
+(ADR 0023).
+
+Verified: 124 tests pass, including the cache holding the ticked row
+while the write is held. Device: backgrounding the app, editing a note
+in Obsidian, and returning updates the list.
