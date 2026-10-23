@@ -2,7 +2,10 @@
 // The Probe pattern: the test reads the provider's hooks through
 // module bindings, which is the shape the rule forbids in app code.
 import * as React from "react";
-import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
+import { act, create } from "react-test-renderer";
+import type { ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The store's contract after ADR 0017: a tap changes the row before any
@@ -68,13 +71,13 @@ vi.mock("../features/reminders/sync", () => ({
   syncTaskReminders: async () => undefined,
 }));
 
+import { makeQueryClient } from "./query-client";
 import { TasksProvider } from "./tasks";
-import {
-  useStoreMeta,
-  useTaskList,
-  type StoreMeta,
-} from "./task-state";
-import { useTaskActions, type TaskActions } from "./task-actions";
+import type { TaskListData } from "./tasks";
+import { useStoreMeta, useTaskList } from "./task-state";
+import type { StoreMeta } from "./task-state";
+import { useTaskActions } from "./task-actions";
+import type { TaskActions } from "./task-actions";
 import type { TaskItem } from "../features/tasks/query";
 
 /** The three contexts read as one snapshot, for the assertions below. */
@@ -82,6 +85,7 @@ type Snapshot = StoreMeta & TaskActions & { tasks: TaskItem[] };
 
 let latest: Snapshot | null = null;
 let latestActions: TaskActions | null = null;
+let queryClient: QueryClient | null = null;
 
 function Probe() {
   const tasks = useTaskList();
@@ -92,20 +96,45 @@ function Probe() {
   return null;
 }
 
+/**
+ * React Query notifies its observers on a timer, not on the promise that
+ * resolved the fetch, so a flush has to cross a macrotask before the
+ * Probe renders the cache. A few turns cover a mutation whose write
+ * chain settles and then reports.
+ */
+async function flush(): Promise<void> {
+  await act(async () => {
+    for (let turn = 0; turn < 3; turn += 1) {
+      const { promise, resolve } = Promise.withResolvers<void>();
+      setTimeout(resolve, 0);
+      await promise;
+    }
+  });
+}
+
 async function mount(): Promise<ReactTestRenderer> {
+  const client = makeQueryClient();
+  // The app retries a vault read once; a test wants the failure now, and
+  // the cache must outlive every render.
+  const defaults = client.getDefaultOptions();
+  client.setDefaultOptions({
+    ...defaults,
+    queries: { ...defaults.queries, retry: false, gcTime: Infinity },
+  });
+  queryClient = client;
+
   let renderer: ReactTestRenderer | null = null;
   await act(async () => {
     renderer = create(
-      <TasksProvider>
-        <Probe />
-      </TasksProvider>,
+      <QueryClientProvider client={client}>
+        <TasksProvider>
+          <Probe />
+        </TasksProvider>
+      </QueryClientProvider>,
     );
   });
-  // Boot: saved uri, then the load.
-  await act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
-  });
+  // Boot: the saved uri, then the vault read behind it.
+  await flush();
   return renderer as unknown as ReactTestRenderer;
 }
 
@@ -125,6 +154,7 @@ beforeEach(() => {
   heldOnce = false;
   latest = null;
   latestActions = null;
+  queryClient = null;
 });
 
 describe("TasksProvider", () => {
@@ -137,11 +167,20 @@ describe("TasksProvider", () => {
     await act(async () => {
       void latest!.toggle(row());
     });
+    // The write is still held; only the cache and the render move.
+    await flush();
 
     // The write is still pending, and the row is already done.
     expect(writes).toHaveLength(1);
     expect(row().data?.completed).toBeDefined();
     expect(row().text).toContain("completed:");
+    // The tick is in the cache, which is where every row consumer reads.
+    const cached = queryClient!.getQueryData<TaskListData>([
+      "tasks",
+      "content://vault",
+    ]);
+    const cachedRow = cached?.tasks.find((item) => item.name === "Call");
+    expect(cachedRow?.data?.completed).toBeDefined();
     // The tick changed the rows, not the actions: their identity holds.
     expect(latestActions).toBe(actionsBeforeTick);
     // No reload: the vault read count did not move.
@@ -151,6 +190,7 @@ describe("TasksProvider", () => {
       releaseWrite?.();
       await Promise.resolve();
     });
+    await flush();
     expect(loadCalls).toBe(1);
   });
 
@@ -162,6 +202,7 @@ describe("TasksProvider", () => {
       void latest!.toggle(row());
       void latest!.toggle(row());
     });
+    await flush();
     // The row already shows the second tap's result.
     expect(row().data?.completed).toBeUndefined();
     // Writes to one note are serialized: the second waits its turn.
@@ -170,8 +211,8 @@ describe("TasksProvider", () => {
     await act(async () => {
       releaseWrite?.();
       await Promise.resolve();
-      await Promise.resolve();
     });
+    await flush();
     expect(writes).toHaveLength(2);
     expect(writes[1].text).not.toContain("completed");
     expect(loadCalls).toBe(1);
@@ -190,6 +231,7 @@ describe("TasksProvider", () => {
         { kind: "main" },
       );
     });
+    await flush();
 
     expect(latest!.tasks.length).toBe(before + 1);
     const captured = latest!.tasks.find((item) => item.name === "Water plants");
