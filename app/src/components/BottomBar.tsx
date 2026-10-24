@@ -212,6 +212,15 @@ export function BottomBar({
         <View
           style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}
         >
+        {/* The system navigation bar draws over this strip. A dark band
+            under it keeps the light system buttons visible on a phone
+            that uses three buttons rather than gestures. */}
+        {insets.bottom > 0 ? (
+          <View
+            pointerEvents="none"
+            style={[styles.navBand, { height: insets.bottom }]}
+          />
+        ) : null}
         <View
           style={styles.row}
           onLayout={(event) => {
@@ -352,6 +361,13 @@ const styles = StyleSheet.create({
   // clip while capture is open.
   barClip: {
     overflow: "hidden" as const,
+  },
+  navBand: {
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.accentDeep,
   },
   bar: {
     backgroundColor: colors.surface,
