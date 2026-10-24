@@ -20,8 +20,8 @@ export type TaskSection = {
 };
 
 /**
- * A tab name: Focus, Main, or the name of a list note in
- * Tasks/Lists/. Any other string is a list tab.
+ * A tab name: Main, or the name of a list note in Tasks/Lists/. Any
+ * other string is a list tab.
  */
 export type ListTab = string;
 
@@ -40,21 +40,19 @@ export function selectOpenTasks(tasks: TaskItem[], now: Date): TaskItem[] {
 }
 
 /**
- * Focus shows the Focus list. Main is the catch-all: every task that is
- * not on Focus, so a task tagged with a list that has no tab still
- * appears instead of vanishing. Any other tab is a list note, so it
- * shows the tasks whose lists property carries [[that name]]. See ADR
- * 0015.
+ * Main is the catch-all: every task, whatever list it carries. Any
+ * other tab is a list note, so it shows the tasks whose lists property
+ * carries [[that name]]. Focus is a list note like the rest. See ADR
+ * 0015 and its 2026-10-24 amendment.
  */
 export function selectTabTasks(
   tasks: TaskItem[],
   tab: ListTab,
 ): TaskItem[] {
-  if (tab !== "Main") {
-    return inList(tasks, tab);
+  if (tab === "Main") {
+    return tasks;
   }
-  const onFocus = new Set(inList(tasks, "Focus").map((item) => item.uri));
-  return tasks.filter((item) => !onFocus.has(item.uri));
+  return inList(tasks, tab);
 }
 
 /**
@@ -104,13 +102,14 @@ export function useTabTasks(tab: ListTab): TaskItem[] {
 }
 
 /**
- * The tab bar's order: Focus and Main first, then every list note by
- * name. A list note named Focus or Main cannot make a second tab.
+ * The tab bar's order: Main first, then every list note by name. Main
+ * is the only fixed tab, so a list note named Focus or Main cannot make
+ * a second tab.
  */
 export function useListTabs(): string[] {
   const { lists } = useStoreMeta();
   return React.useMemo(() => {
-    const tabs = ["Focus", "Main"];
+    const tabs = ["Main"];
     for (const name of lists) {
       if (!tabs.includes(name)) {
         tabs.push(name);

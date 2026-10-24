@@ -21,3 +21,22 @@ tagged with another list could still fall outside both tabs.
 Every task appears on one of the two tabs, so no task can be invisible.
 Main does not map to a vault list, so capture into Main writes no list
 tag. A later tab for Work or Errands only changes the filter.
+
+## Amendment, 2026-10-24
+
+Main now shows every task. It does not hide tasks on Focus, on Work, or
+on any other list. Main is still a view, not a stored list.
+
+Focus is now an ordinary list note. When Tasks/Lists/Focus.md exists it
+gets a tab like any other list. The tab bar is Main followed by the list
+names, so Main stays first. A task on Focus appears on both tabs.
+
+We dropped the earlier Focus exception. It was a preference about how
+Main should feel, not a correctness rule. The old filter also meant a
+task could sit on Focus and never show on Main, which surprised people
+who used Main as their inbox. Keeping every task on Main is simpler to
+explain and simpler to code.
+
+The rest of the original decision stands. Main never maps to a list note,
+so capture into Main writes no list tag.
+

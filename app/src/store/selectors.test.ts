@@ -92,13 +92,16 @@ describe("selectTabTasks", () => {
     ]);
   });
 
-  it("shows every task not on Focus on Main, ADR 0015", () => {
-    // Work and Errands have no tab yet, so they fall into Main rather
-    // than vanishing. A task on both lists stays only on Focus.
+  it("shows every task on Main, ADR 0015", () => {
+    // Main is the catch-all, so Focus and Work tasks show here too. A
+    // task on both lists appears once.
     expect(names(selectTabTasks(tasks, "Main"))).toEqual([
+      "Plan week",
       "Buy milk",
       "Call bank",
       "Errand",
+      "Deep work",
+      "Second focus",
     ]);
   });
 
@@ -116,13 +119,13 @@ describe("selectTabTasks", () => {
     expect(selectTabTasks(tasks, "Someday")).toEqual([]);
   });
 
-  it("partitions the rows into two disjoint tabs", () => {
+  it("does not drop a list tab's tasks from Main", () => {
     const focus = selectTabTasks(tasks, "Focus");
-    const main = selectTabTasks(tasks, "Main");
-    const focusUris = new Set(focus.map((item) => item.uri));
+    const mainUris = new Set(
+      selectTabTasks(tasks, "Main").map((item) => item.uri),
+    );
 
-    expect(main.some((item) => focusUris.has(item.uri))).toBe(false);
-    expect([...focus, ...main]).toHaveLength(tasks.length);
+    expect(focus.every((item) => mainUris.has(item.uri))).toBe(true);
   });
 });
 

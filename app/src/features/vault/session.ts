@@ -1,5 +1,5 @@
 import { ensureSubfolder } from "./scan";
-import { loadLists, type ListItem } from "../lists/query";
+import { loadLists, type BrokenList, type ListItem } from "../lists/query";
 import { loadTasks, type TaskItem } from "../tasks/query";
 
 /**
@@ -14,11 +14,12 @@ export async function loadVaultTasks(root: string): Promise<{
   tasksDir: string;
   tasks: TaskItem[];
   lists: ListItem[];
+  broken: BrokenList[];
 }> {
   const tasksDir = await ensureSubfolder(root, "Tasks");
-  const [tasks, lists] = await Promise.all([
+  const [tasks, { lists, broken }] = await Promise.all([
     loadTasks(tasksDir),
     loadLists(tasksDir),
   ]);
-  return { tasksDir, tasks, lists };
+  return { tasksDir, tasks, lists, broken };
 }

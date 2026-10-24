@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { TaskItem } from "../features/tasks/query";
+import type { BrokenList } from "../features/lists/query";
 
 /**
  * The store's read side, in two contexts: the row list and the store's
@@ -15,8 +16,10 @@ export type StoreMeta = {
   lastError: string | null;
   tasksDir: string | null;
   rootUri: string | null;
-  /** The list notes' names, sorted: the tabs after Focus and Main. */
+  /** The list notes' names, sorted: the tabs after Main. */
   lists: string[];
+  /** Notes in Lists/ that fail validation. Shown, never dropped. */
+  brokenLists: BrokenList[];
 };
 
 /**
@@ -33,6 +36,7 @@ const NO_META: StoreMeta = {
   tasksDir: null,
   rootUri: null,
   lists: [],
+  brokenLists: [],
 };
 
 export const TaskListContext = React.createContext<TaskItem[]>(NO_LIST);

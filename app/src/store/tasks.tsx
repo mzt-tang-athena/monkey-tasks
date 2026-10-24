@@ -13,11 +13,16 @@ import {
   type TaskFrontmatter,
 } from "@monkey-tasks/schemas";
 import { todayIso } from "../lib/dates";
-import { loadMockTasks, toggleMockCompleted } from "../lib/mock";
+import {
+  loadMockTasks,
+  mockBroken,
+  mockLists,
+  toggleMockCompleted,
+} from "../lib/mock";
 import { getSavedVaultUri, requestVaultAccess } from "../features/vault/grant";
 import { ensureSubfolder } from "../features/vault/scan";
 import { loadVaultTasks } from "../features/vault/session";
-import { type ListItem } from "../features/lists/query";
+import { type BrokenList, type ListItem } from "../features/lists/query";
 import {
   createNote,
   updateProperty,
@@ -67,6 +72,8 @@ export type TaskListData = {
   tasksDir: string | null;
   tasks: TaskItem[];
   lists: ListItem[];
+  /** Notes in Lists/ that fail validation: shown, never dropped. */
+  broken: BrokenList[];
 };
 
 /** A row that exists only in memory until its file lands. */
@@ -77,6 +84,9 @@ const NO_TASKS: TaskItem[] = [];
 
 /** The empty list-note set, shared for the same reason. */
 const NO_LISTS: ListItem[] = [];
+
+/** The empty broken-note set, shared for the same reason. */
+const NO_BROKEN: BrokenList[] = [];
 
 /** The frontmatter block that opens a note. */
 const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
@@ -241,7 +251,8 @@ function TaskStore({ children }: { children: React.ReactNode }) {
     queryFn: async (): Promise<TaskListData> => ({
       tasksDir: null,
       tasks: await loadMockTasks(),
-      lists: NO_LISTS,
+      lists: mockLists,
+      broken: mockBroken,
     }),
     enabled: rootUri == null && Platform.OS === "web",
     refetchOnWindowFocus: "always",
@@ -252,6 +263,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
   const tasks = active.data?.tasks ?? NO_TASKS;
   const tasksDir = active.data?.tasksDir ?? null;
   const lists = active.data?.lists ?? NO_LISTS;
+  const broken = active.data?.broken ?? NO_BROKEN;
 
   // The cache entry a write lands in: the granted folder's list, or the
   // sample set standing in for it.
@@ -269,6 +281,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
         tasksDir: old?.tasksDir ?? null,
         tasks: next,
         lists: old?.lists ?? NO_LISTS,
+        broken: old?.broken ?? NO_BROKEN,
       }));
     },
     [queryClient, activeKey],
@@ -628,8 +641,9 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       tasksDir,
       rootUri,
       lists: listNames,
+      brokenLists: broken,
     }),
-    [rootUri, status, lastError, tasksDir, listNames],
+    [rootUri, status, lastError, tasksDir, listNames, broken],
   );
 
   // The actions never read a row, so their identity holds across task
