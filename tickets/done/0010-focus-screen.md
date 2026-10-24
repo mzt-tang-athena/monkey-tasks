@@ -4,7 +4,7 @@ title: Lists route
 created: 2026-10-20
 priority: high
 assignee: omp
-pr:
+pr: 34
 depends: [0009]
 ---
 
@@ -31,14 +31,22 @@ The first tab: Google Tasks-style lists, per the 2026-10-20 brainstorm.
 ## Acceptance
 
 - [x] Focus and Main tabs exist
-- [ ] Creating a list note adds a tab. The tabs are the fixed pair
-      `"Focus" | "Main"` today; nothing reads `Tasks/Lists/`.
+- [x] Creating a list note adds a tab.
 - [x] capture from any screen lands on the chip's target; Main
       targets write no lists property
 - [x] ticking writes `completed`, unticking removes it
 - [x] Date sort groups Past (red), Today, upcoming days, No date,
       with Completed faded last
 
-Remaining work: derive the tab set from the list notes in
-`Tasks/Lists/`, so a new note becomes a tab and a deleted note drops
-one.
+## Outcome
+
+The tab bar reads `Tasks/Lists/` and derives one tab per list note,
+after Main. Focus is one of those notes, not a fixed tab (ADR 0015
+amendment). Main shows every task. Capture targets follow the tab
+order, so a capture on a list tab writes that list.
+
+A list note that fails validation shows under Needs repair and never
+hides the other tabs (0033). List creation from the app waits for the
+command pane.
+
+Sort, tick and capture shipped earlier and have not changed.
