@@ -209,19 +209,32 @@ function TaskStore({ children }: { children: React.ReactNode }) {
   // time, so two taps cannot interleave read-modify-write cycles.
   const writes = React.useRef(new Map<string, Promise<void>>());
 
-  // A read waits for the notes still being written: a reload during a
-  // write would read the old text back over the row the user just
-  // changed. The wait replaces the old "skip this turn" check.
+  // Bumped whenever a write is queued. A read that overlapped a write
+  // cannot trust its result: the file may have changed under it.
+  const writeSeq = React.useRef(0);
+
+  // A read waits for the notes still being written, and re-reads when
+  // a write was queued while it ran. Without the second check a
+  // foreground refresh could land its old text over a row the user
+  // just saved.
   const readVault = React.useCallback(
     async (root: string): Promise<TaskListData> => {
-      await Promise.all(
-        [...writes.current.values()].map((write) =>
-          write.catch(() => undefined),
-        ),
-      );
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const seq = writeSeq.current;
+        await Promise.all(
+          [...writes.current.values()].map((write) =>
+            write.catch(() => undefined),
+          ),
+        );
+        const loaded = await loadVaultTasks(root);
+        if (writeSeq.current === seq) {
+          // A folder that reads is a folder that works again: the
+          // banner should not outlive the failure it reported.
+          setLastError(null);
+          return loaded;
+        }
+      }
       const loaded = await loadVaultTasks(root);
-      // A folder that reads is a folder that works again: the banner
-      // should not outlive the failure it reported.
       setLastError(null);
       return loaded;
     },
@@ -307,22 +320,34 @@ function TaskStore({ children }: { children: React.ReactNode }) {
   // The queue serialises writes per note. Each write also carries the
   // text it was built from, so a write that lost a race to another
   // writer refuses instead of dropping that change.
-  const queueWrite = React.useCallback(
-    (uri: string, expected: string, text: string) => {
+  // Run one piece of work after the note's previous work. The queue
+  // covers the editor's whole read-modify-write, not only its last
+  // write, so a refresh cannot read the note in the middle of a save.
+  const queueWork = React.useCallback(
+    <T,>(uri: string, run: () => Promise<T>): Promise<T> => {
+      writeSeq.current += 1;
       const previous = writes.current.get(uri) ?? Promise.resolve();
-      const next = previous
-        .catch(() => undefined)
-        .then(() => writeNoteIfUnchanged(uri, expected, text));
-      writes.current.set(uri, next);
+      const next = previous.catch(() => undefined).then(run);
+      const settled = next.then(
+        () => undefined,
+        () => undefined,
+      );
+      writes.current.set(uri, settled);
       const settle = () => {
-        if (writes.current.get(uri) === next) {
+        if (writes.current.get(uri) === settled) {
           writes.current.delete(uri);
         }
       };
-      void next.then(settle, settle);
+      void settled.then(settle);
       return next;
     },
     [],
+  );
+
+  const queueWrite = React.useCallback(
+    (uri: string, expected: string, text: string) =>
+      queueWork(uri, () => writeNoteIfUnchanged(uri, expected, text)),
+    [queueWork],
   );
 
   // A failure the screen can shrug off: the message is cleared by the
@@ -517,7 +542,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
   );
 
   const edit = React.useCallback(
-    async (task: TaskItem, change: TaskEdit) => {
+    async (task: TaskItem, change: TaskEdit, expected?: string) => {
       const current =
         tasksRef.current.find((item) => item.id === task.id) ?? task;
       try {
@@ -533,7 +558,9 @@ function TaskStore({ children }: { children: React.ReactNode }) {
           setLastError(null);
           return;
         }
-        const updated = await saveTaskEdit(current, change);
+        const updated = await queueWork(current.uri, () =>
+          saveTaskEdit(current, change, expected ?? current.text),
+        );
         // A rename changes the uri, so the row is found by its render
         // identity. The cache keeps its list tabs: only the rows move.
         applyTasks(
@@ -558,7 +585,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [rootUri, applyTasks],
+    [rootUri, applyTasks, queueWork],
   );
 
   const capture = React.useCallback(

@@ -201,6 +201,20 @@ describe("saveTaskEdit", () => {
     expect(result.id).toBe(OLD_URI);
   });
 
+  it("refuses when the editor opened an older text than the store holds", async () => {
+    const item = task();
+    const opened = item.text.replace("Old body.", "Opened body.");
+    // The store refreshed after the editor mounted: its text is newer
+    // than the draft the user is looking at.
+    state.fileText = item.text;
+
+    await expect(
+      saveTaskEdit(item, edit({ body: "\nNew body.\n" }), opened),
+    ).rejects.toBeInstanceOf(NoteChangedError);
+
+    expect(state.writes).toHaveLength(0);
+  });
+
   it("refuses to save when the note changed on disk", async () => {
     const item = task();
     state.fileText = item.text.replace("Old body.", "Edited in Obsidian.");

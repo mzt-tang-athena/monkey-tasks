@@ -130,8 +130,11 @@ function setBlockList(text: string, key: string, values: string[]): string {
 export async function saveTaskEdit(
   item: TaskItem,
   edit: TaskEdit,
+  expected: string = item.text,
 ): Promise<TaskItem> {
-  let text = item.text;
+  // The draft was built from `expected`, so the property edits apply to
+  // that text, not to whatever the store last read.
+  let text = expected;
   text = updateProperty(text, "due", edit.due);
   text = updateProperty(text, "recurrence", edit.recurrence);
   text = setBlockList(text, "reminders", edit.reminders);
@@ -146,9 +149,9 @@ export async function saveTaskEdit(
   const renaming = requestedName !== item.fileName;
   let uri = item.uri;
   if (renaming) {
-    uri = await renameNote(item.uri, requestedName, text, item.text);
+    uri = await renameNote(item.uri, requestedName, text, expected);
   } else {
-    await writeNoteIfUnchanged(item.uri, item.text, text);
+    await writeNoteIfUnchanged(item.uri, expected, text);
   }
 
   // The provider may adjust the file name it was handed, so the row
