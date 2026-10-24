@@ -4,7 +4,7 @@ title: A list note that fails validation vanishes, and the tab bar has no repair
 created: 2026-10-23
 priority: high
 assignee: omp
-pr:
+pr: 43
 depends: [0010]
 ---
 
@@ -55,4 +55,22 @@ command pane, in its own ticket.
 
 ## Outcome
 
-(filled in before moving to done/)
+The empty `created:` was the cause. The loader now returns the notes
+that fail validation alongside the valid ones, the store carries both,
+and the Lists screen shows a Needs repair block naming the file and
+each error. The app still never writes a list note, so a body with a
+`list.base` block is safe.
+
+The tab bar has a surface fill, a hairline under it, 44px chips and a
+2px active rule. The strip scrolls the active chip into view after a
+tap or a swipe, and stays scrollable by hand. The sort and menu buttons
+are siblings of the strip.
+
+Main shows every task. Focus is a normal list note and appears when
+`Tasks/Lists/Focus.md` exists. ADR 0015 carries the dated amendment.
+
+Verified on the phone: eleven tabs, the strip follows a swipe, the
+repair block renders a deliberately broken note, Focus filters, Main
+shows everything. Verified in the browser at 390px: the strip scrolled
+to 221px after tapping a clipped chip. `tsc` clean, 185 tests in 26
+files, eslint 0 errors.
