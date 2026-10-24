@@ -21,6 +21,11 @@ let holdWrites = false;
 let heldOnce = false;
 let failWrite = false;
 let loadGate: Promise<void> | null = null;
+let extraTasks: TaskItem[] = [];
+let createFails = false;
+let deleteFails = false;
+const creates: { fileName: string; content: string }[] = [];
+const deletes: string[] = [];
 
 vi.mock("react-native", () => ({
   Platform: { OS: "android" },
@@ -53,6 +58,7 @@ vi.mock("../features/vault/session", () => ({
           body: "\nBody.\n",
           data: { kind: "[[tasks]]", created: "2026-10-20" },
         },
+        ...extraTasks,
       ],
     };
   },
@@ -91,7 +97,23 @@ vi.mock("../features/vault/notes", async (importOriginal) => {
         await gate.promise;
       }
     },
-    createNote: async () => "content://vault/Tasks/New.md",
+    createNote: async (
+      _folder: string,
+      fileName: string,
+      content: string,
+    ) => {
+      if (createFails) {
+        throw new Error("no space");
+      }
+      creates.push({ fileName, content });
+      return `content://vault/Tasks/${encodeURIComponent(fileName)}`;
+    },
+    deleteNote: async (uri: string) => {
+      if (deleteFails) {
+        throw new Error("locked");
+      }
+      deletes.push(uri);
+    },
   };
 });
 
@@ -108,6 +130,7 @@ import type { StoreMeta } from "./task-state";
 import { useTaskActions } from "./task-actions";
 import type { TaskActions } from "./task-actions";
 import type { TaskItem } from "../features/tasks/query";
+import { spawnContent } from "../features/tasks/spawn";
 
 /** The three contexts read as one snapshot, for the assertions below. */
 type Snapshot = StoreMeta & TaskActions & { tasks: TaskItem[] };
@@ -168,11 +191,65 @@ async function mount(): Promise<ReactTestRenderer> {
 }
 
 function row(): TaskItem {
-  const task = latest?.tasks.find((item) => item.name === "Call");
+  return byFile("Call.md");
+}
+
+function byFile(fileName: string): TaskItem {
+  const task = latest?.tasks.find((item) => item.fileName === fileName);
   if (task == null) {
-    throw new Error("the task is not in the store");
+    throw new Error(`the task ${fileName} is not in the store`);
   }
   return task;
+}
+
+/** A recurring occurrence and its successor, for the completion tests. */
+function recurring(due: string, body = "\nWater.\n"): TaskItem {
+  const fileName = "Water plants.md";
+  return {
+    id: `content://vault/Tasks/${fileName}`,
+    uri: `content://vault/Tasks/${fileName}`,
+    fileName,
+    name: "Water plants",
+    text: `---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: ${due}\nrecurrence: FREQ=WEEKLY\n---\n${body}`,
+    body,
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      due,
+      recurrence: "FREQ=WEEKLY",
+    },
+  };
+}
+
+function spawnOf(body = "\nWater.\n"): TaskItem {
+  const fileName = "Water plants 2026-10-27.md";
+  return {
+    id: `content://vault/Tasks/${fileName}`,
+    uri: `content://vault/Tasks/${fileName}`,
+    fileName,
+    name: "Water plants",
+    text: spawnContent(
+      {
+        title: "Water plants",
+        previous: "Water plants",
+        due: "2026-10-27",
+        recurrence: "FREQ=WEEKLY",
+        lists: [],
+        reminders: [],
+        body,
+      },
+      "2026-10-24",
+    ),
+    body,
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-24",
+      title: "Water plants",
+      due: "2026-10-27",
+      recurrence: "FREQ=WEEKLY",
+      "recurrence previous": "[[Water plants]]",
+    },
+  };
 }
 
 /** The store reads Platform.OS on every render, so the mock is mutable.
@@ -195,6 +272,11 @@ beforeEach(() => {
   heldOnce = false;
   failWrite = false;
   loadGate = null;
+  extraTasks = [];
+  createFails = false;
+  deleteFails = false;
+  creates.length = 0;
+  deletes.length = 0;
   latest = null;
   latestActions = null;
   queryClient = null;
@@ -309,7 +391,9 @@ describe("TasksProvider", () => {
 
     expect(latest!.tasks.length).toBe(before + 1);
     const captured = latest!.tasks.find((item) => item.name === "Water plants");
-    expect(captured?.uri).toBe("content://vault/Tasks/New.md");
+    expect(captured?.uri).toBe(
+      `content://vault/Tasks/${encodeURIComponent("Water plants.md")}`,
+    );
     // A capture still reads no notes: only the boot load happened.
     expect(loadCalls).toBe(1);
   });
@@ -427,5 +511,102 @@ describe("TasksProvider", () => {
     expect(writes).toHaveLength(0);
     expect(mockLoads).toBe(1);
     expect(loadCalls).toBe(0);
+  });
+});
+
+describe("recurring completion", () => {
+  it("completes the occurrence and creates the next note", async () => {
+    extraTasks = [recurring("2026-10-20")];
+    await mount();
+
+    await act(async () => {
+      await latest!.toggle(byFile("Water plants.md"));
+    });
+    await flush();
+
+    expect(creates).toHaveLength(1);
+    expect(creates[0].fileName).toBe("Water plants 2026-10-27.md");
+    expect(creates[0].content).toContain("title: Water plants");
+    expect(creates[0].content).toContain(
+      'recurrence previous: "[[Water plants]]"',
+    );
+    expect(creates[0].content).toContain("due: 2026-10-27");
+
+    const old = byFile("Water plants.md");
+    expect(old.data?.completed).toBeDefined();
+    expect(old.data?.due).toBe("2026-10-20");
+    expect(latest!.tasks.map((item) => item.fileName)).toContain(
+      "Water plants 2026-10-27.md",
+    );
+    expect(writes.at(-1)?.text).toContain("completed:");
+  });
+
+  it("leaves the old note open when the new note cannot be created", async () => {
+    createFails = true;
+    extraTasks = [recurring("2026-10-20")];
+    await mount();
+
+    await act(async () => {
+      await latest!.toggle(byFile("Water plants.md"));
+    });
+    await flush();
+
+    expect(writes).toHaveLength(0);
+    expect(byFile("Water plants.md").data?.completed).toBeUndefined();
+    expect(latest!.lastError).toContain("recurring create");
+  });
+
+  it("takes the new note back when the completion write fails", async () => {
+    failWrite = true;
+    extraTasks = [recurring("2026-10-20")];
+    await mount();
+
+    await act(async () => {
+      await latest!.toggle(byFile("Water plants.md"));
+    });
+    await flush();
+
+    expect(deletes).toEqual([
+      `content://vault/Tasks/${encodeURIComponent("Water plants 2026-10-27.md")}`,
+    ]);
+    expect(byFile("Water plants.md").data?.completed).toBeUndefined();
+    expect(latest!.tasks.map((item) => item.fileName)).not.toContain(
+      "Water plants 2026-10-27.md",
+    );
+    expect(latest!.lastError).toContain("recurring complete");
+  });
+
+  it("takes back an untouched successor when the occurrence reopens", async () => {
+    const done = recurring("2026-10-20");
+    done.data = { ...done.data!, completed: "2026-10-24" };
+    extraTasks = [done, spawnOf()];
+    await mount();
+
+    await act(async () => {
+      await latest!.toggle(byFile("Water plants.md"));
+    });
+    await flush();
+
+    expect(deletes).toEqual([spawnOf().uri]);
+    expect(byFile("Water plants.md").data?.completed).toBeUndefined();
+    expect(latest!.tasks.map((item) => item.fileName)).not.toContain(
+      "Water plants 2026-10-27.md",
+    );
+  });
+
+  it("leaves an edited successor alone when the occurrence reopens", async () => {
+    const done = recurring("2026-10-20");
+    done.data = { ...done.data!, completed: "2026-10-24" };
+    extraTasks = [done, spawnOf("\nEdited.\n")];
+    await mount();
+
+    await act(async () => {
+      await latest!.toggle(byFile("Water plants.md"));
+    });
+    await flush();
+
+    expect(deletes).toEqual([]);
+    expect(byFile("Water plants 2026-10-27.md")).toBeDefined();
+    expect(latest!.lastError).toContain("edited");
   });
 });

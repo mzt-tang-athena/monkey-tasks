@@ -48,7 +48,7 @@ function warnRename(): void {
 /** The draft the editor holds: the vault fields, plain. */
 function draftOf(task: TaskItem): TaskEdit {
   return {
-    name: task.name,
+    name: task.data?.title ?? task.name,
     due: task.data?.due ?? null,
     recurrence: task.data?.recurrence ?? null,
     lists: (task.data?.lists ?? []).map(listName),
@@ -278,7 +278,11 @@ function TaskEditorForm({ task }: { task: TaskItem }) {
     };
     // The rename warning follows the file name the write will use,
     // not the display text: only a new file loses the old links.
-    if (`${safeFileName(name)}.md` !== task.fileName && !renameWarned) {
+    if (
+      task.data?.title == null &&
+      `${safeFileName(name)}.md` !== task.fileName &&
+      !renameWarned
+    ) {
       renameWarned = true;
       warnRename();
     }

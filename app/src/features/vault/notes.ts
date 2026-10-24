@@ -61,6 +61,11 @@ export async function writeNoteIfUnchanged(
   await writeNote(uri, next);
 }
 
+/** Delete a note file. A file already gone is not an error. */
+export async function deleteNote(uri: string): Promise<void> {
+  await FileSystem.deleteAsync(uri, { idempotent: true });
+}
+
 /** Create a note file in a folder and write it. Returns the new uri. */
 export async function createNote(
   folderUri: string,

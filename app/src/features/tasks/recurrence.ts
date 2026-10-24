@@ -119,6 +119,33 @@ export function nextDue(
 }
 
 /**
+ * The occurrence after a stored due date, with no clamp to today. This
+ * is the date a completed occurrence hands to its successor. It can be
+ * in the past, because a task finished late still follows the schedule;
+ * the successor then shows immediately.
+ */
+export function nextAfter(
+  recurrence: string,
+  due: string | null | undefined,
+): string | null {
+  if (recurrence.trim() === "" || due == null) {
+    return null;
+  }
+  const stored = parseStoredDate(due);
+  const rule = stored == null ? null : ruleFor(recurrence, due);
+  if (stored == null || rule == null) {
+    return null;
+  }
+  let next: Date | null = null;
+  try {
+    next = rule.after(toFloating(stored.date), false);
+  } catch {
+    return null;
+  }
+  return next ? formatLocal(fromFloating(next), stored.hasTime) : null;
+}
+
+/**
  * Every day in [from, to] that a task touches, as local midnights in
  * ascending order. The range form of occursOn: the month grid buckets
  * a task by these days instead of re-deriving its rule per cell.

@@ -228,6 +228,34 @@ describe("saveTaskEdit", () => {
     expect(state.creates).toEqual([]);
   });
 
+  it("edits the title instead of renaming a titled note", async () => {
+    const item: TaskItem = {
+      ...task(),
+      fileName: "Water plants 2026-10-27.md",
+      name: "Water plants",
+      text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ntitle: Water plants\ndue: 2026-10-27\n---\n\nOld body.\n',
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        title: "Water plants",
+        due: "2026-10-27",
+      },
+    };
+    state.fileText = item.text;
+
+    const result = await saveTaskEdit(
+      item,
+      edit({ name: "Water the ferns", body: "\nNew body.\n" }),
+    );
+
+    expect(state.creates).toEqual([]);
+    expect(state.deletes).toEqual([]);
+    expect(result.fileName).toBe("Water plants 2026-10-27.md");
+    expect(result.name).toBe("Water the ferns");
+    expect(result.text).toContain("title: Water the ferns");
+    expect(result.data?.title).toBe("Water the ferns");
+  });
+
   it("leaves the old note in place when the save fails", async () => {
     state.failWrite = true;
     const item = task();

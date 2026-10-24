@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { formatLocal } from "../../lib/dates";
 import type { TaskItem } from "./query";
-import { nextDue, occurrencesBetween, occursOn } from "./recurrence";
+import {
+  nextAfter,
+  nextDue,
+  occurrencesBetween,
+  occursOn,
+} from "./recurrence";
 
 function task(data: TaskFrontmatter): TaskItem {
   const uri = "content://vault/Tasks/recurring.md";
@@ -210,5 +215,30 @@ describe("occurrencesBetween", () => {
     expect(
       occurrencesBetween(daily, new Date(2026, 9, 24), new Date(2026, 9, 20)),
     ).toEqual([]);
+  });
+});
+
+describe("nextAfter", () => {
+  it("returns the occurrence after the stored due, not after today", () => {
+    // A task finished late still follows its schedule.
+    expect(nextAfter("FREQ=WEEKLY", "2026-10-01")).toBe("2026-10-08");
+    expect(nextAfter("FREQ=WEEKLY", "2026-10-20")).toBe("2026-10-27");
+  });
+
+  it("keeps the time of day on a timed occurrence", () => {
+    expect(nextAfter("FREQ=DAILY", "2026-10-20T09:00")).toBe(
+      "2026-10-21T09:00",
+    );
+  });
+
+  it("returns null with no due or an unusable rule", () => {
+    expect(nextAfter("FREQ=WEEKLY", null)).toBeNull();
+    expect(nextAfter("", "2026-10-20")).toBeNull();
+    expect(nextAfter("every week", "2026-10-20")).toBeNull();
+  });
+
+  it("returns null once a counted rule is exhausted", () => {
+    expect(nextAfter("FREQ=DAILY;COUNT=1", "2026-10-20")).toBeNull();
+    expect(nextAfter("FREQ=DAILY;COUNT=2", "2026-10-20")).toBe("2026-10-21");
   });
 });
