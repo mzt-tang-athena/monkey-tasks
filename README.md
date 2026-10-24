@@ -73,6 +73,28 @@ Android asks once for permission to install from the browser or file
 manager. The build is a release: JavaScript rides inside the APK, so the app
 runs without Metro.
 
+### Develop against a phone without rebuilding
+
+The release APK takes about 45 minutes and cannot load code from Metro.
+For day to day work build a development client once, then reload over the
+network:
+
+```bash
+gh workflow run android -f dev=true
+gh run download --name monkey-tasks-dev-apk
+```
+
+Install it once. It keeps the vault grant across reloads. Then serve the
+bundle, with the host name the phone can reach (a LAN address, or a
+Tailscale address when the phone is off the local network):
+
+```bash
+REACT_NATIVE_PACKAGER_HOSTNAME=100.124.248.125 npx expo start --dev-client --lan
+```
+
+The dev client opens the URL the CLI prints. A JavaScript change reloads
+in a second. A new native module or permission still needs a rebuild.
+
 ## Layout
 
 Routes are thin: `app/(tabs)/planner.tsx` re-exports
