@@ -113,6 +113,19 @@ function buildTasks(): TaskItem[] {
     mock("Sort the receipt drawer", {}),
     mock("Book train tickets home", {}),
 
+    // A note that fails validation: shown under Needs repair, never
+    // rendered as a task row.
+    {
+      id: "mock://vault/Tasks/Broken note.md",
+      uri: "mock://vault/Tasks/Broken note.md",
+      fileName: "Broken note.md",
+      name: "Broken note",
+      text: '---\nkind: "[[tasks]]"\n---\n\nNo created date.\n',
+      data: null,
+      body: "\nNo created date.\n",
+      errors: ["created: Invalid input: expected string, received undefined"],
+    },
+
     // Completed, faded at the bottom.
     mock("Buy stamps", {
       completed: formatLocal(addDays(new Date(), 0), false),

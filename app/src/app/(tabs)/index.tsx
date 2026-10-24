@@ -15,7 +15,7 @@ import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { BottomBar } from "../../components/BottomBar";
-import { useStoreMeta } from "../../store/task-state";
+import { useStoreMeta, useTaskList } from "../../store/task-state";
 import { useTaskActions } from "../../store/task-actions";
 import {
   useListTabs,
@@ -39,6 +39,7 @@ type ListsSection = {
 
 export default function ListsScreen() {
   const { mode, status, lastError, brokenLists } = useStoreMeta();
+  const allTasks = useTaskList();
   const actions = useTaskActions();
   const insets = useSafeAreaInsets();
   const tabs = useListTabs();
@@ -142,7 +143,28 @@ export default function ListsScreen() {
     }
   }, [refresh]);
 
-  const visible = useTabTasks(tab);
+  // A note that fails validation never renders as a task row. It is
+  // shown, with its errors, in the repair block above the list.
+  const brokenTasks = React.useMemo(
+    () =>
+      allTasks
+        .filter((task) => (task.errors?.length ?? 0) > 0)
+        .map((task) => ({
+          name: task.name,
+          uri: task.uri,
+          errors: task.errors ?? [],
+        })),
+    [allTasks],
+  );
+  const repairs = React.useMemo(
+    () => [...brokenLists, ...brokenTasks],
+    [brokenLists, brokenTasks],
+  );
+  const shown = useTabTasks(tab);
+  const visible = React.useMemo(
+    () => shown.filter((task) => (task.errors?.length ?? 0) === 0),
+    [shown],
+  );
   const openSections = useTaskSections(visible);
   const completed = React.useMemo(
     () =>
@@ -329,11 +351,11 @@ export default function ListsScreen() {
         {/* A list note that fails validation stays visible here, with
             its errors, so it can be fixed in Obsidian. It never hides
             the tabs or the tasks. */}
-        {brokenLists.length > 0 ? (
+        {repairs.length > 0 ? (
           <View style={styles.repairSlot}>
             <View style={styles.repairBox}>
               <Text style={styles.repairTitle}>Needs repair</Text>
-              {brokenLists.map((item) => (
+              {repairs.map((item) => (
                 <View key={item.uri} style={styles.repairItem}>
                   <Text style={styles.repairName}>{item.name}.md</Text>
                   {item.errors.map((error, index) => (

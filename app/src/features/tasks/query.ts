@@ -2,6 +2,7 @@ import { taskFrontmatter, validateNote, type TaskFrontmatter } from "@monkey-tas
 import { listDirectory, displayName, type Entry } from "../vault/scan";
 import { readNote } from "../vault/notes";
 import { parseStoredDate, startOfDay } from "../../lib/dates";
+import { formatIssues } from "../../lib/schema-errors";
 
 export type TaskItem = {
   /**
@@ -21,6 +22,8 @@ export type TaskItem = {
   data: TaskFrontmatter | null;
   /** Body below the frontmatter. */
   body: string;
+  /** Why the frontmatter failed, when it did. Absent on a valid note. */
+  errors?: string[];
 };
 
 export async function loadTasks(tasksDirUri: string): Promise<TaskItem[]> {
@@ -40,6 +43,9 @@ export async function loadTasks(tasksDirUri: string): Promise<TaskItem[]> {
         text,
         data: result.data,
         body: result.note.body,
+        ...(result.errors == null
+          ? {}
+          : { errors: formatIssues(result.errors.issues) }),
       };
     }),
   );

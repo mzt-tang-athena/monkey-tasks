@@ -1,6 +1,7 @@
 import { listFrontmatter, validateNote } from "@monkey-tasks/schemas";
 import { findSubfolder, listDirectory } from "../vault/scan";
 import { readNote } from "../vault/notes";
+import { formatIssues } from "../../lib/schema-errors";
 
 /** A list note, as the store exposes it: a tab name and its file. */
 export type ListItem = {
@@ -23,16 +24,6 @@ export type ListRead = {
   lists: ListItem[];
   broken: BrokenList[];
 };
-
-type Issue = { readonly path: readonly PropertyKey[]; readonly message: string };
-
-/** Render a zod issue as "path: message", "note" when it has no path. */
-function formatIssues(issues: readonly Issue[]): string[] {
-  return issues.map((issue) => {
-    const path = issue.path.map(String).join(".") || "note";
-    return `${path}: ${issue.message}`;
-  });
-}
 
 /**
  * A note is a list when its frontmatter kind is the wikilink
