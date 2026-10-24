@@ -245,6 +245,9 @@ function TaskEditorForm({ task }: { task: TaskItem }) {
   // Seeded at mount and never reset: a failed save keeps every
   // keystroke.
   const [draft, setDraft] = React.useState<TaskEdit>(() => draftOf(task));
+  // The text this draft was seeded from. The store may refresh while
+  // the editor is open; a save still belongs to the text the user saw.
+  const [openedText] = React.useState(task.text);
   const [listsText, setListsText] = React.useState(() =>
     draftOf(task).lists.join("\n"),
   );
@@ -282,7 +285,7 @@ function TaskEditorForm({ task }: { task: TaskItem }) {
     setSaving(true);
     setError(null);
     try {
-      await actions.edit(task, edit);
+      await actions.edit(task, edit, openedText);
       router.back();
     } catch (caught) {
       // The draft stays put: the user fixes what the write refused.

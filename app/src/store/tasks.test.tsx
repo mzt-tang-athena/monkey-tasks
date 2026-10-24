@@ -20,6 +20,7 @@ let releaseWrite: (() => void) | null = null;
 let holdWrites = false;
 let heldOnce = false;
 let failWrite = false;
+let loadGate: Promise<void> | null = null;
 
 vi.mock("react-native", () => ({
   Platform: { OS: "android" },
@@ -36,6 +37,9 @@ vi.mock("../features/vault/grant", () => ({
 vi.mock("../features/vault/session", () => ({
   loadVaultTasks: async () => {
     loadCalls += 1;
+    if (loadGate) {
+      await loadGate;
+    }
     return {
       tasksDir: "content://vault/Tasks",
       lists: [{ name: "Focus", uri: "content://vault/Tasks/Lists/Focus.md" }],
@@ -71,7 +75,11 @@ vi.mock("../features/vault/notes", async (importOriginal) => {
     await importOriginal<typeof import("../features/vault/notes")>();
   return {
     ...actual,
-    writeNote: async (uri: string, text: string) => {
+    writeNoteIfUnchanged: async (
+      uri: string,
+      _expected: string,
+      text: string,
+    ) => {
       if (failWrite) {
         throw new Error("disk full");
       }
@@ -186,6 +194,7 @@ beforeEach(() => {
   holdWrites = false;
   heldOnce = false;
   failWrite = false;
+  loadGate = null;
   latest = null;
   latestActions = null;
   queryClient = null;
@@ -226,6 +235,37 @@ describe("TasksProvider", () => {
     });
     await flush();
     expect(loadCalls).toBe(1);
+  });
+
+  it("re-reads when a write lands while the read runs", async () => {
+    await mount();
+    const booted = loadCalls;
+    const gate = Promise.withResolvers<void>();
+    loadGate = gate.promise;
+
+    // The read starts and blocks inside the loader.
+    let refreshing: Promise<void> | null = null;
+    await act(async () => {
+      refreshing = latest!.refresh();
+    });
+    await flush();
+    expect(loadCalls).toBe(booted + 1);
+
+    // A write is queued and lands while that read is still open.
+    await act(async () => {
+      void latest!.toggle(row());
+    });
+    await flush();
+
+    // Release the read. Its result predates the write, so the store
+    // reads again instead of dropping the new text.
+    loadGate = null;
+    gate.resolve();
+    await act(async () => {
+      await refreshing;
+    });
+    await flush();
+    expect(loadCalls).toBe(booted + 2);
   });
 
   it("chains two quick taps on one note", async () => {

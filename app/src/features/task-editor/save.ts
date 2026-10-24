@@ -1,7 +1,13 @@
 import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
 import * as FileSystem from "expo-file-system/legacy";
 import { displayName } from "../vault/scan";
-import { updateProperty, writeNote } from "../vault/notes";
+import {
+  NoteChangedError,
+  readNote,
+  updateProperty,
+  writeNote,
+  writeNoteIfUnchanged,
+} from "../vault/notes";
 import { safeFileName } from "../capture/write";
 import type { TaskItem } from "../tasks/query";
 
@@ -76,9 +82,15 @@ async function renameNote(
   oldUri: string,
   fileName: string,
   text: string,
+  expected: string,
 ): Promise<string> {
   let created: string | null = null;
   try {
+    // A rename deletes the old note, so it must not race another
+    // writer: the delete would take their change with it.
+    if ((await readNote(oldUri)) !== expected) {
+      throw new NoteChangedError(oldUri);
+    }
     created = await StorageAccessFramework.createFileAsync(
       parentUri(oldUri),
       fileName,
@@ -118,8 +130,11 @@ function setBlockList(text: string, key: string, values: string[]): string {
 export async function saveTaskEdit(
   item: TaskItem,
   edit: TaskEdit,
+  expected: string = item.text,
 ): Promise<TaskItem> {
-  let text = item.text;
+  // The draft was built from `expected`, so the property edits apply to
+  // that text, not to whatever the store last read.
+  let text = expected;
   text = updateProperty(text, "due", edit.due);
   text = updateProperty(text, "recurrence", edit.recurrence);
   text = setBlockList(text, "reminders", edit.reminders);
@@ -134,9 +149,9 @@ export async function saveTaskEdit(
   const renaming = requestedName !== item.fileName;
   let uri = item.uri;
   if (renaming) {
-    uri = await renameNote(item.uri, requestedName, text);
+    uri = await renameNote(item.uri, requestedName, text, expected);
   } else {
-    await writeNote(item.uri, text);
+    await writeNoteIfUnchanged(item.uri, expected, text);
   }
 
   // The provider may adjust the file name it was handed, so the row

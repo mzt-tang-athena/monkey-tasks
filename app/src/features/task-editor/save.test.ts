@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type * as NotesModule from "../vault/notes";
+import { NoteChangedError } from "../vault/notes";
 
 // The editor writes through two doors: the note helpers and the SAF
 // document calls a rename needs. Both are recorded here so a test can
@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   events: [] as string[],
   createdUri: "",
   failWrite: false,
+  fileText: "",
 }));
 
 vi.mock("expo-file-system/legacy", () => ({
@@ -30,21 +31,16 @@ vi.mock("expo-file-system/legacy", () => ({
     state.deletes.push(uri);
     state.events.push("delete");
   },
+  EncodingType: { UTF8: "utf8" },
+  readAsStringAsync: async () => state.fileText,
+  writeAsStringAsync: async (uri: string, text: string) => {
+    if (state.failWrite) {
+      throw new Error("disk full");
+    }
+    state.writes.push({ uri, text });
+    state.events.push("write");
+  },
 }));
-
-vi.mock("../vault/notes", async (importOriginal) => {
-  const actual = await importOriginal<typeof NotesModule>();
-  return {
-    ...actual,
-    writeNote: async (uri: string, text: string) => {
-      if (state.failWrite) {
-        throw new Error("disk full");
-      }
-      state.writes.push({ uri, text });
-      state.events.push("write");
-    },
-  };
-});
 
 import { parentUri, saveTaskEdit, type TaskEdit } from "./save";
 import type { TaskItem } from "../tasks/query";
@@ -93,6 +89,7 @@ beforeEach(() => {
   state.events.length = 0;
   state.createdUri = NEW_URI;
   state.failWrite = false;
+  state.fileText = task().text;
 });
 
 describe("parentUri", () => {
@@ -160,6 +157,7 @@ describe("saveTaskEdit", () => {
       text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nOld body.\n',
       data: { kind: "[[tasks]]", created: "2026-10-20" },
     };
+    state.fileText = minimal.text;
 
     const result = await saveTaskEdit(
       minimal,
@@ -201,6 +199,33 @@ describe("saveTaskEdit", () => {
     expect(result.name).toBe("New name");
     // The row keeps its identity so the list does not remount it.
     expect(result.id).toBe(OLD_URI);
+  });
+
+  it("refuses when the editor opened an older text than the store holds", async () => {
+    const item = task();
+    const opened = item.text.replace("Old body.", "Opened body.");
+    // The store refreshed after the editor mounted: its text is newer
+    // than the draft the user is looking at.
+    state.fileText = item.text;
+
+    await expect(
+      saveTaskEdit(item, edit({ body: "\nNew body.\n" }), opened),
+    ).rejects.toBeInstanceOf(NoteChangedError);
+
+    expect(state.writes).toHaveLength(0);
+  });
+
+  it("refuses to save when the note changed on disk", async () => {
+    const item = task();
+    state.fileText = item.text.replace("Old body.", "Edited in Obsidian.");
+
+    await expect(
+      saveTaskEdit(item, edit({ body: "\nNew body.\n" })),
+    ).rejects.toBeInstanceOf(NoteChangedError);
+
+    expect(state.writes).toHaveLength(0);
+    expect(state.deletes).toEqual([]);
+    expect(state.creates).toEqual([]);
   });
 
   it("leaves the old note in place when the save fails", async () => {

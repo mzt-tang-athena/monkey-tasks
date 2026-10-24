@@ -1,6 +1,31 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { load } from "js-yaml";
-import { serializeValue, updateProperty } from "./notes";
+
+const fs = vi.hoisted(() => ({
+  read: "",
+  readError: null as Error | null,
+  write: vi.fn(),
+}));
+
+vi.mock("expo-file-system/legacy", () => ({
+  EncodingType: { UTF8: "utf8" },
+  StorageAccessFramework: {},
+  readAsStringAsync: async () => {
+    if (fs.readError) {
+      throw fs.readError;
+    }
+    return fs.read;
+  },
+  writeAsStringAsync: fs.write,
+}));
+
+import {
+  NoteChangedError,
+  NoteUnreadableError,
+  serializeValue,
+  updateProperty,
+  writeNoteIfUnchanged,
+} from "./notes";
 
 const base =
   '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n---\n\nbody\n';
@@ -112,5 +137,43 @@ describe("updateProperty", () => {
   it("clearing an absent property is a no-op", () => {
     const result = updateProperty(base, "completed", null);
     expect(result).toBe(base);
+  });
+});
+
+describe("writeNoteIfUnchanged", () => {
+  beforeEach(() => {
+    fs.read = "";
+    fs.readError = null;
+    fs.write.mockClear();
+  });
+
+  it("writes when the file still holds the text it read", async () => {
+    fs.read = "old";
+
+    await writeNoteIfUnchanged("content://x", "old", "new");
+
+    expect(fs.write).toHaveBeenCalledWith("content://x", "new", {
+      encoding: "utf8",
+    });
+  });
+
+  it("refuses when another writer changed the file", async () => {
+    fs.read = "theirs";
+
+    await expect(
+      writeNoteIfUnchanged("content://x", "ours", "new"),
+    ).rejects.toBeInstanceOf(NoteChangedError);
+
+    expect(fs.write).not.toHaveBeenCalled();
+  });
+
+  it("refuses when the file cannot be read", async () => {
+    fs.readError = new Error("gone");
+
+    await expect(
+      writeNoteIfUnchanged("content://x", "ours", "new"),
+    ).rejects.toBeInstanceOf(NoteUnreadableError);
+
+    expect(fs.write).not.toHaveBeenCalled();
   });
 });

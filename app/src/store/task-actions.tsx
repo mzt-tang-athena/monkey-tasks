@@ -22,7 +22,12 @@ export type TaskActions = {
     patch: Partial<TaskFrontmatter>,
   ): Promise<void>;
   /** Write the editor's fields to the note. Rejects when the save fails. */
-  edit(task: TaskItem, edit: TaskEdit): Promise<void>;
+  /**
+   * `expected` is the note text the editor opened. A save built on a
+   * stale draft refuses instead of overwriting a change that landed
+   * after the editor seeded.
+   */
+  edit(task: TaskItem, edit: TaskEdit, expected?: string): Promise<void>;
   capture(
     parsed: ParsedCapture,
     target: CaptureTarget,
