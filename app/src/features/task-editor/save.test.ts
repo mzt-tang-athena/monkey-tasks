@@ -169,7 +169,7 @@ describe("saveTaskEdit", () => {
       }),
     );
 
-    expect(result.text).toContain("lists:\n  - [[Errands]]");
+    expect(result.text).toContain('lists:\n  - "[[Errands]]"');
     expect(result.text).toContain("reminders:\n  - 2026-10-25T08:00");
     expect(result.data?.lists).toEqual(["[[Errands]]"]);
     expect(result.data?.reminders).toEqual(["2026-10-25T08:00"]);

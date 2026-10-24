@@ -18,6 +18,10 @@ different YAML semantics.
 - `reminders:   - 07:00` on one line is a string to a standard parser
   and a list to the app. Fixed in #38.
 
+Obsidian had already done exactly that in the vault: two notes came
+back as `- - - Focus`, the nested form it wrote after reading the bare
+link. The app then read that as a list named `- - Focus`.
+
 The app's own parser accepts both forms, so its tests passed. The
 contract was never tested against a real YAML parser.
 
