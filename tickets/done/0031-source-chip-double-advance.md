@@ -4,7 +4,7 @@ title: The source chip jumps two lists
 created: 2026-10-23
 priority: high
 assignee: omp
-pr:
+pr: 35
 depends: [0025]
 ---
 
@@ -31,4 +31,11 @@ End the pressed visual when the action lands, before the cycle.
 
 ## Outcome
 
-(filled in before moving to done/)
+Android delivers `onPress` before the delayed `onPressOut`. The chip
+previewed the next source while pressed, the tap moved the source, and
+the re-render still read as pressed, so the preview showed the source
+after the chosen one. The chip now clears the pressed visual before it
+cycles.
+
+The regression test simulates the Android event order: press, tap,
+release. Confirmed on the phone.
