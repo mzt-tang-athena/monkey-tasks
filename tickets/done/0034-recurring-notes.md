@@ -4,7 +4,7 @@ title: A recurring task completes, and the next one is a new note
 created: 2026-10-23
 priority: high
 assignee: omp
-pr:
+pr: 55
 depends: [0012, 0032, 0035]
 ---
 
@@ -47,4 +47,24 @@ and `recurrence previous` linking the completed note.
 
 ## Outcome
 
-(filled in before moving to done/)
+A tick on a recurring task now completes the occurrence and creates
+the successor as its own note (ADR 0027). The successor is named
+`<title> <date>.md`, carries `title` and `recurrence previous`, and
+copies the body, lists and reminders. The next date comes from the
+schedule, so a late completion can produce a past date, which shows
+immediately.
+
+The create comes first, then the completion. A failed completion
+deletes the new note, so the worst case is two open occurrences, never
+a lost series. Unticking clears `completed` and takes back a successor
+that still holds the text we wrote.
+
+The Lists screen hides a successor until its due day; the planner
+shows it. The editor shows and edits `title` instead of renaming a
+titled note.
+
+Verified on the phone: the tick completes the note, the successor
+appears with its properties, the Lists screen hides it and the planner
+shows it. The reappearance on the due day was not observed before the
+ticket closed; the rule is derived on read and covered by tests, and
+the ticket reopens if it misbehaves.
