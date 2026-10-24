@@ -4,7 +4,7 @@ title: The frontmatter the app writes must mean the same thing to any YAML parse
 created: 2026-10-23
 priority: high
 assignee: omp
-pr:
+pr: 47
 depends: [0013]
 ---
 
@@ -51,4 +51,22 @@ Out of scope: compare-and-swap on write (0035), task repair rows
 
 ## Outcome
 
-(filled in before moving to done/)
+One emitter now writes every frontmatter value, and it quotes a
+wikilink. Capture calls the same function instead of building lines by
+hand. A js-yaml conformance test parses the emitted text and compares
+the values, so the app can no longer write YAML that a standard parser
+reads differently.
+
+The vault held the proof: `Shop.md` had `- - - Focus`, the nested form
+Obsidian wrote after reading a bare link. The app had been reading that
+as a list named `- - Focus`.
+
+The task notes are repaired: four bare links quoted, one nested link
+restored, one dangling test property removed. A js-yaml pass over the
+vault finds no nested value in a task note. Legacy bare deed statuses
+stay for 0005.
+
+Verified on the phone: the tasks still show under Focus and Errands
+after the links became quoted. `tsc` clean, 193 tests in 26 files,
+eslint 0 errors. CI was blocked on GitHub billing, so the merge rested
+on the local gates.
