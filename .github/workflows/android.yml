@@ -6,6 +6,11 @@ name: android
 
 on:
   workflow_dispatch:
+    inputs:
+      dev:
+        description: Build a development client APK instead of release
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -51,16 +56,22 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
-      - name: Build the release APK
+      - name: Build the APK
         working-directory: app/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew ${{ inputs.dev && 'assembleDebug' || 'assembleRelease' }} --no-daemon
       - name: Name the artifact
+        env:
+          DEV: ${{ inputs.dev }}
         run: |
           mkdir -p dist
-          cp app/android/app/build/outputs/apk/release/app-release.apk "dist/monkey-tasks-${GITHUB_SHA::7}.apk"
+          if [ "$DEV" = "true" ]; then
+            cp app/android/app/build/outputs/apk/debug/app-debug.apk "dist/monkey-tasks-dev-${GITHUB_SHA::7}.apk"
+          else
+            cp app/android/app/build/outputs/apk/release/app-release.apk "dist/monkey-tasks-${GITHUB_SHA::7}.apk"
+          fi
           ls -lh dist
       - uses: actions/upload-artifact@v4
         with:
-          name: monkey-tasks-apk
+          name: ${{ inputs.dev && 'monkey-tasks-dev-apk' || 'monkey-tasks-apk' }}
           path: dist/*.apk
           if-no-files-found: error
