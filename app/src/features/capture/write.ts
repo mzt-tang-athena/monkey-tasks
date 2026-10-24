@@ -1,4 +1,5 @@
 import { todayIso } from "../../lib/dates";
+import { serializeValue } from "../vault/notes";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { ParsedCapture } from "./parse";
 
@@ -12,14 +13,10 @@ export function captureContent(
     lines.push(`due: ${parsed.due}`);
   }
   if (listName) {
-    lines.push("lists:");
-    lines.push(`  - [[${listName}]]`);
+    lines.push("lists:", serializeValue([`[[${listName}]]`]));
   }
   if (parsed.reminders?.length) {
-    lines.push("reminders:");
-    for (const reminder of parsed.reminders) {
-      lines.push(`  - ${reminder}`);
-    }
+    lines.push("reminders:", serializeValue(parsed.reminders));
   }
   if (parsed.recurrence) {
     lines.push(`recurrence: "${parsed.recurrence}"`);

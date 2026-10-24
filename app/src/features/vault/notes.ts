@@ -51,14 +51,23 @@ function frontmatterSpan(text: string): FrontmatterSpan | null {
   };
 }
 
-function serializeValue(value: string | string[]): string {
+/** A value YAML would read as a nested list unless it is quoted. */
+const WIKILINK = /^\[\[.*\]\]$/;
+
+/**
+ * The one place a frontmatter value is laid out. A wikilink is quoted,
+ * because YAML reads a bare `[[Name]]` as a nested list. A list is a
+ * block under its key, because YAML reads an inline list of one item as
+ * a string. Everything else — a date, an RRULE, a plain word — is
+ * written as-is, so a reader gets back exactly the text it was given.
+ */
+export function serializeValue(value: string | string[]): string {
   if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return "";
-    }
-    return `${value.map((item) => `  - ${item}`).join("\n")}`;
+    return value
+      .map((item) => `  - ${WIKILINK.test(item) ? JSON.stringify(item) : item}`)
+      .join("\n");
   }
-  return value;
+  return WIKILINK.test(value) ? JSON.stringify(value) : value;
 }
 
 /**
@@ -116,7 +125,7 @@ export function updateProperty(
         : [`${key}:`, serializeValue(value)]
       : value === ""
         ? [`${key}:`]
-        : [`${key}: ${value}`];
+        : [`${key}: ${serializeValue(value)}`];
     lines.splice(keyIndex, endIndex - keyIndex, ...replacement);
   }
   return replaceSpan(text, span, lines.join("\n"));
