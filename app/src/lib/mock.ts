@@ -1,4 +1,5 @@
 import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
+import type { BrokenList, ListItem } from "../features/lists/query";
 import type { TaskItem } from "../features/tasks/query";
 import { addDays, formatLocal, startOfDay } from "./dates";
 
@@ -121,3 +122,35 @@ function buildTasks(): TaskItem[] {
     }),
   ];
 }
+
+/**
+ * The sample list notes, so the browser preview shows the tab bar at
+ * the width a real vault reaches: the strip scrolls and the active
+ * chip follows. One note is broken on purpose, to show the repair
+ * block.
+ */
+export const mockLists: ListItem[] = [
+  "Errands",
+  "Finance",
+  "Focus",
+  "Health",
+  "Home",
+  "Projects",
+  "Reading",
+  "Shopping",
+  "Work",
+].map((name) => ({
+  name,
+  uri: `mock://vault/Tasks/Lists/${name}.md`,
+}));
+
+export const mockBroken: BrokenList[] = [
+  {
+    name: "Garden",
+    uri: "mock://vault/Tasks/Lists/Garden.md",
+    errors: [
+      "created: Invalid input: expected string, received undefined",
+      'kind: Invalid input: expected "[[lists]]"',
+    ],
+  },
+];

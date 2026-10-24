@@ -28,8 +28,8 @@ import { IconButton } from "../../components/ui";
 import { colors, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
 
 /**
- * Lists tab: Focus, the catch-all Main, and one tab per list note,
- * with capture docked above the bottom bar.
+ * Lists tab: Main first, then one tab per list note, with capture
+ * docked above the bottom bar. Main shows every task.
  */
 type ListsSection = {
   title: string;
@@ -38,7 +38,7 @@ type ListsSection = {
 };
 
 export default function ListsScreen() {
-  const { mode, status, lastError } = useStoreMeta();
+  const { mode, status, lastError, brokenLists } = useStoreMeta();
   const actions = useTaskActions();
   const insets = useSafeAreaInsets();
   const tabs = useListTabs();
@@ -49,10 +49,14 @@ export default function ListsScreen() {
     left: number;
   } | null>(null);
   const dotsRef = React.useRef<React.ComponentRef<typeof View>>(null);
+  // The tab strip scrolls the active chip into view after a swipe or a
+  // tap. Chip offsets are measured once and kept for the session.
+  const stripRef = React.useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const chipX = React.useRef<Record<string, number>>({});
 
-  // The capture targets follow the tab order: Focus, Main, then one
-  // list target per list note. Main stores nothing; a list target
-  // writes its name into the captured task's lists property.
+  // The capture targets follow the tab order: Main, then one list
+  // target per list note. Main stores nothing; a list target writes
+  // its name into the captured task's lists property.
   const targets = React.useMemo<CaptureTarget[]>(
     () =>
       tabs.map((name) =>
@@ -88,6 +92,16 @@ export default function ListsScreen() {
       });
     }),
   );
+
+  // A tab that is off screen would hide the current view's name, so
+  // the strip follows the selection. The user can still scroll it.
+  React.useEffect(() => {
+    const x = chipX.current[tab];
+    if (x == null) {
+      return;
+    }
+    stripRef.current?.scrollTo({ x: Math.max(0, x - spacing.m), animated: true });
+  }, [tab]);
 
   // The pill preselects the active tab's target; Main is the fallback
   // when the tab has no target of its own.
@@ -250,30 +264,40 @@ export default function ListsScreen() {
           {/* A vault can hold more lists than the bar fits, so the
               chips scroll and the sort and menu buttons stay put. */}
           <ScrollView
+            ref={stripRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.tabStrip}
             contentContainerStyle={styles.tabStripContent}
           >
             {tabs.map((name) => (
-            <Pressable
-              key={name}
-              style={({ pressed }) => [
-                styles.tabChip,
-                pressed && styles.chipPressed,
-              ]}
-              onPress={() => setTab(name)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: tab === name }}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  tab === name && styles.tabTextActive,
+              <Pressable
+                key={name}
+                style={({ pressed }) => [
+                  styles.tabChip,
+                  pressed && styles.chipPressed,
                 ]}
+                onPress={() => setTab(name)}
+                onLayout={(event) => {
+                  chipX.current[name] = event.nativeEvent.layout.x;
+                }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: tab === name }}
               >
-                {name}
-              </Text>
+                <Text
+                  style={[
+                    styles.tabText,
+                    tab === name && styles.tabTextActive,
+                  ]}
+                >
+                  {name}
+                </Text>
+                <View
+                  style={[
+                    styles.tabRule,
+                    tab === name && styles.tabRuleActive,
+                  ]}
+                />
               </Pressable>
             ))}
           </ScrollView>
@@ -299,6 +323,26 @@ export default function ListsScreen() {
             </IconButton>
           </View>
         </View>
+        {/* A list note that fails validation stays visible here, with
+            its errors, so it can be fixed in Obsidian. It never hides
+            the tabs or the tasks. */}
+        {brokenLists.length > 0 ? (
+          <View style={styles.repairSlot}>
+            <View style={styles.repairBox}>
+              <Text style={styles.repairTitle}>Needs repair</Text>
+              {brokenLists.map((item) => (
+                <View key={item.uri} style={styles.repairItem}>
+                  <Text style={styles.repairName}>{item.name}.md</Text>
+                  {item.errors.map((error, index) => (
+                    <Text key={index} style={styles.repairError}>
+                      {`\u2022 ${error}`}
+                    </Text>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
         {/* A failed tick or field write leaves the list usable, so the
             message is a quiet banner over it, not the error state. */}
         {lastError != null && status !== "error" ? (
@@ -472,12 +516,13 @@ const styles = StyleSheet.create({
     maxWidth: measure,
     alignSelf: "center" as const,
     width: "100%" as const,
-    // Fixed chrome above the scroller: opaque over the paper, its
-    // content on the page grid, breathing room under it.
-    backgroundColor: colors.paper,
+    // Fixed chrome above the scroller: a surface step above the paper,
+    // closed by a hairline, so the list body reads as a separate sheet.
+    backgroundColor: colors.surface,
     paddingHorizontal: pageGutter,
-    paddingTop: spacing.l,
-    paddingBottom: spacing.m,
+    paddingTop: spacing.s,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.hairline,
   },
   tabStrip: {
     flexShrink: 1,
@@ -485,11 +530,12 @@ const styles = StyleSheet.create({
   tabStripContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.s,
+    gap: spacing.xs,
+    paddingRight: spacing.m,
   },
   tabChip: {
-    minHeight: 36,
-    paddingHorizontal: spacing.s,
+    minHeight: 44,
+    paddingHorizontal: spacing.m,
     justifyContent: "center",
   },
   chipPressed: {
@@ -506,8 +552,18 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: colors.accent,
     fontWeight: "700",
-    textDecorationLine: "underline",
-    textDecorationColor: colors.accent,
+  },
+  tabRule: {
+    position: "absolute" as const,
+    left: spacing.m,
+    right: spacing.m,
+    bottom: 0,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: "transparent",
+  },
+  tabRuleActive: {
+    backgroundColor: colors.accent,
   },
   tabSpacer: {
     flex: 1,
@@ -535,6 +591,49 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     color: colors.inkMuted,
     marginTop: 2,
+  },
+
+  // Notes that fail validation: a block on the page grid, above the
+  // list, naming the file and each error so it can be fixed in the
+  // vault.
+  repairSlot: {
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    width: "100%" as const,
+    paddingHorizontal: pageGutter,
+    paddingTop: spacing.m,
+  },
+  repairBox: {
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius,
+    paddingVertical: spacing.m,
+    paddingHorizontal: spacing.m,
+    gap: spacing.s,
+  },
+  repairTitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.danger,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase" as const,
+  },
+  repairItem: {
+    gap: 2,
+  },
+  repairName: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    color: colors.ink,
+    fontWeight: "600",
+  },
+  repairError: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.danger,
   },
 
   // A failed write that leaves the screen usable: a compact strip on

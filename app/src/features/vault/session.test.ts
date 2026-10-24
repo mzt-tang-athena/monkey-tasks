@@ -11,10 +11,10 @@ vi.mock("../tasks/query", () => ({
 }));
 
 vi.mock("../lists/query", () => ({
-  loadLists: vi.fn(async () => []),
+  loadLists: vi.fn(async () => ({ lists: [], broken: [] as BrokenList[] })),
 }));
 
-import { loadLists } from "../lists/query";
+import { loadLists, type BrokenList } from "../lists/query";
 import { loadTasks } from "../tasks/query";
 import { ensureSubfolder } from "./scan";
 import { loadVaultTasks } from "./session";
@@ -38,5 +38,20 @@ describe("loadVaultTasks", () => {
 
     expect(loadLists).toHaveBeenCalledWith("content://root/vault/Tasks");
     expect(result.lists).toEqual([]);
+    expect(result.broken).toEqual([]);
+  });
+
+  it("passes the broken list notes through", async () => {
+    const broken = {
+      name: "Errands",
+      uri: "content://root/vault/Tasks/Lists/Errands.md",
+      errors: ["created: expected a date like 2026-10-21"],
+    };
+    vi.mocked(loadLists).mockResolvedValueOnce({ lists: [], broken: [broken] });
+
+    const result = await loadVaultTasks("content://root/vault");
+
+    expect(result.lists).toEqual([]);
+    expect(result.broken).toEqual([broken]);
   });
 });

@@ -39,6 +39,7 @@ vi.mock("../features/vault/session", () => ({
     return {
       tasksDir: "content://vault/Tasks",
       lists: [{ name: "Focus", uri: "content://vault/Tasks/Lists/Focus.md" }],
+      broken: [],
       tasks: [
         {
           uri: "content://vault/Tasks/Call.md",
