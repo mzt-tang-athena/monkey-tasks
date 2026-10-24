@@ -58,7 +58,16 @@ jobs:
           cache-read-only: false
       - name: Build the APK
         working-directory: app/android
-        run: ./gradlew ${{ inputs.dev && 'assembleDebug' || 'assembleRelease' }} --no-daemon
+        env:
+          DEV: ${{ inputs.dev }}
+        # A debug build carries four ABIs and overruns the runner disk.
+        # The dev client only needs the phone's ABI, so arm64 alone.
+        run: |
+          if [ "$DEV" = "true" ]; then
+            ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
+          else
+            ./gradlew assembleRelease --no-daemon
+          fi
       - name: Name the artifact
         env:
           DEV: ${{ inputs.dev }}
