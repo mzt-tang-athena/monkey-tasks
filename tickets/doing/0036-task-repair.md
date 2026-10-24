@@ -3,7 +3,7 @@ id: 0036
 title: A task note that fails validation shows as a repair row
 created: 2026-10-24
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [0033]
 ---
