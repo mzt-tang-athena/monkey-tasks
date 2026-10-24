@@ -26,7 +26,7 @@ import { type BrokenList, type ListItem } from "../features/lists/query";
 import {
   createNote,
   updateProperty,
-  writeNote,
+  writeNoteIfUnchanged,
 } from "../features/vault/notes";
 import { type TaskItem } from "../features/tasks/query";
 import { saveTaskEdit, type TaskEdit } from "../features/task-editor/save";
@@ -304,20 +304,26 @@ function TaskStore({ children }: { children: React.ReactNode }) {
     [applyTasks],
   );
 
-  const queueWrite = React.useCallback((uri: string, text: string) => {
-    const previous = writes.current.get(uri) ?? Promise.resolve();
-    const next = previous
-      .catch(() => undefined)
-      .then(() => writeNote(uri, text));
-    writes.current.set(uri, next);
-    const settle = () => {
-      if (writes.current.get(uri) === next) {
-        writes.current.delete(uri);
-      }
-    };
-    void next.then(settle, settle);
-    return next;
-  }, []);
+  // The queue serialises writes per note. Each write also carries the
+  // text it was built from, so a write that lost a race to another
+  // writer refuses instead of dropping that change.
+  const queueWrite = React.useCallback(
+    (uri: string, expected: string, text: string) => {
+      const previous = writes.current.get(uri) ?? Promise.resolve();
+      const next = previous
+        .catch(() => undefined)
+        .then(() => writeNoteIfUnchanged(uri, expected, text));
+      writes.current.set(uri, next);
+      const settle = () => {
+        if (writes.current.get(uri) === next) {
+          writes.current.delete(uri);
+        }
+      };
+      void next.then(settle, settle);
+      return next;
+    },
+    [],
+  );
 
   // A failure the screen can shrug off: the message is cleared by the
   // banner's dismiss, not by the next render.
@@ -455,7 +461,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
 
       patchOne(current.uri, () => updated);
       try {
-        await queueWrite(current.uri, updated.text);
+        await queueWrite(current.uri, current.text, updated.text);
         setLastError(null);
       } catch (error) {
         // Roll back only when no later tap has moved the note on; that
@@ -496,7 +502,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       }
       patchOne(current.uri, () => updated);
       try {
-        await queueWrite(current.uri, updated.text);
+        await queueWrite(current.uri, current.text, updated.text);
         setLastError(null);
       } catch (error) {
         patchOne(current.uri, (item) =>

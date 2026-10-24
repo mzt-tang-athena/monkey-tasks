@@ -71,7 +71,11 @@ vi.mock("../features/vault/notes", async (importOriginal) => {
     await importOriginal<typeof import("../features/vault/notes")>();
   return {
     ...actual,
-    writeNote: async (uri: string, text: string) => {
+    writeNoteIfUnchanged: async (
+      uri: string,
+      _expected: string,
+      text: string,
+    ) => {
       if (failWrite) {
         throw new Error("disk full");
       }

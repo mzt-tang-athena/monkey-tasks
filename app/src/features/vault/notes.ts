@@ -14,6 +14,53 @@ export async function writeNote(uri: string, content: string): Promise<void> {
   });
 }
 
+/** Another writer changed the file between the read and the write. */
+export class NoteChangedError extends Error {
+  readonly uri: string;
+
+  constructor(uri: string) {
+    super("the note changed on disk");
+    this.name = "NoteChangedError";
+    this.uri = uri;
+  }
+}
+
+/** The file could not be read back, so the write cannot be checked. */
+export class NoteUnreadableError extends Error {
+  readonly uri: string;
+  readonly reason: unknown;
+
+  constructor(uri: string, reason: unknown) {
+    super("the note could not be read");
+    this.name = "NoteUnreadableError";
+    this.uri = uri;
+    this.reason = reason;
+  }
+}
+
+/**
+ * Write only when the file still holds the text the caller started
+ * from. Every write is a read-modify-write cycle, and another writer
+ * (Obsidian, the sync client, another device) can land between the
+ * two. A plain write would drop that change without a word.
+ */
+export async function writeNoteIfUnchanged(
+  uri: string,
+  expected: string,
+  next: string,
+): Promise<void> {
+  let current: string;
+  try {
+    current = await readNote(uri);
+  } catch (error) {
+    throw new NoteUnreadableError(uri, error);
+  }
+  if (current !== expected) {
+    throw new NoteChangedError(uri);
+  }
+  await writeNote(uri, next);
+}
+
 /** Create a note file in a folder and write it. Returns the new uri. */
 export async function createNote(
   folderUri: string,

@@ -3,7 +3,7 @@ id: 0035
 title: Every write compares the text it read
 created: 2026-10-24
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [0032]
 ---
