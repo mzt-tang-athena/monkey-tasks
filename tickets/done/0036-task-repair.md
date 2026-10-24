@@ -4,7 +4,7 @@ title: A task note that fails validation shows as a repair row
 created: 2026-10-24
 priority: high
 assignee: omp
-pr:
+pr: 54
 depends: [0033]
 ---
 
@@ -34,4 +34,14 @@ Out of scope: repair actions in the app. You fix the note in Obsidian.
 
 ## Outcome
 
-(filled in before moving to done/)
+The task loader carries the zod issues on the row, and the Lists
+screen puts a note that fails validation in the existing `Needs
+repair` block with its file name and each error. No task row renders
+it, so it cannot open, tick, drag or swipe, and the valid rows are
+untouched.
+
+Verified in the browser at 390px with a broken task note: it appears
+in the repair block and is absent from the sections. The loader test
+covers one broken and one valid note.
+
+The work merged as part of #54, whose branch was based on this one.
