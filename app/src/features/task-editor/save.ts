@@ -145,8 +145,15 @@ export async function saveTaskEdit(
   );
   text = replaceBody(text, edit.body);
 
+  // A titled note uses its file name as an address, so a rename edits
+  // the title instead of creating a new file. An untitled note keeps
+  // the old behaviour, where the name is the file name.
+  const titled = item.data?.title != null;
+  if (titled) {
+    text = updateProperty(text, "title", edit.name);
+  }
   const requestedName = `${safeFileName(edit.name)}.md`;
-  const renaming = requestedName !== item.fileName;
+  const renaming = !titled && requestedName !== item.fileName;
   let uri = item.uri;
   if (renaming) {
     uri = await renameNote(item.uri, requestedName, text, expected);

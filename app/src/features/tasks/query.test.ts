@@ -50,4 +50,18 @@ describe("loadTasks", () => {
     expect(validRow?.data?.lists).toEqual(["[[Focus]]"]);
     expect(validRow?.errors).toBeUndefined();
   });
+
+  it("shows a spawned occurrence by its title, not its file name", async () => {
+    vi.mocked(listDirectory).mockResolvedValue([
+      entry("Water plants 2026-10-27.md"),
+    ]);
+    vi.mocked(readNote).mockResolvedValue(
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-24\ntitle: Water plants\ndue: 2026-10-27\n---\n\nBody.\n',
+    );
+
+    const tasks = await loadTasks(dir);
+
+    expect(tasks[0].name).toBe("Water plants");
+    expect(tasks[0].fileName).toBe("Water plants 2026-10-27.md");
+  });
 });

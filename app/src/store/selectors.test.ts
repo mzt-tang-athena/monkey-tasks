@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "../features/tasks/query";
-import { selectOpenTasks, selectSections, selectTabTasks } from "./selectors";
+import {
+  isHiddenOccurrence,
+  selectOpenTasks,
+  selectSections,
+  selectTabTasks,
+} from "./selectors";
 
 // The selectors only read day boundaries out of `now`, so a pinned
 // local midnight keeps the ordering deterministic in any timezone.
@@ -11,6 +16,8 @@ type TaskFields = {
   due?: string;
   lists?: string[];
   completed?: string;
+  recurrence?: string;
+  "recurrence previous"?: string;
 };
 
 function task(name: string, fields: TaskFields = {}): TaskItem {
@@ -85,7 +92,7 @@ describe("selectTabTasks", () => {
   ];
 
   it("shows only Focus list tasks on the Focus tab", () => {
-    expect(names(selectTabTasks(tasks, "Focus"))).toEqual([
+    expect(names(selectTabTasks(tasks, "Focus", NOW))).toEqual([
       "Plan week",
       "Deep work",
       "Second focus",
@@ -95,7 +102,7 @@ describe("selectTabTasks", () => {
   it("shows every task on Main, ADR 0015", () => {
     // Main is the catch-all, so Focus and Work tasks show here too. A
     // task on both lists appears once.
-    expect(names(selectTabTasks(tasks, "Main"))).toEqual([
+    expect(names(selectTabTasks(tasks, "Main", NOW))).toEqual([
       "Plan week",
       "Buy milk",
       "Call bank",
@@ -108,21 +115,40 @@ describe("selectTabTasks", () => {
   it("filters a named list tab by the wikilink in tasks", () => {
     // Work is a list note now, so it gets a tab of its own; the tab
     // name matches the wikilink, not the file name with an extension.
-    expect(names(selectTabTasks(tasks, "Work"))).toEqual([
+    expect(names(selectTabTasks(tasks, "Work", NOW))).toEqual([
       "Buy milk",
       "Deep work",
     ]);
-    expect(names(selectTabTasks(tasks, "Errands"))).toEqual(["Errand"]);
+    expect(names(selectTabTasks(tasks, "Errands", NOW))).toEqual(["Errand"]);
   });
 
   it("shows nothing for a tab with no matching tasks", () => {
-    expect(selectTabTasks(tasks, "Someday")).toEqual([]);
+    expect(selectTabTasks(tasks, "Someday", NOW)).toEqual([]);
+  });
+
+  it("hides a spawned occurrence until its due day", () => {
+    const spawn = task("Water plants", {
+      due: "2026-10-30",
+      recurrence: "FREQ=WEEKLY",
+      "recurrence previous": "[[Water plants 2026-10-23]]",
+    });
+    const overdue = task("Old spawn", {
+      due: "2026-10-01",
+      recurrence: "FREQ=WEEKLY",
+      "recurrence previous": "[[Old spawn 2026-09-24]]",
+    });
+
+    expect(names(selectTabTasks([spawn, overdue], "Main", NOW))).toEqual([
+      "Old spawn",
+    ]);
+    expect(isHiddenOccurrence(spawn, NOW)).toBe(true);
+    expect(isHiddenOccurrence(overdue, NOW)).toBe(false);
   });
 
   it("does not drop a list tab's tasks from Main", () => {
-    const focus = selectTabTasks(tasks, "Focus");
+    const focus = selectTabTasks(tasks, "Focus", NOW);
     const mainUris = new Set(
-      selectTabTasks(tasks, "Main").map((item) => item.uri),
+      selectTabTasks(tasks, "Main", NOW).map((item) => item.uri),
     );
 
     expect(focus.every((item) => mainUris.has(item.uri))).toBe(true);

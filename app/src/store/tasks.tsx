@@ -25,13 +25,20 @@ import { loadVaultTasks } from "../features/vault/session";
 import { type BrokenList, type ListItem } from "../features/lists/query";
 import {
   createNote,
+  deleteNote,
   updateProperty,
   writeNoteIfUnchanged,
 } from "../features/vault/notes";
 import { type TaskItem } from "../features/tasks/query";
 import { saveTaskEdit, type TaskEdit } from "../features/task-editor/save";
 import { applyPatch } from "../features/tasks/patch";
-import { nextDue } from "../features/tasks/recurrence";
+import { nextAfter } from "../features/tasks/recurrence";
+import {
+  isUntouchedSpawn,
+  spawnContent,
+  spawnFileName,
+  type SpawnInput,
+} from "../features/tasks/spawn";
 import { syncReminders, syncTaskReminders } from "../features/reminders/sync";
 import {
   captureDraft,
@@ -120,6 +127,8 @@ function replaceBody(text: string, body: string): string {
   }
   return `${fence}\n${body}`;
 }
+
+
 
 /**
  * The editor's save without a file, for the browser preview. The same
@@ -433,6 +442,131 @@ function TaskStore({ children }: { children: React.ReactNode }) {
     void syncReminders(loaded.tasks).catch(() => undefined);
   }, [loaded]);
 
+  /**
+   * Complete a recurring occurrence and create its successor. The
+   * create comes first: a failed create leaves the series intact. A
+   * failed completion deletes the new note, so the worst case is two
+   * open occurrences, never a lost series.
+   */
+  const spawnNext = React.useCallback(
+    async (current: TaskItem, next: string) => {
+      const data = current.data;
+      if (data == null || tasksDir == null) {
+        return;
+      }
+      const title = data.title ?? current.name;
+      const previous = current.fileName.replace(/\.md$/, "");
+      const input: SpawnInput = {
+        title,
+        previous,
+        due: next,
+        recurrence: data.recurrence ?? "",
+        lists: data.lists ?? [],
+        // A date-only due carries no time of day, so no alarm.
+        reminders: next.includes("T") ? [next] : [],
+        body: current.body,
+      };
+      const taken = new Set(tasksRef.current.map((item) => item.fileName));
+      const fileName = spawnFileName(title, next, taken);
+      const text = spawnContent(input, todayIso());
+      let uri: string;
+      try {
+        uri = await createNote(tasksDir, fileName, text);
+      } catch (error) {
+        setLastError(`recurring create: ${String(error)}`);
+        return;
+      }
+      const note = validateNote(fileName, text, taskFrontmatter);
+      const spawn: TaskItem = {
+        id: uri,
+        uri,
+        fileName,
+        name: note.data?.title ?? fileName.replace(/\.md$/, ""),
+        text,
+        data: note.data,
+        body: note.note.body,
+      };
+      applyTasks([...tasksRef.current, spawn]);
+
+      const completed = applyPatch(current, { completed: todayIso() });
+      try {
+        await queueWrite(current.uri, current.text, completed.text);
+      } catch (error) {
+        // Compensation: take the new note back, keep the old one open.
+        await deleteNote(uri).catch(() => undefined);
+        applyTasks(tasksRef.current.filter((item) => item.uri !== uri));
+        setLastError(`recurring complete: ${String(error)}`);
+        return;
+      }
+      patchOne(current.uri, () => completed);
+      setLastError(null);
+      void syncTaskReminders(current, null).then(() =>
+        syncTaskReminders(null, spawn),
+      );
+    },
+    [tasksDir, applyTasks, patchOne, queueWrite],
+  );
+
+  /**
+   * Reopen a completed occurrence. The successor goes first only when
+   * it still holds the text we wrote; an edited or completed one stays,
+   * because deleting it would drop the user's work.
+   */
+  const reopenOccurrence = React.useCallback(
+    async (current: TaskItem) => {
+      const data = current.data;
+      if (data == null) {
+        return;
+      }
+      const previous = `[[${current.fileName.replace(/\.md$/, "")}]]`;
+      const spawn = tasksRef.current.find(
+        (item) => item.data?.["recurrence previous"] === previous,
+      );
+      const updated = applyPatch(current, { completed: null });
+      try {
+        await queueWrite(current.uri, current.text, updated.text);
+      } catch (error) {
+        setLastError(`toggle write: ${String(error)}`);
+        return;
+      }
+      patchOne(current.uri, () => updated);
+      void syncTaskReminders(current, updated);
+
+      if (spawn == null) {
+        setLastError(null);
+        return;
+      }
+      const next = nextAfter(data.recurrence ?? "", data.due);
+      const expected: SpawnInput | null =
+        next == null
+          ? null
+          : {
+              title: data.title ?? current.name,
+              previous: current.fileName.replace(/\.md$/, ""),
+              due: next,
+              recurrence: data.recurrence ?? "",
+              lists: data.lists ?? [],
+              reminders: next.includes("T") ? [next] : [],
+              body: current.body,
+            };
+      if (expected != null && isUntouchedSpawn(spawn, expected)) {
+        try {
+          await deleteNote(spawn.uri);
+          applyTasks(tasksRef.current.filter((item) => item.uri !== spawn.uri));
+          setLastError(null);
+          void syncTaskReminders(spawn, null);
+        } catch (error) {
+          setLastError(`recurring delete: ${String(error)}`);
+        }
+      } else {
+        setLastError(
+          "recurring: the next occurrence was edited, so both notes stay",
+        );
+      }
+    },
+    [applyTasks, patchOne, queueWrite],
+  );
+
   const toggle = React.useCallback(
     async (task: TaskItem) => {
       if (!rootUri) {
@@ -466,23 +600,24 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       }
       const ticking = !taskIsDone(current.data);
       const recurrence = current.data.recurrence;
-      // Ticking a recurring task never finishes it: the tick moves the
-      // due date, and the reminder that rides with it, forward. A rule
-      // with no future occurrence falls through to completion.
-      const next =
-        ticking && recurrence
-          ? nextDue(recurrence, current.data.due, new Date())
-          : null;
-      const updated = applyPatch(
-        current,
-        next != null
-          ? {
-              due: next,
-              // A date-only due carries no time of day, so no alarm.
-              reminders: next.includes("T") ? [next] : null,
-            }
-          : { completed: ticking ? todayIso() : null },
-      );
+      // Ticking a recurring task completes the occurrence and creates
+      // the next one as its own note (ADR 0027). A rule with no next
+      // date falls through to a plain completion. Unticking reopens the
+      // occurrence and takes back an untouched successor.
+      if (recurrence) {
+        const next = nextAfter(recurrence, current.data.due);
+        if (ticking && next != null) {
+          await spawnNext(current, next);
+          return;
+        }
+        if (!ticking) {
+          await reopenOccurrence(current);
+          return;
+        }
+      }
+      const updated = applyPatch(current, {
+        completed: ticking ? todayIso() : null,
+      });
 
       patchOne(current.uri, () => updated);
       try {
@@ -499,7 +634,15 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       }
       void syncTaskReminders(current, updated);
     },
-    [rootUri, tasksDir, applyTasks, patchOne, queueWrite],
+    [
+      rootUri,
+      tasksDir,
+      applyTasks,
+      patchOne,
+      queueWrite,
+      spawnNext,
+      reopenOccurrence,
+    ],
   );
 
   const writeFields = React.useCallback(

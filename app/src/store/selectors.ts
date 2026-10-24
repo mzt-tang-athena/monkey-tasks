@@ -1,6 +1,11 @@
 import * as React from "react";
 import { groupByDue, inList, type TaskItem } from "../features/tasks/query";
-import { dayLabel, parseStoredDate, todayIso } from "../lib/dates";
+import {
+  dayLabel,
+  parseStoredDate,
+  startOfDay,
+  todayIso,
+} from "../lib/dates";
 import { useStoreMeta, useTaskList } from "./task-state";
 
 /*
@@ -48,11 +53,33 @@ export function selectOpenTasks(tasks: TaskItem[], now: Date): TaskItem[] {
 export function selectTabTasks(
   tasks: TaskItem[],
   tab: ListTab,
+  now: Date,
 ): TaskItem[] {
+  const shown = tasks.filter((task) => !isHiddenOccurrence(task, now));
   if (tab === "Main") {
-    return tasks;
+    return shown;
   }
-  return inList(tasks, tab);
+  return inList(shown, tab);
+}
+
+/**
+ * A spawned occurrence waits for its day, like Google Tasks. It has a
+ * `recurrence previous` link and a due date after today. The planner
+ * still shows it, because the planner is the calendar surface.
+ */
+export function isHiddenOccurrence(task: TaskItem, now: Date): boolean {
+  const data = task.data;
+  if (data == null || data.completed != null) {
+    return false;
+  }
+  if (data["recurrence previous"] == null) {
+    return false;
+  }
+  const due = data.due ? parseStoredDate(data.due) : null;
+  if (due == null) {
+    return false;
+  }
+  return startOfDay(due.date).getTime() > startOfDay(now).getTime();
 }
 
 /**
@@ -98,7 +125,11 @@ export function useOpenTasks(): TaskItem[] {
 
 export function useTabTasks(tab: ListTab): TaskItem[] {
   const tasks = useTaskList();
-  return React.useMemo(() => selectTabTasks(tasks, tab), [tasks, tab]);
+  const now = useToday();
+  return React.useMemo(
+    () => selectTabTasks(tasks, tab, now),
+    [tasks, tab, now],
+  );
 }
 
 /**

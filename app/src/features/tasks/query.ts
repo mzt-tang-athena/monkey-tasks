@@ -35,11 +35,14 @@ export async function loadTasks(tasksDirUri: string): Promise<TaskItem[]> {
     files.map(async (file): Promise<TaskItem> => {
       const text = await readNote(file.uri);
       const result = validateNote(file.name, text, taskFrontmatter);
+      const base = displayName(file.uri).replace(/\.md$/, "");
       return {
         id: file.uri,
         uri: file.uri,
         fileName: file.name,
-        name: displayName(file.uri).replace(/\.md$/, ""),
+        // A spawned occurrence carries a date-suffixed file name, so
+        // the display name comes from its title.
+        name: result.data?.title ?? base,
         text,
         data: result.data,
         body: result.note.body,

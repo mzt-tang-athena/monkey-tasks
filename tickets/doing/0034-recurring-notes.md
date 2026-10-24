@@ -3,7 +3,7 @@ id: 0034
 title: A recurring task completes, and the next one is a new note
 created: 2026-10-23
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [0012, 0032, 0035]
 ---
