@@ -228,7 +228,10 @@ export default function ListsScreen() {
   const closeMenu = () => setMenu(null);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={styles.screen}>
+      {/* The status bar strip takes the header's surface, so the top
+          chrome reads as one band instead of a paper gap. */}
+      <View style={[styles.statusStrip, { height: insets.top }]} />
       {menu?.open ? (
         // The backdrop sits under the menu card and swallows taps
         // anywhere else, closing the menu.
@@ -496,6 +499,9 @@ const styles = StyleSheet.create({
     // The lists screen shares the planner's no-selection rule: a
     // row drag or tab swipe must not start text selection.
     userSelect: "none" as const,
+  },
+  statusStrip: {
+    backgroundColor: colors.surface,
   },
   body: {
     flex: 1,
