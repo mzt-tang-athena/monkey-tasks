@@ -387,11 +387,17 @@ export default function ListsScreen() {
             value = new Animated.Value(0);
             rowShift.set(uri, value);
           }
-          value.setValue(delta);
+          // A row still sliding keeps its current offset: the new one
+          // starts from where the row is on screen, not from its
+          // finished place, so it never jumps.
+          const current = (
+            value as unknown as { __getValue?: () => number }
+          ).__getValue?.() ?? 0;
+          value.setValue(delta + current);
           Animated.timing(value, {
             toValue: 0,
-            duration: 160,
-            useNativeDriver: Platform.OS !== "web",
+            duration: 220,
+            useNativeDriver: false,
           }).start();
         }
         setReorder({ ...reorder, to });
