@@ -350,6 +350,61 @@ export const styles = StyleSheet.create({
   paneList: {
     flex: 1,
   },
+  // The pool tray: a strip of undated tasks above the bottom bar. It
+  // doubles as a drop target: a row dropped here loses its date.
+  tray: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.m,
+    paddingVertical: spacing.s,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.hairline,
+  },
+  trayHot: {
+    backgroundColor: colors.accentSoft,
+  },
+  dateBlockHot: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius,
+  },
+  trayLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: fonts.body,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: colors.accent,
+  },
+  trayScroll: {
+    flex: 1,
+  },
+  trayRow: {
+    flexDirection: "row",
+    gap: spacing.s,
+  },
+  trayChip: {
+    maxWidth: 200,
+    minHeight: 32,
+    justifyContent: "center",
+    paddingHorizontal: spacing.m,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    backgroundColor: colors.surface,
+  },
+  trayChipText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.ink,
+  },
+  trayEmpty: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.inkFaint,
+  },
   paneScroll: {
     flex: 1,
   },

@@ -15,6 +15,7 @@ import {
   inSourceList,
   isoOf,
   minuteOf,
+  schedulingPool,
   sortOpenFirst,
   tasksForDayAll,
   withTime,
@@ -82,6 +83,13 @@ export function DaySpread({
     y: number;
   } | null>(null);
   const [hoverHour, setHoverHour] = React.useState<number | null>(null);
+  // The pool tray: a drop target of its own, outside the ruler's clip.
+  const [trayHeight, setTrayHeight] = React.useState(0);
+  const [trayZones] = React.useState(() => new DropZoneMap());
+  const [hoverTray, setHoverTray] = React.useState(false);
+  // The date block: dropping here dates a task without a time.
+  const [dayZones] = React.useState(() => new DropZoneMap());
+  const [hoverDay, setHoverDay] = React.useState(false);
   const [resizing, setResizing] = React.useState<{
     y: number;
     height: number;
@@ -129,6 +137,8 @@ export function DaySpread({
       return;
     }
     moved.current = true;
+    trayZones.measureAll();
+    dayZones.measureAll();
     hourZones.measureAll(() => {
       const node = paneRef.current as unknown as {
         measureInWindow?: (cb: (px: number, py: number, pw: number, ph: number) => void) => void;
@@ -141,7 +151,7 @@ export function DaySpread({
     });
     setDragging({ task: pending.task, x, y });
     setPending(null);
-  }, [hourZones]);
+  }, [hourZones, trayZones, dayZones]);
   useTouchDragGate(dayRootRef, {
     busy: dayGate,
     pending: dayPendingRef,
@@ -163,7 +173,7 @@ export function DaySpread({
   // touches the dayRoot's bottom edge - which is exactly where the
   // bottom bar begins - and never past it.
   const maxTimeline = Math.max(
-    rootHeight - paneTop - dividerHeight,
+    rootHeight - paneTop - dividerHeight - trayHeight,
     drag.minPane,
   );
 
@@ -172,12 +182,20 @@ export function DaySpread({
   // the slot's hour with the task's own minute.
   const draggingRef = React.useRef(dragging);
   const hoverHourRef = React.useRef(hoverHour);
+  const hoverTrayRef = React.useRef(hoverTray);
+  const hoverDayRef = React.useRef(hoverDay);
   React.useEffect(() => {
     draggingRef.current = dragging;
   }, [dragging]);
   React.useEffect(() => {
     hoverHourRef.current = hoverHour;
   }, [hoverHour]);
+  React.useEffect(() => {
+    hoverTrayRef.current = hoverTray;
+  }, [hoverTray]);
+  React.useEffect(() => {
+    hoverDayRef.current = hoverDay;
+  }, [hoverDay]);
   const dayApi = React.useMemo<DragApi>(() => ({
     pickup: (task, x, y) => {
       // The hold already fired; a sideways drag must not also shift
@@ -196,10 +214,22 @@ export function DaySpread({
         });
       }
       hourZones.measureAll();
+      trayZones.measureAll();
+      dayZones.measureAll();
       setDragging({ task, x, y });
     },
     move: (x, y) => {
       setDragging((current) => (current ? { ...current, x, y } : current));
+      const overTray = trayZones.hit(x, y) != null;
+      if (overTray !== hoverTrayRef.current) {
+        hoverTrayRef.current = overTray;
+        setHoverTray(overTray);
+      }
+      const overDay = dayZones.hit(x, y) != null;
+      if (overDay !== hoverDayRef.current) {
+        hoverDayRef.current = overDay;
+        setHoverDay(overDay);
+      }
       const hit = hourZones.hit(x, y);
       const hour = hit?.startsWith("hour:") ? Number(hit.slice(5)) : null;
       if (hour !== hoverHourRef.current) {
@@ -211,7 +241,16 @@ export function DaySpread({
     },
     drop: () => {
       const current = draggingRef.current;
-      if (current && hoverHourRef.current != null) {
+      if (current && hoverTrayRef.current) {
+        // Back to the pool: the task keeps its name and list, and
+        // loses the date.
+        if (current.task.data?.due != null) {
+          onUpdate(current.task, { due: null });
+        }
+      } else if (current && hoverDayRef.current) {
+        // The day block dates the task without a time.
+        onUpdate(current.task, { due: isoOf(date) });
+      } else if (current && hoverHourRef.current != null) {
         onUpdate(current.task, {
           due: withTime(date, hoverHourRef.current, minuteOf(current.task)),
         });
@@ -226,8 +265,10 @@ export function DaySpread({
       }
       setDragging(null);
       setHoverHour(null);
+      setHoverTray(false);
+      setHoverDay(false);
     },
-  }), [hourZones, date, onUpdate, swipe]);
+  }), [hourZones, trayZones, dayZones, date, onUpdate, swipe]);
 
   // The grabber's native resize: immediate activation, any travel
   // resizes the split.
@@ -288,6 +329,7 @@ export function DaySpread({
       )
     : sortOpenFirst(tasksForDayAll(tasks, date));
   const timed = dayTasks.filter(hasTime);
+  const pool = schedulingPool(tasks);
 
   // The list pane's rows follow the chosen source. In the pills form
   // the overdue group folds into the pool, so the data set is the
@@ -363,6 +405,8 @@ export function DaySpread({
         return;
       }
       moved.current = true;
+      trayZones.measureAll();
+      dayZones.measureAll();
       hourZones.measureAll(() => {
         const node = paneRef.current as unknown as {
           measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void;
@@ -379,6 +423,14 @@ export function DaySpread({
     }
     if (dragging) {
       setDragging({ ...dragging, x, y });
+      const overTray = trayZones.hit(x, y) != null;
+      if (overTray !== hoverTray) {
+        setHoverTray(overTray);
+      }
+      const overDay = dayZones.hit(x, y) != null;
+      if (overDay !== hoverDay) {
+        setHoverDay(overDay);
+      }
       const hit = hourZones.hit(x, y);
       const hour = hit?.startsWith("hour:") ? Number(hit.slice(5)) : null;
       if (hour !== hoverHour) {
@@ -394,7 +446,11 @@ export function DaySpread({
       return;
     }
     if (dragging) {
-      if (hoverHour != null) {
+      if (hoverTray && dragging.task.data?.due != null) {
+        onUpdate(dragging.task, { due: null });
+      } else if (hoverDay) {
+        onUpdate(dragging.task, { due: isoOf(date) });
+      } else if (hoverHour != null) {
         // The slot's hour with the task's own minute: an hour drop
         // never rounds away what the task already carries.
         onUpdate(dragging.task, {
@@ -408,6 +464,8 @@ export function DaySpread({
       }, 350);
       setDragging(null);
       setHoverHour(null);
+      setHoverTray(false);
+      setHoverDay(false);
     }
     setPending(null);
     moved.current = false;
@@ -459,14 +517,23 @@ export function DaySpread({
         onMode={onMode}
       />
 
-      {/* Compact day heading: eyebrow, short serif date, accent rule. */}
-      <Text style={styles.dateMonth}>
-        {MONTHS[date.getMonth()]} {date.getFullYear()}
-      </Text>
-      <Text style={styles.dateHeader}>
-        {WEEKDAYS_FULL[date.getDay()]} {date.getDate()}
-      </Text>
-      <View style={styles.dateRule} />
+      {/* Compact day heading: eyebrow, short serif date, accent rule.
+          The block is also a drop target: a task dropped here gets the
+          day without a time. */}
+      <View
+        ref={(node) => {
+          dayZones.set("day", node as never);
+        }}
+        style={hoverDay && styles.dateBlockHot}
+      >
+        <Text style={styles.dateMonth}>
+          {MONTHS[date.getMonth()]} {date.getFullYear()}
+        </Text>
+        <Text style={styles.dateHeader}>
+          {WEEKDAYS_FULL[date.getDay()]} {date.getDate()}
+        </Text>
+        <View style={styles.dateRule} />
+      </View>
 
       {/* The timeline pane: the ruler, resizable by the grabber. */}
       <View
@@ -603,6 +670,47 @@ export function DaySpread({
             ) : undefined
           }
         />
+      </View>
+
+      {/* The pool: undated tasks, docked above the bottom bar. Drag a
+          chip onto the ruler to date it; drag a scheduled row back here
+          to clear its date. The tray stays put when empty, so the list
+          pane does not jump after every drop. */}
+      <View
+        ref={(node) => {
+          trayZones.set("tray", node as never);
+        }}
+        style={[styles.tray, hoverTray && styles.trayHot]}
+        onLayout={(e) => setTrayHeight(e.nativeEvent.layout.height)}
+      >
+        <Text style={styles.trayLabel}>Pool  {pool.length}</Text>
+        {pool.length === 0 ? (
+          <Text style={styles.trayEmpty}>Nothing left to schedule.</Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.trayScroll}
+            contentContainerStyle={styles.trayRow}
+          >
+            {pool.map((task) => (
+              <Pickup
+                key={task.id}
+                task={task}
+                kind="pill"
+                api={dayApi}
+                lifted={lifted}
+                onPointerDown={(e) => startTaskDrag(task, e)}
+              >
+                <View style={styles.trayChip}>
+                  <Text style={styles.trayChipText} numberOfLines={1}>
+                    {task.name}
+                  </Text>
+                </View>
+              </Pickup>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       {/* The drag ghost, riding just above the pointer. */}

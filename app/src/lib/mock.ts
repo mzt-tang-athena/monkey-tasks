@@ -2,6 +2,7 @@ import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { BrokenList, ListItem } from "../features/lists/query";
 import type { TaskItem } from "../features/tasks/query";
 import { addDays, formatLocal, startOfDay } from "./dates";
+import { serializeValue } from "./yaml";
 
 /**
  * Mock tasks for the design exploration. The shape mirrors TaskItem
@@ -10,23 +11,39 @@ import { addDays, formatLocal, startOfDay } from "./dates";
  * group (past, today, upcoming, no date, completed) stays populated.
  */
 
+/** The note text the app's own emitter would write, so a drag or a
+    toggle in the preview goes through the real write path. */
+function frontmatterText(data: Record<string, unknown>): string {
+  const lines: string[] = [];
+  for (const [key, value] of Object.entries(data)) {
+    if (value == null) continue;
+    if (Array.isArray(value)) {
+      lines.push(`${key}:`, serializeValue(value));
+    } else {
+      lines.push(`${key}: ${serializeValue(value as string)}`);
+    }
+  }
+  return `---\n${lines.join("\n")}\n---\n`;
+}
+
 function mock(
   name: string,
   data: Partial<TaskFrontmatter>,
   body = "",
 ): TaskItem {
   const uri = `mock://vault/Tasks/${name}.md`;
+  const full = {
+    kind: "[[tasks]]",
+    created: formatLocal(startOfDay(new Date()), false),
+    ...data,
+  } as TaskFrontmatter;
   return {
     id: uri,
     uri,
     fileName: `${name}.md`,
     name,
-    text: "",
-    data: {
-      kind: "[[tasks]]",
-      created: formatLocal(startOfDay(new Date()), false),
-      ...data,
-    },
+    text: `${frontmatterText(full)}\n${body}`,
+    data: full,
     body,
   };
 }
@@ -54,11 +71,13 @@ export function toggleMockCompleted(item: TaskItem): TaskItem {
     return item;
   }
   const { completed, ...rest } = item.data;
+  const data = done
+    ? { ...rest }
+    : { ...item.data, completed: isoToday() };
   return {
     ...item,
-    data: done
-      ? { ...rest }
-      : { ...item.data, completed: isoToday() },
+    data,
+    text: `${frontmatterText(data)}\n${item.body}`,
   };
 }
 

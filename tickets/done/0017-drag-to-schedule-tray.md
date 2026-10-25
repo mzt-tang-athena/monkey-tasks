@@ -4,7 +4,7 @@ title: Planner drag-to-schedule tray
 created: 2026-10-20
 priority: normal
 assignee: omp
-pr:
+pr: 62
 depends: [0012]
 ---
 

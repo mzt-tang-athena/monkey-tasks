@@ -1,5 +1,5 @@
 import { todayIso } from "../../lib/dates";
-import { serializeValue } from "../vault/notes";
+import { serializeValue } from "../../lib/yaml";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { ParsedCapture } from "./parse";
 

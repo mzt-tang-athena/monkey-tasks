@@ -134,6 +134,19 @@ export function tasksForDayAll(tasks: TaskItem[], day: Date): TaskItem[] {
   return tasks.filter((task) => occursOn(task, day));
 }
 
+/**
+ * The Day spread's scheduling pool: open tasks with no due at all.
+ * A drop on the ruler dates one, and a drop back on the tray clears
+ * the date again.
+ */
+export function schedulingPool(tasks: TaskItem[]): TaskItem[] {
+  return sortOpenFirst(
+    tasks.filter(
+      (task) => task.data != null && task.data.due == null && !isDone(task),
+    ),
+  );
+}
+
 export function hasTime(task: TaskItem): boolean {
   return task.data?.due
     ? (parseStoredDate(task.data.due)?.hasTime ?? false)

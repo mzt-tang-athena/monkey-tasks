@@ -7,6 +7,7 @@ import {
   parseMode,
   parsePlannerDay,
   plannerDayParam,
+  schedulingPool,
   sortOpenFirst,
   tasksForDay,
   tasksForDayAll,
@@ -130,6 +131,28 @@ describe("sortOpenFirst", () => {
       "Alpha",
       "Bravo",
     ]);
+  });
+});
+
+describe("schedulingPool", () => {
+  it("holds open tasks with no due, and nothing else", () => {
+    const undated = task("Buy stamps", {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+    });
+    const scheduled = task("Call mum", due("2026-10-22T09:00"));
+    const doneUndated = task("Old chore", {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      completed: "2026-10-21",
+    });
+    const unreadable = task("Broken note", null);
+
+    expect(
+      schedulingPool([undated, scheduled, doneUndated, unreadable]).map(
+        (item) => item.name,
+      ),
+    ).toEqual(["Buy stamps"]);
   });
 });
 
