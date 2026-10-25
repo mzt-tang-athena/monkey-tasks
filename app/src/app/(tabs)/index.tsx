@@ -1,10 +1,8 @@
 import * as React from "react";
 import {
   Animated,
-  LayoutAnimation,
   Platform,
   Pressable,
-  UIManager,
   ScrollView,
   SectionList,
   StyleSheet,
@@ -17,7 +15,11 @@ import type { TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { ReorderGrip, ReorderRow } from "../../features/lists/ReorderRow";
-import { moveItem, reorderItems } from "../../features/lists/reorder";
+import {
+  layoutOrder,
+  moveItem,
+  reorderItems,
+} from "../../features/lists/reorder";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { loadSettings, saveSetting, type SortMode } from "../../lib/settings";
 import { BottomBar } from "../../components/BottomBar";
@@ -32,12 +34,6 @@ import {
 } from "../../store/selectors";
 import { IconButton } from "../../components/ui";
 import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
-
-if (Platform.OS === "android") {
-  // LayoutAnimation needs this switch on the old renderer; newer ones
-  // ignore it. The reorder relies on it to slide the rows.
-  UIManager.setLayoutAnimationEnabledExperimental?.(true);
-}
 
 /**
  * Lists tab: Main first, then one tab per list note, with capture
@@ -223,6 +219,10 @@ export default function ListsScreen() {
     width: number;
   } | null>(null);
   const [ghostY] = React.useState(() => new Animated.Value(0));
+  // One translateY per row: the slide from the old place to the new.
+  const [rowShift] = React.useState(
+    () => new Map<string, Animated.Value>(),
+  );
   // The sequence the last drop wrote, held on screen until every note
   // is saved: the rows must not snap back while the writes land.
   const [settling, setSettling] = React.useState<{
@@ -362,17 +362,42 @@ export default function ListsScreen() {
         }
       }
       if (to !== reorder.to) {
-        if (Platform.OS !== "web") {
-          // The rows make room in one motion, like a native list.
-          LayoutAnimation.configureNext({
-            duration: 180,
-            update: { type: "easeInEaseOut" },
-          });
+        // Each row starts where it was and slides to its new place,
+        // instead of blinking there.
+        const items =
+          sections.find((s) => s.title === reorder.section)?.data ?? [];
+        const rects = reorderRects.current;
+        const before = layoutOrder(
+          moveItem(items, reorder.from, reorder.to),
+          rects,
+          StyleSheet.hairlineWidth,
+        );
+        const after = layoutOrder(
+          moveItem(items, reorder.from, to),
+          rects,
+          StyleSheet.hairlineWidth,
+        );
+        for (const [uri, y] of before) {
+          const delta = y - (after.get(uri) ?? y);
+          if (delta === 0) {
+            continue;
+          }
+          let value = rowShift.get(uri);
+          if (value == null) {
+            value = new Animated.Value(0);
+            rowShift.set(uri, value);
+          }
+          value.setValue(delta);
+          Animated.timing(value, {
+            toValue: 0,
+            duration: 160,
+            useNativeDriver: Platform.OS !== "web",
+          }).start();
         }
         setReorder({ ...reorder, to });
       }
     },
-    [clearHold, ghostY, reorder, tabSwipe],
+    [clearHold, ghostY, reorder, rowShift, sections, tabSwipe],
   );
 
   const endReorder = React.useCallback(() => {
@@ -480,6 +505,9 @@ export default function ListsScreen() {
             index === section.data.length - 1 && styles.cardLast,
             section.tone === "faint" ? styles.completedRow : undefined,
             lifted && styles.rowSlot,
+            rowShift.has(item.uri)
+              ? { transform: [{ translateY: rowShift.get(item.uri)! }] }
+              : undefined,
           ]}
         >
           <ReorderRow
@@ -534,6 +562,7 @@ export default function ListsScreen() {
       openTask,
       sortMode,
       reorder,
+      rowShift,
       holdRow,
       armReorderNow,
       moveReorder,

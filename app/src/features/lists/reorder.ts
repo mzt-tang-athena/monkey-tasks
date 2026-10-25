@@ -39,3 +39,23 @@ export function reorderItems(
     return task.data?.order === order ? [] : [{ task, order }];
   });
 }
+
+/**
+ * Where each row sits once `order` is laid out from the section's top,
+ * using the heights measured at pickup. The reorder animates a row
+ * from its old place to its new one with this.
+ */
+export function layoutOrder(
+  order: TaskItem[],
+  rects: { uri: string; y: number; h: number }[],
+  gap = 0,
+): Map<string, number> {
+  const heights = new Map(rects.map((rect) => [rect.uri, rect.h]));
+  let y = rects.length > 0 ? Math.min(...rects.map((rect) => rect.y)) : 0;
+  const out = new Map<string, number>();
+  order.forEach((task, index) => {
+    out.set(task.uri, y);
+    y += (heights.get(task.uri) ?? 0) + (index < order.length - 1 ? gap : 0);
+  });
+  return out;
+}

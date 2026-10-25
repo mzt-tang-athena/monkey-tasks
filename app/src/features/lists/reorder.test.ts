@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "../tasks/query";
-import { reorderItems } from "./reorder";
+import { layoutOrder, reorderItems } from "./reorder";
 
 function task(name: string, order?: number): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;
@@ -59,5 +59,22 @@ describe("reorderItems", () => {
       ["A", 2],
       ["C", 3],
     ]);
+  });
+});
+
+describe("layoutOrder", () => {
+  it("stacks the rows from the section top, with the divider between", () => {
+    const items = [task("A"), task("B"), task("C")];
+    const rects = [
+      { uri: items[0].uri, y: 100, h: 50 },
+      { uri: items[1].uri, y: 151, h: 70 },
+      { uri: items[2].uri, y: 222, h: 40 },
+    ];
+
+    const before = layoutOrder(items, rects, 1);
+    expect([...before.values()]).toEqual([100, 151, 222]);
+
+    const moved = layoutOrder([items[1], items[0], items[2]], rects, 1);
+    expect([...moved.values()]).toEqual([100, 171, 222]);
   });
 });
