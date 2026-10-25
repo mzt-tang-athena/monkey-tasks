@@ -184,7 +184,7 @@ export const touchTarget = 44;
  * 48pt Add control that reads as the primary action.
  */
 export const bottomBar = {
-  row: 56,
+  row: 52,
   tabWidth: 56,
   add: 48,
   glyph: 20,

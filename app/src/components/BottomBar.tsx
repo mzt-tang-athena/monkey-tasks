@@ -191,7 +191,9 @@ export function BottomBar({
               inputRange: [0, 1],
               outputRange: [0, barHeight],
             }),
-            height: Math.max(window.height - barHeight, 0),
+            // The full window: the bottom offset alone clears the
+            // bar, so the scrim reaches the status strip.
+            height: window.height,
           }}
           progress={expand}
         />

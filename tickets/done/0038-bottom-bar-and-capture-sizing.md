@@ -33,7 +33,8 @@ must not push the list off screen or hide a row behind it.
 
 ## Outcome
 
-The bar's row is 56pt tall. Each nav item is a 56 by 44 target, the
+The bar's row is 52pt tall (56 in the first pass, shortened by
+0042). Each nav item is a 56 by 44 target, the
 Add control is 48 tall with an 18pt plus and a 16pt label, and the
 toast actions clear 44 by 44. The labels grew to 12pt and the glyphs
 to 20pt so nothing looks lost in the taller row.
