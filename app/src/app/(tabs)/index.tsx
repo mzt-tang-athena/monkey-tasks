@@ -270,6 +270,10 @@ export default function ListsScreen() {
     pendingReorder.current = null;
     clearHold();
     setSettling(null);
+    for (const value of rowShift.values()) {
+      value.stopAnimation();
+      value.setValue(0);
+    }
     // The reorder owns the gesture now, not the tab swipe.
     tabSwipe.claim();
     const items =
@@ -304,7 +308,7 @@ export default function ListsScreen() {
     } else {
       measure(0, 0);
     }
-  }, [clearHold, ghostY, sections, tabSwipe]);
+  }, [clearHold, ghostY, rowShift, sections, tabSwipe]);
 
   const holdRow = React.useCallback(
     (
@@ -362,40 +366,27 @@ export default function ListsScreen() {
         }
       }
       if (to !== reorder.to) {
-        // Each row starts where it was and slides to its new place,
-        // instead of blinking there.
+        // The list keeps its order; every row slides to where it would
+        // be. Nothing is reordered while a finger is down, so nothing
+        // can blink.
         const items =
           sections.find((s) => s.title === reorder.section)?.data ?? [];
         const rects = reorderRects.current;
-        const before = layoutOrder(
-          moveItem(items, reorder.from, reorder.to),
-          rects,
-          StyleSheet.hairlineWidth,
-        );
-        const after = layoutOrder(
+        const gap = StyleSheet.hairlineWidth;
+        const base = layoutOrder(items, rects, gap);
+        const preview = layoutOrder(
           moveItem(items, reorder.from, to),
           rects,
-          StyleSheet.hairlineWidth,
+          gap,
         );
-        for (const [uri, y] of before) {
-          const delta = y - (after.get(uri) ?? y);
-          if (delta === 0) {
-            continue;
-          }
+        for (const [uri, y] of base) {
           let value = rowShift.get(uri);
           if (value == null) {
             value = new Animated.Value(0);
             rowShift.set(uri, value);
           }
-          // A row still sliding keeps its current offset: the new one
-          // starts from where the row is on screen, not from its
-          // finished place, so it never jumps.
-          const current = (
-            value as unknown as { __getValue?: () => number }
-          ).__getValue?.() ?? 0;
-          value.setValue(delta + current);
           Animated.timing(value, {
-            toValue: 0,
+            toValue: (preview.get(uri) ?? y) - y,
             duration: 220,
             useNativeDriver: false,
           }).start();
@@ -437,28 +428,45 @@ export default function ListsScreen() {
     })();
   }, [actions, clearHold, reorder, sections]);
 
-  // The rows as they render while a drag is live: the section under
-  // the pointer shows the sequence the drop would write.
+  // The list keeps its own order while a drag is live; only transforms
+  // move the rows. After a drop the written order takes over.
   const displaySections = React.useMemo(() => {
-    if (reorder != null) {
-      return sections.map((section) =>
-        section.title === reorder.section
-          ? {
-              ...section,
-              data: moveItem(section.data, reorder.from, reorder.to),
-            }
-          : section,
-      );
+    if (settling == null) {
+      return sections;
     }
-    if (settling != null) {
-      return sections.map((section) =>
-        section.title === settling.section
-          ? { ...section, data: settling.data }
-          : section,
-      );
+    return sections.map((section) =>
+      section.title === settling.section
+        ? { ...section, data: settling.data }
+        : section,
+    );
+  }, [sections, settling]);
+
+  // Where each row sits while the finger is down: the sequence the
+  // drop would write. It drives the corner radii and the divider, not
+  // the data order.
+  const previewIndex = React.useMemo(() => {
+    if (reorder == null) {
+      return null;
     }
-    return sections;
-  }, [sections, reorder, settling]);
+    const section = sections.find((s) => s.title === reorder.section);
+    if (section == null) {
+      return null;
+    }
+    const order = moveItem(section.data, reorder.from, reorder.to);
+    return new Map(order.map((item, index) => [item.uri, index]));
+  }, [sections, reorder]);
+
+  // The transforms go back to zero in the same commit that reorders
+  // the data, so the drop has no frame of its own.
+  React.useLayoutEffect(() => {
+    if (settling == null) {
+      return;
+    }
+    for (const value of rowShift.values()) {
+      value.stopAnimation();
+      value.setValue(0);
+    }
+  }, [settling, rowShift]);
 
   const renderSectionHeader = React.useCallback(
     ({ section }: { section: ListsSection }) => {
@@ -498,6 +506,10 @@ export default function ListsScreen() {
     }) => {
       const canDrag = sortMode === "manual" && section.tone !== "faint";
       const lifted = reorder?.task.uri === item.uri;
+      // While a drag is live the row's slot decides its corners and
+      // its divider; the list order itself does not change.
+      const slot = previewIndex?.get(item.uri) ?? index;
+      const lastSlot = section.data.length - 1;
       return (
         <Animated.View
           ref={(node) => {
@@ -507,8 +519,8 @@ export default function ListsScreen() {
           }}
           style={[
             styles.cardRow,
-            index === 0 && styles.cardFirst,
-            index === section.data.length - 1 && styles.cardLast,
+            slot === 0 && styles.cardFirst,
+            slot === lastSlot && styles.cardLast,
             section.tone === "faint" ? styles.completedRow : undefined,
             lifted && styles.rowSlot,
             rowShift.has(item.uri)
@@ -516,6 +528,7 @@ export default function ListsScreen() {
               : undefined,
           ]}
         >
+          {slot > 0 ? <View style={styles.cardDivider} /> : null}
           <ReorderRow
             enabled={canDrag}
             onHold={(e) =>
@@ -569,6 +582,7 @@ export default function ListsScreen() {
       sortMode,
       reorder,
       rowShift,
+      previewIndex,
       holdRow,
       armReorderNow,
       moveReorder,
@@ -770,7 +784,6 @@ export default function ListsScreen() {
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           renderSectionHeader={renderSectionHeader}
-          ItemSeparatorComponent={GroupRowSeparator}
           ListHeaderComponent={
             status === "ready" &&
             openSections.length === 0 &&
@@ -910,14 +923,6 @@ export default function ListsScreen() {
 }
 
 const keyExtractor = (item: TaskItem) => item.id;
-
-/**
- * The hairline between two rows of one card. It starts at the text,
- * so the card's edge stays clean.
- */
-function GroupRowSeparator() {
-  return <View style={styles.cardDivider} />;
-}
 
 const toneLabel = (() => {
   const map = StyleSheet.create({
@@ -1271,11 +1276,15 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radius,
     borderBottomRightRadius: radius,
   },
-  // Inset to the text: the row's own padding, the circle, its gap.
+  // The hairline between two rows of a card. It lives inside the row,
+  // so a dragged row carries its divider with it. Inset to the text.
   cardDivider: {
+    position: "absolute" as const,
+    left: spacing.l + 24 + spacing.m,
+    right: 0,
+    top: 0,
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.hairline,
-    marginLeft: spacing.l + 24 + spacing.m,
   },
   completedGroup: {
     opacity: 0.55,
