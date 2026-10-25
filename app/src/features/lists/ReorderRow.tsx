@@ -104,6 +104,12 @@ function NativeGrip({
   children: React.ReactNode;
 }) {
   const active = React.useRef(false);
+  // The callbacks change every render; the gesture must not. A rebuilt
+  // gesture mid-drag loses the touch and leaves the drag stuck.
+  const cb = React.useRef({ onPickup, onMove, onEnd });
+  React.useEffect(() => {
+    cb.current = { onPickup, onMove, onEnd };
+  });
   const pan = React.useMemo(
     () =>
       Gesture.Pan()
@@ -111,20 +117,20 @@ function NativeGrip({
         .minDistance(0)
         .onStart((e) => {
           active.current = true;
-          onPickup(e.absoluteX, e.absoluteY);
+          cb.current.onPickup(e.absoluteX, e.absoluteY);
         })
-        .onUpdate((e) => onMove?.(e.absoluteX, e.absoluteY))
+        .onUpdate((e) => cb.current.onMove?.(e.absoluteX, e.absoluteY))
         .onEnd(() => {
           active.current = false;
-          onEnd?.();
+          cb.current.onEnd?.();
         })
         .onFinalize(() => {
           if (active.current) {
             active.current = false;
-            onEnd?.();
+            cb.current.onEnd?.();
           }
         }),
-    [onPickup, onMove, onEnd],
+    [],
   );
   return <GestureDetector gesture={pan}>{children}</GestureDetector>;
 }
@@ -141,6 +147,12 @@ function NativeReorder({
   children: React.ReactNode;
 }) {
   const active = React.useRef(false);
+  // Same rule as the grip: one gesture for the whole drag, with the
+  // latest callbacks read through a ref.
+  const cb = React.useRef({ onPickup, onMove, onEnd });
+  React.useEffect(() => {
+    cb.current = { onPickup, onMove, onEnd };
+  });
   const pan = React.useMemo(
     () =>
       Gesture.Pan()
@@ -148,20 +160,20 @@ function NativeReorder({
         .activateAfterLongPress(drag.pickMs)
         .onStart((e) => {
           active.current = true;
-          onPickup?.(e.absoluteX, e.absoluteY);
+          cb.current.onPickup?.(e.absoluteX, e.absoluteY);
         })
-        .onUpdate((e) => onMove?.(e.absoluteX, e.absoluteY))
+        .onUpdate((e) => cb.current.onMove?.(e.absoluteX, e.absoluteY))
         .onEnd(() => {
           active.current = false;
-          onEnd?.();
+          cb.current.onEnd?.();
         })
         .onFinalize(() => {
           if (active.current) {
             active.current = false;
-            onEnd?.();
+            cb.current.onEnd?.();
           }
         }),
-    [onPickup, onMove, onEnd],
+    [],
   );
   return <GestureDetector gesture={pan}>{children}</GestureDetector>;
 }

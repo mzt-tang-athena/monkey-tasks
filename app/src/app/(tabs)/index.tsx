@@ -223,6 +223,12 @@ export default function ListsScreen() {
     width: number;
   } | null>(null);
   const [ghostY] = React.useState(() => new Animated.Value(0));
+  // The sequence the last drop wrote, held on screen until every note
+  // is saved: the rows must not snap back while the writes land.
+  const [settling, setSettling] = React.useState<{
+    section: string;
+    data: TaskItem[];
+  } | null>(null);
   const rootY = React.useRef(0);
   const grabOffset = React.useRef(0);
   const rootRef = React.useRef<React.ComponentRef<typeof View>>(null);
@@ -263,6 +269,7 @@ export default function ListsScreen() {
     }
     pendingReorder.current = null;
     clearHold();
+    setSettling(null);
     // The reorder owns the gesture now, not the tab swipe.
     tabSwipe.claim();
     const items =
@@ -383,10 +390,18 @@ export default function ListsScreen() {
     }, 350);
     const items =
       sections.find((s) => s.title === current.section)?.data ?? [];
+    const next = moveItem(items, current.from, current.to);
+    if (next !== items) {
+      setSettling({ section: current.section, data: next });
+    }
     const changes = reorderItems(items, current.from, current.to);
     void (async () => {
-      for (const change of changes) {
-        await actions.writeFields(change.task, { order: change.order });
+      try {
+        for (const change of changes) {
+          await actions.writeFields(change.task, { order: change.order });
+        }
+      } finally {
+        setSettling(null);
       }
     })();
   }, [actions, clearHold, reorder, sections]);
@@ -394,18 +409,25 @@ export default function ListsScreen() {
   // The rows as they render while a drag is live: the section under
   // the pointer shows the sequence the drop would write.
   const displaySections = React.useMemo(() => {
-    if (reorder == null) {
-      return sections;
+    if (reorder != null) {
+      return sections.map((section) =>
+        section.title === reorder.section
+          ? {
+              ...section,
+              data: moveItem(section.data, reorder.from, reorder.to),
+            }
+          : section,
+      );
     }
-    return sections.map((section) =>
-      section.title === reorder.section
-        ? {
-            ...section,
-            data: moveItem(section.data, reorder.from, reorder.to),
-          }
-        : section,
-    );
-  }, [sections, reorder]);
+    if (settling != null) {
+      return sections.map((section) =>
+        section.title === settling.section
+          ? { ...section, data: settling.data }
+          : section,
+      );
+    }
+    return sections;
+  }, [sections, reorder, settling]);
 
   const renderSectionHeader = React.useCallback(
     ({ section }: { section: ListsSection }) => {
