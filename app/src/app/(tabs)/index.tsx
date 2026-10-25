@@ -516,8 +516,9 @@ export default function ListsScreen() {
               />
             </View>
           </ReorderRow>
-          {canDrag && !lifted ? (
+          {canDrag ? (
             <ReorderGrip
+              hidden={lifted}
               onPickup={(x, y) =>
                 armReorderNow(item, index, section.title, x, y)
               }

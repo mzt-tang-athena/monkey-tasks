@@ -57,13 +57,17 @@ export function ReorderGrip({
   onPickup,
   onMove,
   onEnd,
+  hidden = false,
 }: {
   onPickup: (x: number, y: number) => void;
   onMove?: (x: number, y: number) => void;
   onEnd?: () => void;
+  /** The row is lifted: hide the grip without unmounting it, so the
+      gesture that started the drag survives to its end. */
+  hidden?: boolean;
 }) {
   const content = (
-    <View style={styles.grip}>
+    <View style={[styles.grip, hidden && styles.hidden]}>
       <View style={styles.gripDots}>
         {[0, 1, 2].map((row) => (
           <View key={row} style={styles.gripRow}>
@@ -181,6 +185,9 @@ function NativeReorder({
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
+  },
+  hidden: {
+    opacity: 0,
   },
   grip: {
     width: touchTarget,
