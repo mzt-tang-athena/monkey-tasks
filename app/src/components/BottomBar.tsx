@@ -14,12 +14,14 @@ import type { CaptureTarget } from "../features/capture/write";
 import { CaptureSheet } from "../features/capture/components/CaptureSheet";
 import { useCaptureDraft } from "../features/capture/hooks/useCaptureDraft";
 import {
+  bottomBar,
   colors,
   fonts,
   spacing,
   radius,
   radiusFloating,
   radii,
+  touchTarget,
 } from "../theme/tokens";
 
 /**
@@ -86,7 +88,8 @@ export function BottomBar({
   // The navbar's height: its row plus its own padding. It is computed
   // rather than measured, because the collapse clip clamps the height
   // it would measure, and the bar would lose its bottom padding.
-  const barHeight = rowHeight + spacing.s + insets.bottom + 8;
+  const barHeight =
+    rowHeight + spacing.s + insets.bottom + spacing.s;
 
   // The dock's distance from the bottom of the window. Closed, it sits
   // above the navbar; open, just above the keyboard. One node for the
@@ -210,7 +213,7 @@ export function BottomBar({
         ]}
       >
         <View
-          style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}
+          style={[styles.bar, { paddingBottom: insets.bottom + spacing.s }]}
         >
         {/* The system navigation bar draws over this strip. A dark band
             under it keeps the light system buttons visible on a phone
@@ -338,9 +341,24 @@ function ListGlyph({ active }: { active: boolean }) {
   const color = active ? colors.accent : colors.inkMuted;
   return (
     <View style={styles.glyphList}>
-      <View style={[styles.glyphLine, { backgroundColor: color, width: 18 }]} />
-      <View style={[styles.glyphLine, { backgroundColor: color, width: 13 }]} />
-      <View style={[styles.glyphLine, { backgroundColor: color, width: 18 }]} />
+      <View
+        style={[
+          styles.glyphLine,
+          { backgroundColor: color, width: bottomBar.glyph },
+        ]}
+      />
+      <View
+        style={[
+          styles.glyphLine,
+          { backgroundColor: color, width: bottomBar.glyph - 6 },
+        ]}
+      />
+      <View
+        style={[
+          styles.glyphLine,
+          { backgroundColor: color, width: bottomBar.glyph },
+        ]}
+      />
     </View>
   );
 }
@@ -380,6 +398,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.s,
+    minHeight: bottomBar.row,
   },
   navSpacer: {
     flex: 1,
@@ -391,8 +410,8 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 36,
-    minWidth: 52,
+    minHeight: touchTarget,
+    minWidth: bottomBar.tabWidth,
     paddingHorizontal: spacing.xs,
     borderRadius: radius,
   },
@@ -400,8 +419,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pressed,
   },
   tabLabel: {
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: bottomBar.labelSize,
+    lineHeight: bottomBar.labelLine,
     fontFamily: fonts.body,
     color: colors.inkMuted,
     marginTop: 3,
@@ -411,31 +430,31 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   glyphList: {
-    height: 12,
+    height: 16,
     alignItems: "flex-start",
-    gap: 3,
+    gap: 4,
   },
   glyphLine: {
-    height: 2,
-    borderRadius: 1,
+    height: 2.5,
+    borderRadius: 1.25,
   },
   glyphCalendar: {
-    width: 16,
-    height: 16,
+    width: bottomBar.glyph,
+    height: bottomBar.glyph,
     borderWidth: 1.5,
-    borderRadius: 4,
+    borderRadius: 5,
     overflow: "hidden",
   },
   glyphCalendarTop: {
-    height: 4,
+    height: 5,
     width: "100%" as const,
   },
   glyphCalendarDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginLeft: 3,
-    marginTop: 3,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginLeft: 4,
+    marginTop: 3.5,
   },
 
   // Collapsed capture control: an unmistakable button, glyph and
@@ -443,9 +462,9 @@ const styles = StyleSheet.create({
   captureButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    minHeight: 36,
-    paddingHorizontal: spacing.m,
+    gap: 6,
+    minHeight: bottomBar.add,
+    paddingHorizontal: spacing.l,
     borderRadius: radii.pill,
     backgroundColor: colors.accent,
   },
@@ -453,30 +472,30 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentDeep,
   },
   capturePlus: {
-    width: 14,
-    height: 14,
+    width: 18,
+    height: 18,
     alignItems: "center",
     justifyContent: "center",
   },
   capturePlusH: {
-    width: 12,
-    height: 2,
-    borderRadius: 1,
+    width: 16,
+    height: 2.5,
+    borderRadius: 1.25,
     backgroundColor: colors.onAccent,
   },
   capturePlusV: {
     position: "absolute" as const,
-    left: 6,
+    left: 7.75,
     top: 1,
-    width: 2,
-    height: 12,
-    borderRadius: 1,
+    width: 2.5,
+    height: 16,
+    borderRadius: 1.25,
     backgroundColor: colors.onAccent,
   },
   captureLabel: {
     color: colors.onAccent,
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: bottomBar.addLabelSize,
+    lineHeight: bottomBar.addLabelLine,
     fontFamily: fonts.body,
     fontWeight: "600",
   },
@@ -510,8 +529,10 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   toastAction: {
-    minHeight: 32,
+    minHeight: touchTarget,
+    minWidth: touchTarget,
     justifyContent: "center" as const,
+    alignItems: "center" as const,
     paddingHorizontal: spacing.s,
     borderRadius: radius,
   },

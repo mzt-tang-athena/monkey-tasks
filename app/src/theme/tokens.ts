@@ -176,6 +176,41 @@ export const periodStep = 52;
 /** The page's side margin, shared by every screen. */
 export const pageGutter = 20;
 
+/** The smallest touch target the platform guidance allows. */
+export const touchTarget = 44;
+
+/**
+ * The bottom bar's rhythm: a taller row, a 44pt nav target, and a
+ * 48pt Add control that reads as the primary action.
+ */
+export const bottomBar = {
+  row: 56,
+  tabWidth: 56,
+  add: 48,
+  glyph: 20,
+  labelSize: 12,
+  labelLine: 16,
+  addLabelSize: 16,
+  addLabelLine: 22,
+} as const;
+
+/**
+ * The capture input: larger than a list row, with line height that
+ * keeps a wrapped capture readable.
+ */
+export const captureText = {
+  size: 17,
+  line: 24,
+  minHeight: 52,
+} as const;
+
+/**
+ * Room the capture panel leaves for the keyboard and its own fixed
+ * chrome, so a long capture still fits a 568pt screen. About 260pt of
+ * keyboard, 116pt of panel chrome and an 8pt gutter.
+ */
+export const sheetReserve = 400;
+
 /**
  * The capture panel's internal rhythm: clear air between the input,
  * the parse line, and the action row.
