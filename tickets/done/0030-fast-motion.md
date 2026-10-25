@@ -4,7 +4,7 @@ title: Fast motion for the moments that feel slow
 created: 2026-10-23
 priority: normal
 assignee: omp
-pr:
+pr: 65
 depends: [0021, 0023]
 ---
 
