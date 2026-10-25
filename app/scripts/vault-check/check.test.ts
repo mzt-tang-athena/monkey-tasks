@@ -72,6 +72,14 @@ describe("checkVault", () => {
     expect(findings[0].reason).toContain("[[Focus]]");
   });
 
+  it("reads a numeric order the same as the app's text form", () => {
+    const dir = vault({
+      "Tasks/Ordered.md": task("order: 3\n"),
+    });
+
+    expect(checkVault(dir)).toEqual({ notes: 1, findings: [] });
+  });
+
   it("reports a value the two parsers read differently", () => {
     const dir = vault({
       "Tasks/Old.md": task("lists:\n  - - Focus\n"),

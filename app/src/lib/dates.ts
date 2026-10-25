@@ -12,6 +12,16 @@ export function todayIso(): string {
   return formatLocal(new Date(), false);
 }
 
+/**
+ * The current local moment to the second: a new note's `created`.
+ * Obsidian's Date & time property uses ISO 8601 at second resolution,
+ * local time, so a note opens with the type it expects.
+ */
+export function nowStamp(): string {
+  const now = new Date();
+  return `${formatLocal(now, true)}:${pad(now.getSeconds())}`;
+}
+
 /** Seconds are schema-legal but the app carries no use for them:
     they are accepted and ignored. */
 export function parseStoredDate(value: string): {

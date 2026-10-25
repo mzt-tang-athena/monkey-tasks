@@ -1,6 +1,12 @@
 /* eslint-disable react-hooks/refs */
 import * as React from "react";
-import { ScrollView, Text, View, type PointerEvent as RNPointerEvent } from "react-native";
+import {
+  Animated,
+  ScrollView,
+  Text,
+  View,
+  type PointerEvent as RNPointerEvent,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { groupByDue, type TaskItem } from "../../tasks/query";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
@@ -9,7 +15,7 @@ import { makeSwipeController, swipeProps } from "../../../lib/swipe";
 import { DropZoneMap } from "../../../lib/dropzone";
 import { startOfDay } from "../../../lib/dates";
 import { drag } from "../../../theme/tokens";
-import type { TaskForm } from "../../../lib/task-form";
+import type { TaskForm } from "../../../lib/settings";
 import {
   hasTime,
   inSourceList,
@@ -84,9 +90,11 @@ export function DaySpread({
   const holdTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dragging, setDragging] = React.useState<{
     task: TaskItem;
-    x: number;
-    y: number;
   } | null>(null);
+  // The ghost rides an Animated value, not state: a pointer move must
+  // not re-render the whole spread.
+  const [ghostX] = React.useState(() => new Animated.Value(0));
+  const [ghostY] = React.useState(() => new Animated.Value(0));
   const [hoverHour, setHoverHour] = React.useState<number | null>(null);
   const [resizing, setResizing] = React.useState<{
     y: number;
@@ -145,9 +153,11 @@ export function DaySpread({
         });
       }
     });
-    setDragging({ task: pending.task, x, y });
+    ghostX.setValue(x - rootPos.x - 100);
+    ghostY.setValue(y - rootPos.y - 40);
+    setDragging({ task: pending.task });
     setPending(null);
-  }, [hourZones]);
+  }, [hourZones, ghostX, ghostY, rootPos]);
   useTouchDragGate(dayRootRef, {
     busy: dayGate,
     pending: dayPendingRef,
@@ -232,10 +242,13 @@ export function DaySpread({
         });
       }
       hourZones.measureAll();
-      setDragging({ task, x, y });
+      ghostX.setValue(x - rootPos.x - 100);
+      ghostY.setValue(y - rootPos.y - 40);
+      setDragging({ task });
     },
     move: (x, y) => {
-      setDragging((current) => (current ? { ...current, x, y } : current));
+      ghostX.setValue(x - rootPos.x - 100);
+      ghostY.setValue(y - rootPos.y - 40);
       const hit = hourZones.hit(x, y);
       const hour = hit?.startsWith("hour:") ? Number(hit.slice(5)) : null;
       if (hour !== hoverHourRef.current) {
@@ -263,7 +276,7 @@ export function DaySpread({
       setDragging(null);
       setHoverHour(null);
     },
-  }), [hourZones, date, onUpdate, swipe, beginHold, endHold]);
+  }), [hourZones, date, onUpdate, swipe, beginHold, endHold, ghostX, ghostY, rootPos]);
 
   // The grabber's native resize: immediate activation, any travel
   // resizes the split.
@@ -414,12 +427,15 @@ export function DaySpread({
           });
         }
       });
-      setDragging({ task: pending.task, x, y });
+      ghostX.setValue(x - rootPos.x - 100);
+      ghostY.setValue(y - rootPos.y - 40);
+      setDragging({ task: pending.task });
       setPending(null);
       return;
     }
     if (dragging) {
-      setDragging({ ...dragging, x, y });
+      ghostX.setValue(x - rootPos.x - 100);
+      ghostY.setValue(y - rootPos.y - 40);
       const hit = hourZones.hit(x, y);
       const hour = hit?.startsWith("hour:") ? Number(hit.slice(5)) : null;
       if (hour !== hoverHour) {
@@ -649,9 +665,16 @@ export function DaySpread({
 
       {/* The drag ghost, riding just above the pointer. */}
       {dragging ? (
-        <View
+        <Animated.View
           pointerEvents="none"
-          style={[styles.dragGhost, { left: dragging.x - rootPos.x - 100, top: dragging.y - rootPos.y - 40 }]}
+          style={[
+            styles.dragGhost,
+            {
+              left: 0,
+              top: 0,
+              transform: [{ translateX: ghostX }, { translateY: ghostY }],
+            },
+          ]}
         >
           <View style={styles.dragGhostChip}>
             <View style={styles.ghostBar} />
@@ -659,7 +682,7 @@ export function DaySpread({
               {dragging.task.name}
             </Text>
           </View>
-        </View>
+        </Animated.View>
       ) : null}
     </View>
   );

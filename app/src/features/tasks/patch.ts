@@ -24,7 +24,11 @@ export function applyPatch(
     if (value === undefined) {
       continue;
     }
-    text = updateProperty(text, key, value as string | string[] | null);
+    text = updateProperty(
+      text,
+      key,
+      value as string | string[] | number | null,
+    );
     if (value === null) {
       delete data[key];
     } else {

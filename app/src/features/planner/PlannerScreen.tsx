@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Animated, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "../tasks/query";
@@ -18,7 +18,7 @@ import { PlannerHeader } from "./components/PlannerHeader";
 import { TaskListSection } from "./components/TaskListSection";
 import { LoadingState, ErrorState } from "./components/PlannerStates";
 import { pointerPickup } from "./components/drag";
-import { loadTaskForm, saveTaskForm, type TaskForm } from "../../lib/task-form";
+import { loadSettings, saveSetting, type TaskForm } from "../../lib/settings";
 import { useTaskList, useStoreMeta } from "../../store/task-state";
 import { useTaskActions } from "../../store/task-actions";
 import { useOpenTasks } from "../../store/selectors";
@@ -63,12 +63,12 @@ export default function PlannerScreen() {
 
   // One global task form (rows or pills) for every planner mode,
   // persisted in app-internal settings; default rows.
-  const [taskForm, setTaskForm] = React.useState<TaskForm>(() =>
-    loadTaskForm(),
+  const [taskForm, setTaskForm] = React.useState<TaskForm>(
+    () => loadSettings().taskForm,
   );
   const changeTaskForm = (form: TaskForm) => {
     setTaskForm(form);
-    saveTaskForm(form);
+    saveSetting("taskForm", form);
   };
 
   // A row body press opens the task editor. The guard against a
@@ -81,6 +81,8 @@ export default function PlannerScreen() {
   const {
     rootRef,
     dragging,
+    ghostX,
+    ghostY,
     hoveredDay,
     dropZones,
     lifted,
@@ -262,9 +264,16 @@ export default function PlannerScreen() {
 
       {/* The drag ghost for week and month drops. */}
       {dragging ? (
-        <View
+        <Animated.View
           pointerEvents="none"
-          style={[styles.dragGhost, { left: dragging.x - 100, top: dragging.y - 40 }]}
+          style={[
+            styles.dragGhost,
+            {
+              left: 0,
+              top: 0,
+              transform: [{ translateX: ghostX }, { translateY: ghostY }],
+            },
+          ]}
         >
           <View style={styles.dragGhostChip}>
             <View style={styles.ghostBar} />
@@ -272,7 +281,7 @@ export default function PlannerScreen() {
               {dragging.task.name}
             </Text>
           </View>
-        </View>
+        </Animated.View>
       ) : null}
 
       {/* The source chooser, opened by press-and-hold. */}

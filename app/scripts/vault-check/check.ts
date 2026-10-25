@@ -93,10 +93,21 @@ function render(value: unknown): string {
  * Scalar types stay strict: a bare `20` is a number to YAML and a
  * string to the app, and the note should say which it means.
  */
+/** Keys the schema reads as numbers; the app's own parser sees text. */
+const NUMERIC_KEYS = new Set(["order"]);
+
 function sameValue(
+  key: string,
   app: string | string[] | null,
   parsed: unknown,
 ): boolean {
+  if (
+    NUMERIC_KEYS.has(key) &&
+    typeof app === "string" &&
+    typeof parsed === "number"
+  ) {
+    return Number(app) === parsed;
+  }
   if (app == null) return parsed == null;
   if (typeof app === "string") {
     return typeof parsed === "string" && parsed === app;
@@ -174,7 +185,7 @@ function checkNote(file: string, text: string): Finding[] {
     if (bareKeys.has(key)) continue;
     const app = note.values[key] ?? null;
     const theirs = values[key];
-    if (sameValue(app, theirs)) continue;
+    if (sameValue(key, app, theirs)) continue;
     findings.push({
       file,
       line: lineOfKey(block, key),

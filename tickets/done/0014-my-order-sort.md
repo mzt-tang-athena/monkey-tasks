@@ -3,8 +3,8 @@ id: 0014
 title: My order sort with manual ordering
 created: 2026-10-20
 priority: low
-assignee:
-pr:
+assignee: omp
+pr: 64
 depends: [0010]
 ---
 

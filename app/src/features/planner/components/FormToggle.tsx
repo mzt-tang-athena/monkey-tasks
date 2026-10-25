@@ -1,5 +1,5 @@
 import { Pressable, View } from "react-native";
-import type { TaskForm } from "../../../lib/task-form";
+import type { TaskForm } from "../../../lib/settings";
 import { styles } from "./plannerStyles";
 
 /**

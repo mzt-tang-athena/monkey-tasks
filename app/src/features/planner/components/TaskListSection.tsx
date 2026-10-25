@@ -8,7 +8,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import type { TaskItem } from "../../tasks/query";
-import type { TaskForm } from "../../../lib/task-form";
+import type { TaskForm } from "../../../lib/settings";
 import { TaskRow } from "../../../components/TaskRow";
 import type { Mode, Source } from "../model";
 import { FormToggle } from "./FormToggle";

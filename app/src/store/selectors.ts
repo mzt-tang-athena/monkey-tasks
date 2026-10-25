@@ -6,6 +6,7 @@ import {
   startOfDay,
   todayIso,
 } from "../lib/dates";
+import type { SortMode } from "../lib/settings";
 import { useStoreMeta, useTaskList } from "./task-state";
 
 /*
@@ -86,20 +87,43 @@ export function isHiddenOccurrence(task: TaskItem, now: Date): boolean {
  * The lists tab's dated sections, empty ones dropped: Past, Today, one
  * per upcoming day, then No date. `now` labels the day buckets.
  */
+/**
+ * Manual order: `order` ascending, tasks without one after. The
+ * unplaced ones fall back to the order they were created in, then by
+ * name, so a fresh list reads oldest first instead of alphabetical.
+ * The same rule the sort sheet's My order picks.
+ */
+export function byManualOrder(a: TaskItem, b: TaskItem): number {
+  const left = a.data?.order;
+  const right = b.data?.order;
+  if (left != null && right != null) {
+    return left - right || a.name.localeCompare(b.name);
+  }
+  if (left != null) return -1;
+  if (right != null) return 1;
+  const created = (task: TaskItem) => task.data?.created ?? "9999-99-99";
+  return (
+    created(a).localeCompare(created(b)) || a.name.localeCompare(b.name)
+  );
+}
+
 export function selectSections(
   visible: TaskItem[],
   now: Date,
+  sortMode: SortMode = "due",
 ): TaskSection[] {
   const groups = groupByDue(visible, now);
+  const inOrder = (items: TaskItem[]) =>
+    sortMode === "manual" ? [...items].sort(byManualOrder) : items;
   const sections: TaskSection[] = [
-    { title: "Past", items: groups.overdue, tone: "danger" },
-    { title: "Today", items: groups.today, tone: "ink" },
+    { title: "Past", items: inOrder(groups.overdue), tone: "danger" },
+    { title: "Today", items: inOrder(groups.today), tone: "ink" },
     ...groups.upcoming.map((bucket) => ({
       title: dayLabel(bucket.date, now),
-      items: bucket.items,
+      items: inOrder(bucket.items),
       tone: "muted" as const,
     })),
-    { title: "No date", items: groups.undated, tone: "muted" },
+    { title: "No date", items: inOrder(groups.undated), tone: "muted" },
   ];
   return sections.filter((section) => section.items.length > 0);
 }
@@ -150,7 +174,13 @@ export function useListTabs(): string[] {
   }, [lists]);
 }
 
-export function useTaskSections(visible: TaskItem[]): TaskSection[] {
+export function useTaskSections(
+  visible: TaskItem[],
+  sortMode: SortMode = "due",
+): TaskSection[] {
   const now = useToday();
-  return React.useMemo(() => selectSections(visible, now), [visible, now]);
+  return React.useMemo(
+    () => selectSections(visible, now, sortMode),
+    [visible, now, sortMode],
+  );
 }
