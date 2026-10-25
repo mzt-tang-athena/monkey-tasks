@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,7 +20,9 @@ import {
   moveItem,
   reorderItems,
 } from "../../features/lists/reorder";
-import { swipeProps, useSwipeSlide } from "../../lib/swipe";
+import { swipeProps, type SwipeController } from "../../lib/swipe";
+import { useSwipePager } from "../../components/SwipePager";
+import { ListPagePreview } from "../../features/lists/ListPagePreview";
 import { loadSettings, saveSetting, type SortMode } from "../../lib/settings";
 import { BottomBar } from "../../components/BottomBar";
 import { useStoreMeta, useTaskList } from "../../store/task-state";
@@ -45,6 +46,9 @@ type ListsSection = {
   tone: SectionTone | "faint";
   data: TaskItem[];
 };
+
+/** How long a ticked row keeps its place before it regroups. */
+const tickHoldMs = 250;
 
 export default function ListsScreen() {
   const { mode, status, lastError, brokenLists } = useStoreMeta();
@@ -93,26 +97,13 @@ export default function ListsScreen() {
     tabsRef.current = tabs;
   }, [tabs]);
 
-  // The tab swipe: horizontal travel on the list body walks the tab
+  // The tab pager: horizontal travel on the list body walks the tab
   // bar's order. Touch events, not a gesture handler, because a
   // handler on the parent of a scrolling list never sees the moves on
-  // Android.
-  const { width: windowWidth } = useWindowDimensions();
-  const { offset: tabOffset, controller: tabSwipe } = useSwipeSlide(
-    tab,
-    (dir) => {
-      setTab((current) => {
-        const names = tabsRef.current;
-        const index = names.indexOf(current);
-        if (index === -1) {
-          return current;
-        }
-        const next = dir === "left" ? index + 1 : index - 1;
-        return names[next] ?? current;
-      });
-    },
-    windowWidth,
-  );
+  // Android. The pager is created below the reorder callbacks, since
+  // its page wraps the list; those callbacks reach its controller
+  // through this ref when a gesture runs.
+  const tabSwipeRef = React.useRef<SwipeController | null>(null);
 
   // A tab that is off screen would hide the current view's name, so
   // the strip follows the selection. The user can still scroll it.
@@ -134,14 +125,6 @@ export default function ListsScreen() {
     );
     return index === -1 ? 1 : index;
   }, [targets, tab]);
-
-  const toggleTask = actions.toggle;
-  const toggle = React.useCallback(
-    (task: TaskItem) => {
-      void toggleTask(task);
-    },
-    [toggleTask],
-  );
 
   // A row body press opens the task editor. The id is a SAF uri, so
   // it rides one encoded path segment.
@@ -194,6 +177,26 @@ export default function ListsScreen() {
     [visible],
   );
 
+  // A tick regroups the row into Completed in the same frame, which
+  // would cut off the circle's own animation. The row keeps its place
+  // for a beat, then it moves.
+  const [tickHold, setTickHold] = React.useState<{
+    uri: string;
+    section: string;
+    tone: SectionTone | "faint";
+    index: number;
+  } | null>(null);
+  const tickHoldTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const clearTickHold = React.useCallback(() => {
+    if (tickHoldTimer.current != null) {
+      clearTimeout(tickHoldTimer.current);
+      tickHoldTimer.current = null;
+    }
+  }, []);
+  React.useEffect(() => () => clearTickHold(), [clearTickHold]);
+
   const sections = React.useMemo<ListsSection[]>(() => {
     if (status !== "ready") {
       return [];
@@ -206,8 +209,57 @@ export default function ListsScreen() {
     if (completed.length > 0) {
       next.push({ title: "Completed", tone: "faint", data: completed });
     }
-    return next;
-  }, [status, openSections, completed]);
+    const hold = tickHold;
+    const heldT = hold == null ? null : shown.find((t) => t.uri === hold.uri);
+    if (hold == null || heldT == null || heldT.data?.completed == null) {
+      return next;
+    }
+    // The tick already pushed the row into Completed. Lift it out and
+    // splice it back where it was, so it stays mounted and its circle
+    // keeps animating in place.
+    const source = next.find((section) =>
+      section.data.some((task) => task.uri === hold.uri),
+    );
+    const restored: ListsSection[] =
+      source == null
+        ? next
+        : next.map((section) =>
+            section === source
+              ? {
+                  ...section,
+                  data: section.data.filter((task) => task.uri !== hold.uri),
+                }
+              : section,
+          );
+    const at = restored.findIndex(
+      (section) => section.title === hold.section,
+    );
+    if (at === -1) {
+      // The row was its group's only task, so the group is gone. It
+      // comes back ahead of Completed, where the group sat.
+      const slot = restored.findIndex((section) => section.tone === "faint");
+      restored.splice(slot === -1 ? restored.length : slot, 0, {
+        title: hold.section,
+        tone: hold.tone,
+        data: [heldT],
+      });
+      return restored;
+    }
+    return restored.map((section, index) => {
+      if (index !== at) {
+        return section;
+      }
+      const cut = Math.min(hold.index, section.data.length);
+      return {
+        ...section,
+        data: [
+          ...section.data.slice(0, cut),
+          heldT,
+          ...section.data.slice(cut),
+        ],
+      };
+    });
+  }, [status, openSections, completed, tickHold, shown]);
 
   // The manual reorder: a hold (or the grip) lifts a row, the rows
   // reflow live under it, and the drop writes `order` for the rows
@@ -283,7 +335,7 @@ export default function ListsScreen() {
       value.setValue(0);
     }
     // The reorder owns the gesture now, not the tab swipe.
-    tabSwipe.claim();
+    tabSwipeRef.current?.claim();
     const items =
       sections.find((s) => s.title === pending.section)?.data ?? [];
     reorderRects.current = [];
@@ -316,7 +368,7 @@ export default function ListsScreen() {
     } else {
       measure(0, 0);
     }
-  }, [clearHold, ghostY, rowShift, sections, tabSwipe]);
+  }, [clearHold, ghostY, rowShift, sections]);
 
   const holdRow = React.useCallback(
     (
@@ -360,7 +412,7 @@ export default function ListsScreen() {
         return;
       }
       // A live drag owns the gesture: the tab swipe must not arm.
-      tabSwipe.claim();
+      tabSwipeRef.current?.claim();
       ghostY.setValue(y - rootY.current - grabOffset.current);
       const rects = [...reorderRects.current].sort((a, b) => a.y - b.y);
       if (rects.length === 0) {
@@ -409,7 +461,7 @@ export default function ListsScreen() {
         setReorder({ ...reorder, to });
       }
     },
-    [clearHold, ghostY, reorder, rowShift, sections, tabSwipe],
+    [clearHold, ghostY, reorder, rowShift, sections],
   );
 
   const endReorder = React.useCallback(() => {
@@ -455,6 +507,46 @@ export default function ListsScreen() {
         : section,
     );
   }, [sections, settling]);
+
+  // A tick holds its row in place for a beat: the store regroups the
+  // row into Completed at once, so the row's own check animation would
+  // be cut off. The hold keeps it where it was until the animation
+  // lands, then the sections memo lets it move.
+  const toggleTask = actions.toggle;
+  const toggle = React.useCallback(
+    (task: TaskItem) => {
+      const section = displaySections.find(
+        (entry) =>
+          entry.tone !== "faint" &&
+          entry.data.some((item) => item.uri === task.uri),
+      );
+      if (task.data?.completed != null || section == null) {
+        // An untick needs no hold, and a row on its way out keeps none.
+        clearTickHold();
+        setTickHold(null);
+      } else if (tickHold?.uri === task.uri) {
+        // A second tap in the same beat calls the tick off.
+        clearTickHold();
+        setTickHold(null);
+      } else {
+        clearTickHold();
+        setTickHold({
+          uri: task.uri,
+          section: section.title,
+          tone: section.tone,
+          index: section.data.findIndex((item) => item.uri === task.uri),
+        });
+        tickHoldTimer.current = setTimeout(() => {
+          tickHoldTimer.current = null;
+          setTickHold((current) =>
+            current != null && current.uri === task.uri ? null : current,
+          );
+        }, tickHoldMs);
+      }
+      void toggleTask(task);
+    },
+    [clearTickHold, displaySections, tickHold, toggleTask],
+  );
 
   // Where each row sits while the finger is down: the sequence the
   // drop would write. It drives the corner radii and the divider, not
@@ -606,6 +698,78 @@ export default function ListsScreen() {
     ],
   );
 
+  // The pager's page: the current list, plus the neighbour the finger
+  // travels toward. The pager owns the horizontal offset; the current
+  // list keeps its identity, so its scroll position survives a swipe.
+  const { page, controller } = useSwipePager({
+    pageKey: tab,
+    canGo: (dir) => {
+      const names = tabsRef.current;
+      const index = names.indexOf(tab);
+      if (index === -1) {
+        return false;
+      }
+      return dir === "left" ? index + 1 < names.length : index > 0;
+    },
+    onPage: (dir) => {
+      setTab((current) => {
+        const names = tabsRef.current;
+        const index = names.indexOf(current);
+        if (index === -1) {
+          return current;
+        }
+        const next = dir === "left" ? index + 1 : index - 1;
+        return names[next] ?? current;
+      });
+    },
+    renderNeighbor: (dir) => {
+      const index = tabs.indexOf(tab);
+      const neighbor =
+        index === -1 ? undefined : tabs[dir === "left" ? index + 1 : index - 1];
+      return neighbor == null ? null : (
+        <ListPagePreview tab={neighbor} sortMode={sortMode} />
+      );
+    },
+    children: (
+      <SectionList<TaskItem, ListsSection>
+        contentContainerStyle={styles.content}
+        onRefresh={reload}
+        refreshing={refreshing}
+        sections={displaySections}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
+        ListHeaderComponent={
+          status === "ready" &&
+          openSections.length === 0 &&
+          completed.length > 0 ? (
+            <EmptyState label="Nothing on this list yet." />
+          ) : undefined
+        }
+        ListEmptyComponent={
+          status === "loading" ? (
+            <LoadingState />
+          ) : status === "error" ? (
+            <EmptyState
+              label={lastError ?? "Something went wrong. Pull to retry."}
+            />
+          ) : (
+            <EmptyState label="Nothing on this list yet." />
+          )
+        }
+        scrollEnabled={reorder == null}
+        stickySectionHeadersEnabled={false}
+        removeClippedSubviews={false}
+      />
+    ),
+  });
+
+  // The reorder callbacks above claim the gesture through this ref;
+  // the controller exists from here on.
+  React.useLayoutEffect(() => {
+    tabSwipeRef.current = controller;
+  }, [controller]);
+
   const openSortMenu = () => {
     // One menu at a time: opening this one closes the other.
     setMenu(null);
@@ -657,7 +821,7 @@ export default function ListsScreen() {
         style={styles.body}
         // The handlers read refs when the gesture runs, not in render.
         // eslint-disable-next-line react-hooks/refs
-        {...swipeProps(tabSwipe, { move: moveReorder, up: endReorder })}
+        {...swipeProps(controller, { move: moveReorder, up: endReorder })}
       >
         {/* The list tab bar sits ABOVE the scroller: the page's fixed
             chrome. Sections scroll beneath it, the bar never moves.
@@ -792,40 +956,7 @@ export default function ListsScreen() {
             </View>
           </View>
         ) : null}
-        <Animated.View
-          style={[styles.page, { transform: [{ translateX: tabOffset }] }]}
-        >
-        <SectionList<TaskItem, ListsSection>
-          contentContainerStyle={styles.content}
-          onRefresh={reload}
-          refreshing={refreshing}
-          sections={displaySections}
-          keyExtractor={keyExtractor}
-          renderItem={renderItem}
-          renderSectionHeader={renderSectionHeader}
-          ListHeaderComponent={
-            status === "ready" &&
-            openSections.length === 0 &&
-            completed.length > 0 ? (
-              <EmptyState label="Nothing on this list yet." />
-            ) : undefined
-          }
-          ListEmptyComponent={
-            status === "loading" ? (
-              <LoadingState />
-            ) : status === "error" ? (
-              <EmptyState
-                label={lastError ?? "Something went wrong. Pull to retry."}
-              />
-            ) : (
-              <EmptyState label="Nothing on this list yet." />
-            )
-          }
-          scrollEnabled={reorder == null}
-          stickySectionHeadersEnabled={false}
-          removeClippedSubviews={false}
-        />
-        </Animated.View>
+        {page}
       </View>
       {/* The dragged row rides the pointer while the list reflows
           under it. Its slot stays empty, so the gap is the drop. */}
@@ -984,10 +1115,7 @@ const styles = StyleSheet.create({
   statusStrip: {
     backgroundColor: colors.surface,
   },
-  // The list page: the swipe slides it sideways under the tab bar.
-  page: {
-    flex: 1,
-  },
+  // The body holds the pager under the fixed chrome.
   body: {
     flex: 1,
   },

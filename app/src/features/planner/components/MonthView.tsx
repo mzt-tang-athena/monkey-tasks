@@ -2,17 +2,11 @@ import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import type { TaskItem } from "../../tasks/query";
 import { DropZoneMap } from "../../../lib/dropzone";
-import { addDays, isSameDay } from "../../../lib/dates";
-import { makeSwipeController, swipeProps } from "../../../lib/swipe";
-import { occurrencesBetween } from "../../tasks/recurrence";
-import { isDone, isoOf, startOfMonth } from "../model";
-import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "../lib/labels";
+import { swipeProps } from "../../../lib/swipe";
+import { useSwipePager } from "../../../components/SwipePager";
+import { MonthGrid, type PickedDay } from "./MonthGrid";
+import { WEEKDAYS_FULL } from "../lib/labels";
 import { styles } from "./plannerStyles";
-
-/** The tapped day, tagged with the month it belongs to. The
-    container holds it, so a new month from the strip invalidates the
-    pick without an effect. */
-export type PickedDay = { key: string; day: Date } | null;
 
 /** The fixed half of the month: the title and the grid card. The
     container passes the picked-day list pane as children, so both
@@ -49,112 +43,51 @@ export function MonthView({
 }) {
   const year = viewMonth.getFullYear();
   const monthIdx = viewMonth.getMonth();
-  const monthStart = startOfMonth(viewMonth);
-  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-  const lead = monthStart.getDay();
+  // The pager's viewport fills its box, so the fixed half has to state
+  // its own height. The grid reports it: every month's row count
+  // differs, and the arithmetic lives in the styles, not here.
+  const [gridHeight, setGridHeight] = React.useState(0);
+  const monthKey = `${year}-${monthIdx}`;
 
-  const byDay = new Map<string, TaskItem[]>();
-  // One rule pass per task over the whole grid, lead blanks included.
-  // The range ends at the close of the last week row, so trailing
-  // cells keep their dots if the grid ever pads them.
-  const gridStart = addDays(monthStart, -lead);
-  const gridEnd = addDays(
-    gridStart,
-    Math.ceil((lead + daysInMonth) / 7) * 7 - 1,
-  );
-  for (const task of tasks) {
-    if (isDone(task)) {
-      continue;
-    }
-    for (const day of occurrencesBetween(task, gridStart, gridEnd)) {
-      const iso = isoOf(day);
-      const bucket = byDay.get(iso);
-      if (bucket) {
-        bucket.push(task);
-      } else {
-        byDay.set(iso, [task]);
-      }
-    }
-  }
-  const cells: (Date | null)[] = [
-    ...Array.from({ length: lead }, () => null),
-    ...Array.from(
-      { length: daysInMonth },
-      (_, index) => new Date(year, monthIdx, index + 1),
+  const { controller, page } = useSwipePager({
+    pageKey: monthKey,
+    // Every month has a neighbour, so a swipe always lands on one and
+    // the fixed half never rubber-bands.
+    canGo: () => true,
+    onPage: (dir) => onShiftMonth(dir === "left" ? 1 : -1),
+    renderNeighbor: (dir) => (
+      <MonthGrid
+        viewMonth={new Date(year, monthIdx + (dir === "left" ? 1 : -1), 1)}
+        tasks={tasks}
+        today={today}
+        picked={picked}
+        interactive={false}
+      />
     ),
-  ];
-
-  // Swipe left/right on the fixed calendar areas shifts one month.
-  // Created once; the shift callback is a stable functional updater.
-  const [calendarSwipe] = React.useState(() =>
-    makeSwipeController((dir) => onShiftMonth(dir === "left" ? 1 : -1)),
-  );
+    children: (
+      <MonthGrid
+        viewMonth={viewMonth}
+        tasks={tasks}
+        today={today}
+        picked={picked}
+        interactive
+        onPick={onPick}
+        pressGuard={pressGuard}
+        dropZones={dropZones}
+        dragActive={dragActive}
+        hoveredDay={hoveredDay}
+        onMeasure={setGridHeight}
+      />
+    ),
+  });
 
   return (
     <View style={styles.monthColumn}>
-      <View style={styles.monthFixed} {...swipeProps(calendarSwipe)}>
-        <Text style={styles.monthTitle}>
-          {MONTHS[monthIdx]} {year}
-        </Text>
-        <View style={styles.monthCard}>
-          <View style={styles.monthHead}>
-            {WEEKDAYS.map((name) => (
-              <Text key={name} style={styles.monthHeadCell}>
-                {name[0]}
-              </Text>
-            ))}
-          </View>
-          <View style={styles.monthGrid}>
-            {cells.map((day, index) =>
-              day == null ? (
-                <View key={`blank-${index}`} style={styles.monthCell} />
-              ) : (
-                <Pressable
-                  key={day.getTime()}
-                  style={({ pressed }) => [
-                    styles.monthCell,
-                    isSameDay(day, picked?.day ?? null) &&
-                      styles.monthCellPicked,
-                    isSameDay(day, today) && styles.monthCellToday,
-                    dragActive &&
-                      isSameDay(day, hoveredDay) && styles.monthCellHovered,
-                    pressed && styles.pressedFill,
-                  ]}
-                  onPress={() => {
-                    // A drag drop that released over this cell
-                    // suppresses the accidental pick.
-                    if (pressGuard?.current) {
-                      pressGuard.current = false;
-                      return;
-                    }
-                    onPick(day);
-                  }}
-                  ref={(node) => {
-                    dropZones.set(`day:${isoOf(day)}`, node);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
-                >
-                  <Text
-                    style={[
-                      styles.monthNum,
-                      isSameDay(day, today) && styles.monthNumToday,
-                    ]}
-                  >
-                    {day.getDate()}
-                  </Text>
-                  {/* The dot slot is always reserved, so every number
-                      sits on one baseline with or without a dot. */}
-                  <View style={styles.monthDotSlot}>
-                    {byDay.has(isoOf(day)) ? (
-                      <View style={styles.monthDot} />
-                    ) : null}
-                  </View>
-                </Pressable>
-              ),
-            )}
-          </View>
-        </View>
+      <View
+        style={[styles.monthFixed, gridHeight > 0 && { height: gridHeight }]}
+        {...swipeProps(controller)}
+      >
+        {page}
       </View>
       {children}
     </View>
@@ -198,4 +131,3 @@ export function MonthOpenDayButton({ onPress }: { onPress: () => void }) {
     </Pressable>
   );
 }
-
