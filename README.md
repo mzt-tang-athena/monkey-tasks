@@ -95,6 +95,27 @@ REACT_NATIVE_PACKAGER_HOSTNAME=100.124.248.125 npx expo start --dev-client --lan
 The dev client opens the URL the CLI prints. A JavaScript change reloads
 in a second. A new native module or permission still needs a rebuild.
 
+## Check the vault
+
+The app reads `Tasks/`, `Tasks/Lists/` and `Deeds/`. One command checks
+those notes against the schemas, checks every note for a bare
+`[[wikilink]]`, and compares the app's frontmatter parse with `js-yaml`:
+
+```bash
+npm run vault:check -- /path/to/vault
+```
+
+It prints one line per finding, with the file and line. It exits 0
+when the vault is clean, 1 when it finds something, and 2 when it
+cannot read the path.
+
+A bare link is a `[[link]]` value with no quotes. YAML reads it as a
+list, and Obsidian writes the nested form back on the next edit. That
+is how `Shop.md` lost its Focus list (ticket 0032). A parser
+disagreement is a note where the app and `js-yaml` read the same text
+differently, for example `- - Focus`. The parser check covers the
+app's three folders. The wikilink check covers every note.
+
 ## Layout
 
 Routes are thin: `app/(tabs)/planner.tsx` re-exports

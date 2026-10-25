@@ -6,6 +6,7 @@
   },
   "scripts": {
     "test": "npm test --prefix contracts/packages/schemas",
-    "typecheck": "npm run typecheck --prefix contracts/packages/schemas"
+    "typecheck": "npm run typecheck --prefix contracts/packages/schemas",
+    "vault:check": "npm run vault:check --prefix app --"
   }
 }
