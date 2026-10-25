@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 // never delivers, so every swipe was dead on the phone.
 
 vi.mock("react-native", () => ({
+  Easing: { bezier: () => (value: number) => value },
   Platform: { OS: "android" },
   PanResponder: {
     create: (config: unknown) => ({ panHandlers: { config } }),
@@ -81,13 +82,13 @@ describe("makeSwipeController", () => {
 
 describe("makeSwipeController with motion", () => {
   function follow() {
-    const dragged: number[] = [];
-    const released: [number, "left" | "right"][] = [];
+    const dragged: [number, "left" | "right"][] = [];
+    const released: [number, "left" | "right", boolean][] = [];
     let cancelled = 0;
     const fired: ("left" | "right")[] = [];
     const motion: SwipeMotion = {
-      drag: (dx) => dragged.push(dx),
-      release: (dx, dir) => released.push([dx, dir]),
+      drag: (dx, dir) => dragged.push([dx, dir]),
+      release: (dx, dir, armed) => released.push([dx, dir, armed]),
       cancel: () => {
         cancelled += 1;
       },
@@ -102,15 +103,18 @@ describe("makeSwipeController with motion", () => {
     };
   }
 
-  it("follows the finger only once the travel is a swipe", () => {
+  it("follows the finger from the first horizontal travel", () => {
     const page = follow();
     page.controller.down(300, 400);
     page.controller.move(290, 400);
     expect(page.dragged).toEqual([]);
-    page.controller.move(200, 400);
-    expect(page.dragged).toEqual([-100]);
+    page.controller.move(288, 400);
+    expect(page.dragged).toEqual([[-12, "left"]]);
     page.controller.move(150, 402);
-    expect(page.dragged).toEqual([-100, -150]);
+    expect(page.dragged).toEqual([
+      [-12, "left"],
+      [-150, "left"],
+    ]);
   });
 
   it("never follows a scroll", () => {
@@ -118,15 +122,23 @@ describe("makeSwipeController with motion", () => {
     page.controller.down(300, 400);
     page.controller.move(295, 460);
     page.controller.move(290, 520);
+    page.controller.move(240, 600);
     expect(page.dragged).toEqual([]);
   });
 
-  it("hands the release the travel and the direction, not the swipe", () => {
+  it("follows a sideways drift that is still mostly vertical only once it reads horizontal", () => {
+    const page = follow();
+    page.controller.down(300, 400);
+    page.controller.move(280, 440);
+    expect(page.dragged).toEqual([]);
+  });
+
+  it("reports the travel, the direction and whether it can commit", () => {
     const page = follow();
     page.controller.down(300, 400);
     page.controller.move(150, 400);
     page.controller.up();
-    expect(page.released).toEqual([[-150, "left"]]);
+    expect(page.released).toEqual([[-150, "left", true]]);
     expect(page.fired).toEqual([]);
   });
 
@@ -136,7 +148,25 @@ describe("makeSwipeController with motion", () => {
     page.controller.move(150, 400);
     page.controller.move(280, 400);
     page.controller.up();
-    expect(page.released).toEqual([[-20, "left"]]);
+    expect(page.released).toEqual([[-20, "left", false]]);
+  });
+
+  it("says a short travel cannot commit", () => {
+    const page = follow();
+    page.controller.down(300, 400);
+    page.controller.move(300 - swipeThreshold + 1, 400);
+    page.controller.up();
+    expect(page.released).toEqual([
+      [-(swipeThreshold - 1), "left", false],
+    ]);
+  });
+
+  it("says a travel at the threshold can commit", () => {
+    const page = follow();
+    page.controller.down(300, 400);
+    page.controller.move(300 - swipeThreshold, 400);
+    page.controller.up();
+    expect(page.released).toEqual([[-swipeThreshold, "left", true]]);
   });
 
   it("returns a claimed page to rest", () => {
@@ -148,26 +178,26 @@ describe("makeSwipeController with motion", () => {
     expect(page.released).toEqual([]);
   });
 
-  it("does not report a cancel for a claim before the swipe arms", () => {
+  it("does not report a cancel before the page started to follow", () => {
     const page = follow();
     page.controller.down(300, 400);
-    page.controller.move(290, 400);
+    page.controller.move(295, 400);
     page.controller.claim();
     expect(page.cancelled()).toBe(0);
   });
 
-  it("fires the swipe at the threshold and not a pixel before", () => {
-    const under = follow();
-    under.controller.down(300, 400);
-    under.controller.move(300 - swipeThreshold + 1, 400);
-    under.controller.up();
-    expect(under.released).toEqual([]);
-
-    const at = follow();
-    at.controller.down(300, 400);
-    at.controller.move(300 - swipeThreshold, 400);
-    at.controller.up();
-    expect(at.released).toEqual([[-swipeThreshold, "left"]]);
+  it("starts clean after a release", () => {
+    const page = follow();
+    page.controller.down(300, 400);
+    page.controller.move(150, 400);
+    page.controller.up();
+    page.controller.down(300, 400);
+    page.controller.move(150, 400);
+    page.controller.up();
+    expect(page.released).toEqual([
+      [-150, "left", true],
+      [-150, "left", true],
+    ]);
   });
 });
 

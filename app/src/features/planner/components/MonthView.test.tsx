@@ -32,6 +32,7 @@ vi.mock("react-native", async () => {
 
   const OS = "android";
   return {
+    Easing: { bezier: () => (value: number) => value },
     PanResponder: { create: () => ({ panHandlers: {} }) },
     Platform: { OS, select: (spec: Record<string, unknown>) => spec[OS] },
     Pressable: host("Pressable"),
