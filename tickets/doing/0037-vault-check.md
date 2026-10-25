@@ -3,7 +3,7 @@ id: 0037
 title: A command checks the whole vault
 created: 2026-10-24
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: [0032]
 ---
