@@ -2,11 +2,12 @@
 import * as React from "react";
 import {
   Platform,
+  StyleSheet,
   View,
   type PointerEvent as RNPointerEvent,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { drag } from "../../theme/tokens";
+import { colors, drag, touchTarget } from "../../theme/tokens";
 
 /**
  * A row that can be picked up for a manual reorder: a long press on
@@ -41,6 +42,79 @@ export function ReorderRow({
       {children}
     </NativeReorder>
   );
+}
+
+/**
+ * The visible drag handle: six dots, two columns by three. A press on
+ * it picks the row up at once, so reordering does not need a hold or
+ * a guess. Only My order shows it.
+ */
+export function ReorderGrip({
+  onPickup,
+  onMove,
+  onEnd,
+}: {
+  onPickup: () => void;
+  onMove?: (x: number, y: number) => void;
+  onEnd?: () => void;
+}) {
+  const content = (
+    <View style={styles.grip}>
+      <View style={styles.gripDots}>
+        {[0, 1, 2].map((row) => (
+          <View key={row} style={styles.gripRow}>
+            <View style={styles.gripDot} />
+            <View style={styles.gripDot} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+  if (Platform.OS === "web") {
+    return <View onPointerDown={onPickup}>{content}</View>;
+  }
+  return (
+    <NativeGrip onPickup={onPickup} onMove={onMove} onEnd={onEnd}>
+      {content}
+    </NativeGrip>
+  );
+}
+
+function NativeGrip({
+  onPickup,
+  onMove,
+  onEnd,
+  children,
+}: {
+  onPickup: () => void;
+  onMove?: (x: number, y: number) => void;
+  onEnd?: () => void;
+  children: React.ReactNode;
+}) {
+  const active = React.useRef(false);
+  const pan = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .runOnJS(true)
+        .minDistance(0)
+        .onStart(() => {
+          active.current = true;
+          onPickup();
+        })
+        .onUpdate((e) => onMove?.(e.absoluteX, e.absoluteY))
+        .onEnd(() => {
+          active.current = false;
+          onEnd?.();
+        })
+        .onFinalize(() => {
+          if (active.current) {
+            active.current = false;
+            onEnd?.();
+          }
+        }),
+    [onPickup, onMove, onEnd],
+  );
+  return <GestureDetector gesture={pan}>{children}</GestureDetector>;
 }
 
 function NativeReorder({
@@ -79,3 +153,25 @@ function NativeReorder({
   );
   return <GestureDetector gesture={pan}>{children}</GestureDetector>;
 }
+
+const styles = StyleSheet.create({
+  grip: {
+    width: touchTarget,
+    height: touchTarget,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gripDots: {
+    gap: 3,
+  },
+  gripRow: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  gripDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.inkFaint,
+  },
+});

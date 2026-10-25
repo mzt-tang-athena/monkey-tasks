@@ -109,8 +109,9 @@ export function swipeProps(
       onPointerDown: (e: PointerEvent) =>
         controller.down(e.nativeEvent.pageX, e.nativeEvent.pageY),
       onPointerMove: (e: PointerEvent) => {
-        controller.move(e.nativeEvent.pageX, e.nativeEvent.pageY);
+        // The drag claims the gesture before the swipe reads the move.
         extra?.move?.(e.nativeEvent.pageX, e.nativeEvent.pageY);
+        controller.move(e.nativeEvent.pageX, e.nativeEvent.pageY);
       },
       onPointerUp: () => {
         controller.up();

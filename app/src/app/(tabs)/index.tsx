@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
-import { ReorderRow } from "../../features/lists/ReorderRow";
+import { ReorderGrip, ReorderRow } from "../../features/lists/ReorderRow";
 import { reorderItems } from "../../features/lists/reorder";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { loadSettings, saveSetting, type SortMode } from "../../lib/settings";
@@ -277,6 +277,14 @@ export default function ListsScreen() {
     [armReorder, clearHold],
   );
 
+  const armReorderNow = React.useCallback(
+    (task: TaskItem, index: number, section: string) => {
+      pendingReorder.current = { task, section, index, x: 0, y: 0 };
+      armReorder();
+    },
+    [armReorder],
+  );
+
   const moveReorder = React.useCallback(
     (x: number, y: number) => {
       if (reorder == null) {
@@ -290,6 +298,8 @@ export default function ListsScreen() {
         }
         return;
       }
+      // A live drag owns the gesture: the tab swipe must not arm.
+      tabSwipe.claim();
       const rects = [...reorderRects.current].sort((a, b) => a.y - b.y);
       if (rects.length === 0) {
         return;
@@ -305,7 +315,7 @@ export default function ListsScreen() {
         current != null && current.to !== to ? { ...current, to } : current,
       );
     },
-    [clearHold, reorder],
+    [clearHold, reorder, tabSwipe],
   );
 
   const endReorder = React.useCallback(() => {
@@ -398,23 +408,32 @@ export default function ListsScreen() {
           reorder.to === index ? (
             <View style={styles.dropLine} />
           ) : null}
-          <TaskRow
-            task={item}
-            onToggle={(task) => {
-              if (suppressClick.current) {
-                suppressClick.current = false;
-                return;
-              }
-              toggle(task);
-            }}
-            onOpen={(task) => {
-              if (suppressClick.current) {
-                suppressClick.current = false;
-                return;
-              }
-              openTask(task);
-            }}
-          />
+          <View style={styles.rowMain}>
+            <TaskRow
+              task={item}
+              onToggle={(task) => {
+                if (suppressClick.current) {
+                  suppressClick.current = false;
+                  return;
+                }
+                toggle(task);
+              }}
+              onOpen={(task) => {
+                if (suppressClick.current) {
+                  suppressClick.current = false;
+                  return;
+                }
+                openTask(task);
+              }}
+            />
+          </View>
+          {sortMode === "manual" && section.tone !== "faint" ? (
+            <ReorderGrip
+              onPickup={() => armReorderNow(item, index, section.title)}
+              onMove={moveReorder}
+              onEnd={endReorder}
+            />
+          ) : null}
           {reorder != null &&
           reorder.section === section.title &&
           reorder.to === section.data.length &&
@@ -431,6 +450,7 @@ export default function ListsScreen() {
       reorder,
       holdRow,
       armReorder,
+      armReorderNow,
       moveReorder,
       endReorder,
     ],
@@ -1040,6 +1060,10 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontWeight: "600",
   },
+  // The grip sits beside the row, so the row keeps its own width.
+  rowMain: {
+    flex: 1,
+  },
   // The reorder: the dragged row dims and the gap it will take draws
   // as a line, without moving any row.
   rowLifted: {
@@ -1085,6 +1109,8 @@ const styles = StyleSheet.create({
   // One card per group, built from its rows: the sides on every row,
   // the top and its radii on the first, the bottom on the last.
   cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderRightWidth: StyleSheet.hairlineWidth,
