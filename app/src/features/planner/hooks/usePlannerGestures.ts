@@ -46,6 +46,11 @@ export function usePlannerGestures({
   // The pill/list drag that targets week columns and month cells.
   const [pending, setPending] = React.useState<PendingDrag | null>(null);
   const [dragging, setDragging] = React.useState<DragState | null>(null);
+  // The hold cue, shared with the day spread: a tint while the finger
+  // is down, the lift once the hold is armed.
+  const [holding, setHolding] = React.useState<TaskItem | null>(null);
+  const [armed, setArmed] = React.useState<TaskItem | null>(null);
+  const holdTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hoveredDay, setHoveredDay] = React.useState<Date | null>(null);
   const moved = React.useRef(false);
 
@@ -70,14 +75,41 @@ export function usePlannerGestures({
     setDragging({ task: pending.task, x, y });
     setPending(null);
   }, [dropZones]);
+  const clearHoldTimer = React.useCallback(() => {
+    if (holdTimer.current != null) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+  }, []);
+  React.useEffect(() => clearHoldTimer, [clearHoldTimer]);
+  const beginHold = React.useCallback(
+    (task: TaskItem, kind: "pill" | "row") => {
+      const wait = kind === "pill" ? drag.pillPickMs : drag.pickMs;
+      setHolding(task);
+      setArmed(null);
+      clearHoldTimer();
+      holdTimer.current = setTimeout(() => setArmed(task), wait);
+    },
+    [clearHoldTimer],
+  );
+  const endHold = React.useCallback(() => {
+    clearHoldTimer();
+    setHolding(null);
+    setArmed(null);
+  }, [clearHoldTimer]);
+
   const lifted = React.useMemo<LiftState>(
     () =>
-      pending != null
-        ? { task: pending.task, phase: "hold" }
-        : dragging != null
-          ? { task: dragging.task, phase: "picked" }
-          : null,
-    [pending, dragging],
+      dragging != null
+        ? { task: dragging.task, phase: "picked" }
+        : armed != null
+          ? { task: armed, phase: "picked" }
+          : pending != null
+            ? { task: pending.task, phase: "hold" }
+            : holding != null
+              ? { task: holding, phase: "hold" }
+              : null,
+    [pending, dragging, holding, armed],
   );
   useTouchDragGate(rootRef, {
     busy: gateRef,
@@ -107,7 +139,10 @@ export function usePlannerGestures({
       setHoveredDay(null);
     };
     return {
+      hold: beginHold,
+      releaseHold: endHold,
       pickup: (task, x, y) => {
+        endHold();
         moved.current = false;
         dropZones.measureAll();
         setDragging({ task, x, y });
@@ -125,7 +160,7 @@ export function usePlannerGestures({
       },
       drop: apply,
     };
-  }, [dropZones, pointerPickup]);
+  }, [dropZones, pointerPickup, beginHold, endHold]);
   const draggingRef = React.useRef(dragging);
   const hoveredRef = React.useRef(hoveredDay);
   React.useEffect(() => { draggingRef.current = dragging; }, [dragging]);
@@ -188,6 +223,7 @@ export function usePlannerGestures({
 
   const startDayDrag = (task: TaskItem, e: RNPointerEvent, kind: "pill" | "row" = "row") => {
     moved.current = false;
+    beginHold(task, kind);
     setPending({
       task,
       x: e.nativeEvent.pageX,
@@ -247,6 +283,7 @@ export function usePlannerGestures({
       setHoveredDay(null);
     }
     setPending(null);
+    endHold();
     moved.current = false;
   };
 
