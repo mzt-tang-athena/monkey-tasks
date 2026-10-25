@@ -46,6 +46,7 @@ export const EasingStandin = {
 export const AnimatedStandin = {
   Value: StandinValue,
   View: host("AnimatedView"),
+  add: (left: unknown) => left,
   timing: () => ({ start: finish }),
   spring: () => ({ start: finish }),
   sequence: () => ({ start: () => {} }),

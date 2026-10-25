@@ -6,6 +6,7 @@ import {
   Platform,
   StyleSheet,
   View,
+  useWindowDimensions,
   type LayoutChangeEvent,
 } from "react-native";
 import { easeOut, useReduceMotion } from "../lib/motion";
@@ -68,7 +69,11 @@ export function useSwipePager({
     key: string;
   } | null>(null);
   const side = neighbor != null && neighbor.key === pageKey ? neighbor.dir : null;
-  const [width, setWidth] = React.useState(0);
+  // The window width seeds the first frame, so the current page is
+  // never painted into a zero-width viewport. The viewport's own
+  // measurement replaces it before a finger can arrive.
+  const { width: windowWidth } = useWindowDimensions();
+  const [width, setWidth] = React.useState(windowWidth);
   const pageKeyRef = React.useRef(pageKey);
   const neighborRef = React.useRef(neighbor);
   const widthRef = React.useRef(0);
@@ -161,25 +166,23 @@ export function useSwipePager({
 
   const page = (
     <View style={styles.viewport} onLayout={onLayout}>
-      {width > 0 ? (
-        <Animated.View
-          style={[
-            styles.track,
-            {
-              width: width * 3,
-              transform: [{ translateX: Animated.add(offset, -width) }],
-            },
-          ]}
-        >
-          <View style={[styles.cell, { width }]}>
-            {side === "right" ? renderNeighbor("right") : null}
-          </View>
-          <View style={[styles.cell, { width }]}>{children}</View>
-          <View style={[styles.cell, { width }]}>
-            {side === "left" ? renderNeighbor("left") : null}
-          </View>
-        </Animated.View>
-      ) : null}
+      <Animated.View
+        style={[
+          styles.track,
+          {
+            width: width * 3,
+            transform: [{ translateX: Animated.add(offset, -width) }],
+          },
+        ]}
+      >
+        <View style={[styles.cell, { width }]}>
+          {side === "right" ? renderNeighbor("right") : null}
+        </View>
+        <View style={[styles.cell, { width }]}>{children}</View>
+        <View style={[styles.cell, { width }]}>
+          {side === "left" ? renderNeighbor("left") : null}
+        </View>
+      </Animated.View>
     </View>
   );
 

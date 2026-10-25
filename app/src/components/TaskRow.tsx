@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import type { TaskItem } from "../features/tasks/query";
 import { parseStoredDate } from "../lib/dates";
-import { useReduceMotion, useRise } from "../lib/motion";
+import { easeOut, useReduceMotion, useRise } from "../lib/motion";
 import { taskIsDone } from "@monkey-tasks/schemas";
 import { colors, fonts, spacing, radii } from "../theme/tokens";
 
@@ -40,12 +40,65 @@ function TaskRowBase({
   }
   const shown = tick ?? done;
   const reduced = useReduceMotion();
-  const [pop] = React.useState(() => new Animated.Value(1));
-  const [fade] = React.useState(() => new Animated.Value(1));
 
-  // A row created moments ago rises in: a capture lands where it will
-  // live instead of appearing under the finger.
+  // The tick is an acknowledgement, not a colour change: the circle
+  // fills, the check pops in over it, and a wash crosses the row once.
+  // The circle and the glyph travel apart, so the check lands on a
+  // surface that is already settling.
+  const [pop] = React.useState(() => new Animated.Value(1));
+  const [glyph] = React.useState(() => new Animated.Value(1));
+  // One wash serves both acknowledgements: the tick and the landing of
+  // a capture. They never run together on the same row for long, and
+  // sharing the layer keeps a single cheap animated view.
+  const [wash] = React.useState(() => new Animated.Value(0));
+
+  // A row created moments ago rises in where it will live instead of
+  // appearing under the finger. The fade is the app's shared entrance;
+  // the travel is a touch longer, which reads as the row settling.
   const rise = useRise(task.data?.created);
+  // The entrance helper owns the freshness window and does not export
+  // it: a landing needs the same gate to know whether it travels and
+  // washes at all.
+  const [fresh] = React.useState(() => {
+    const at = task.data?.created ? parseStoredDate(task.data.created) : null;
+    return at != null && Date.now() - at.date.getTime() < freshMs;
+  });
+  const [land] = React.useState(() => new Animated.Value(fresh ? 0 : 1));
+
+  // A row that is already done at mount is not a tick. Every later
+  // change plays, or lands at once when motion is reduced.
+  const played = React.useRef(false);
+  React.useEffect(() => {
+    if (!played.current) {
+      played.current = true;
+      return;
+    }
+    if (reduced || !shown) {
+      settle(pop, 1);
+      settle(glyph, 1);
+      settle(wash, 0);
+      return;
+    }
+    play(pop, 1, 120);
+    play(glyph, 1, 120);
+    play(wash, 0, 320);
+  }, [shown, reduced, pop, glyph, wash]);
+
+  // A captured task lands with a visible rise and the same wash, so
+  // the new row is seen arriving rather than found in the list.
+  React.useEffect(() => {
+    if (!fresh) {
+      return;
+    }
+    if (reduced) {
+      settle(land, 1);
+      settle(wash, 0);
+      return;
+    }
+    settle(wash, 0.9);
+    play(land, 1, 220);
+    play(wash, 0, 600);
+  }, [fresh, reduced, land, wash]);
 
   const press = () => {
     if (onToggle == null) {
@@ -53,23 +106,12 @@ function TaskRowBase({
     }
     const next = !shown;
     setTick(next);
-    if (reduced) {
-      pop.setValue(1);
-      fade.setValue(next ? completedWeight : 1);
-    } else {
-      pop.setValue(0.86);
-      Animated.spring(pop, {
-        toValue: 1,
-        speed: 24,
-        bounciness: 6,
-        useNativeDriver: Platform.OS !== "web",
-      }).start();
-      Animated.timing(fade, {
-        toValue: next ? completedWeight : 1,
-        duration: 120,
-        useNativeDriver: Platform.OS !== "web",
-      }).start();
-    }
+    // The press puts the values where the animation starts, so the
+    // first frame of the tick never shows the end state; the effect
+    // above then plays them out, or stops here when motion is reduced.
+    settle(pop, next && !reduced ? 0.9 : 1);
+    settle(glyph, next && !reduced ? 0.6 : 1);
+    settle(wash, next && !reduced ? 0.9 : 0);
     onToggle(task);
   };
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
@@ -106,67 +148,101 @@ function TaskRowBase({
         opacity: rise,
         transform: [
           {
-            translateY: rise.interpolate({
+            translateY: land.interpolate({
               inputRange: [0, 1],
-              outputRange: [8, 0],
+              outputRange: [landingPx, 0],
             }),
           },
         ],
       }}
     >
-    <Animated.View style={[styles.row, { opacity: fade }]}>
-      {timeAlign === "right" && due?.hasTime && !shown ? (
-        <Text style={[styles.gutterTime, overdue && styles.overdueText]}>
-          {formatTime(due.date)}
-        </Text>
-      ) : null}
-      {/* The circle is the ONLY toggle. It top-anchors to the FIRST
-          text line: 24pt circle on a 24pt line box, so wrapped lines
-          flow beneath without moving it (Google Tasks' rule). The
-          body beside it opens the task when the caller wants that. */}
-      <Animated.View style={{ transform: [{ scale: pop }] }}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.circle,
-            shown && styles.circleDone,
-            (hot || pressed) && !shown && styles.circleHot,
-            pressed && shown && styles.circlePressedDone,
-          ]}
-          onPress={press}
-          disabled={disabled}
-          hitSlop={11}
-          onHoverIn={() => setHot(true)}
-          onHoverOut={() => setHot(false)}
-          accessibilityLabel={shown ? "mark not done" : "mark done"}
-          accessibilityRole="button"
-          accessibilityState={{ checked: shown }}
-        >
-          {shown ? <Text style={styles.check}>{"✓"}</Text> : null}
-        </Pressable>
-      </Animated.View>
+    <View>
+      {/* The acknowledgement sits behind the content and never takes a
+          touch: a tick and a landing both show the same accent wash. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.wash, { opacity: wash }]}
+      />
+      <View style={styles.row}>
+        {timeAlign === "right" && due?.hasTime && !shown ? (
+          <Text style={[styles.gutterTime, overdue && styles.overdueText]}>
+            {formatTime(due.date)}
+          </Text>
+        ) : null}
+        {/* The circle is the ONLY toggle. It top-anchors to the FIRST
+            text line: 24pt circle on a 24pt line box, so wrapped lines
+            flow beneath without moving it (Google Tasks' rule). The
+            body beside it opens the task when the caller wants that. */}
+        <Animated.View style={{ transform: [{ scale: pop }] }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.circle,
+              shown && styles.circleDone,
+              (hot || pressed) && !shown && styles.circleHot,
+              pressed && shown && styles.circlePressedDone,
+            ]}
+            onPress={press}
+            disabled={disabled}
+            hitSlop={11}
+            onHoverIn={() => setHot(true)}
+            onHoverOut={() => setHot(false)}
+            accessibilityLabel={shown ? "mark not done" : "mark done"}
+            accessibilityRole="button"
+            accessibilityState={{ checked: shown }}
+          >
+            {/* The glyph travels on its own, so it lands on a circle
+                that is already filling rather than riding it. */}
+            {shown ? (
+              <Animated.View style={{ transform: [{ scale: glyph }] }}>
+                <Text style={styles.check}>{"✓"}</Text>
+              </Animated.View>
+            ) : null}
+          </Pressable>
+        </Animated.View>
 
-      {onOpen == null ? (
-        <View style={styles.textBlock}>{body}</View>
-      ) : (
-        <Pressable
-          style={({ pressed }) => [
-            styles.textBlock,
-            pressed && styles.bodyPressed,
-          ]}
-          onPress={() => onOpen(task)}
-          accessibilityRole="button"
-          accessibilityLabel="open task"
-        >
-          {body}
-        </Pressable>
-      )}
-    </Animated.View>
+        {onOpen == null ? (
+          <View style={styles.textBlock}>{body}</View>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [
+              styles.textBlock,
+              pressed && styles.bodyPressed,
+            ]}
+            onPress={() => onOpen(task)}
+            accessibilityRole="button"
+            accessibilityLabel="open task"
+          >
+            {body}
+          </Pressable>
+        )}
+      </View>
+    </View>
     </Animated.View>
   );
 }
 
-/** How dim a row goes while its tick is being written. */
-const completedWeight = 0.55;
+/** How far a capture travels as it lands. */
+const landingPx = 12;
+
+/** The freshness window the entrance helper uses, kept in step with
+    it: a landing must not outlive the rise it belongs to. */
+const freshMs = 90_000;
+
+/** Put a value at its end state, stopping whatever was playing. */
+function settle(value: Animated.Value, toValue: number) {
+  value.stopAnimation();
+  value.setValue(toValue);
+}
+
+/** Travel on the app's entrance curve. */
+function play(value: Animated.Value, toValue: number, duration: number) {
+  Animated.timing(value, {
+    toValue,
+    duration,
+    easing: easeOut,
+    useNativeDriver: Platform.OS !== "web",
+  }).start();
+}
 
 function startOfToday(): number {
   const now = new Date();
@@ -188,6 +264,14 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     paddingHorizontal: spacing.l,
     paddingVertical: spacing.m,
+  },
+  wash: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: colors.accentSoft,
   },
   circleHot: {
     backgroundColor: colors.pressed,
