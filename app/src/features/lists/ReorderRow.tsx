@@ -126,14 +126,7 @@ function NativeGrip({
         }),
     [onPickup, onMove, onEnd],
   );
-  // The wrapper keeps the row's own ref off the element the gesture
-  // clones: GestureDetector replaces its child's ref, so a ref on the
-  // child itself never fires.
-  return (
-    <GestureDetector gesture={pan}>
-      <View style={styles.fill}>{children}</View>
-    </GestureDetector>
-  );
+  return <GestureDetector gesture={pan}>{children}</GestureDetector>;
 }
 
 function NativeReorder({
@@ -170,14 +163,7 @@ function NativeReorder({
         }),
     [onPickup, onMove, onEnd],
   );
-  // The wrapper keeps the row's own ref off the element the gesture
-  // clones: GestureDetector replaces its child's ref, so a ref on the
-  // child itself never fires.
-  return (
-    <GestureDetector gesture={pan}>
-      <View style={styles.fill}>{children}</View>
-    </GestureDetector>
-  );
+  return <GestureDetector gesture={pan}>{children}</GestureDetector>;
 }
 
 const styles = StyleSheet.create({

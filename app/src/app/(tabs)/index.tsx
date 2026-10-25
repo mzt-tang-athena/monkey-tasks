@@ -1,5 +1,6 @@
 import * as React from "react";
 import {
+  Animated,
   LayoutAnimation,
   Platform,
   Pressable,
@@ -210,20 +211,20 @@ export default function ListsScreen() {
 
   // The manual reorder: a hold (or the grip) lifts a row, the rows
   // reflow live under it, and the drop writes `order` for the rows
-  // whose position changed.
+  // whose position changed. The floating row moves through an
+  // Animated value, so a pointer move costs no render.
   const [reorder, setReorder] = React.useState<{
     task: TaskItem;
     section: string;
     from: number;
     to: number;
-    /** The pointer's page y. */
-    y: number;
-    /** The pointer's distance from the row's top edge. */
-    offset: number;
-    /** The row's page rect at pickup; 0 width until measured. */
-    rect: { x: number; y: number; w: number };
+    /** The row's left edge and width, in root coordinates. */
+    left: number;
+    width: number;
   } | null>(null);
-  const [rootPos, setRootPos] = React.useState({ x: 0, y: 0 });
+  const [ghostY] = React.useState(() => new Animated.Value(0));
+  const rootY = React.useRef(0);
+  const grabOffset = React.useRef(0);
   const rootRef = React.useRef<React.ComponentRef<typeof View>>(null);
   const rowRefs = React.useRef(
     new Map<
@@ -264,36 +265,39 @@ export default function ListsScreen() {
     clearHold();
     // The reorder owns the gesture now, not the tab swipe.
     tabSwipe.claim();
-    rootRef.current?.measureInWindow((x, y) => setRootPos({ x, y }));
     const items =
       sections.find((s) => s.title === pending.section)?.data ?? [];
     reorderRects.current = [];
-    for (const item of items) {
-      rowRefs.current.get(item.uri)?.measureInWindow?.((x, y, w, h) => {
-        reorderRects.current.push({ uri: item.uri, y, h });
-        if (item.uri === pending.task.uri) {
-          setReorder((current) =>
-            current == null
-              ? current
-              : {
-                  ...current,
-                  rect: { x, y, w },
-                  offset: current.y - y,
-                },
-          );
-        }
-      });
+    const measure = (rootX: number, rootY: number) => {
+      for (const item of items) {
+        rowRefs.current.get(item.uri)?.measureInWindow?.((x, y, w, h) => {
+          reorderRects.current.push({ uri: item.uri, y, h });
+          if (item.uri === pending.task.uri) {
+            grabOffset.current = pending.y - y;
+            ghostY.setValue(y - rootY);
+            setReorder({
+              task: pending.task,
+              section: pending.section,
+              from: pending.index,
+              to: pending.index,
+              left: x - rootX,
+              width: w,
+            });
+          }
+        });
+      }
+    };
+    const root = rootRef.current as unknown as {
+      measureInWindow?: (
+        cb: (x: number, y: number, w: number, h: number) => void,
+      ) => void;
+    } | null;
+    if (root?.measureInWindow) {
+      root.measureInWindow((x, y) => measure(x, y));
+    } else {
+      measure(0, 0);
     }
-    setReorder({
-      task: pending.task,
-      section: pending.section,
-      from: pending.index,
-      to: pending.index,
-      y: pending.y,
-      offset: 0,
-      rect: { x: 0, y: pending.y, w: 0 },
-    });
-  }, [clearHold, sections, tabSwipe]);
+  }, [clearHold, ghostY, sections, tabSwipe]);
 
   const holdRow = React.useCallback(
     (
@@ -338,6 +342,7 @@ export default function ListsScreen() {
       }
       // A live drag owns the gesture: the tab swipe must not arm.
       tabSwipe.claim();
+      ghostY.setValue(y - rootY.current - grabOffset.current);
       const rects = [...reorderRects.current].sort((a, b) => a.y - b.y);
       if (rects.length === 0) {
         return;
@@ -349,16 +354,18 @@ export default function ListsScreen() {
           break;
         }
       }
-      if (to !== reorder.to && Platform.OS !== "web") {
-        // The rows make room in one motion, like a native list.
-        LayoutAnimation.configureNext({
-          duration: 180,
-          update: { type: "easeInEaseOut" },
-        });
+      if (to !== reorder.to) {
+        if (Platform.OS !== "web") {
+          // The rows make room in one motion, like a native list.
+          LayoutAnimation.configureNext({
+            duration: 180,
+            update: { type: "easeInEaseOut" },
+          });
+        }
+        setReorder({ ...reorder, to });
       }
-      setReorder({ ...reorder, to, y });
     },
-    [clearHold, reorder, tabSwipe],
+    [clearHold, ghostY, reorder, tabSwipe],
   );
 
   const endReorder = React.useCallback(() => {
@@ -440,11 +447,17 @@ export default function ListsScreen() {
       const lifted = reorder?.task.uri === item.uri;
       return (
         <View
+          ref={(node) => {
+            if (node != null) {
+              rowRefs.current.set(item.uri, node as never);
+            }
+          }}
           style={[
             styles.cardRow,
             index === 0 && styles.cardFirst,
             index === section.data.length - 1 && styles.cardLast,
             section.tone === "faint" ? styles.completedRow : undefined,
+            lifted && styles.rowSlot,
           ]}
         >
           <ReorderRow
@@ -461,14 +474,7 @@ export default function ListsScreen() {
             onMove={moveReorder}
             onEnd={endReorder}
           >
-            <View
-              ref={(node) => {
-                if (node != null) {
-                  rowRefs.current.set(item.uri, node as never);
-                }
-              }}
-              style={[styles.rowMain, lifted && styles.rowHidden]}
-            >
+            <View style={[styles.rowMain, lifted && styles.rowHidden]}>
               <TaskRow
                 task={item}
                 onToggle={(task) => {
@@ -732,20 +738,19 @@ export default function ListsScreen() {
       </View>
       {/* The dragged row rides the pointer while the list reflows
           under it. Its slot stays empty, so the gap is the drop. */}
-      {reorder != null && reorder.rect.w > 0 ? (
-        <View
+      {reorder != null ? (
+        <Animated.View
           pointerEvents="none"
           style={[
             styles.dragRow,
-            {
-              left: reorder.rect.x - rootPos.x,
-              width: reorder.rect.w,
-              top: reorder.y - rootPos.y - reorder.offset,
-            },
+            reorder.width > 0
+              ? { left: reorder.left, width: reorder.width }
+              : { left: pageGutter, right: pageGutter },
+            { top: ghostY },
           ]}
         >
           <TaskRow task={reorder.task} />
-        </View>
+        </Animated.View>
       ) : null}
 
       {/* The sort sheet: two orders, the active one checked. My order
@@ -1160,6 +1165,11 @@ const styles = StyleSheet.create({
   // as a line, without moving any row.
   rowHidden: {
     opacity: 0,
+  },
+  // The slot the lifted row leaves: tinted, so it reads as a place
+  // to land rather than an empty task.
+  rowSlot: {
+    backgroundColor: colors.accentSoft,
   },
 
   menuItemHint: {
