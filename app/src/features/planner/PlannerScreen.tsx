@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Animated, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "../tasks/query";
@@ -81,6 +81,8 @@ export default function PlannerScreen() {
   const {
     rootRef,
     dragging,
+    ghostX,
+    ghostY,
     hoveredDay,
     dropZones,
     lifted,
@@ -262,9 +264,9 @@ export default function PlannerScreen() {
 
       {/* The drag ghost for week and month drops. */}
       {dragging ? (
-        <View
+        <Animated.View
           pointerEvents="none"
-          style={[styles.dragGhost, { left: dragging.x - 100, top: dragging.y - 40 }]}
+          style={[styles.dragGhost, { left: ghostX, top: ghostY }]}
         >
           <View style={styles.dragGhostChip}>
             <View style={styles.ghostBar} />
@@ -272,7 +274,7 @@ export default function PlannerScreen() {
               {dragging.task.name}
             </Text>
           </View>
-        </View>
+        </Animated.View>
       ) : null}
 
       {/* The source chooser, opened by press-and-hold. */}

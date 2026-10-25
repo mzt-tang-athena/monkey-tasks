@@ -388,7 +388,9 @@ export default function ListsScreen() {
           Animated.timing(value, {
             toValue: (preview.get(uri) ?? y) - y,
             duration: 220,
-            useNativeDriver: false,
+            // Only a transform moves now, so the slide can run on the
+            // native thread and keep its frames while JS is busy.
+            useNativeDriver: Platform.OS !== "web",
           }).start();
         }
         setReorder({ ...reorder, to });

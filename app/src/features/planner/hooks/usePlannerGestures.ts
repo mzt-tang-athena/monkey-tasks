@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { PointerEvent as RNPointerEvent } from "react-native";
+import { Animated, type PointerEvent as RNPointerEvent } from "react-native";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "../../tasks/query";
 import { DropZoneMap } from "../../../lib/dropzone";
@@ -21,7 +21,7 @@ type PlannerGesturesOptions = {
 };
 
 /** One drag in flight: the task and the page point under the finger. */
-type DragState = { task: TaskItem; x: number; y: number };
+type DragState = { task: TaskItem };
 
 /** The root View's pointer wiring: whole on web, reset-only on native. */
 type PointerHandlers = { onPointerDown: () => void; onPointerMove?: (e: RNPointerEvent) => void; onPointerUp?: () => void; onPointerCancel?: () => void };
@@ -46,6 +46,10 @@ export function usePlannerGestures({
   // The pill/list drag that targets week columns and month cells.
   const [pending, setPending] = React.useState<PendingDrag | null>(null);
   const [dragging, setDragging] = React.useState<DragState | null>(null);
+  // The ghost follows an Animated value, not state: a pointer move
+  // must not re-render the screen.
+  const [ghostX] = React.useState(() => new Animated.Value(0));
+  const [ghostY] = React.useState(() => new Animated.Value(0));
   // The hold cue, shared with the day spread: a tint while the finger
   // is down, the lift once the hold is armed.
   const [holding, setHolding] = React.useState<TaskItem | null>(null);
@@ -72,9 +76,11 @@ export function usePlannerGestures({
     if (!pending || pending.task == null) return;
     moved.current = true;
     dropZones.measureAll();
-    setDragging({ task: pending.task, x, y });
+    ghostX.setValue(x - 100);
+    ghostY.setValue(y - 40);
+    setDragging({ task: pending.task });
     setPending(null);
-  }, [dropZones]);
+  }, [dropZones, ghostX, ghostY]);
   const clearHoldTimer = React.useCallback(() => {
     if (holdTimer.current != null) {
       clearTimeout(holdTimer.current);
@@ -145,10 +151,13 @@ export function usePlannerGestures({
         endHold();
         moved.current = false;
         dropZones.measureAll();
-        setDragging({ task, x, y });
+        ghostX.setValue(x - 100);
+        ghostY.setValue(y - 40);
+        setDragging({ task });
       },
       move: (x, y) => {
-        setDragging((current) => (current ? { ...current, x, y } : current));
+        ghostX.setValue(x - 100);
+        ghostY.setValue(y - 40);
         const hit = dropZones.hit(x, y);
         const dayTarget = hit?.startsWith("day:") ? (parseStoredDate(hit.slice(4))?.date ?? null) : null;
         if (!isSameDay(dayTarget, hoveredRef.current)) {
@@ -160,7 +169,7 @@ export function usePlannerGestures({
       },
       drop: apply,
     };
-  }, [dropZones, pointerPickup, beginHold, endHold]);
+  }, [dropZones, pointerPickup, beginHold, endHold, ghostX, ghostY]);
   const draggingRef = React.useRef(dragging);
   const hoveredRef = React.useRef(hoveredDay);
   React.useEffect(() => { draggingRef.current = dragging; }, [dragging]);
@@ -255,12 +264,15 @@ export function usePlannerGestures({
       }
       moved.current = true;
       dropZones.measureAll();
-      setDragging({ task: pending.task, x, y });
+      ghostX.setValue(x - 100);
+      ghostY.setValue(y - 40);
+      setDragging({ task: pending.task });
       setPending(null);
       return;
     }
     if (dragging) {
-      setDragging({ ...dragging, x, y });
+      ghostX.setValue(x - 100);
+      ghostY.setValue(y - 40);
       // Hit-test against the drop zones: enter/leave do not fire on touch.
       const hit = dropZones.hit(x, y);
       const dayTarget = hit?.startsWith("day:") ? (parseStoredDate(hit.slice(4))?.date ?? null) : null;
@@ -298,7 +310,7 @@ export function usePlannerGestures({
     : { onPointerDown: onPointerDownScreen };
 
   return {
-    rootRef, dragging, hoveredDay, dropZones, lifted, dragApi, toggle,
+    rootRef, dragging, ghostX, ghostY, hoveredDay, dropZones, lifted, dragApi, toggle,
     updateTask, guardedToggle, guardedOpen, guardedSelect, suppressClick, shiftDay,
     shiftMonth, startDayDrag, pointerHandlers,
   };
