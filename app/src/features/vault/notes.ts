@@ -1,4 +1,5 @@
 import * as FileSystem from "expo-file-system/legacy";
+import { displayName } from "./scan";
 
 const { StorageAccessFramework } = FileSystem;
 
@@ -66,19 +67,31 @@ export async function deleteNote(uri: string): Promise<void> {
   await FileSystem.deleteAsync(uri, { idempotent: true });
 }
 
-/** Create a note file in a folder and write it. Returns the new uri. */
+/**
+ * Create a note file in a folder and write it. The document provider
+ * appends " (1)" when the requested name is taken, so the result
+ * carries the name the file really got. When that name differs and a
+ * title is given, the title is written into the note: the display
+ * prefers it, so the row keeps the name the user typed.
+ */
 export async function createNote(
   folderUri: string,
   fileName: string,
   content: string,
-): Promise<string> {
+  title?: string,
+): Promise<{ uri: string; fileName: string; text: string }> {
   const uri = await StorageAccessFramework.createFileAsync(
     folderUri,
     fileName,
     "text/markdown",
   );
-  await writeNote(uri, content);
-  return uri;
+  const actual = displayName(uri);
+  const text =
+    title != null && actual !== fileName
+      ? updateProperty(content, "title", title)
+      : content;
+  await writeNote(uri, text);
+  return { uri, fileName: actual, text };
 }
 
 type FrontmatterSpan = {
@@ -103,23 +116,41 @@ function frontmatterSpan(text: string): FrontmatterSpan | null {
   };
 }
 
-/** A value YAML would read as a nested list unless it is quoted. */
-const WIKILINK = /^\[\[.*\]\]$/;
+/**
+ * A value a YAML parser reads back as the same string. Free text can
+ * carry a colon, a leading `#`, or read as a boolean or a number, and
+ * an unquoted one would change meaning or break the note.
+ */
+function plainScalar(value: string): boolean {
+  if (value === "" || value !== value.trim() || /[\n\r]/.test(value)) {
+    return false;
+  }
+  if (/^[-?:,[\]{}#&*!|>'"%@`]/.test(value)) {
+    return false;
+  }
+  if (/: |:$|\s#/.test(value)) {
+    return false;
+  }
+  if (/^(true|false|null|yes|no|on|off|~)$/i.test(value)) {
+    return false;
+  }
+  return !/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(value);
+}
 
 /**
- * The one place a frontmatter value is laid out. A wikilink is quoted,
- * because YAML reads a bare `[[Name]]` as a nested list. A list is a
- * block under its key, because YAML reads an inline list of one item as
- * a string. Everything else — a date, an RRULE, a plain word — is
- * written as-is, so a reader gets back exactly the text it was given.
+ * The one place a frontmatter value is laid out. A list is a block
+ * under its key, because YAML reads an inline list of one item as a
+ * string. A value that YAML would read as something else is quoted: a
+ * wikilink reads as a nested list, a name with a colon breaks the
+ * line, and `true` or `123` reads as a boolean or a number.
  */
 export function serializeValue(value: string | string[]): string {
   if (Array.isArray(value)) {
     return value
-      .map((item) => `  - ${WIKILINK.test(item) ? JSON.stringify(item) : item}`)
+      .map((item) => `  - ${plainScalar(item) ? item : JSON.stringify(item)}`)
       .join("\n");
   }
-  return WIKILINK.test(value) ? JSON.stringify(value) : value;
+  return plainScalar(value) ? value : JSON.stringify(value);
 }
 
 /**

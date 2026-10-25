@@ -24,6 +24,7 @@ let loadGate: Promise<void> | null = null;
 let extraTasks: TaskItem[] = [];
 let createFails = false;
 let deleteFails = false;
+let renameOnCreate = false;
 const creates: { fileName: string; content: string }[] = [];
 const deletes: string[] = [];
 
@@ -101,12 +102,26 @@ vi.mock("../features/vault/notes", async (importOriginal) => {
       _folder: string,
       fileName: string,
       content: string,
+      title?: string,
     ) => {
       if (createFails) {
         throw new Error("no space");
       }
-      creates.push({ fileName, content });
-      return `content://vault/Tasks/${encodeURIComponent(fileName)}`;
+      // The provider appends " (1)" to a taken name, and the note then
+      // carries the typed name as its title.
+      const actualName = renameOnCreate
+        ? fileName.replace(/\.md$/, " (1).md")
+        : fileName;
+      const text =
+        renameOnCreate && title != null
+          ? actual.updateProperty(content, "title", title)
+          : content;
+      creates.push({ fileName: actualName, content: text });
+      return {
+        uri: `content://vault/Tasks/${encodeURIComponent(actualName)}`,
+        fileName: actualName,
+        text,
+      };
     },
     deleteNote: async (uri: string) => {
       if (deleteFails) {
@@ -275,6 +290,7 @@ beforeEach(() => {
   extraTasks = [];
   createFails = false;
   deleteFails = false;
+  renameOnCreate = false;
   creates.length = 0;
   deletes.length = 0;
   latest = null;
@@ -396,6 +412,26 @@ describe("TasksProvider", () => {
     );
     // A capture still reads no notes: only the boot load happened.
     expect(loadCalls).toBe(1);
+  });
+
+  it("keeps the typed name when the provider renames the file", async () => {
+    renameOnCreate = true;
+    await mount();
+
+    await act(async () => {
+      await latest!.capture(
+        { name: "Water plants", due: "2026-10-23" },
+        { kind: "main" },
+      );
+    });
+    await flush();
+
+    const captured = latest!.tasks.find((item) => item.name === "Water plants");
+    expect(captured?.fileName).toBe("Water plants (1).md");
+    // The row carries the text and data the file really has, so the
+    // next write compares against the right bytes.
+    expect(captured?.text).toContain("title: Water plants");
+    expect(captured?.data?.title).toBe("Water plants");
   });
 
   it("edits the row by id and keeps the list tabs", async () => {

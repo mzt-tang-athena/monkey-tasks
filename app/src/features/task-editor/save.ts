@@ -83,7 +83,8 @@ async function renameNote(
   fileName: string,
   text: string,
   expected: string,
-): Promise<string> {
+  title: string,
+): Promise<{ uri: string; text: string }> {
   let created: string | null = null;
   try {
     // A rename deletes the old note, so it must not race another
@@ -96,9 +97,14 @@ async function renameNote(
       fileName,
       "text/markdown",
     );
-    await writeNote(created, text);
+    // The provider appends " (1)" when the name is taken. The note
+    // then carries the typed name as its title, so the row keeps it.
+    const actual = displayName(created);
+    const written =
+      actual === fileName ? text : updateProperty(text, "title", title);
+    await writeNote(created, written);
     await FileSystem.deleteAsync(oldUri, { idempotent: true });
-    return created;
+    return { uri: created, text: written };
   } catch (error) {
     if (created != null) {
       await FileSystem.deleteAsync(created, { idempotent: true }).catch(
@@ -155,8 +161,17 @@ export async function saveTaskEdit(
   const requestedName = `${safeFileName(edit.name)}.md`;
   const renaming = !titled && requestedName !== item.fileName;
   let uri = item.uri;
+  let written = text;
   if (renaming) {
-    uri = await renameNote(item.uri, requestedName, text, expected);
+    const renamed = await renameNote(
+      item.uri,
+      requestedName,
+      text,
+      expected,
+      edit.name,
+    );
+    uri = renamed.uri;
+    written = renamed.text;
   } else {
     await writeNoteIfUnchanged(item.uri, expected, text);
   }
@@ -164,7 +179,7 @@ export async function saveTaskEdit(
   // The provider may adjust the file name it was handed, so the row
   // reads the name the file really has.
   const fileName = renaming ? displayName(uri) : item.fileName;
-  const note = validateNote(fileName, text, taskFrontmatter);
+  const note = validateNote(fileName, written, taskFrontmatter);
   return {
     // The row keeps its identity: a rename changes the uri, not which
     // row the list is showing.
@@ -172,7 +187,7 @@ export async function saveTaskEdit(
     uri,
     fileName,
     name: edit.name,
-    text,
+    text: written,
     data: note.data,
     body: note.note.body,
   };

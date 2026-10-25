@@ -201,6 +201,18 @@ describe("saveTaskEdit", () => {
     expect(result.id).toBe(OLD_URI);
   });
 
+  it("writes the typed title when the provider renames on a rename", async () => {
+    state.createdUri = NEW_URI.replace("New%20name.md", "New%20name%20(1).md");
+
+    const result = await saveTaskEdit(task(), edit({ name: "New name" }));
+
+    expect(result.fileName).toBe("New name (1).md");
+    expect(result.text).toContain("title: New name");
+    expect(result.data?.title).toBe("New name");
+    expect(result.name).toBe("New name");
+    expect(state.writes).toEqual([{ uri: state.createdUri, text: result.text }]);
+  });
+
   it("refuses when the editor opened an older text than the store holds", async () => {
     const item = task();
     const opened = item.text.replace("Old body.", "Opened body.");
