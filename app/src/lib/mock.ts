@@ -1,7 +1,7 @@
 import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { BrokenList, ListItem } from "../features/lists/query";
 import type { TaskItem } from "../features/tasks/query";
-import { addDays, formatLocal, startOfDay } from "./dates";
+import { addDays, formatLocal, nowStamp, startOfDay } from "./dates";
 import { serializeValue } from "./yaml";
 
 /**
@@ -34,7 +34,7 @@ function mock(
   const uri = `mock://vault/Tasks/${name}.md`;
   const full = {
     kind: "[[tasks]]",
-    created: formatLocal(new Date(), true),
+    created: nowStamp(),
     ...data,
   } as TaskFrontmatter;
   return {

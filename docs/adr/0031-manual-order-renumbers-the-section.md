@@ -31,7 +31,8 @@ and a hand edit in Obsidian can set one without arithmetic.
 
 A task without `order` sorts after the ordered ones, oldest created
 first, then by name. So a list you never touched reads in the order
-you added to it, not alphabetically. New notes carry the minute in
-`created`; older notes hold the date alone, and both compare as text. The app's parser reads every
+you added to it, not alphabetically. New notes carry the second in
+`created`, the form Obsidian's Date & time property uses; older notes
+hold the date alone, and both compare as text. The app's parser reads every
 scalar as text, so the vault check compares `order` numerically
 instead of flagging the type.
