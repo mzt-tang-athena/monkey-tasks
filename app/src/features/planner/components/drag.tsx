@@ -37,6 +37,10 @@ export const pointerPickup = Platform.OS === "web";
 /** The contract a screen's drag machinery exposes to its sources:
     pickup, move with the drop-zone hit-test, and the drop write. */
 export type DragApi = {
+  /** The finger landed: show the hold cue and arm it after the delay. */
+  hold?: (task: TaskItem, kind: "pill" | "row") => void;
+  /** The finger left without a drag: clear the hold cue. */
+  releaseHold?: () => void;
   pickup: (task: TaskItem, x: number, y: number, kind: "pill" | "row") => void;
   move: (x: number, y: number) => void;
   drop: () => void;
@@ -69,6 +73,11 @@ export function NativeDragHandle({
         // must stay on the JS thread, not the UI runtime.
         .runOnJS(true)
         .activateAfterLongPress(hold)
+        // The cue starts on touch down, not on activation: the hold is
+        // visible while it runs.
+        .onBegin(() => {
+          api.hold?.(task, kind);
+        })
         .onStart((e) => {
           active.current = true;
           api.pickup(task, e.absoluteX, e.absoluteY, kind);
@@ -87,6 +96,7 @@ export function NativeDragHandle({
             active.current = false;
             api.drop();
           }
+          api.releaseHold?.();
         }),
     [task, kind, hold, api],
   );

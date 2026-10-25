@@ -3,7 +3,7 @@ id: 0017
 title: Planner drag-to-schedule tray
 created: 2026-10-20
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: [0012]
 ---

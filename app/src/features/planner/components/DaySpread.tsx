@@ -76,6 +76,12 @@ export function DaySpread({
   const [timelineHeight, setTimelineHeight] = React.useState(320);
   // A press waiting to travel: promoted to a drag past the threshold.
   const [pending, setPending] = React.useState<PendingDrag | null>(null);
+  // The hold cue: the finger is down on a row, then the row is armed
+  // once the hold reaches its threshold. Native runs both; web reads
+  // the same clock, so the preview shows what the phone shows.
+  const [holding, setHolding] = React.useState<TaskItem | null>(null);
+  const [armed, setArmed] = React.useState<TaskItem | null>(null);
+  const holdTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dragging, setDragging] = React.useState<{
     task: TaskItem;
     x: number;
@@ -147,16 +153,43 @@ export function DaySpread({
     pending: dayPendingRef,
     promote: promoteDayPending,
   });
+  const clearHoldTimer = React.useCallback(() => {
+    if (holdTimer.current != null) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+  }, []);
+  React.useEffect(() => clearHoldTimer, [clearHoldTimer]);
+  const beginHold = React.useCallback(
+    (task: TaskItem, kind: "pill" | "row") => {
+      const wait = kind === "pill" ? drag.pillPickMs : drag.pickMs;
+      setHolding(task);
+      setArmed(null);
+      clearHoldTimer();
+      holdTimer.current = setTimeout(() => setArmed(task), wait);
+    },
+    [clearHoldTimer],
+  );
+  const endHold = React.useCallback(() => {
+    clearHoldTimer();
+    setHolding(null);
+    setArmed(null);
+  }, [clearHoldTimer]);
+
   // DaySpread's own lift: the source row tints through the hold and
-  // lifts once the drag owns the pointer.
+  // lifts once the hold is armed or the drag owns the pointer.
   const lifted = React.useMemo<LiftState>(
     () =>
-      pending != null
-        ? { task: pending.task, phase: "hold" }
-        : dragging != null
-          ? { task: dragging.task, phase: "picked" }
-          : null,
-    [pending, dragging],
+      dragging != null
+        ? { task: dragging.task, phase: "picked" }
+        : armed != null
+          ? { task: armed, phase: "picked" }
+          : pending != null
+            ? { task: pending.task, phase: "hold" }
+            : holding != null
+              ? { task: holding, phase: "hold" }
+              : null,
+    [pending, dragging, holding, armed],
   );
 
   // The divider's travel limit: it may run until its bottom edge
@@ -179,7 +212,10 @@ export function DaySpread({
     hoverHourRef.current = hoverHour;
   }, [hoverHour]);
   const dayApi = React.useMemo<DragApi>(() => ({
+    hold: beginHold,
+    releaseHold: endHold,
     pickup: (task, x, y) => {
+      endHold();
       // The hold already fired; a sideways drag must not also shift
       // the day when it ends.
       swipe.claim();
@@ -227,7 +263,7 @@ export function DaySpread({
       setDragging(null);
       setHoverHour(null);
     },
-  }), [hourZones, date, onUpdate, swipe]);
+  }), [hourZones, date, onUpdate, swipe, beginHold, endHold]);
 
   // The grabber's native resize: immediate activation, any travel
   // resizes the split.
@@ -301,8 +337,13 @@ export function DaySpread({
       ? sortOpenFirst([...overdue, ...listRows])
       : listRows;
 
-  const startTaskDrag = (task: TaskItem, e: RNPointerEvent) => {
+  const startTaskDrag = (
+    task: TaskItem,
+    e: RNPointerEvent,
+    kind: "pill" | "row" = "row",
+  ) => {
     moved.current = false;
+    beginHold(task, kind);
     // Claim the gesture against the day swipe, synchronously, before
     // the root's pointerdown reads the flag.
     taskTouched.current = true;
@@ -410,6 +451,7 @@ export function DaySpread({
       setHoverHour(null);
     }
     setPending(null);
+    endHold();
     moved.current = false;
   };
 
