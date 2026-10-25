@@ -35,7 +35,11 @@ export function ReorderRow({
     return <>{children}</>;
   }
   if (Platform.OS === "web") {
-    return <View onPointerDown={onHold}>{children}</View>;
+    return (
+      <View style={styles.fill} onPointerDown={onHold}>
+        {children}
+      </View>
+    );
   }
   return (
     <NativeReorder onPickup={onPickup} onMove={onMove} onEnd={onEnd}>
@@ -54,7 +58,7 @@ export function ReorderGrip({
   onMove,
   onEnd,
 }: {
-  onPickup: () => void;
+  onPickup: (x: number, y: number) => void;
   onMove?: (x: number, y: number) => void;
   onEnd?: () => void;
 }) {
@@ -71,7 +75,15 @@ export function ReorderGrip({
     </View>
   );
   if (Platform.OS === "web") {
-    return <View onPointerDown={onPickup}>{content}</View>;
+    return (
+      <View
+        onPointerDown={(e) =>
+          onPickup(e.nativeEvent.pageX, e.nativeEvent.pageY)
+        }
+      >
+        {content}
+      </View>
+    );
   }
   return (
     <NativeGrip onPickup={onPickup} onMove={onMove} onEnd={onEnd}>
@@ -86,7 +98,7 @@ function NativeGrip({
   onEnd,
   children,
 }: {
-  onPickup: () => void;
+  onPickup: (x: number, y: number) => void;
   onMove?: (x: number, y: number) => void;
   onEnd?: () => void;
   children: React.ReactNode;
@@ -97,9 +109,9 @@ function NativeGrip({
       Gesture.Pan()
         .runOnJS(true)
         .minDistance(0)
-        .onStart(() => {
+        .onStart((e) => {
           active.current = true;
-          onPickup();
+          onPickup(e.absoluteX, e.absoluteY);
         })
         .onUpdate((e) => onMove?.(e.absoluteX, e.absoluteY))
         .onEnd(() => {
@@ -155,6 +167,9 @@ function NativeReorder({
 }
 
 const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
   grip: {
     width: touchTarget,
     height: touchTarget,

@@ -1,5 +1,6 @@
 import * as React from "react";
 import {
+  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
@@ -14,7 +15,7 @@ import type { TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
 import { ReorderGrip, ReorderRow } from "../../features/lists/ReorderRow";
-import { reorderItems } from "../../features/lists/reorder";
+import { moveItem, reorderItems } from "../../features/lists/reorder";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
 import { loadSettings, saveSetting, type SortMode } from "../../lib/settings";
 import { BottomBar } from "../../components/BottomBar";
@@ -200,14 +201,23 @@ export default function ListsScreen() {
     return next;
   }, [status, openSections, completed]);
 
-  // The manual reorder: a long hold arms it, moves pick the gap, and
-  // the drop writes `order` for the rows whose position changed.
+  // The manual reorder: a hold (or the grip) lifts a row, the rows
+  // reflow live under it, and the drop writes `order` for the rows
+  // whose position changed.
   const [reorder, setReorder] = React.useState<{
     task: TaskItem;
     section: string;
     from: number;
     to: number;
+    /** The pointer's page y. */
+    y: number;
+    /** The pointer's distance from the row's top edge. */
+    offset: number;
+    /** The row's page rect at pickup; 0 width until measured. */
+    rect: { x: number; y: number; w: number };
   } | null>(null);
+  const [rootPos, setRootPos] = React.useState({ x: 0, y: 0 });
+  const rootRef = React.useRef<React.ComponentRef<typeof View>>(null);
   const rowRefs = React.useRef(
     new Map<
       string,
@@ -247,11 +257,24 @@ export default function ListsScreen() {
     clearHold();
     // The reorder owns the gesture now, not the tab swipe.
     tabSwipe.claim();
+    rootRef.current?.measureInWindow((x, y) => setRootPos({ x, y }));
+    const items =
+      sections.find((s) => s.title === pending.section)?.data ?? [];
     reorderRects.current = [];
-    for (const item of sections.find((s) => s.title === pending.section)?.data ??
-      []) {
+    for (const item of items) {
       rowRefs.current.get(item.uri)?.measureInWindow?.((x, y, w, h) => {
         reorderRects.current.push({ uri: item.uri, y, h });
+        if (item.uri === pending.task.uri) {
+          setReorder((current) =>
+            current == null
+              ? current
+              : {
+                  ...current,
+                  rect: { x, y, w },
+                  offset: current.y - y,
+                },
+          );
+        }
       });
     }
     setReorder({
@@ -259,11 +282,19 @@ export default function ListsScreen() {
       section: pending.section,
       from: pending.index,
       to: pending.index,
+      y: pending.y,
+      offset: 0,
+      rect: { x: 0, y: pending.y, w: 0 },
     });
   }, [clearHold, sections, tabSwipe]);
 
   const holdRow = React.useCallback(
-    (task: TaskItem, index: number, section: string, e: { pageX: number; pageY: number }) => {
+    (
+      task: TaskItem,
+      index: number,
+      section: string,
+      e: { pageX: number; pageY: number },
+    ) => {
       pendingReorder.current = {
         task,
         section,
@@ -278,8 +309,8 @@ export default function ListsScreen() {
   );
 
   const armReorderNow = React.useCallback(
-    (task: TaskItem, index: number, section: string) => {
-      pendingReorder.current = { task, section, index, x: 0, y: 0 };
+    (task: TaskItem, index: number, section: string, x: number, y: number) => {
+      pendingReorder.current = { task, section, index, x, y };
       armReorder();
     },
     [armReorder],
@@ -311,9 +342,11 @@ export default function ListsScreen() {
           break;
         }
       }
-      setReorder((current) =>
-        current != null && current.to !== to ? { ...current, to } : current,
-      );
+      if (to !== reorder.to && Platform.OS !== "web") {
+        // The rows make room in one motion, like a native list.
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      }
+      setReorder({ ...reorder, to, y });
     },
     [clearHold, reorder, tabSwipe],
   );
@@ -340,6 +373,22 @@ export default function ListsScreen() {
       }
     })();
   }, [actions, clearHold, reorder, sections]);
+
+  // The rows as they render while a drag is live: the section under
+  // the pointer shows the sequence the drop would write.
+  const displaySections = React.useMemo(() => {
+    if (reorder == null) {
+      return sections;
+    }
+    return sections.map((section) =>
+      section.title === reorder.section
+        ? {
+            ...section,
+            data: moveItem(section.data, reorder.from, reorder.to),
+          }
+        : section,
+    );
+  }, [sections, reorder]);
 
   const renderSectionHeader = React.useCallback(
     ({ section }: { section: ListsSection }) => {
@@ -376,80 +425,77 @@ export default function ListsScreen() {
       item: TaskItem;
       index: number;
       section: ListsSection;
-    }) => (
-      <ReorderRow
-        enabled={sortMode === "manual" && section.tone !== "faint"}
-        onHold={(e) =>
-          holdRow(item, index, section.title, {
-            pageX: e.nativeEvent.pageX,
-            pageY: e.nativeEvent.pageY,
-          })
-        }
-        onPickup={() => armReorder()}
-        onMove={moveReorder}
-        onEnd={endReorder}
-      >
+    }) => {
+      const canDrag = sortMode === "manual" && section.tone !== "faint";
+      const lifted = reorder?.task.uri === item.uri;
+      return (
         <View
-          ref={(node) => {
-            if (node != null) {
-              rowRefs.current.set(item.uri, node as never);
-            }
-          }}
           style={[
             styles.cardRow,
             index === 0 && styles.cardFirst,
             index === section.data.length - 1 && styles.cardLast,
             section.tone === "faint" ? styles.completedRow : undefined,
-            reorder?.task.uri === item.uri ? styles.rowLifted : undefined,
           ]}
         >
-          {reorder != null &&
-          reorder.section === section.title &&
-          reorder.to === index ? (
-            <View style={styles.dropLine} />
-          ) : null}
-          <View style={styles.rowMain}>
-            <TaskRow
-              task={item}
-              onToggle={(task) => {
-                if (suppressClick.current) {
-                  suppressClick.current = false;
-                  return;
+          <ReorderRow
+            enabled={canDrag}
+            onHold={(e) =>
+              holdRow(item, index, section.title, {
+                pageX: e.nativeEvent.pageX,
+                pageY: e.nativeEvent.pageY,
+              })
+            }
+            onPickup={(x, y) =>
+              armReorderNow(item, index, section.title, x, y)
+            }
+            onMove={moveReorder}
+            onEnd={endReorder}
+          >
+            <View
+              ref={(node) => {
+                if (node != null) {
+                  rowRefs.current.set(item.uri, node as never);
                 }
-                toggle(task);
               }}
-              onOpen={(task) => {
-                if (suppressClick.current) {
-                  suppressClick.current = false;
-                  return;
-                }
-                openTask(task);
-              }}
-            />
-          </View>
-          {sortMode === "manual" && section.tone !== "faint" ? (
+              style={[styles.rowMain, lifted && styles.rowHidden]}
+            >
+              <TaskRow
+                task={item}
+                onToggle={(task) => {
+                  if (suppressClick.current) {
+                    suppressClick.current = false;
+                    return;
+                  }
+                  toggle(task);
+                }}
+                onOpen={(task) => {
+                  if (suppressClick.current) {
+                    suppressClick.current = false;
+                    return;
+                  }
+                  openTask(task);
+                }}
+              />
+            </View>
+          </ReorderRow>
+          {canDrag ? (
             <ReorderGrip
-              onPickup={() => armReorderNow(item, index, section.title)}
+              onPickup={(x, y) =>
+                armReorderNow(item, index, section.title, x, y)
+              }
               onMove={moveReorder}
               onEnd={endReorder}
             />
           ) : null}
-          {reorder != null &&
-          reorder.section === section.title &&
-          reorder.to === section.data.length &&
-          index === section.data.length - 1 ? (
-            <View style={styles.dropLineEnd} />
-          ) : null}
         </View>
-      </ReorderRow>
-    ),
+      );
+    },
     [
       toggle,
       openTask,
       sortMode,
       reorder,
       holdRow,
-      armReorder,
       armReorderNow,
       moveReorder,
       endReorder,
@@ -481,7 +527,12 @@ export default function ListsScreen() {
   const closeMenu = () => setMenu(null);
 
   return (
-    <View style={styles.screen}>
+    <View
+      ref={(node) => {
+        rootRef.current = node;
+      }}
+      style={styles.screen}
+    >
       {/* The status bar strip takes the header's surface, so the top
           chrome reads as one band instead of a paper gap. */}
       <View style={[styles.statusStrip, { height: insets.top }]} />
@@ -641,7 +692,7 @@ export default function ListsScreen() {
           contentContainerStyle={styles.content}
           onRefresh={reload}
           refreshing={refreshing}
-          sections={sections}
+          sections={displaySections}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           renderSectionHeader={renderSectionHeader}
@@ -669,6 +720,24 @@ export default function ListsScreen() {
           removeClippedSubviews={false}
         />
       </View>
+      {/* The dragged row rides the pointer while the list reflows
+          under it. Its slot stays empty, so the gap is the drop. */}
+      {reorder != null && reorder.rect.w > 0 ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.dragRow,
+            {
+              left: reorder.rect.x - rootPos.x,
+              width: reorder.rect.w,
+              top: reorder.y - rootPos.y - reorder.offset,
+            },
+          ]}
+        >
+          <TaskRow task={reorder.task} />
+        </View>
+      ) : null}
+
       {/* The sort sheet: two orders, the active one checked. My order
           is what the row drag writes. */}
       {sortMenu != null ? (
@@ -1064,27 +1133,25 @@ const styles = StyleSheet.create({
   rowMain: {
     flex: 1,
   },
+  // The row that follows the pointer during a reorder.
+  dragRow: {
+    position: "absolute" as const,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radius,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
   // The reorder: the dragged row dims and the gap it will take draws
   // as a line, without moving any row.
-  rowLifted: {
-    opacity: 0.45,
+  rowHidden: {
+    opacity: 0,
   },
-  dropLine: {
-    position: "absolute" as const,
-    left: 0,
-    right: 0,
-    top: -1,
-    height: 2,
-    backgroundColor: colors.accent,
-  },
-  dropLineEnd: {
-    position: "absolute" as const,
-    left: 0,
-    right: 0,
-    bottom: -1,
-    height: 2,
-    backgroundColor: colors.accent,
-  },
+
   menuItemHint: {
     fontSize: 12,
     lineHeight: 16,
