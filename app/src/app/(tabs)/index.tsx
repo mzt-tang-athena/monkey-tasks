@@ -493,7 +493,7 @@ export default function ListsScreen() {
       const canDrag = sortMode === "manual" && section.tone !== "faint";
       const lifted = reorder?.task.uri === item.uri;
       return (
-        <View
+        <Animated.View
           ref={(node) => {
             if (node != null) {
               rowRefs.current.set(item.uri, node as never);
@@ -554,7 +554,7 @@ export default function ListsScreen() {
               onEnd={endReorder}
             />
           ) : null}
-        </View>
+        </Animated.View>
       );
     },
     [
