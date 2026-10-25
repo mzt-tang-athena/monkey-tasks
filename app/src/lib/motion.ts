@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AccessibilityInfo, Animated, Platform } from "react-native";
+import { AccessibilityInfo, Animated, Easing, Platform } from "react-native";
 import { parseStoredDate } from "./dates";
 
 /**
@@ -44,6 +44,9 @@ export function useReduceMotion(): boolean {
   }, []);
   return reduced;
 }
+
+/** Elements entering decelerate into place. One curve for the app. */
+export const easeOut = Easing.bezier(0.16, 1, 0.3, 1);
 
 /** How young a task is when its row rises in on mount. The parser
     drops the seconds a created stamp carries, so the window has to

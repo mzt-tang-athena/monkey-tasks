@@ -33,13 +33,14 @@ vi.mock("react-native", async () => {
     select: (spec: Record<string, unknown>) => spec[OS],
   };
 
-  const { AccessibilityInfoStandin, AnimatedStandin } = await import(
+  const { AccessibilityInfoStandin, AnimatedStandin, EasingStandin } = await import(
     "../test/rn-standin"
   );
 
   return {
     AccessibilityInfo: AccessibilityInfoStandin,
     Animated: AnimatedStandin,
+    Easing: EasingStandin,
     Platform,
     Pressable: host("Pressable"),
     StyleSheet: {
