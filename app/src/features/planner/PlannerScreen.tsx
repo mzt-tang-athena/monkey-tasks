@@ -1,10 +1,11 @@
 import * as React from "react";
-import { Animated, Pressable, Text, View } from "react-native";
+import { Animated, Platform, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "../tasks/query";
 import type { CaptureTarget } from "../capture/write";
 import { BottomBar } from "../../components/BottomBar";
+import { useReduceMotion } from "../../lib/motion";
 import { isoOf, cycleSource, sourceLabel, SOURCES, type Source } from "./model";
 import { styles } from "./components/plannerStyles";
 import { DaySpread } from "./components/DaySpread";
@@ -60,6 +61,27 @@ export default function PlannerScreen() {
     top: number;
     left: number;
   } | null>(null);
+  // The menu scales in from its corner and the backdrop fades; both
+  // ride one value.
+  const reduced = useReduceMotion();
+  const [menuAnim] = React.useState(() => new Animated.Value(0));
+  const menuOpen = sourceMenu != null;
+  React.useEffect(() => {
+    if (!menuOpen) {
+      menuAnim.setValue(0);
+      return;
+    }
+    if (reduced) {
+      menuAnim.setValue(1);
+      return;
+    }
+    menuAnim.setValue(0);
+    Animated.timing(menuAnim, {
+      toValue: 1,
+      duration: 140,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  }, [menuOpen, menuAnim, reduced]);
 
   // One global task form (rows or pills) for every planner mode,
   // persisted in app-internal settings; default rows.
@@ -287,13 +309,37 @@ export default function PlannerScreen() {
       {/* The source chooser, opened by press-and-hold. */}
       {sourceMenu ? (
         <React.Fragment>
-          <Pressable
-            style={styles.menuBackdrop}
-            onPress={() => setSourceMenu(null)}
-            accessibilityLabel="close source menu"
-            accessibilityRole="button"
-          />
-          <View style={[styles.sourceMenu, { top: sourceMenu.top, left: sourceMenu.left }]}>
+          <Animated.View
+            style={[styles.menuBackdrop, { opacity: menuAnim }]}
+          >
+            <Pressable
+              style={styles.menuBackdrop}
+              onPress={() => setSourceMenu(null)}
+              accessibilityLabel="close source menu"
+              accessibilityRole="button"
+            />
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.sourceMenu,
+              {
+                top: sourceMenu.top,
+                left: sourceMenu.left,
+                opacity: menuAnim,
+                // It grows out of its top left corner, next to the chip
+                // that opened it.
+                transformOrigin: "top left",
+                transform: [
+                  {
+                    scale: menuAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.92, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
             {SOURCES.map((option) => (
               <Pressable
                 key={option}
@@ -316,7 +362,7 @@ export default function PlannerScreen() {
                 ) : null}
               </Pressable>
             ))}
-          </View>
+          </Animated.View>
         </React.Fragment>
       ) : null}
 

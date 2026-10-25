@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/refs */
 import * as React from "react";
 import {
+  Animated,
   Platform,
   StyleSheet,
   View,
@@ -9,6 +10,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useRise, useShake } from "../../../lib/motion";
 import { colors, drag } from "../../../theme/tokens";
 import type { TaskItem } from "../../tasks/query";
 
@@ -27,6 +29,22 @@ export function liftStyleOf(
     return [];
   }
   return [lifted.phase === "hold" ? styles.liftHold : styles.liftPicked];
+}
+
+/**
+ * The readiness shake: once the hold completes and the drag is armed,
+ * the source shakes once so the finger knows the row is picked up.
+ */
+function useLiftShake(lift: LiftState, task: TaskItem): Animated.Value {
+  const { offset, start } = useShake();
+  const picked =
+    lift != null && lift.task.uri === task.uri && lift.phase === "picked";
+  React.useEffect(() => {
+    if (picked) {
+      start();
+    }
+  }, [picked, start]);
+  return offset;
 }
 
 /** The interaction layer's split: web reads the W3C pointer events
@@ -100,11 +118,14 @@ export function NativeDragHandle({
         }),
     [task, kind, hold, api],
   );
+  const shakeX = useLiftShake(lift ?? null, task);
   return (
     <GestureDetector gesture={pan}>
-      <View style={[style, ...liftStyleOf(lift ?? null, task)]}>
-        {children}
-      </View>
+      <Animated.View style={{ transform: [{ translateX: shakeX }] }}>
+        <View style={[style, ...liftStyleOf(lift ?? null, task)]}>
+          {children}
+        </View>
+      </Animated.View>
     </GestureDetector>
   );
 }
@@ -128,17 +149,37 @@ export function Pickup({
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
 }) {
+  const shakeX = useLiftShake(lifted ?? null, task);
+  // A pill that just landed rises in; a row is handled by TaskRow, so
+  // passing it here too would animate it twice.
+  const rise = useRise(kind === "pill" ? task.data?.created : undefined);
+  const riseStyle = {
+    opacity: rise,
+    transform: [
+      {
+        translateY: rise.interpolate({
+          inputRange: [0, 1],
+          outputRange: [8, 0],
+        }),
+      },
+    ],
+  };
   if (pointerPickup || api == null) {
     return (
-      <View
-        style={[style, ...liftStyleOf(lifted ?? null, task)]}
-        onPointerDown={onPointerDown as never}
+      <Animated.View
+        style={[riseStyle, { transform: [...riseStyle.transform, { translateX: shakeX }] }]}
       >
-        {children}
-      </View>
+        <View
+          style={[style, ...liftStyleOf(lifted ?? null, task)]}
+          onPointerDown={onPointerDown as never}
+        >
+          {children}
+        </View>
+      </Animated.View>
     );
   }
   return (
+    <Animated.View style={riseStyle}>
     <NativeDragHandle
       task={task}
       kind={kind}
@@ -148,6 +189,7 @@ export function Pickup({
     >
       {children}
     </NativeDragHandle>
+    </Animated.View>
   );
 }
 

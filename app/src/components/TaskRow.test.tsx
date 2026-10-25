@@ -33,7 +33,13 @@ vi.mock("react-native", async () => {
     select: (spec: Record<string, unknown>) => spec[OS],
   };
 
+  const { AccessibilityInfoStandin, AnimatedStandin } = await import(
+    "../test/rn-standin"
+  );
+
   return {
+    AccessibilityInfo: AccessibilityInfoStandin,
+    Animated: AnimatedStandin,
     Platform,
     Pressable: host("Pressable"),
     StyleSheet: {
@@ -100,5 +106,54 @@ describe("TaskRow", () => {
     });
     expect(onToggle).toHaveBeenCalledWith(item);
     expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the check before the write lands", async () => {
+    // The task's data is untouched here: this is the moment between
+    // the tap and the note being written.
+    const item = task("Buy milk");
+    const renderer = await mount(item, { onToggle: vi.fn() });
+
+    act(() => {
+      pressable(renderer, "mark done").props.onPress();
+    });
+
+    const circle = pressable(renderer, "mark not done");
+    expect(circle.props.accessibilityState).toEqual({ checked: true });
+    const glyphs = renderer.root
+      .findAll((node) => (node.type as unknown) === "Text")
+      .map((node) => node.props.children);
+    expect(glyphs).toContain("✓");
+  });
+
+  it("lets the data win again once it agrees", async () => {
+    const item = task("Buy milk");
+    const renderer = await mount(item, { onToggle: vi.fn() });
+    const withDone = (done: boolean) => {
+      const data = {
+        kind: "[[tasks]]" as const,
+        created: "2026-10-20",
+        ...item.data,
+        completed: done ? "2026-10-25T10:00:00" : undefined,
+      };
+      return <TaskRow task={{ ...item, data }} onToggle={vi.fn()} />;
+    };
+
+    act(() => {
+      pressable(renderer, "mark done").props.onPress();
+    });
+
+    // The write lands: the local tick has nothing left to say.
+    await act(async () => {
+      renderer.update(withDone(true));
+    });
+    expect(pressable(renderer, "mark not done")).toBeTruthy();
+
+    // A later change from the vault is shown, not shadowed by a stale
+    // local tick.
+    await act(async () => {
+      renderer.update(withDone(false));
+    });
+    expect(pressable(renderer, "mark done")).toBeTruthy();
   });
 });

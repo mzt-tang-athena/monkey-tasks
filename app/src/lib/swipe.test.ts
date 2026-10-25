@@ -11,7 +11,12 @@ vi.mock("react-native", () => ({
   },
 }));
 
-import { makeSwipeController, swipeProps } from "./swipe";
+import {
+  makeSwipeController,
+  swipeProps,
+  swipeThreshold,
+  type SwipeMotion,
+} from "./swipe";
 
 function moves() {
   const fired: ("left" | "right")[] = [];
@@ -71,6 +76,98 @@ describe("makeSwipeController", () => {
     controller.move(150, 400);
     controller.up();
     expect(fired).toEqual(["left"]);
+  });
+});
+
+describe("makeSwipeController with motion", () => {
+  function follow() {
+    const dragged: number[] = [];
+    const released: [number, "left" | "right"][] = [];
+    let cancelled = 0;
+    const fired: ("left" | "right")[] = [];
+    const motion: SwipeMotion = {
+      drag: (dx) => dragged.push(dx),
+      release: (dx, dir) => released.push([dx, dir]),
+      cancel: () => {
+        cancelled += 1;
+      },
+    };
+    const controller = makeSwipeController((dir) => fired.push(dir), motion);
+    return {
+      cancelled: () => cancelled,
+      controller,
+      dragged,
+      fired,
+      released,
+    };
+  }
+
+  it("follows the finger only once the travel is a swipe", () => {
+    const page = follow();
+    page.controller.down(300, 400);
+    page.controller.move(290, 400);
+    expect(page.dragged).toEqual([]);
+    page.controller.move(200, 400);
+    expect(page.dragged).toEqual([-100]);
+    page.controller.move(150, 402);
+    expect(page.dragged).toEqual([-100, -150]);
+  });
+
+  it("never follows a scroll", () => {
+    const page = follow();
+    page.controller.down(300, 400);
+    page.controller.move(295, 460);
+    page.controller.move(290, 520);
+    expect(page.dragged).toEqual([]);
+  });
+
+  it("hands the release the travel and the direction, not the swipe", () => {
+    const page = follow();
+    page.controller.down(300, 400);
+    page.controller.move(150, 400);
+    page.controller.up();
+    expect(page.released).toEqual([[-150, "left"]]);
+    expect(page.fired).toEqual([]);
+  });
+
+  it("reports the travel at the release, not the peak", () => {
+    const page = follow();
+    page.controller.down(300, 400);
+    page.controller.move(150, 400);
+    page.controller.move(280, 400);
+    page.controller.up();
+    expect(page.released).toEqual([[-20, "left"]]);
+  });
+
+  it("returns a claimed page to rest", () => {
+    const page = follow();
+    page.controller.down(300, 400);
+    page.controller.move(150, 400);
+    page.controller.claim();
+    expect(page.cancelled()).toBe(1);
+    expect(page.released).toEqual([]);
+  });
+
+  it("does not report a cancel for a claim before the swipe arms", () => {
+    const page = follow();
+    page.controller.down(300, 400);
+    page.controller.move(290, 400);
+    page.controller.claim();
+    expect(page.cancelled()).toBe(0);
+  });
+
+  it("fires the swipe at the threshold and not a pixel before", () => {
+    const under = follow();
+    under.controller.down(300, 400);
+    under.controller.move(300 - swipeThreshold + 1, 400);
+    under.controller.up();
+    expect(under.released).toEqual([]);
+
+    const at = follow();
+    at.controller.down(300, 400);
+    at.controller.move(300 - swipeThreshold, 400);
+    at.controller.up();
+    expect(at.released).toEqual([[-swipeThreshold, "left"]]);
   });
 });
 
