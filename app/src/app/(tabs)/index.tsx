@@ -223,6 +223,9 @@ export default function ListsScreen() {
   const [rowShift] = React.useState(
     () => new Map<string, Animated.Value>(),
   );
+  // Where each row is heading, so a crossing only animates the rows
+  // whose slot actually changed.
+  const rowTarget = React.useRef(new Map<string, number>());
   // The sequence the last drop wrote, held on screen until every note
   // is saved: the rows must not snap back while the writes land.
   const [settling, setSettling] = React.useState<{
@@ -270,6 +273,7 @@ export default function ListsScreen() {
     pendingReorder.current = null;
     clearHold();
     setSettling(null);
+    rowTarget.current.clear();
     for (const value of rowShift.values()) {
       value.stopAnimation();
       value.setValue(0);
@@ -380,13 +384,18 @@ export default function ListsScreen() {
           gap,
         );
         for (const [uri, y] of base) {
+          const target = (preview.get(uri) ?? y) - y;
+          if (rowTarget.current.get(uri) === target) {
+            continue;
+          }
+          rowTarget.current.set(uri, target);
           let value = rowShift.get(uri);
           if (value == null) {
             value = new Animated.Value(0);
             rowShift.set(uri, value);
           }
           Animated.timing(value, {
-            toValue: (preview.get(uri) ?? y) - y,
+            toValue: target,
             duration: 220,
             // Only a transform moves now, so the slide can run on the
             // native thread and keep its frames while JS is busy.
@@ -464,6 +473,7 @@ export default function ListsScreen() {
     if (settling == null) {
       return;
     }
+    rowTarget.current.clear();
     for (const value of rowShift.values()) {
       value.stopAnimation();
       value.setValue(0);
@@ -819,7 +829,9 @@ export default function ListsScreen() {
             reorder.width > 0
               ? { left: reorder.left, width: reorder.width }
               : { left: pageGutter, right: pageGutter },
-            { top: ghostY },
+            // A transform, not a layout prop: the ghost follows the
+            // finger without a layout pass per frame.
+            { top: 0, transform: [{ translateY: ghostY }] },
           ]}
         >
           <TaskRow task={reorder.task} />

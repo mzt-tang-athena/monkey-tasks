@@ -667,7 +667,14 @@ export function DaySpread({
       {dragging ? (
         <Animated.View
           pointerEvents="none"
-          style={[styles.dragGhost, { left: ghostX, top: ghostY }]}
+          style={[
+            styles.dragGhost,
+            {
+              left: 0,
+              top: 0,
+              transform: [{ translateX: ghostX }, { translateY: ghostY }],
+            },
+          ]}
         >
           <View style={styles.dragGhostChip}>
             <View style={styles.ghostBar} />
