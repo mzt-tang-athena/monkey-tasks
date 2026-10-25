@@ -3,6 +3,7 @@ import {
   LayoutAnimation,
   Platform,
   Pressable,
+  UIManager,
   ScrollView,
   SectionList,
   StyleSheet,
@@ -30,6 +31,12 @@ import {
 } from "../../store/selectors";
 import { IconButton } from "../../components/ui";
 import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
+
+if (Platform.OS === "android") {
+  // LayoutAnimation needs this switch on the old renderer; newer ones
+  // ignore it. The reorder relies on it to slide the rows.
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
 
 /**
  * Lists tab: Main first, then one tab per list note, with capture
@@ -344,7 +351,10 @@ export default function ListsScreen() {
       }
       if (to !== reorder.to && Platform.OS !== "web") {
         // The rows make room in one motion, like a native list.
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        LayoutAnimation.configureNext({
+          duration: 180,
+          update: { type: "easeInEaseOut" },
+        });
       }
       setReorder({ ...reorder, to, y });
     },
@@ -478,7 +488,7 @@ export default function ListsScreen() {
               />
             </View>
           </ReorderRow>
-          {canDrag ? (
+          {canDrag && !lifted ? (
             <ReorderGrip
               onPickup={(x, y) =>
                 armReorderNow(item, index, section.title, x, y)
