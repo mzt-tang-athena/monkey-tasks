@@ -437,6 +437,8 @@ export default function ListsScreen() {
   );
 
   const openSortMenu = () => {
+    // One menu at a time: opening this one closes the other.
+    setMenu(null);
     sortRef.current?.measureInWindow((x, y, width, height) => {
       setSortMenu({
         top: y + height + 4,
@@ -446,6 +448,7 @@ export default function ListsScreen() {
   };
 
   const openMenu = () => {
+    setSortMenu(null);
     dotsRef.current?.measureInWindow((x, y, width, height) => {
       setMenu({
         open: true,
