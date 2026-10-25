@@ -3,7 +3,7 @@ id: 0030
 title: Fast motion for the moments that feel slow
 created: 2026-10-23
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: [0021, 0023]
 ---
