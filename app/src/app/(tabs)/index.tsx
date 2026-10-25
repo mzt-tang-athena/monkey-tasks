@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
 
   // Plain groups: a header on the paper, flush rows beneath.
   group: {
-    marginTop: spacing.l,
+    marginTop: spacing.xl,
   },
   groupLabel: {
     fontSize: 12,
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
   cardDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.hairline,
-    marginLeft: spacing.m + 22 + spacing.m,
+    marginLeft: spacing.l + 24 + spacing.m,
   },
   completedGroup: {
     opacity: 0.55,

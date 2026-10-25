@@ -56,7 +56,7 @@ function TaskRowBase({
         </Text>
       ) : null}
       {/* The circle is the ONLY toggle. It top-anchors to the FIRST
-          text line: 22pt circle on a 22pt line box, so wrapped lines
+          text line: 24pt circle on a 24pt line box, so wrapped lines
           flow beneath without moving it (Google Tasks' rule). The
           body beside it opens the task when the caller wants that. */}
       <Pressable
@@ -115,8 +115,8 @@ const styles = StyleSheet.create({
     // may wrap or grow without moving it. The row hugs its content,
     // so single-line tasks sit exactly centered.
     alignItems: "flex-start",
-    paddingHorizontal: spacing.m,
-    paddingVertical: spacing.s,
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.m,
   },
   circleHot: {
     backgroundColor: colors.pressed,
@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   circle: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     borderRadius: radii.pill,
     borderWidth: 1.5,
     borderColor: colors.inkFaint,

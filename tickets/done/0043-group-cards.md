@@ -43,6 +43,10 @@ top and its radii on the first, the bottom on the last. The section
 list keeps its virtualization and its sticky header, and the row keeps
 its own padding, so no text moved.
 
+A second pass on the phone: the rows felt tight. The row's vertical
+padding went to 12, its horizontal padding to 16, the circle to 24, the
+divider inset to 52, and the gap between groups to 24.
+
 ADR 0030 records the choice against Todoist's flat rows. Verified in
 the web preview at 390 by 800 and 320 by 640, including a wrapped row,
 a one-item group and the completed group.

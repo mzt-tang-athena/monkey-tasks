@@ -23,8 +23,10 @@ floating surfaces, the sheet and the toast.
 ## Consequences
 
 A group now has an edge, so a glance finds the boundary without reading
-the label. The screen gains one border and two radii per group, about
-nothing in height, because the row keeps its own padding.
+the label. The screen gains one border and two radii per group, and no
+height of its own: the row keeps its padding. The rows themselves got
+roomier in the same pass, with 12pt of vertical padding, 16pt of
+horizontal padding, a 24pt circle and 24pt between groups.
 
 The card is built from its rows, so the section list keeps its
 virtualization and its sticky header. The cost is that a card cannot
