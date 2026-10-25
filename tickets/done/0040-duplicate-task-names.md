@@ -4,7 +4,7 @@ title: A duplicate task name keeps its clean display name
 created: 2026-10-25
 priority: high
 assignee: omp
-pr:
+pr: 58
 depends: [0034]
 ---
 
@@ -51,4 +51,17 @@ Out of scope: UUIDs and inline checklists. ADR 0028 records why.
 
 ## Outcome
 
-(filled in before moving to done/)
+The app now reads the name the provider gave the file. When it differs
+from the requested name, `createNote` writes the typed name as
+`title`, and the row takes the file name, text and data the file
+really has. The capture and the editor rename both go through it, so
+the suffix never reaches the screen.
+
+`serializeValue` quotes a value YAML would read as something else: a
+colon, a leading indicator, `true`, or a number. A title with any of
+those stays valid and reads back unchanged. A hand-made
+`draw (1).md` with no title still displays its file name.
+
+ADR 0028 records the decision and why UUIDs and inline checklists stay
+out. Tests cover the created note, the capture row, the editor row and
+the emitter.

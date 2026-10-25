@@ -149,8 +149,8 @@ Phases:
 6. Notifications: on-device alarms with recurrence. Wired. The store
    rebuilds the alarm list from the notes after every successful vault
    read, so a capture, a tick, or a drag leaves the schedule matching
-   the vault. Ticking a recurring task moves its due date forward
-   instead of completing it.
+   the vault. Ticking a recurring task completes the occurrence and
+   creates the next one as its own note (ADR 0027).
 7. Later: deed vocabulary cleanup (0005), the quick-task and deed merge
    decision, capture text highlighting (0008), location triggers,
    MCP capture on athena, ntfy fallback, the athena operational dashboard as a possible app surface (idea only), email and calendar

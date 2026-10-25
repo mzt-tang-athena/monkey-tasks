@@ -469,20 +469,20 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       const taken = new Set(tasksRef.current.map((item) => item.fileName));
       const fileName = spawnFileName(title, next, taken);
       const text = spawnContent(input, todayIso());
-      let uri: string;
+      let created: Awaited<ReturnType<typeof createNote>>;
       try {
-        uri = await createNote(tasksDir, fileName, text);
+        created = await createNote(tasksDir, fileName, text, input.title);
       } catch (error) {
         setLastError(`recurring create: ${String(error)}`);
         return;
       }
-      const note = validateNote(fileName, text, taskFrontmatter);
+      const note = validateNote(created.fileName, created.text, taskFrontmatter);
       const spawn: TaskItem = {
-        id: uri,
-        uri,
-        fileName,
-        name: note.data?.title ?? fileName.replace(/\.md$/, ""),
-        text,
+        id: created.uri,
+        uri: created.uri,
+        fileName: created.fileName,
+        name: note.data?.title ?? created.fileName.replace(/\.md$/, ""),
+        text: created.text,
         data: note.data,
         body: note.note.body,
       };
@@ -493,8 +493,10 @@ function TaskStore({ children }: { children: React.ReactNode }) {
         await queueWrite(current.uri, current.text, completed.text);
       } catch (error) {
         // Compensation: take the new note back, keep the old one open.
-        await deleteNote(uri).catch(() => undefined);
-        applyTasks(tasksRef.current.filter((item) => item.uri !== uri));
+        await deleteNote(created.uri).catch(() => undefined);
+        applyTasks(
+          tasksRef.current.filter((item) => item.uri !== created.uri),
+        );
         setLastError(`recurring complete: ${String(error)}`);
         return;
       }
@@ -782,10 +784,36 @@ function TaskStore({ children }: { children: React.ReactNode }) {
         // The Tasks folder is derived from the root, so a capture still
         // lands in the right place when the first load failed.
         const folder = tasksDir ?? (await ensureSubfolder(rootUri, "Tasks"));
-        const uri = await createNote(folder, draft.fileName, draft.content);
-        patchOne(provisional, (row) => ({ ...row, uri }));
+        const created = await createNote(
+          folder,
+          draft.fileName,
+          draft.content,
+          draft.name,
+        );
+        // The provider may have added " (1)" to the name. The note
+        // then carries the typed name as its title, and the row reads
+        // the file that really landed so the next write compares
+        // against the right text.
+        const note = validateNote(
+          created.fileName,
+          created.text,
+          taskFrontmatter,
+        );
+        patchOne(provisional, (row) => ({
+          ...row,
+          uri: created.uri,
+          fileName: created.fileName,
+          text: created.text,
+          data: note.data,
+          body: note.note.body,
+        }));
         setLastError(null);
-        void syncTaskReminders(null, { ...item, uri });
+        void syncTaskReminders(null, {
+          ...item,
+          uri: created.uri,
+          fileName: created.fileName,
+          text: created.text,
+        });
       } catch (error) {
         applyTasks(tasksRef.current.filter((row) => row.uri !== provisional));
         const message = `capture write: ${String(error)}`;

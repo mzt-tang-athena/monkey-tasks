@@ -5,11 +5,17 @@ const fs = vi.hoisted(() => ({
   read: "",
   readError: null as Error | null,
   write: vi.fn(),
+  created: "draw.md",
 }));
 
 vi.mock("expo-file-system/legacy", () => ({
   EncodingType: { UTF8: "utf8" },
-  StorageAccessFramework: {},
+  StorageAccessFramework: {
+    createFileAsync: async (_folder: string, fileName: string) =>
+      `content://vault/Tasks/${encodeURIComponent(
+        fs.created === "" ? fileName : fs.created,
+      )}`,
+  },
   readAsStringAsync: async () => {
     if (fs.readError) {
       throw fs.readError;
@@ -20,6 +26,7 @@ vi.mock("expo-file-system/legacy", () => ({
 }));
 
 import {
+  createNote,
   NoteChangedError,
   NoteUnreadableError,
   serializeValue,
@@ -40,7 +47,7 @@ function parsed(text: string): Record<string, unknown> {
 }
 
 describe("serializeValue", () => {
-  it("quotes a wikilink, scalar or item, and nothing else", () => {
+  it("quotes what YAML would read as something else, and nothing else", () => {
     expect(serializeValue("[[Focus]]")).toBe('"[[Focus]]"');
     expect(serializeValue(["[[a]]", "[[b]]"])).toBe(
       '  - "[[a]]"\n  - "[[b]]"',
@@ -49,6 +56,56 @@ describe("serializeValue", () => {
       "  - 2026-11-01T07:00",
     );
     expect(serializeValue("2026-10-21")).toBe("2026-10-21");
+    // Free text: a colon, a leading indicator, or a value YAML would
+    // read as a boolean or a number.
+    expect(serializeValue("Call: mom")).toBe('"Call: mom"');
+    expect(serializeValue("#1 thing")).toBe('"#1 thing"');
+    expect(serializeValue("true")).toBe('"true"');
+    expect(serializeValue("123")).toBe('"123"');
+    expect(serializeValue("draw (1)")).toBe("draw (1)");
+  });
+
+  it("reads every quoted value back unchanged", () => {
+    for (const value of ["Call: mom", "#1 thing", "true", "123", "a # b"]) {
+      expect(parsed(`---\ntitle: ${serializeValue(value)}\n---\n`).title).toBe(
+        value,
+      );
+    }
+  });
+});
+
+describe("createNote", () => {
+  beforeEach(() => {
+    fs.created = "";
+    fs.write.mockClear();
+  });
+
+  it("writes the note and returns the name it got", async () => {
+    const created = await createNote(
+      "content://vault/Tasks",
+      "draw.md",
+      '---\ncreated: 2026-10-25\n---\n',
+    );
+    expect(created.fileName).toBe("draw.md");
+    expect(created.text).not.toContain("title:");
+  });
+
+  it("adds the requested title when the provider renames the file", async () => {
+    fs.created = "draw (1).md";
+    const created = await createNote(
+      "content://vault/Tasks",
+      "draw.md",
+      '---\ncreated: 2026-10-25\n---\n',
+      "draw",
+    );
+    expect(created.fileName).toBe("draw (1).md");
+    expect(created.text).toContain("title: draw");
+    expect(parsed(created.text).title).toBe("draw");
+    // The text that was written is the text that is returned.
+    expect(fs.write.mock.calls[0]?.slice(0, 2)).toEqual([
+      created.uri,
+      created.text,
+    ]);
   });
 });
 
