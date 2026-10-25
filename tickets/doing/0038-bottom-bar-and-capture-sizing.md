@@ -3,7 +3,7 @@ id: 0038
 title: The bottom bar and the capture sheet are too small to hit
 created: 2026-10-24
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: [0028]
 ---
