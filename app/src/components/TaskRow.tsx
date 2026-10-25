@@ -151,8 +151,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   name: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 17,
+    lineHeight: 24,
     fontFamily: fonts.body,
     color: colors.ink,
   },
@@ -185,8 +185,8 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     width: 64,
     fontVariant: ["tabular-nums"],
-    // Centered on the 22pt first-line box: (22 - 18) / 2.
-    marginTop: 2,
+    // Centered on the 24pt first-line box: (24 - 18) / 2.
+    marginTop: 3,
   },
   recur: {
     fontSize: 12,

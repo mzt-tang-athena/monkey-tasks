@@ -1,6 +1,13 @@
 import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, spacing, radius, radii } from "../../theme/tokens";
+import {
+  colors,
+  fonts,
+  spacing,
+  radius,
+  radii,
+  touchTarget,
+} from "../../theme/tokens";
 
 /**
  * Two quiet pill forms: the capture sheet's target list control, and
@@ -59,12 +66,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentSoft,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.m,
-    minHeight: 32,
+    minHeight: touchTarget,
     justifyContent: "center",
   },
   controlText: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 20,
     fontFamily: fonts.body,
     color: colors.accent,
     fontWeight: "600",

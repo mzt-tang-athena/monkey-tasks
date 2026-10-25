@@ -1,6 +1,13 @@
 import * as React from "react";
 import { Pressable, StyleSheet, Text, type PressableProps } from "react-native";
-import { colors, fonts, spacing, radius, radii } from "../../theme/tokens";
+import {
+  colors,
+  fonts,
+  spacing,
+  radius,
+  radii,
+  touchTarget,
+} from "../../theme/tokens";
 
 /**
  * The app's two button shapes, copied from their first homes: the
@@ -76,19 +83,19 @@ export function Button({
 }
 
 const styles = StyleSheet.create({
-  // The save control: an icon-only circle, same height as the pill,
+  // The save control: an icon-only circle at the touch target floor,
   // so the action row reads as two matching rounded forms.
   circle: {
-    width: 32,
-    height: 32,
+    width: touchTarget,
+    height: touchTarget,
     borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
   },
   circleText: {
     color: colors.onAccent,
-    fontSize: 15,
-    lineHeight: 18,
+    fontSize: 17,
+    lineHeight: 22,
     fontFamily: fonts.body,
     fontWeight: "700",
   },

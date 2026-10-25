@@ -15,12 +15,14 @@ import { targetLabel } from "../lib/chipLabels";
 import { CaptureChips } from "./CaptureChips";
 import { Button, Pill } from "../../../components/ui";
 import {
+  captureText,
   colors,
   fonts,
   spacing,
   radiusFloating,
   sheetGap,
   sheetMaxShare,
+  sheetReserve,
 } from "../../../theme/tokens";
 
 // The sheet input carries focus by caret and placeholder alone: no
@@ -68,9 +70,15 @@ export function CaptureSheet({
   progress?: Animated.Value;
 }) {
   const window = useWindowDimensions();
-  // The input's cap: sheetMaxShare of the window; the input follows
-  // its text both ways inside it.
-  const maxInputHeight = Math.round(window.height * sheetMaxShare);
+  // The input's cap: sheetMaxShare of the window, less the room the
+  // keyboard and the panel's fixed chrome need. The input follows its
+  // text both ways inside it.
+  const maxInputHeight = Math.max(
+    captureText.minHeight,
+    Math.round(
+      Math.min(window.height * sheetMaxShare, window.height - sheetReserve),
+    ),
+  );
   // The keyboard's height as an Animated node the platform moves frame
   // by frame. The dock rides it directly, so the sheet and the
   // keyboard travel together instead of the sheet waiting for a
@@ -253,13 +261,13 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   sheetInput: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: captureText.size,
+    lineHeight: captureText.line,
     fontFamily: fonts.body,
     color: colors.ink,
-    minHeight: 40,
+    minHeight: captureText.minHeight,
     paddingHorizontal: spacing.s,
-    paddingVertical: spacing.s,
+    paddingVertical: spacing.m,
     ...noFocusOutline,
   },
   sheetActions: {
