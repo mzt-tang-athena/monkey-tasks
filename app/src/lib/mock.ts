@@ -34,7 +34,7 @@ function mock(
   const uri = `mock://vault/Tasks/${name}.md`;
   const full = {
     kind: "[[tasks]]",
-    created: formatLocal(startOfDay(new Date()), false),
+    created: formatLocal(new Date(), true),
     ...data,
   } as TaskFrontmatter;
   return {

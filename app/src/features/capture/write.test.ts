@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { load } from "js-yaml";
 import { captureContent } from "./write";
-import { todayIso } from "../../lib/dates";
+
 import type { ParsedCapture } from "./parse";
+
+const CREATED = "2026-10-25T14:03";
 
 const sample: ParsedCapture = {
   name: "water the plants",
@@ -22,12 +24,12 @@ function parsed(text: string): Record<string, unknown> {
 
 describe("captureContent", () => {
   it("writes the frontmatter only, no replacement surgery", () => {
-    const text = captureContent(sample);
+    const text = captureContent(sample, undefined, CREATED);
     expect(text).toBe(
       [
         "---",
         'kind: "[[tasks]]"',
-        `created: ${todayIso()}`,
+        `created: ${CREATED}`,
         "due: 2026-10-21T07:30",
         "reminders:",
         "  - 2026-10-21T07:30",
@@ -53,10 +55,10 @@ describe("captureContent", () => {
   });
 
   it("reads back through js-yaml as the values the row holds", () => {
-    const data = parsed(captureContent(sample, "Focus"));
+    const data = parsed(captureContent(sample, "Focus", CREATED));
     expect(data).toEqual({
       kind: "[[tasks]]",
-      created: todayIso(),
+      created: CREATED,
       due: "2026-10-21T07:30",
       lists: ["[[Focus]]"],
       reminders: ["2026-10-21T07:30"],

@@ -1,4 +1,4 @@
-import { todayIso } from "../../lib/dates";
+import { nowStamp } from "../../lib/dates";
 import { serializeValue } from "../../lib/yaml";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { ParsedCapture } from "./parse";
@@ -7,8 +7,9 @@ import type { ParsedCapture } from "./parse";
 export function captureContent(
   parsed: ParsedCapture,
   listName?: string,
+  created = nowStamp(),
 ): string {
-  const lines = ["---", 'kind: "[[tasks]]"', `created: ${todayIso()}`];
+  const lines = ["---", 'kind: "[[tasks]]"', `created: ${created}`];
   if (parsed.due) {
     lines.push(`due: ${parsed.due}`);
   }
@@ -63,14 +64,15 @@ export function captureDraft(
 } {
   const due = preselectedDue && !parsed.due ? preselectedDue : parsed.due;
   const listName = target.kind === "list" ? target.name : undefined;
-  const content = captureContent({ ...parsed, due }, listName);
+  const created = nowStamp();
+  const content = captureContent({ ...parsed, due }, listName, created);
   return {
     name: parsed.name,
     fileName: `${safeFileName(parsed.name)}.md`,
     content,
     data: {
       kind: "[[tasks]]",
-      created: todayIso(),
+      created,
       ...(due ? { due } : {}),
       ...(listName ? { lists: [`[[${listName}]]`] } : {}),
       ...(parsed.reminders?.length ? { reminders: parsed.reminders } : {}),

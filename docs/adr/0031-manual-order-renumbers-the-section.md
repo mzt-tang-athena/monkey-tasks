@@ -29,6 +29,9 @@ A drop can write several notes, one per moved row. A section is small,
 and the writes run in sequence. The numbers stay short and readable,
 and a hand edit in Obsidian can set one without arithmetic.
 
-A task without `order` sorts after the ordered ones, by name. The
-app's parser reads every scalar as text, so the vault check compares
-`order` numerically instead of flagging the type.
+A task without `order` sorts after the ordered ones, oldest created
+first, then by name. So a list you never touched reads in the order
+you added to it, not alphabetically. New notes carry the minute in
+`created`; older notes hold the date alone, and both compare as text. The app's parser reads every
+scalar as text, so the vault check compares `order` numerically
+instead of flagging the type.

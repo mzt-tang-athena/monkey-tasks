@@ -12,6 +12,11 @@ export function todayIso(): string {
   return formatLocal(new Date(), false);
 }
 
+/** The current local moment to the minute: a new note's `created`. */
+export function nowStamp(): string {
+  return formatLocal(new Date(), true);
+}
+
 /** Seconds are schema-legal but the app carries no use for them:
     they are accepted and ignored. */
 export function parseStoredDate(value: string): {

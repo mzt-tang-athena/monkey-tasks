@@ -15,6 +15,7 @@ const NOW = new Date(2026, 9, 22);
 type TaskFields = {
   due?: string;
   order?: number;
+  created?: string;
   lists?: string[];
   completed?: string;
   recurrence?: string;
@@ -213,6 +214,24 @@ describe("selectSections", () => {
       "Third",
       "No order A",
       "No order B",
+    ]);
+  });
+
+  it("falls back to the creation date before the name", () => {
+    const visible = [
+      task("Bought later", { due: "2026-10-22", created: "2026-10-21" }),
+      task("Bought first", { due: "2026-10-22", created: "2026-10-19" }),
+      task("Same day, A", { due: "2026-10-22", created: "2026-10-20" }),
+      task("Same day, B", { due: "2026-10-22", created: "2026-10-20" }),
+    ];
+
+    const [today] = selectSections(visible, NOW, "manual");
+
+    expect(names(today.items)).toEqual([
+      "Bought first",
+      "Same day, A",
+      "Same day, B",
+      "Bought later",
     ]);
   });
 

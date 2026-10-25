@@ -88,8 +88,10 @@ export function isHiddenOccurrence(task: TaskItem, now: Date): boolean {
  * per upcoming day, then No date. `now` labels the day buckets.
  */
 /**
- * Manual order: `order` ascending, tasks without one after, ties by
- * name. The same rule the sort sheet's My order picks.
+ * Manual order: `order` ascending, tasks without one after. The
+ * unplaced ones fall back to the order they were created in, then by
+ * name, so a fresh list reads oldest first instead of alphabetical.
+ * The same rule the sort sheet's My order picks.
  */
 export function byManualOrder(a: TaskItem, b: TaskItem): number {
   const left = a.data?.order;
@@ -99,7 +101,10 @@ export function byManualOrder(a: TaskItem, b: TaskItem): number {
   }
   if (left != null) return -1;
   if (right != null) return 1;
-  return a.name.localeCompare(b.name);
+  const created = (task: TaskItem) => task.data?.created ?? "9999-99-99";
+  return (
+    created(a).localeCompare(created(b)) || a.name.localeCompare(b.name)
+  );
 }
 
 export function selectSections(

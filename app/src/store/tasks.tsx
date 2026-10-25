@@ -12,7 +12,7 @@ import {
   validateNote,
   type TaskFrontmatter,
 } from "@monkey-tasks/schemas";
-import { todayIso } from "../lib/dates";
+import { nowStamp, todayIso } from "../lib/dates";
 import {
   loadMockTasks,
   mockBroken,
@@ -468,7 +468,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       };
       const taken = new Set(tasksRef.current.map((item) => item.fileName));
       const fileName = spawnFileName(title, next, taken);
-      const text = spawnContent(input, todayIso());
+      const text = spawnContent(input, nowStamp());
       let created: Awaited<ReturnType<typeof createNote>>;
       try {
         created = await createNote(tasksDir, fileName, text, input.title);
