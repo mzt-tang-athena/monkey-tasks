@@ -100,15 +100,26 @@ function nativeHandlers(controller: SwipeController) {
  * events; React Native reads the responder system. Spreading both
  * would fire the tripwire twice on web.
  */
-export function swipeProps(controller: SwipeController) {
+export function swipeProps(
+  controller: SwipeController,
+  extra?: { move?: (x: number, y: number) => void; up?: () => void },
+) {
   if (Platform.OS === "web") {
     return {
       onPointerDown: (e: PointerEvent) =>
         controller.down(e.nativeEvent.pageX, e.nativeEvent.pageY),
-      onPointerMove: (e: PointerEvent) =>
-        controller.move(e.nativeEvent.pageX, e.nativeEvent.pageY),
-      onPointerUp: () => controller.up(),
-      onPointerCancel: () => controller.up(),
+      onPointerMove: (e: PointerEvent) => {
+        controller.move(e.nativeEvent.pageX, e.nativeEvent.pageY);
+        extra?.move?.(e.nativeEvent.pageX, e.nativeEvent.pageY);
+      },
+      onPointerUp: () => {
+        controller.up();
+        extra?.up?.();
+      },
+      onPointerCancel: () => {
+        controller.up();
+        extra?.up?.();
+      },
     };
   }
   controller.handlers ??= nativeHandlers(controller);

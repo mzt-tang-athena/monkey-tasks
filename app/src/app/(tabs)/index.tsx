@@ -13,7 +13,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "../../features/tasks/query";
 import type { CaptureTarget } from "../../features/capture/write";
 import { TaskRow } from "../../components/TaskRow";
+import { ReorderRow } from "../../features/lists/ReorderRow";
+import { reorderItems } from "../../features/lists/reorder";
 import { makeSwipeController, swipeProps } from "../../lib/swipe";
+import { loadSettings, saveSetting, type SortMode } from "../../lib/settings";
 import { BottomBar } from "../../components/BottomBar";
 import { useStoreMeta, useTaskList } from "../../store/task-state";
 import { useTaskActions } from "../../store/task-actions";
@@ -25,7 +28,7 @@ import {
   type SectionTone,
 } from "../../store/selectors";
 import { IconButton } from "../../components/ui";
-import { colors, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
+import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
 
 /**
  * Lists tab: Main first, then one tab per list note, with capture
@@ -44,12 +47,20 @@ export default function ListsScreen() {
   const insets = useSafeAreaInsets();
   const tabs = useListTabs();
   const [tab, setTab] = React.useState<ListTab>("Main");
+  const [sortMode, setSortMode] = React.useState<SortMode>(
+    () => loadSettings().sortMode,
+  );
   const [menu, setMenu] = React.useState<{
     open: boolean;
     top: number;
     left: number;
   } | null>(null);
+  const [sortMenu, setSortMenu] = React.useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const dotsRef = React.useRef<React.ComponentRef<typeof View>>(null);
+  const sortRef = React.useRef<React.ComponentRef<typeof View>>(null);
   // The tab strip scrolls the active chip into view after a swipe or a
   // tap. Chip offsets are measured once and kept for the session.
   const stripRef = React.useRef<React.ComponentRef<typeof ScrollView>>(null);
@@ -165,7 +176,7 @@ export default function ListsScreen() {
     () => shown.filter((task) => (task.errors?.length ?? 0) === 0),
     [shown],
   );
-  const openSections = useTaskSections(visible);
+  const openSections = useTaskSections(visible, sortMode);
   const completed = React.useMemo(
     () =>
       visible
@@ -188,6 +199,137 @@ export default function ListsScreen() {
     }
     return next;
   }, [status, openSections, completed]);
+
+  // The manual reorder: a long hold arms it, moves pick the gap, and
+  // the drop writes `order` for the rows whose position changed.
+  const [reorder, setReorder] = React.useState<{
+    task: TaskItem;
+    section: string;
+    from: number;
+    to: number;
+  } | null>(null);
+  const rowRefs = React.useRef(
+    new Map<
+      string,
+      {
+        measureInWindow?: (
+          cb: (x: number, y: number, w: number, h: number) => void,
+        ) => void;
+      } | null
+    >(),
+  );
+  const reorderRects = React.useRef<{ uri: string; y: number; h: number }[]>(
+    [],
+  );
+  const holdTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingReorder = React.useRef<{
+    task: TaskItem;
+    section: string;
+    index: number;
+    x: number;
+    y: number;
+  } | null>(null);
+  const suppressClick = React.useRef(false);
+
+  const clearHold = React.useCallback(() => {
+    if (holdTimer.current != null) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+  }, []);
+
+  const armReorder = React.useCallback(() => {
+    const pending = pendingReorder.current;
+    if (pending == null) {
+      return;
+    }
+    pendingReorder.current = null;
+    clearHold();
+    // The reorder owns the gesture now, not the tab swipe.
+    tabSwipe.claim();
+    reorderRects.current = [];
+    for (const item of sections.find((s) => s.title === pending.section)?.data ??
+      []) {
+      rowRefs.current.get(item.uri)?.measureInWindow?.((x, y, w, h) => {
+        reorderRects.current.push({ uri: item.uri, y, h });
+      });
+    }
+    setReorder({
+      task: pending.task,
+      section: pending.section,
+      from: pending.index,
+      to: pending.index,
+    });
+  }, [clearHold, sections, tabSwipe]);
+
+  const holdRow = React.useCallback(
+    (task: TaskItem, index: number, section: string, e: { pageX: number; pageY: number }) => {
+      pendingReorder.current = {
+        task,
+        section,
+        index,
+        x: e.pageX,
+        y: e.pageY,
+      };
+      clearHold();
+      holdTimer.current = setTimeout(armReorder, drag.pickMs);
+    },
+    [armReorder, clearHold],
+  );
+
+  const moveReorder = React.useCallback(
+    (x: number, y: number) => {
+      if (reorder == null) {
+        const pending = pendingReorder.current;
+        if (
+          pending != null &&
+          Math.abs(x - pending.x) + Math.abs(y - pending.y) > drag.threshold
+        ) {
+          pendingReorder.current = null;
+          clearHold();
+        }
+        return;
+      }
+      const rects = [...reorderRects.current].sort((a, b) => a.y - b.y);
+      if (rects.length === 0) {
+        return;
+      }
+      let to = rects.length;
+      for (let i = 0; i < rects.length; i += 1) {
+        if (y < rects[i].y + rects[i].h / 2) {
+          to = i;
+          break;
+        }
+      }
+      setReorder((current) =>
+        current != null && current.to !== to ? { ...current, to } : current,
+      );
+    },
+    [clearHold, reorder],
+  );
+
+  const endReorder = React.useCallback(() => {
+    clearHold();
+    pendingReorder.current = null;
+    const current = reorder;
+    if (current == null) {
+      return;
+    }
+    setReorder(null);
+    // The drop's click must not also open the row.
+    suppressClick.current = true;
+    setTimeout(() => {
+      suppressClick.current = false;
+    }, 350);
+    const items =
+      sections.find((s) => s.title === current.section)?.data ?? [];
+    const changes = reorderItems(items, current.from, current.to);
+    void (async () => {
+      for (const change of changes) {
+        await actions.writeFields(change.task, { order: change.order });
+      }
+    })();
+  }, [actions, clearHold, reorder, sections]);
 
   const renderSectionHeader = React.useCallback(
     ({ section }: { section: ListsSection }) => {
@@ -225,19 +367,83 @@ export default function ListsScreen() {
       index: number;
       section: ListsSection;
     }) => (
-      <View
-        style={[
-          styles.cardRow,
-          index === 0 && styles.cardFirst,
-          index === section.data.length - 1 && styles.cardLast,
-          section.tone === "faint" ? styles.completedRow : undefined,
-        ]}
+      <ReorderRow
+        enabled={sortMode === "manual" && section.tone !== "faint"}
+        onHold={(e) =>
+          holdRow(item, index, section.title, {
+            pageX: e.nativeEvent.pageX,
+            pageY: e.nativeEvent.pageY,
+          })
+        }
+        onPickup={() => armReorder()}
+        onMove={moveReorder}
+        onEnd={endReorder}
       >
-        <TaskRow task={item} onToggle={toggle} onOpen={openTask} />
-      </View>
+        <View
+          ref={(node) => {
+            if (node != null) {
+              rowRefs.current.set(item.uri, node as never);
+            }
+          }}
+          style={[
+            styles.cardRow,
+            index === 0 && styles.cardFirst,
+            index === section.data.length - 1 && styles.cardLast,
+            section.tone === "faint" ? styles.completedRow : undefined,
+            reorder?.task.uri === item.uri ? styles.rowLifted : undefined,
+          ]}
+        >
+          {reorder != null &&
+          reorder.section === section.title &&
+          reorder.to === index ? (
+            <View style={styles.dropLine} />
+          ) : null}
+          <TaskRow
+            task={item}
+            onToggle={(task) => {
+              if (suppressClick.current) {
+                suppressClick.current = false;
+                return;
+              }
+              toggle(task);
+            }}
+            onOpen={(task) => {
+              if (suppressClick.current) {
+                suppressClick.current = false;
+                return;
+              }
+              openTask(task);
+            }}
+          />
+          {reorder != null &&
+          reorder.section === section.title &&
+          reorder.to === section.data.length &&
+          index === section.data.length - 1 ? (
+            <View style={styles.dropLineEnd} />
+          ) : null}
+        </View>
+      </ReorderRow>
     ),
-    [toggle, openTask],
+    [
+      toggle,
+      openTask,
+      sortMode,
+      reorder,
+      holdRow,
+      armReorder,
+      moveReorder,
+      endReorder,
+    ],
   );
+
+  const openSortMenu = () => {
+    sortRef.current?.measureInWindow((x, y, width, height) => {
+      setSortMenu({
+        top: y + height + 4,
+        left: Math.max(x + width - 216, spacing.m),
+      });
+    });
+  };
 
   const openMenu = () => {
     dotsRef.current?.measureInWindow((x, y, width, height) => {
@@ -256,17 +462,25 @@ export default function ListsScreen() {
       {/* The status bar strip takes the header's surface, so the top
           chrome reads as one band instead of a paper gap. */}
       <View style={[styles.statusStrip, { height: insets.top }]} />
-      {menu?.open ? (
+      {menu?.open || sortMenu != null ? (
         // The backdrop sits under the menu card and swallows taps
         // anywhere else, closing the menu.
         <Pressable
           style={styles.menuBackdrop}
-          onPress={closeMenu}
+          onPress={() => {
+            closeMenu();
+            setSortMenu(null);
+          }}
           accessibilityLabel="close menu"
           accessibilityRole="button"
         />
       ) : null}
-      <View style={styles.body} {...swipeProps(tabSwipe)}>
+      <View
+        style={styles.body}
+        // The handlers read refs when the gesture runs, not in render.
+        // eslint-disable-next-line react-hooks/refs
+        {...swipeProps(tabSwipe, { move: moveReorder, up: endReorder })}
+      >
         {/* The list tab bar sits ABOVE the scroller: the page's fixed
             chrome. Sections scroll beneath it, the bar never moves.
             A horizontal swipe on the body walks the tabs. */}
@@ -329,13 +543,21 @@ export default function ListsScreen() {
             ))}
           </ScrollView>
           <View style={styles.tabSpacer} />
-          <IconButton label="sort list">
-            <View style={styles.glyphSort}>
-              <View style={[styles.glyphSortBar, { width: 16 }]} />
-              <View style={[styles.glyphSortBar, { width: 11 }]} />
-              <View style={[styles.glyphSortBar, { width: 6 }]} />
-            </View>
-          </IconButton>
+          <View ref={sortRef}>
+            <IconButton
+              label="sort list"
+              active={sortMenu != null || sortMode !== "due"}
+              onPress={() =>
+                sortMenu == null ? openSortMenu() : setSortMenu(null)
+              }
+            >
+              <View style={styles.glyphSort}>
+                <View style={[styles.glyphSortBar, { width: 16 }]} />
+                <View style={[styles.glyphSortBar, { width: 11 }]} />
+                <View style={[styles.glyphSortBar, { width: 6 }]} />
+              </View>
+            </IconButton>
+          </View>
           <View ref={dotsRef}>
             <IconButton
               label="list menu"
@@ -419,10 +641,50 @@ export default function ListsScreen() {
               <EmptyState label="Nothing on this list yet." />
             )
           }
+          scrollEnabled={reorder == null}
           stickySectionHeadersEnabled={false}
           removeClippedSubviews={false}
         />
       </View>
+      {/* The sort sheet: two orders, the active one checked. My order
+          is what the row drag writes. */}
+      {sortMenu != null ? (
+        <View style={[styles.menu, { top: sortMenu.top, left: sortMenu.left }]}>
+          {(
+            [
+              { key: "due", label: "Due date", hint: "Soonest first" },
+              { key: "manual", label: "My order", hint: "Drag rows to sort" },
+            ] as const
+          ).map((option) => (
+            <Pressable
+              key={option.key}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && styles.menuItemPressed,
+              ]}
+              onPress={() => {
+                setSortMode(option.key);
+                saveSetting("sortMode", option.key);
+                setSortMenu(null);
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: sortMode === option.key }}
+              accessibilityLabel={option.label}
+            >
+              <Text
+                style={[
+                  styles.menuItemText,
+                  sortMode === option.key && styles.menuItemActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+              <Text style={styles.menuItemHint}>{option.hint}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
       {/* The overflow menu, anchored to the dots button. */}
       {menu?.open ? (
         <View style={[styles.menu, { top: menu.top, left: menu.left }]}>
@@ -770,6 +1032,38 @@ const styles = StyleSheet.create({
   },
   menuItemDanger: {
     color: colors.danger,
+  },
+  menuItemActive: {
+    color: colors.accent,
+    fontWeight: "600",
+  },
+  // The reorder: the dragged row dims and the gap it will take draws
+  // as a line, without moving any row.
+  rowLifted: {
+    opacity: 0.45,
+  },
+  dropLine: {
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    top: -1,
+    height: 2,
+    backgroundColor: colors.accent,
+  },
+  dropLineEnd: {
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    bottom: -1,
+    height: 2,
+    backgroundColor: colors.accent,
+  },
+  menuItemHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    marginTop: 1,
   },
 
   // Plain groups: a header on the paper, flush rows beneath.

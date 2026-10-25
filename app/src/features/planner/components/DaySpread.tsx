@@ -9,7 +9,7 @@ import { makeSwipeController, swipeProps } from "../../../lib/swipe";
 import { DropZoneMap } from "../../../lib/dropzone";
 import { startOfDay } from "../../../lib/dates";
 import { drag } from "../../../theme/tokens";
-import type { TaskForm } from "../../../lib/task-form";
+import type { TaskForm } from "../../../lib/settings";
 import {
   hasTime,
   inSourceList,

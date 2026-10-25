@@ -4,7 +4,7 @@ title: My order sort with manual ordering
 created: 2026-10-20
 priority: low
 assignee: omp
-pr:
+pr: 64
 depends: [0010]
 ---
 

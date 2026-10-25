@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { load } from "js-yaml";
+import { serializeValue } from "../../lib/yaml";
 
 const fs = vi.hoisted(() => ({
   read: "",
@@ -29,7 +30,6 @@ import {
   createNote,
   NoteChangedError,
   NoteUnreadableError,
-  serializeValue,
   updateProperty,
   writeNoteIfUnchanged,
 } from "./notes";
