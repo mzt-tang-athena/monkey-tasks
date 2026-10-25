@@ -227,7 +227,9 @@ export default function ListsScreen() {
     }) => (
       <View
         style={[
-          index > 0 ? styles.groupRow : undefined,
+          styles.cardRow,
+          index === 0 && styles.cardFirst,
+          index === section.data.length - 1 && styles.cardLast,
           section.tone === "faint" ? styles.completedRow : undefined,
         ]}
       >
@@ -482,9 +484,12 @@ export default function ListsScreen() {
 
 const keyExtractor = (item: TaskItem) => item.id;
 
-/** The hairline between rows in a group. */
+/**
+ * The hairline between two rows of one card. It starts at the text,
+ * so the card's edge stays clean.
+ */
 function GroupRowSeparator() {
-  return <View style={styles.groupRow} />;
+  return <View style={styles.cardDivider} />;
 }
 
 const toneLabel = (() => {
@@ -778,11 +783,31 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    paddingBottom: spacing.xs,
+    paddingBottom: spacing.s,
   },
-  groupRow: {
+  // One card per group, built from its rows: the sides on every row,
+  // the top and its radii on the first, the bottom on the last.
+  cardRow: {
+    backgroundColor: colors.surface,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+  },
+  cardFirst: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.hairline,
+    borderTopLeftRadius: radius,
+    borderTopRightRadius: radius,
+  },
+  cardLast: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomLeftRadius: radius,
+    borderBottomRightRadius: radius,
+  },
+  // Inset to the text: the row's own padding, the circle, its gap.
+  cardDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.hairline,
+    marginLeft: spacing.m + 22 + spacing.m,
   },
   completedGroup: {
     opacity: 0.55,
