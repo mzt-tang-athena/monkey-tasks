@@ -4,7 +4,7 @@ title: A command checks the whole vault
 created: 2026-10-24
 priority: normal
 assignee: omp
-pr:
+pr: 59
 depends: [0032]
 ---
 
@@ -43,4 +43,22 @@ Out of scope: automatic fixes.
 
 ## Outcome
 
-(filled in before moving to done/)
+`npm run vault:check -- <vault-dir>` walks the vault, prints one line
+per finding with the file and line, and prints a summary. Exit codes:
+0 clean, 1 findings, 2 the path is unreadable.
+
+The schema check runs on the app's three folders. A bare wikilink is
+reported on every note. The parser check compares the app's
+`parseFrontmatter` with `js-yaml` on the app's folders; a bare link is
+reported once, not twice. ADR 0029 records that scope and the trial
+run behind it.
+
+`tsx` joins the app's dev dependencies to run TypeScript under Node,
+and the CLI resolves a relative path against the folder the command
+was typed in. CI lints `src` and `scripts`.
+
+Verified: the real vault is 390 notes and no findings. A temp vault
+with one note of each kind reports two findings and exits 1; a missing
+path exits 2. Seven tests cover the three kinds, the dedupe, the
+hidden-folder skip and the clean case. `tsc` clean, 240 tests in 29
+files, eslint 0 errors, contracts 25 tests, Vale clean.
