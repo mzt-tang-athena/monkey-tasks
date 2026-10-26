@@ -141,6 +141,7 @@ export function DaySpread({
         tasks={tasks}
         source={source}
         taskForm={taskForm}
+        timelineHeight={timelineHeight}
       />
     ),
     children: <BodySlot render={renderBody} />,

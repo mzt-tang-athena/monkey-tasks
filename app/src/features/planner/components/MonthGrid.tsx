@@ -71,6 +71,9 @@ export function MonthGrid({
     return iso;
   }, [tasks, viewMonth]);
 
+  // Six rows, always: a month that needs five pads with trailing
+  // blanks, so the card is the same height every month and the pane
+  // below never jumps when the month changes.
   const cells: (Date | null)[] = [
     ...Array.from({ length: lead }, () => null),
     ...Array.from(
@@ -78,6 +81,9 @@ export function MonthGrid({
       (_, index) => new Date(year, monthIdx, index + 1),
     ),
   ];
+  while (cells.length < 42) {
+    cells.push(null);
+  }
 
   return (
     <View style={gridStyles.root}>
