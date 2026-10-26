@@ -63,6 +63,15 @@ fills, the check scales in, and an accent wash crosses the row. A
 captured task rises 12 px, fades in over 220 ms, and carries the same
 wash for 600 ms.
 
+Revision after a phone pass. The pager no longer sizes itself: the
+current page sets the height, and the neighbour is drawn beside it out
+of the flow, so the month calendar renders again. The neighbour stays
+mounted through the commit, which removed the day planner's blink. The
+previews render a plain row instead of the live one, so a gesture no
+longer mounts a list of animated rows. A tick reads the store's data
+alone: the optimistic local tick is gone, which removed the double
+state behind the fast tick, untick, tick sequence.
+
 Verified in the browser: the neighbouring list peeks and commits, the
 first list rubber-bands at 0.28 of the travel and returns, the day body
 slides under a still strip, the month title and grid slide while the

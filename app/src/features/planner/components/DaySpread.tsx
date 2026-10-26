@@ -555,6 +555,29 @@ export function DaySpread({
       >
         {paged}
       </View>
+      {/* The drag ghost rides the pointer in root page coordinates. It
+          sits outside the pager, so a slide never carries it and the
+          viewport never clips it. */}
+      {dragging ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.dragGhost,
+            {
+              left: 0,
+              top: 0,
+              transform: [{ translateX: ghostX }, { translateY: ghostY }],
+            },
+          ]}
+        >
+          <View style={styles.dragGhostChip}>
+            <View style={styles.ghostBar} />
+            <Text style={styles.dragGhostText} numberOfLines={1}>
+              {dragging.task.name}
+            </Text>
+          </View>
+        </Animated.View>
+      ) : null}
     </View>
   );
 
@@ -709,29 +732,6 @@ export function DaySpread({
         />
       </View>
 
-      {/* The drag ghost, riding just above the pointer. It carries
-          root page coordinates, but its cell starts below the header,
-          so the cell's offset is taken back out here. */}
-      {dragging ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.dragGhost,
-            {
-              left: 0,
-              top: -bodyTop,
-              transform: [{ translateX: ghostX }, { translateY: ghostY }],
-            },
-          ]}
-        >
-          <View style={styles.dragGhostChip}>
-            <View style={styles.ghostBar} />
-            <Text style={styles.dragGhostText} numberOfLines={1}>
-              {dragging.task.name}
-            </Text>
-          </View>
-        </Animated.View>
-      ) : null}
       </View>
     );
   }
