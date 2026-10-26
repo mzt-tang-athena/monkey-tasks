@@ -31,7 +31,13 @@ vi.mock("react-native", async () => {
   }
 
   const OS = "android";
+  const { AccessibilityInfoStandin, AnimatedStandin, EasingStandin } =
+    await import("../../../test/rn-standin");
   return {
+    AccessibilityInfo: AccessibilityInfoStandin,
+    Animated: AnimatedStandin,
+    Easing: EasingStandin,
+    useWindowDimensions: () => ({ width: 390, height: 800, scale: 1, fontScale: 1 }),
     PanResponder: { create: () => ({ panHandlers: {} }) },
     Platform: { OS, select: (spec: Record<string, unknown>) => spec[OS] },
     Pressable: host("Pressable"),

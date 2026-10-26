@@ -35,9 +35,18 @@ type End = (result: { finished: boolean }) => void;
 /** An animation that ends at once, with or without a callback. */
 const finish = (callback?: End) => callback?.({ finished: true });
 
+/** Curves are identities in node; nothing interpolates here. */
+export const EasingStandin = {
+  bezier: () => (value: number) => value,
+  out: (curve: (value: number) => number) => curve,
+  in: (curve: (value: number) => number) => curve,
+  cubic: (value: number) => value,
+};
+
 export const AnimatedStandin = {
   Value: StandinValue,
   View: host("AnimatedView"),
+  add: (left: unknown) => left,
   timing: () => ({ start: finish }),
   spring: () => ({ start: finish }),
   sequence: () => ({ start: () => {} }),

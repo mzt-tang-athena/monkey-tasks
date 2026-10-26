@@ -1,15 +1,10 @@
-/* eslint-disable react-hooks/refs -- the controller's callbacks read
-the refs when the gesture runs, not during render. */
-import * as React from "react";
 import {
-  Animated,
   PanResponder,
   Platform,
   type GestureResponderEvent,
   type GestureResponderHandlers,
   type PointerEvent,
 } from "react-native";
-import { useReduceMotion } from "./motion";
 
 /**
  * A horizontal swipe tripwire. It arms only when the travel is clearly
@@ -22,10 +17,17 @@ export const swipeThreshold = 80;
 
 /** What the page does with the travel: follow, settle, spring back. */
 export type SwipeMotion = {
-  /** The armed travel so far, in px. Called on every move once armed. */
-  drag?: (dx: number) => void;
-  /** The gesture ended past the threshold. The page settles itself. */
-  release?: (dx: number, dir: "left" | "right") => void;
+  /** The travel so far, in px, once the move is clearly horizontal.
+      The page follows from here, below the commit threshold, so the
+      finger owns the page from the first few pixels. */
+  drag?: (dx: number, dir: "left" | "right") => void;
+  /** The gesture ended. `armed` says whether the travel reached the
+      commit threshold, so a page can spring back or settle. */
+  release?: (
+    dx: number,
+    dir: "left" | "right",
+    armed: boolean,
+  ) => void;
   /** Another gesture took the touch mid swipe: return to rest. */
   cancel?: () => void;
 };
@@ -48,17 +50,14 @@ export function makeSwipeController(
   onSwipe: (dir: "left" | "right") => void,
   motion: SwipeMotion = {},
 ): SwipeController {
-  const straight = 1.6;
   let start: { x: number; y: number } | null = null;
   let claimed = false;
-  let armed: "left" | "right" | null = null;
   let last = 0;
 
   return {
     down(x, y, claimed_ = false) {
       start = { x, y };
       claimed = claimed_;
-      armed = null;
       last = 0;
     },
     move(x, y) {
@@ -67,127 +66,39 @@ export function makeSwipeController(
       }
       const dx = x - start.x;
       const dy = y - start.y;
-      if (
-        armed == null &&
-        Math.abs(dx) >= swipeThreshold &&
-        Math.abs(dx) >= straight * Math.abs(dy)
-      ) {
-        armed = dx < 0 ? "left" : "right";
+      // The page follows as soon as the travel reads as horizontal,
+      // well before the commit threshold. A vertical scroll with a
+      // little sideways drift never moves it.
+      if (!horizontal(dx, dy)) {
+        return;
       }
-      if (armed != null) {
-        last = dx;
-        motion.drag?.(dx);
-      }
+      last = dx;
+      motion.drag?.(dx, dx < 0 ? "left" : "right");
     },
     up() {
-      if (armed != null) {
+      if (start != null && last !== 0) {
+        const dir = last < 0 ? "left" : "right";
+        const armed = Math.abs(last) >= swipeThreshold;
         if (motion.release) {
-          motion.release(last, armed);
-        } else {
-          onSwipe(armed);
+          motion.release(last, dir, armed);
+        } else if (armed) {
+          onSwipe(dir);
         }
       }
       start = null;
       claimed = false;
-      armed = null;
       last = 0;
     },
     claim() {
-      if (armed != null) {
+      if (last !== 0) {
         motion.cancel?.();
       }
       claimed = true;
-      armed = null;
       last = 0;
     },
   };
 }
 
-
-/** How long the page takes to settle on the next one. */
-const settleMs = 160;
-
-export type SwipeSlide = {
-  /** The horizontal offset, applied as a translateX. */
-  offset: Animated.Value;
-  /** The controller to hand to `swipeProps`. */
-  controller: SwipeController;
-};
-
-/**
- * A page that follows the finger. The offset resets when `key`
- * changes, before paint, so the next page appears in place instead of
- * flashing the old one.
- */
-export function useSwipeSlide(
-  key: string,
-  onSwipe: (dir: "left" | "right") => void,
-  width: number,
-): SwipeSlide {
-  const reduced = useReduceMotion();
-  const [offset] = React.useState(() => new Animated.Value(0));
-  const swipeRef = React.useRef(onSwipe);
-  const widthRef = React.useRef(width);
-  const reducedRef = React.useRef(reduced);
-  React.useEffect(() => {
-    swipeRef.current = onSwipe;
-    widthRef.current = width;
-    reducedRef.current = reduced;
-  }, [onSwipe, width, reduced]);
-
-  const back = React.useCallback(() => {
-    offset.stopAnimation();
-    if (reducedRef.current) {
-      offset.setValue(0);
-      return;
-    }
-    Animated.spring(offset, {
-      toValue: 0,
-      speed: 20,
-      bounciness: 0,
-      useNativeDriver: Platform.OS !== "web",
-    }).start();
-  }, [offset]);
-
-  const [controller] = React.useState(() =>
-    makeSwipeController((dir) => swipeRef.current(dir), {
-      drag: (dx) => {
-        if (!reducedRef.current) {
-          offset.setValue(dx);
-        }
-      },
-      release: (dx, dir) => {
-        if (reducedRef.current) {
-          offset.setValue(0);
-          swipeRef.current(dir);
-          return;
-        }
-        if (Math.abs(dx) < swipeThreshold) {
-          back();
-          return;
-        }
-        Animated.timing(offset, {
-          toValue: dir === "left" ? -widthRef.current : widthRef.current,
-          duration: settleMs,
-          useNativeDriver: Platform.OS !== "web",
-        }).start(({ finished }) => {
-          if (finished) {
-            swipeRef.current(dir);
-          }
-        });
-      },
-      cancel: back,
-    }),
-  );
-
-  // The next page paints in place: the offset is gone before the frame.
-  React.useLayoutEffect(() => {
-    offset.stopAnimation();
-    offset.setValue(0);
-  }, [key, offset]);
-
-  return { offset, controller };
-}
 
 /** Is this movement a swipe rather than a scroll? */
 function horizontal(dx: number, dy: number): boolean {

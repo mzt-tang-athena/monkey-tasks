@@ -5,16 +5,16 @@ import {
   ScrollView,
   Text,
   View,
-  useWindowDimensions,
   type PointerEvent as RNPointerEvent,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { groupByDue, type TaskItem } from "../../tasks/query";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../../components/TaskRow";
-import { swipeProps, useSwipeSlide } from "../../../lib/swipe";
+import { swipeProps } from "../../../lib/swipe";
+import { useSwipePager } from "../../../components/SwipePager";
 import { DropZoneMap } from "../../../lib/dropzone";
-import { startOfDay } from "../../../lib/dates";
+import { addDays, startOfDay } from "../../../lib/dates";
 import { drag } from "../../../theme/tokens";
 import type { TaskForm } from "../../../lib/settings";
 import {
@@ -30,11 +30,25 @@ import {
 } from "../model";
 import { MONTHS, WEEKDAYS_FULL } from "../lib/labels";
 import { useTouchDragGate, type PendingDrag } from "../hooks/useTouchDragGate";
+import { DayPreview } from "./DayPreview";
 import { Pickup, pointerPickup, type DragApi, type LiftState } from "./drag";
 import { PlannerHeader } from "./PlannerHeader";
 import { TaskListSection } from "./TaskListSection";
 import { Timeline } from "./Timeline";
 import { styles } from "./plannerStyles";
+
+/**
+ * The pager asks for its children when its hook runs, but the day
+ * body's handlers read the controller that same call returns. This
+ * stable slot builds the body one step later, during its own render,
+ * so the body sees a bound controller without remounting the page.
+ */
+function BodySlot({ render }: { render: () => React.ReactNode }) {
+  return <>{render()}</>;
+}
+
+/** The pager's flex slot, directly under the stationary header. */
+const bodyFrame = { flex: 1 } as const;
 
 export function DaySpread({
   date,
@@ -77,9 +91,12 @@ export function DaySpread({
   // The day root's page-space origin: the drag ghost lives inside it
   // but rides page coordinates from the gesture.
   const [rootPos, setRootPos] = React.useState({ x: 0, y: 0 });
-  // The pane's top edge inside the root, measured at layout: the
-  // divider may never travel past it plus a minimum list pane.
-  const [paneTop, setPaneTop] = React.useState(200);
+  // The pane's top edge inside the root: the pager's cell begins
+  // where the body begins, below the stationary header, so the cell's
+  // offset plus the pane's own layout y gives root coordinates.
+  const [bodyTop, setBodyTop] = React.useState(0);
+  const [paneY, setPaneY] = React.useState(200);
+  const paneTop = bodyTop + paneY;
   const [timelineHeight, setTimelineHeight] = React.useState(320);
   // A press waiting to travel: promoted to a drag past the threshold.
   const [pending, setPending] = React.useState<PendingDrag | null>(null);
@@ -109,15 +126,26 @@ export function DaySpread({
   // The day swipe: armed only from a touch that did NOT start on a
   // task row or the grabber. Rows set taskTouched on their own
   // pointerdown, and the root's pointerdown reads it right after,
-  // so a drag start claims the whole gesture. Created once; the
-  // shift callback is a stable functional updater.
+  // so a drag start claims the whole gesture.
   const taskTouched = React.useRef(false);
-  const { width: windowWidth } = useWindowDimensions();
-  const { offset: dayOffset, controller: swipe } = useSwipeSlide(
-    `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`,
-    (dir) => onShiftDay(dir === "left" ? 1 : -1),
-    windowWidth,
-  );
+  // Days are unbounded, so every swipe has a neighbour day to reveal.
+  // Only the body pages: the header above it never moves, and the
+  // current page keeps its identity and its scroll for the gesture.
+  const { controller: swipe, page: paged } = useSwipePager({
+    pageKey: isoOf(date),
+    canGo: () => true,
+    onPage: (dir) => onShiftDay(dir === "left" ? 1 : -1),
+    renderNeighbor: (dir) => (
+      <DayPreview
+        date={addDays(date, dir === "left" ? 1 : -1)}
+        tasks={tasks}
+        source={source}
+        taskForm={taskForm}
+        timelineHeight={timelineHeight}
+      />
+    ),
+    children: <BodySlot render={renderBody} />,
+  });
   const dividerHeight = 28;
   // Ruler rows register under their hour; moves hit-test these
   // rects, since touch capture suppresses enter/leave events. The
@@ -513,9 +541,6 @@ export function DaySpread({
           // would not.
           swipeProps(swipe))}
     >
-      <Animated.View
-        style={[styles.dayPage, { transform: [{ translateX: dayOffset }] }]}
-      >
       <PlannerHeader
         mode="day"
         selected={date}
@@ -523,7 +548,45 @@ export function DaySpread({
         onSelect={onSelectStrip}
         onMode={onMode}
       />
+      {/* The pager sits under the header: only the day body slides,
+          so the date strip and the mode switch never move. */}
+      <View
+        style={bodyFrame}
+        onLayout={(e) => setBodyTop(e.nativeEvent.layout.y)}
+      >
+        {paged}
+      </View>
+      {/* The drag ghost rides the pointer in root page coordinates. It
+          sits outside the pager, so a slide never carries it and the
+          viewport never clips it. */}
+      {dragging ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.dragGhost,
+            {
+              left: 0,
+              top: 0,
+              transform: [{ translateX: ghostX }, { translateY: ghostY }],
+            },
+          ]}
+        >
+          <View style={styles.dragGhostChip}>
+            <View style={styles.ghostBar} />
+            <Text style={styles.dragGhostText} numberOfLines={1}>
+              {dragging.task.name}
+            </Text>
+          </View>
+        </Animated.View>
+      ) : null}
+    </View>
+  );
 
+  // The paged day body: everything below the stationary header, built
+  // as the pager's cell renders so its handlers see the controller.
+  function renderBody() {
+    return (
+      <View style={styles.dayPage}>
       {/* Compact day heading: eyebrow, short serif date, accent rule. */}
       <Text style={styles.dateMonth}>
         {MONTHS[date.getMonth()]} {date.getFullYear()}
@@ -540,7 +603,7 @@ export function DaySpread({
         }}
         style={[styles.pane, { height: timelineHeight }]}
         onLayout={(e) => {
-          setPaneTop(e.nativeEvent.layout.y);
+          setPaneY(e.nativeEvent.layout.y);
         }}
       >
         <Text style={styles.sectionLabel}>Timeline  {timed.length}</Text>
@@ -670,30 +733,10 @@ export function DaySpread({
         />
       </View>
 
-      {/* The drag ghost, riding just above the pointer. */}
-      {dragging ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.dragGhost,
-            {
-              left: 0,
-              top: 0,
-              transform: [{ translateX: ghostX }, { translateY: ghostY }],
-            },
-          ]}
-        >
-          <View style={styles.dragGhostChip}>
-            <View style={styles.ghostBar} />
-            <Text style={styles.dragGhostText} numberOfLines={1}>
-              {dragging.task.name}
-            </Text>
-          </View>
-        </Animated.View>
-      ) : null}
-      </Animated.View>
-    </View>
-  );
+      </View>
+    );
+  }
+
   return dayRoot;
 }
 

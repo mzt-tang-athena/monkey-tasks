@@ -24,9 +24,12 @@ import { ensureSubfolder } from "../features/vault/scan";
 import { loadVaultTasks } from "../features/vault/session";
 import { type BrokenList, type ListItem } from "../features/lists/query";
 import {
+  NoteChangedError,
   createNote,
   deleteNote,
+  readNote,
   updateProperty,
+  writeNote,
   writeNoteIfUnchanged,
 } from "../features/vault/notes";
 import { type TaskItem } from "../features/tasks/query";
@@ -46,6 +49,7 @@ import {
   type CaptureTarget,
 } from "../features/capture/write";
 import type { ParsedCapture } from "../features/capture/parse";
+import { taskFromText } from "../features/tasks/query";
 import { makeQueryClient } from "./query-client";
 import {
   StoreMetaContext,
@@ -359,6 +363,35 @@ function TaskStore({ children }: { children: React.ReactNode }) {
     [queueWork],
   );
 
+  /**
+   * Apply a frontmatter patch to a note, even when the note moved on
+   * since this row was read. A tap that raced an earlier write of the
+   * same note would otherwise fail with a conflict and roll back, so
+   * the work re-reads the file and applies the same patch to what is
+   * there. The queue owns the note while it runs.
+   */
+  const queuePatch = React.useCallback(
+    (base: TaskItem, patch: Partial<TaskFrontmatter>): Promise<TaskItem> =>
+      queueWork(base.uri, async () => {
+        const first = applyPatch(base, patch);
+        try {
+          await writeNoteIfUnchanged(base.uri, base.text, first.text);
+          return first;
+        } catch (error) {
+          if (!(error instanceof NoteChangedError)) {
+            throw error;
+          }
+          const fresh = await readNote(base.uri);
+          // The file may hold an edit we never saw: parse it, then add
+          // this patch on top, so the row and the note agree.
+          const retried = applyPatch(taskFromText(base, fresh), patch);
+          await writeNote(base.uri, retried.text);
+          return retried;
+        }
+      }),
+    [queueWork],
+  );
+
   // A failure the screen can shrug off: the message is cleared by the
   // banner's dismiss, not by the next render.
   const clearError = React.useCallback(() => {
@@ -623,7 +656,10 @@ function TaskStore({ children }: { children: React.ReactNode }) {
 
       patchOne(current.uri, () => updated);
       try {
-        await queueWrite(current.uri, current.text, updated.text);
+        const written = await queuePatch(current, {
+          completed: ticking ? todayIso() : null,
+        });
+        patchOne(current.uri, () => written);
         setLastError(null);
       } catch (error) {
         // Roll back only when no later tap has moved the note on; that
@@ -641,7 +677,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       tasksDir,
       applyTasks,
       patchOne,
-      queueWrite,
+      queuePatch,
       spawnNext,
       reopenOccurrence,
     ],
@@ -672,7 +708,8 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       }
       patchOne(current.uri, () => updated);
       try {
-        await queueWrite(current.uri, current.text, updated.text);
+        const written = await queuePatch(current, patch);
+        patchOne(current.uri, () => written);
         setLastError(null);
       } catch (error) {
         patchOne(current.uri, (item) =>
@@ -683,7 +720,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       }
       void syncTaskReminders(current, updated);
     },
-    [rootUri, tasksDir, patchOne, queueWrite],
+    [rootUri, tasksDir, patchOne, queuePatch],
   );
 
   const edit = React.useCallback(
