@@ -1,0 +1,129 @@
+---
+id: 0053
+title: The frontmatter parser reads what YAML reads
+created: 2026-10-26
+priority: high
+assignee:
+pr:
+depends: []
+---
+
+## Spec
+
+The app reads frontmatter with the small parser in the contracts repo
+(`mzt-tang-athena/contracts`, the submodule at `contracts/`). It
+disagrees with YAML in two places, and the app writes a file name rule
+that loses the typed name. All three change what a user sees, and one
+deletes data on save.
+
+### Bug 1: list items at any indent but two spaces vanish
+
+`contracts/packages/schemas/src/frontmatter.ts:25` reads a list item
+only with exactly two spaces before the dash: `/^ {2}- (.*)$/`. YAML
+also accepts no indent, four spaces, or a tab, and hand edits and other
+tools write them. The app's own writer already accepts any indent
+(`app/src/features/vault/notes.ts:156-164`).
+
+Repro: a task note with
+
+```yaml
+lists:
+    - "[[Focus]]"
+```
+
+reads as no lists, so the task leaves its Focus tab with no message.
+Open it in the editor and save any change. The editor seeds its draft
+from the parsed lists (`TaskEditorScreen.tsx:54`), so it saves an
+empty list, and `saveTaskEdit` (`task-editor/save.ts:146-151`) deletes
+the `lists` property. With no indent the save is worse: it removes the
+`lists:` line and leaves the item behind, which breaks the note's
+YAML.
+
+Fix: a line that matches `/^[ \t]*- (.*)$/` is an item of the current
+key when that key has no value on its own line or already holds a
+list. Frontmatter stays flat, as today: a nested key is out of scope.
+
+### Bug 2: a quoted value with an escape does not read back
+
+The app's emitter (`app/src/lib/yaml.ts:46`) quotes with
+`JSON.stringify`, so `"Dune" by Herbert` becomes
+`"\"Dune\" by Herbert"`. The parser (`frontmatter.ts:54-56`) strips
+the outer quotes and keeps the backslashes. The title then reads
+`\"Dune\" by Herbert`, and each save adds more backslashes. The same
+regex also strips a value that opens with one quote and closes with
+the other.
+
+Fix: decode a double-quoted value with YAML's escapes: at least `\\`,
+`\"`, `\/`, `\n`, `\r`, `\t`, `\uXXXX`, `\xXX` and `\UXXXXXXXX`. In a
+single-quoted value, `''` becomes `'` and nothing else changes. Strip
+quotes only when both ends hold the same quote.
+
+### Bug 3: a cleaned file name loses the typed name
+
+ADR 0028 writes `title` when the provider renames a new note, for
+example to `draw (1).md`. It does not cover the app's own cleaning:
+`safeFileName` (`app/src/features/capture/write.ts:39-48`) turns
+`/\:*?"<>|` into spaces and cuts a name at 80 characters. Capture
+types "Pay bill: water", the file is `Pay bill water.md`, and
+`createNote` (`app/src/features/vault/notes.ts:89-93`) writes no title,
+because the provider kept the name it got. The row shows
+"Pay bill: water" until the next read, then "Pay bill water". A rename
+in the editor has the same gap (`task-editor/save.ts:102-104`).
+
+Fix: write `title` when the final file name, without `.md`, differs
+from the name the user typed. Add a dated amendment to ADR 0028 for the
+wider rule. A note that gets a title this way is a titled note, so a
+later rename in the editor changes the title, not the file
+(`save.ts:154-162`).
+
+After ticket 0050 these app files live under `app/src/lib/vault/`.
+After ticket 0051, `createNote` and the rename go through the vault
+adapter. Change the files where they are when you start.
+
+### Repro tests
+
+They are already in `app/src/testing/repro/parser.test.ts`, as
+`it.fails`. Each asserts the behaviour we want, so it passes only while
+the bug is there. A fix turns its test into a plain `it`.
+
+| Bug | Repro test |
+|---|---|
+| 1 | "reads items with no indent", "reads items at four spaces", "reads items after a tab", "keeps a four-space list through an editor save" |
+| 2 | "reads back a title that starts with a quote", "reads back a quoted title that holds a backslash" |
+| 3 | "shows the typed name after the next read" |
+
+### Steps
+
+1. A PR in `mzt-tang-athena/contracts` fixes bugs 1 and 2 in
+   `packages/schemas/src/frontmatter.ts`, with tests in
+   `packages/schemas/test/`. Merge it when its checks pass.
+2. A PR here into `epic/0047-rebuild` moves the `contracts` submodule
+   to that merge commit and flips the bug 1 and bug 2 repro tests.
+3. The same PR, or a second one, fixes bug 3 in the app and flips its
+   repro test.
+
+## Acceptance
+
+- [ ] Each bug had its repro test in `app/src/testing/repro/parser.test.ts`
+      before its fix, as `it.fails`.
+- [ ] Every test in `app/src/testing/repro/parser.test.ts` runs as a
+      plain `it` and passes.
+- [ ] The contracts tests cover list items at no indent, two spaces,
+      four spaces and a tab, and all read `["[[Focus]]"]`.
+- [ ] The contracts tests cover each escape in the bug 2 list and a
+      single-quoted `''`.
+- [ ] A value with a quote at one end only keeps its quote.
+- [ ] Every value `serializeValue` writes reads back unchanged, for a
+      list of tricky titles in an app test.
+- [ ] The `vault:check` tests show no parser disagreement for a note
+      with list items at no indent, four spaces, or a tab.
+- [ ] An editor save on a note with a four-space list keeps the list.
+- [ ] A capture of "Pay bill: water" shows "Pay bill: water" after the
+      next read.
+- [ ] ADR 0028 has a dated amendment for the wider title rule.
+- [ ] The contracts PR is merged, and the submodule points at its
+      merge commit.
+
+## Outcome
+
+(filled in before moving to done/)

@@ -49,3 +49,16 @@ one reviewer would still hold 3,000 lines in their head.
 **A component library.** A third-party kit would replace the app's
 design language. The three primitives the app reuses now live in
 `components/ui`.
+
+## Amendment: 2026-10-26
+
+ADR 0039 changes this layout. A feature now holds UI only: `capture`,
+`diagnostics`, `lists`, `planner` and `task-editor`. The task data
+leaves `features`. The store and the code that reads the vault into it
+move to `src/stores/tasks`. The vault access moves to `src/lib/vault`.
+Shared types move to `src/types`, and pure helpers move to `src/utils`.
+
+A route re-exports its screen, or it composes features in a few lines.
+Only `src/app` composes features. Inside a feature, `components/`,
+`hooks/`, `lib/` and `model.ts` keep the roles this ADR gave them. File
+names use kebab-case.

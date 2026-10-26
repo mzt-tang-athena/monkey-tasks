@@ -35,3 +35,10 @@ The root layout was missing `GestureHandlerRootView`, so `GestureDetector`
 never received touches on Android. The root layout now wraps the app in
 `GestureHandlerRootView` with `flex: 1`.
 
+## Amendment, 2026-10-26: one gesture path
+
+ADR 0036 retires the browser's pointer path. The browser now runs the
+same gesture handler gestures as the phone. Gesture handler's web build
+captures the pointer, so a release outside the view still ends the
+gesture. The library choice stands. The API moves from the `Gesture`
+builder to the version 3 hooks, such as `usePanGesture`.

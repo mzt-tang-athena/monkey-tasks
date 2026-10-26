@@ -48,3 +48,18 @@ hide the jump.
 **Reorder once, at the drop, and let the rows snap.** No animation at
 all. The drop looked broken and the user could not tell where the row
 would land.
+
+## Amendment, 2026-10-26: the slide runs on the UI thread
+
+The decision stands. The list keeps its order while a finger is down,
+and the corner radii follow the slot a row heads to. The offsets, the
+radii and the slot move into shared values (ADR 0036), so a crossing
+writes no React state.
+
+The drop is the one place where work crosses from the UI thread to a
+React commit. Ticket 0060 tries two ways on a phone and adds a dated
+note here with the result.
+
+The first version missed one reset. A drop that read a stale slot equal
+to its start skipped the reset, and the rows stayed offset until the
+next drag.

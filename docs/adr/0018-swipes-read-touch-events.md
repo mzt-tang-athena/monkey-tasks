@@ -1,6 +1,6 @@
 # 0018. Swipes read touch events
 
-- **Status:** accepted
+- **Status:** superseded by 0036
 - **Date:** 2026-10-22
 
 ## Context
@@ -74,3 +74,22 @@ reserves the same gesture on web.
 The root layout installs a global error handler. A release build closes
 on the first uncaught error, and a closed app reports nothing. The
 handler shows the message and the first frames of the stack instead.
+
+## Amendment, 2026-10-26: superseded by 0036
+
+ADR 0036 replaces the tripwire with a gesture handler pan on the UI
+thread. The premise above does not hold. On Android the gesture
+handler's root view hands every touch to its orchestrator before the
+view tree sees it. It cancels a JS callback gesture only when a native
+view calls `requestDisallowInterceptTouchEvent`, and a vertical
+scroller makes that call only when it starts to scroll. A horizontal
+pan on the parent of a list does see the moves.
+
+The pan this ADR replaced failed for other reasons. It had no
+`runOnJS(true)` and set React state inside a worklet, which ADR 0019
+found throws. Its `failOffsetY` of 24 against an `activeOffsetX` of 80
+also failed most thumb swipes.
+
+The responder version had a fault of its own: a terminated or
+cancelled gesture counted as a release, so a cancel could change the
+page. Ticket 0059 removes it.

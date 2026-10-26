@@ -1,6 +1,6 @@
 # 0023. The vault read is a query
 
-- **Status:** accepted
+- **Status:** accepted, write path superseded by 0037
 - **Date:** 2026-10-23
 
 ## Context
@@ -45,3 +45,20 @@ second vault, a sync backend) would extend it by hand.
 **React Query for writes too.** Mutations would wrap the same functions.
 The queue and the provisional row would still be ours, so it would add a
 layer without removing work.
+
+## Amendment, 2026-10-26
+
+ADR 0037 supersedes the write path of this decision. The read part
+stands: TanStack Query owns the read, nothing goes stale on a timer,
+and AppState drives the focus refetch.
+
+These parts no longer hold. A mutation does not keep a queue per note.
+Every vault write is a `useMutation` hook in one scope. The read still
+waits for writes, but it reads that from the mutation cache, not from a
+counter. We rejected "React Query for writes too" here because the
+queue would stay ours. A mutation scope replaces the queue, so ADR 0037
+takes that path.
+
+ADR 0037 also puts the read behind a vault adapter. On the web the
+query reads the memory adapter, so the browser preview runs the same
+query as the phone.

@@ -78,3 +78,10 @@ slides under a still strip, the month title and grid slide while the
 pane below stays, the tick holds then regroups, the capture rises and
 washes, and with reduced motion emulated the page does not travel while
 the release still commits.
+
+## Note, 2026-10-26
+
+The phone pass this ticket kept open moves into ticket 0059: the
+list's vertical shift on landing, and the day and month flicker at the
+commit. Both come from the pager's commit, which ADR 0036 and ticket
+0059 rebuild. Nothing else remains open here.

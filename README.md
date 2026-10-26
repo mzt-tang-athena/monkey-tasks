@@ -89,7 +89,7 @@ bundle, with the host name the phone can reach (a LAN address, or a
 Tailscale address when the phone is off the local network):
 
 ```bash
-REACT_NATIVE_PACKAGER_HOSTNAME=100.124.248.125 npx expo start --dev-client --lan
+REACT_NATIVE_PACKAGER_HOSTNAME=<tailscale-ip> npx expo start --dev-client --lan
 ```
 
 The dev client opens the URL the CLI prints. A JavaScript change reloads
@@ -135,16 +135,17 @@ as a bare RRULE value and expands it with `rrule`.
 
 ## Next
 
-The bug queue is clear. Open feature tickets, in the order they are
-likely to land:
+Ticket 0047 is the current work: a refactor to the Bulletproof React
+layout, a data layer built on mutations, and a motion rebuild on the UI
+thread. It lands on the `epic/0047-rebuild` branch through child tickets
+0048 to 0063 (ADR 0035). New feature work waits until it merges.
 
-- 0010 a list tab bar
-- 0012 planner week and month polish
-- 0013 a task editor and a note viewer
-- 0014 a my-order sort
-- 0017 a drag-to-schedule tray
+Open feature tickets after that:
+
 - 0018 a keep-style notes board
-- 0003, 0005, 0008, 0017 and 0018 carry the larger ideas.
+- 0039 home screen widgets
+- 0065 the list menu actions
+- 0003, 0005 and 0008 carry the larger ideas.
 
 The app has two tabs: Lists and Planner. The Lists tab shows Focus and
 Main. Main is the catch-all: every task that is not on Focus, including
