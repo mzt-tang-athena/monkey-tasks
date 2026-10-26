@@ -337,6 +337,10 @@ export const styles = StyleSheet.create({
   },
 
   // day split: fixed header over two panes, sized by the grabber
+  // The day page: the swipe slides it sideways inside the root.
+  dayPage: {
+    flex: 1,
+  },
   dayRoot: {
     flex: 1,
     width: "100%" as const,

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,7 +21,7 @@ import {
   moveItem,
   reorderItems,
 } from "../../features/lists/reorder";
-import { makeSwipeController, swipeProps } from "../../lib/swipe";
+import { swipeProps, useSwipeSlide } from "../../lib/swipe";
 import { loadSettings, saveSetting, type SortMode } from "../../lib/settings";
 import { BottomBar } from "../../components/BottomBar";
 import { useStoreMeta, useTaskList } from "../../store/task-state";
@@ -96,8 +97,10 @@ export default function ListsScreen() {
   // bar's order. Touch events, not a gesture handler, because a
   // handler on the parent of a scrolling list never sees the moves on
   // Android.
-  const [tabSwipe] = React.useState(() =>
-    makeSwipeController((dir) => {
+  const { width: windowWidth } = useWindowDimensions();
+  const { offset: tabOffset, controller: tabSwipe } = useSwipeSlide(
+    tab,
+    (dir) => {
       setTab((current) => {
         const names = tabsRef.current;
         const index = names.indexOf(current);
@@ -107,7 +110,8 @@ export default function ListsScreen() {
         const next = dir === "left" ? index + 1 : index - 1;
         return names[next] ?? current;
       });
-    }),
+    },
+    windowWidth,
   );
 
   // A tab that is off screen would hide the current view's name, so
@@ -788,6 +792,9 @@ export default function ListsScreen() {
             </View>
           </View>
         ) : null}
+        <Animated.View
+          style={[styles.page, { transform: [{ translateX: tabOffset }] }]}
+        >
         <SectionList<TaskItem, ListsSection>
           contentContainerStyle={styles.content}
           onRefresh={reload}
@@ -818,6 +825,7 @@ export default function ListsScreen() {
           stickySectionHeadersEnabled={false}
           removeClippedSubviews={false}
         />
+        </Animated.View>
       </View>
       {/* The dragged row rides the pointer while the list reflows
           under it. Its slot stays empty, so the gap is the drop. */}
@@ -975,6 +983,10 @@ const styles = StyleSheet.create({
   },
   statusStrip: {
     backgroundColor: colors.surface,
+  },
+  // The list page: the swipe slides it sideways under the tab bar.
+  page: {
+    flex: 1,
   },
   body: {
     flex: 1,

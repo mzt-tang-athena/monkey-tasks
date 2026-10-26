@@ -1,7 +1,15 @@
 import * as React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Animated,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import type { TaskItem } from "../features/tasks/query";
 import { parseStoredDate } from "../lib/dates";
+import { useReduceMotion, useRise } from "../lib/motion";
 import { taskIsDone } from "@monkey-tasks/schemas";
 import { colors, fonts, spacing, radii } from "../theme/tokens";
 
@@ -20,19 +28,63 @@ function TaskRowBase({
 }) {
   const [hot, setHot] = React.useState(false);
   const done = task.data != null && taskIsDone(task.data);
+  // The tick shows at once, before the note is written. The local
+  // value stands in for `done` until the write lands and the data
+  // agrees with it.
+  const [tick, setTick] = React.useState<boolean | null>(null);
+  // Once the note agrees, the local value has nothing left to say. The
+  // adjustment happens during render, so the row never paints a stale
+  // tick after the write lands.
+  if (tick != null && tick === done) {
+    setTick(null);
+  }
+  const shown = tick ?? done;
+  const reduced = useReduceMotion();
+  const [pop] = React.useState(() => new Animated.Value(1));
+  const [fade] = React.useState(() => new Animated.Value(1));
+
+  // A row created moments ago rises in: a capture lands where it will
+  // live instead of appearing under the finger.
+  const rise = useRise(task.data?.created);
+
+  const press = () => {
+    if (onToggle == null) {
+      return;
+    }
+    const next = !shown;
+    setTick(next);
+    if (reduced) {
+      pop.setValue(1);
+      fade.setValue(next ? completedWeight : 1);
+    } else {
+      pop.setValue(0.86);
+      Animated.spring(pop, {
+        toValue: 1,
+        speed: 24,
+        bounciness: 6,
+        useNativeDriver: Platform.OS !== "web",
+      }).start();
+      Animated.timing(fade, {
+        toValue: next ? completedWeight : 1,
+        duration: 120,
+        useNativeDriver: Platform.OS !== "web",
+      }).start();
+    }
+    onToggle(task);
+  };
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
   const overdue =
-    !done && due != null && due.date.getTime() < startOfToday();
+    !shown && due != null && due.date.getTime() < startOfToday();
   const recurring = task.data?.recurrence != null && task.data.recurrence !== "";
   const disabled = onToggle == null;
 
   const body = (
     <>
-      <Text style={[styles.name, done && styles.nameDone]} numberOfLines={2}>
+      <Text style={[styles.name, shown && styles.nameDone]} numberOfLines={2}>
         {task.name}
       </Text>
       <View style={styles.metaRow}>
-        {timeAlign === "under" && due?.hasTime && !done ? (
+        {timeAlign === "under" && due?.hasTime && !shown ? (
           <Text style={[styles.time, overdue && styles.overdueText]}>
             {formatTime(due.date)}
           </Text>
@@ -49,8 +101,21 @@ function TaskRowBase({
   );
 
   return (
-    <View style={styles.row}>
-      {timeAlign === "right" && due?.hasTime && !done ? (
+    <Animated.View
+      style={{
+        opacity: rise,
+        transform: [
+          {
+            translateY: rise.interpolate({
+              inputRange: [0, 1],
+              outputRange: [8, 0],
+            }),
+          },
+        ],
+      }}
+    >
+    <Animated.View style={[styles.row, { opacity: fade }]}>
+      {timeAlign === "right" && due?.hasTime && !shown ? (
         <Text style={[styles.gutterTime, overdue && styles.overdueText]}>
           {formatTime(due.date)}
         </Text>
@@ -59,24 +124,26 @@ function TaskRowBase({
           text line: 24pt circle on a 24pt line box, so wrapped lines
           flow beneath without moving it (Google Tasks' rule). The
           body beside it opens the task when the caller wants that. */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.circle,
-          done && styles.circleDone,
-          (hot || pressed) && !done && styles.circleHot,
-          pressed && done && styles.circlePressedDone,
-        ]}
-        onPress={onToggle ? () => onToggle(task) : undefined}
-        disabled={disabled}
-        hitSlop={11}
-        onHoverIn={() => setHot(true)}
-        onHoverOut={() => setHot(false)}
-        accessibilityLabel={done ? "mark not done" : "mark done"}
-        accessibilityRole="button"
-        accessibilityState={{ checked: done }}
-      >
-        {done ? <Text style={styles.check}>{"✓"}</Text> : null}
-      </Pressable>
+      <Animated.View style={{ transform: [{ scale: pop }] }}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.circle,
+            shown && styles.circleDone,
+            (hot || pressed) && !shown && styles.circleHot,
+            pressed && shown && styles.circlePressedDone,
+          ]}
+          onPress={press}
+          disabled={disabled}
+          hitSlop={11}
+          onHoverIn={() => setHot(true)}
+          onHoverOut={() => setHot(false)}
+          accessibilityLabel={shown ? "mark not done" : "mark done"}
+          accessibilityRole="button"
+          accessibilityState={{ checked: shown }}
+        >
+          {shown ? <Text style={styles.check}>{"✓"}</Text> : null}
+        </Pressable>
+      </Animated.View>
 
       {onOpen == null ? (
         <View style={styles.textBlock}>{body}</View>
@@ -93,9 +160,13 @@ function TaskRowBase({
           {body}
         </Pressable>
       )}
-    </View>
+    </Animated.View>
+    </Animated.View>
   );
 }
+
+/** How dim a row goes while its tick is being written. */
+const completedWeight = 0.55;
 
 function startOfToday(): number {
   const now = new Date();

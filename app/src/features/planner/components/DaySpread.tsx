@@ -5,13 +5,14 @@ import {
   ScrollView,
   Text,
   View,
+  useWindowDimensions,
   type PointerEvent as RNPointerEvent,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { groupByDue, type TaskItem } from "../../tasks/query";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "../../../components/TaskRow";
-import { makeSwipeController, swipeProps } from "../../../lib/swipe";
+import { swipeProps, useSwipeSlide } from "../../../lib/swipe";
 import { DropZoneMap } from "../../../lib/dropzone";
 import { startOfDay } from "../../../lib/dates";
 import { drag } from "../../../theme/tokens";
@@ -111,8 +112,11 @@ export function DaySpread({
   // so a drag start claims the whole gesture. Created once; the
   // shift callback is a stable functional updater.
   const taskTouched = React.useRef(false);
-  const [swipe] = React.useState(() =>
-    makeSwipeController((dir) => onShiftDay(dir === "left" ? 1 : -1)),
+  const { width: windowWidth } = useWindowDimensions();
+  const { offset: dayOffset, controller: swipe } = useSwipeSlide(
+    `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`,
+    (dir) => onShiftDay(dir === "left" ? 1 : -1),
+    windowWidth,
   );
   const dividerHeight = 28;
   // Ruler rows register under their hour; moves hit-test these
@@ -509,6 +513,9 @@ export function DaySpread({
           // would not.
           swipeProps(swipe))}
     >
+      <Animated.View
+        style={[styles.dayPage, { transform: [{ translateX: dayOffset }] }]}
+      >
       <PlannerHeader
         mode="day"
         selected={date}
@@ -684,6 +691,7 @@ export function DaySpread({
           </View>
         </Animated.View>
       ) : null}
+      </Animated.View>
     </View>
   );
   return dayRoot;
