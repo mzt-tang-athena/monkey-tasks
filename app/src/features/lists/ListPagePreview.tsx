@@ -1,6 +1,6 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { TaskRow } from "../../components/TaskRow";
+import { PreviewRow } from "../../components/PreviewRow";
 import type { SortMode } from "../../lib/settings";
 import {
   useTabTasks,
@@ -92,7 +92,10 @@ export function ListPagePreview({
               >
                 {index > 0 ? <View style={styles.cardDivider} /> : null}
                 <View style={styles.rowMain}>
-                  <TaskRow task={task} />
+                  <PreviewRow
+                    task={task}
+                    done={task.data?.completed != null}
+                  />
                 </View>
               </View>
             ))}

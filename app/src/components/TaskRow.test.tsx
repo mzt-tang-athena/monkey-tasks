@@ -109,52 +109,49 @@ describe("TaskRow", () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the check before the write lands", async () => {
-    // The task's data is untouched here: this is the moment between
-    // the tap and the note being written.
+  it("shows the check as soon as the data says done", async () => {
+    // The store is optimistic: it flips the row's data in the same
+    // frame as the tap, so the row reads the data and nothing else.
     const item = task("Buy milk");
     const renderer = await mount(item, { onToggle: vi.fn() });
+    expect(pressable(renderer, "mark done")).toBeTruthy();
 
-    act(() => {
-      pressable(renderer, "mark done").props.onPress();
+    const data = {
+      kind: "[[tasks]]" as const,
+      created: "2026-10-20",
+      ...item.data,
+      completed: "2026-10-25T10:00:00",
+    };
+    await act(async () => {
+      renderer.update(<TaskRow task={{ ...item, data }} onToggle={vi.fn()} />);
     });
 
-    const circle = pressable(renderer, "mark not done");
-    expect(circle.props.accessibilityState).toEqual({ checked: true });
+    expect(pressable(renderer, "mark not done").props.accessibilityState).toEqual(
+      { checked: true },
+    );
     const glyphs = renderer.root
       .findAll((node) => (node.type as unknown) === "Text")
       .map((node) => node.props.children);
     expect(glyphs).toContain("✓");
   });
 
-  it("lets the data win again once it agrees", async () => {
+  it("returns to an empty circle when the data says not done", async () => {
     const item = task("Buy milk");
-    const renderer = await mount(item, { onToggle: vi.fn() });
-    const withDone = (done: boolean) => {
-      const data = {
-        kind: "[[tasks]]" as const,
-        created: "2026-10-20",
-        ...item.data,
-        completed: done ? "2026-10-25T10:00:00" : undefined,
-      };
-      return <TaskRow task={{ ...item, data }} onToggle={vi.fn()} />;
+    const done = {
+      kind: "[[tasks]]" as const,
+      created: "2026-10-20",
+      ...item.data,
+      completed: "2026-10-25T10:00:00",
     };
-
-    act(() => {
-      pressable(renderer, "mark done").props.onPress();
-    });
-
-    // The write lands: the local tick has nothing left to say.
-    await act(async () => {
-      renderer.update(withDone(true));
-    });
+    const renderer = await mount({ ...item, data: done }, { onToggle: vi.fn() });
     expect(pressable(renderer, "mark not done")).toBeTruthy();
 
-    // A later change from the vault is shown, not shadowed by a stale
-    // local tick.
+    const data = { ...done, completed: undefined };
     await act(async () => {
-      renderer.update(withDone(false));
+      renderer.update(<TaskRow task={{ ...item, data }} onToggle={vi.fn()} />);
     });
+
     expect(pressable(renderer, "mark done")).toBeTruthy();
   });
+
 });

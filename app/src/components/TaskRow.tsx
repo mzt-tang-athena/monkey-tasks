@@ -27,18 +27,10 @@ function TaskRowBase({
   timeAlign?: "under" | "right";
 }) {
   const [hot, setHot] = React.useState(false);
+  // The store is optimistic: a tap flips this row's data in the same
+  // frame. The row reads that data and nothing else, so a fast tick,
+  // untick, tick sequence has one source of truth.
   const done = task.data != null && taskIsDone(task.data);
-  // The tick shows at once, before the note is written. The local
-  // value stands in for `done` until the write lands and the data
-  // agrees with it.
-  const [tick, setTick] = React.useState<boolean | null>(null);
-  // Once the note agrees, the local value has nothing left to say. The
-  // adjustment happens during render, so the row never paints a stale
-  // tick after the write lands.
-  if (tick != null && tick === done) {
-    setTick(null);
-  }
-  const shown = tick ?? done;
   const reduced = useReduceMotion();
 
   // The tick is an acknowledgement, not a colour change: the circle
@@ -73,7 +65,7 @@ function TaskRowBase({
       played.current = true;
       return;
     }
-    if (reduced || !shown) {
+    if (reduced || !done) {
       settle(pop, 1);
       settle(glyph, 1);
       settle(wash, 0);
@@ -82,7 +74,7 @@ function TaskRowBase({
     play(pop, 1, 120);
     play(glyph, 1, 120);
     play(wash, 0, 320);
-  }, [shown, reduced, pop, glyph, wash]);
+  }, [done, reduced, pop, glyph, wash]);
 
   // A captured task lands with a visible rise and the same wash, so
   // the new row is seen arriving rather than found in the list.
@@ -104,11 +96,10 @@ function TaskRowBase({
     if (onToggle == null) {
       return;
     }
-    const next = !shown;
-    setTick(next);
-    // The press puts the values where the animation starts, so the
-    // first frame of the tick never shows the end state; the effect
-    // above then plays them out, or stops here when motion is reduced.
+    // The press puts the values where the animation starts, before the
+    // data flips, so the first frame of the tick never shows the end
+    // state. The effect above then plays them out.
+    const next = !done;
     settle(pop, next && !reduced ? 0.9 : 1);
     settle(glyph, next && !reduced ? 0.6 : 1);
     settle(wash, next && !reduced ? 0.9 : 0);
@@ -116,17 +107,17 @@ function TaskRowBase({
   };
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
   const overdue =
-    !shown && due != null && due.date.getTime() < startOfToday();
+    !done && due != null && due.date.getTime() < startOfToday();
   const recurring = task.data?.recurrence != null && task.data.recurrence !== "";
   const disabled = onToggle == null;
 
   const body = (
     <>
-      <Text style={[styles.name, shown && styles.nameDone]} numberOfLines={2}>
+      <Text style={[styles.name, done && styles.nameDone]} numberOfLines={2}>
         {task.name}
       </Text>
       <View style={styles.metaRow}>
-        {timeAlign === "under" && due?.hasTime && !shown ? (
+        {timeAlign === "under" && due?.hasTime && !done ? (
           <Text style={[styles.time, overdue && styles.overdueText]}>
             {formatTime(due.date)}
           </Text>
@@ -164,7 +155,7 @@ function TaskRowBase({
         style={[styles.wash, { opacity: wash }]}
       />
       <View style={styles.row}>
-        {timeAlign === "right" && due?.hasTime && !shown ? (
+        {timeAlign === "right" && due?.hasTime && !done ? (
           <Text style={[styles.gutterTime, overdue && styles.overdueText]}>
             {formatTime(due.date)}
           </Text>
@@ -177,22 +168,22 @@ function TaskRowBase({
           <Pressable
             style={({ pressed }) => [
               styles.circle,
-              shown && styles.circleDone,
-              (hot || pressed) && !shown && styles.circleHot,
-              pressed && shown && styles.circlePressedDone,
+              done && styles.circleDone,
+              (hot || pressed) && !done && styles.circleHot,
+              pressed && done && styles.circlePressedDone,
             ]}
             onPress={press}
             disabled={disabled}
             hitSlop={11}
             onHoverIn={() => setHot(true)}
             onHoverOut={() => setHot(false)}
-            accessibilityLabel={shown ? "mark not done" : "mark done"}
+            accessibilityLabel={done ? "mark not done" : "mark done"}
             accessibilityRole="button"
-            accessibilityState={{ checked: shown }}
+            accessibilityState={{ checked: done }}
           >
             {/* The glyph travels on its own, so it lands on a circle
                 that is already filling rather than riding it. */}
-            {shown ? (
+            {done ? (
               <Animated.View style={{ transform: [{ scale: glyph }] }}>
                 <Text style={styles.check}>{"✓"}</Text>
               </Animated.View>

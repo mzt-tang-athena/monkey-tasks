@@ -69,3 +69,17 @@ slides into blankness and the ends land on an empty page.
 **Rubber-band into the neighbour on release.** The page follows the
 finger, then snaps the rest of the way. It was not tried; the preview
 cell already reads as arrival, so the settle is short.
+
+## Amendment: 2026-10-25
+
+The neighbour cell is now drawn out of the layout flow, absolutely,
+beside the current page, and the pager has no fixed size of its own.
+The first version put three cells in a row and let the viewport fill
+its parent. That made the pager collapse inside an auto-height parent,
+and the month calendar vanished on the phone. Now the current page
+alone sets the height, and the pager grows with it.
+
+The neighbour also stays mounted through the commit instead of
+disappearing with the old page key. Without it, the settling frame
+showed an empty cell, and the day planner blinked. It is dropped one
+frame after the commit, once the reset has painted.

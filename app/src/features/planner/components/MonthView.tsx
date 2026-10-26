@@ -43,10 +43,6 @@ export function MonthView({
 }) {
   const year = viewMonth.getFullYear();
   const monthIdx = viewMonth.getMonth();
-  // The pager's viewport fills its box, so the fixed half has to state
-  // its own height. The grid reports it: every month's row count
-  // differs, and the arithmetic lives in the styles, not here.
-  const [gridHeight, setGridHeight] = React.useState(0);
   const monthKey = `${year}-${monthIdx}`;
 
   const { controller, page } = useSwipePager({
@@ -76,17 +72,13 @@ export function MonthView({
         dropZones={dropZones}
         dragActive={dragActive}
         hoveredDay={hoveredDay}
-        onMeasure={setGridHeight}
       />
     ),
   });
 
   return (
     <View style={styles.monthColumn}>
-      <View
-        style={[styles.monthFixed, gridHeight > 0 && { height: gridHeight }]}
-        {...swipeProps(controller)}
-      >
+      <View style={styles.monthFixed} {...swipeProps(controller)}>
         {page}
       </View>
       {children}

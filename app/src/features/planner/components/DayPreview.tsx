@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "../../tasks/query";
-import { TaskRow } from "../../../components/TaskRow";
+import { PreviewRow } from "../../../components/PreviewRow";
 import type { TaskForm } from "../../../lib/settings";
 import { spacing } from "../../../theme/tokens";
 import { labelHour, MONTHS, WEEKDAYS_FULL } from "../lib/labels";
@@ -69,7 +69,10 @@ export function DayPreview({
           rows.map((task, index) => (
             <View key={task.id}>
               {index > 0 ? <View style={base.groupRow} /> : null}
-              <TaskRow task={task} />
+              <PreviewRow
+                task={task}
+                done={task.data?.completed != null}
+              />
             </View>
           ))
         )}

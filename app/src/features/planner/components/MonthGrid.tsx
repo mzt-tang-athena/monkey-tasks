@@ -28,7 +28,6 @@ export function MonthGrid({
   dropZones,
   dragActive = false,
   hoveredDay = null,
-  onMeasure,
 }: {
   viewMonth: Date;
   tasks: TaskItem[];
@@ -44,9 +43,6 @@ export function MonthGrid({
   dropZones?: DropZoneMap;
   dragActive?: boolean;
   hoveredDay?: Date | null;
-  /** The grid's own height, so the month's fixed half can hold the
-      pager without clipping it. */
-  onMeasure?: (height: number) => void;
 }) {
   const year = viewMonth.getFullYear();
   const monthIdx = viewMonth.getMonth();
@@ -84,14 +80,7 @@ export function MonthGrid({
   ];
 
   return (
-    <View
-      style={gridStyles.root}
-      onLayout={
-        onMeasure
-          ? (event) => onMeasure(event.nativeEvent.layout.height)
-          : undefined
-      }
-    >
+    <View style={gridStyles.root}>
       <Text style={styles.monthTitle}>
         {MONTHS[monthIdx]} {year}
       </Text>

@@ -10,10 +10,7 @@ import {
   type LayoutChangeEvent,
 } from "react-native";
 import { easeOut, useReduceMotion } from "../lib/motion";
-import {
-  makeSwipeController,
-  type SwipeController,
-} from "../lib/swipe";
+import { makeSwipeController, type SwipeController } from "../lib/swipe";
 
 /** How far a page follows when there is no neighbour, in px. */
 const rubberMax = 48;
@@ -32,7 +29,8 @@ export type SwipePagerOptions = {
   /** Commit the page change. `pageKey` must change with it. */
   onPage: (dir: PagerSide) => void;
   /** The neighbour page, mounted only while a finger travels toward
-      it. It sits in a fixed cell, so the current page never remounts. */
+      it. It sits beside the current page, out of the layout flow, so
+      the current page alone sets the height. */
   renderNeighbor: (dir: PagerSide) => React.ReactNode;
   /** The current page. */
   children: React.ReactNode;
@@ -47,10 +45,11 @@ export type SwipePager = {
 
 /**
  * A horizontal pager that shows the page beside the current one. The
- * track holds three fixed cells, previous, current, next, so the
- * current page keeps its identity and its scroll position for the
- * whole gesture. Only the neighbour the finger travels toward is
- * mounted, and only while it travels.
+ * current page sits in the flow and keeps its identity, its height,
+ * and its scroll for the whole gesture; the neighbour is drawn beside
+ * it, absolutely, so it never changes the layout. On commit the
+ * neighbour stays mounted until the page key has changed, so the
+ * settling frame shows the neighbour rather than an empty cell.
  */
 export function useSwipePager({
   pageKey,
@@ -61,22 +60,14 @@ export function useSwipePager({
 }: SwipePagerOptions): SwipePager {
   const reduced = useReduceMotion();
   const [offset] = React.useState(() => new Animated.Value(0));
-  // The neighbour remembers which page it belongs to. A commit changes
-  // the key, so the neighbour is gone in the same render, with no
-  // effect and no frame of the old page.
   const [neighbor, setNeighbor] = React.useState<{
     dir: PagerSide;
     key: string;
   } | null>(null);
-  const side = neighbor != null && neighbor.key === pageKey ? neighbor.dir : null;
-  // The window width seeds the first frame, so the current page is
-  // never painted into a zero-width viewport. The viewport's own
-  // measurement replaces it before a finger can arrive.
-  const { width: windowWidth } = useWindowDimensions();
-  const [width, setWidth] = React.useState(windowWidth);
+  const [width, setWidth] = React.useState(useWindowDimensions().width);
   const pageKeyRef = React.useRef(pageKey);
   const neighborRef = React.useRef(neighbor);
-  const widthRef = React.useRef(0);
+  const widthRef = React.useRef(width);
   const canGoRef = React.useRef(canGo);
   const onPageRef = React.useRef(onPage);
   const reducedRef = React.useRef(reduced);
@@ -112,7 +103,10 @@ export function useSwipePager({
         }
         const allowed = canGoRef.current(dir);
         if (allowed) {
-          setNeighbor({ dir, key: pageKeyRef.current });
+          const mounted = neighborRef.current;
+          if (mounted == null || mounted.dir !== dir) {
+            setNeighbor({ dir, key: pageKeyRef.current });
+          }
         } else if (neighborRef.current != null) {
           setNeighbor(null);
         }
@@ -142,9 +136,21 @@ export function useSwipePager({
           easing: easeOut,
           useNativeDriver: Platform.OS !== "web",
         }).start(({ finished }) => {
-          if (finished) {
-            onPageRef.current(dir);
+          if (!finished) {
+            return;
           }
+          // The neighbour stays mounted for the commit: the key change
+          // and the offset reset land together, and the frame in
+          // between still shows the neighbour where it settled.
+          const settled = neighborRef.current;
+          onPageRef.current(dir);
+          // Once that frame is painted the neighbour is off screen, so
+          // it stops rendering until the next gesture.
+          requestAnimationFrame(() => {
+            if (neighborRef.current === settled) {
+              setNeighbor(null);
+            }
+          });
         });
       },
       cancel: back,
@@ -164,24 +170,30 @@ export function useSwipePager({
     }
   };
 
+  const side = neighbor == null ? null : neighbor.dir;
   const page = (
     <View style={styles.viewport} onLayout={onLayout}>
       <Animated.View
         style={[
           styles.track,
-          {
-            width: width * 3,
-            transform: [{ translateX: Animated.add(offset, -width) }],
-          },
+          { width, transform: [{ translateX: offset }] },
         ]}
       >
-        <View style={[styles.cell, { width }]}>
-          {side === "right" ? renderNeighbor("right") : null}
-        </View>
         <View style={[styles.cell, { width }]}>{children}</View>
-        <View style={[styles.cell, { width }]}>
-          {side === "left" ? renderNeighbor("left") : null}
-        </View>
+        {side != null ? (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.beside,
+              {
+                width,
+                left: side === "right" ? -width : width,
+              },
+            ]}
+          >
+            {renderNeighbor(side)}
+          </View>
+        ) : null}
       </Animated.View>
     </View>
   );
@@ -191,15 +203,22 @@ export function useSwipePager({
 
 const styles = StyleSheet.create({
   viewport: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
     overflow: "hidden",
   },
   track: {
-    flex: 1,
     flexDirection: "row",
   },
   cell: {
     flexGrow: 0,
     flexShrink: 0,
+  },
+  // Out of the layout flow: the current page alone sets the height, so
+  // a taller or shorter neighbour never moves the chrome.
+  beside: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
   },
 });
