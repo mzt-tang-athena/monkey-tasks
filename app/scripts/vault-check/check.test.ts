@@ -72,6 +72,52 @@ describe("checkVault", () => {
     expect(findings[0].reason).toContain("[[Focus]]");
   });
 
+  it.each([
+    ["no indent", ""],
+    ["two spaces", "  "],
+    ["four spaces", "    "],
+  ])("reads list items at %s the way js-yaml does", (_label, indent) => {
+    const dir = vault({
+      "Tasks/Shop.md": task(`lists:\n${indent}- "[[Focus]]"\n`),
+    });
+
+    expect(checkVault(dir)).toEqual({ notes: 1, findings: [] });
+  });
+
+  // YAML forbids a tab in indentation. The app reads the list, so the
+  // task keeps its tab, but Obsidian cannot read the note.
+  it("reports a tab-indented list as YAML js-yaml cannot parse", () => {
+    const dir = vault({
+      "Tasks/Shop.md": task('lists:\n\t- "[[Focus]]"\n'),
+    });
+
+    const { findings } = checkVault(dir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].kind).toBe("parser-disagreement");
+    expect(findings[0].reason).toContain("tab characters");
+  });
+
+  it.each([
+    ["no indent", ""],
+    ["four spaces", "    "],
+  ])("reports a bare wikilink at %s once", (_label, indent) => {
+    const dir = vault({
+      "Tasks/Shop.md": task(`lists:\n${indent}- [[Focus]]\n`),
+    });
+
+    const { findings } = checkVault(dir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ line: 5, kind: "bare-wikilink" });
+  });
+
+  it("reads back a title the app quoted with escapes", () => {
+    const dir = vault({
+      "Tasks/Dune.md": task('title: "\\"Dune\\" by Herbert \\\\ 1"\n'),
+    });
+
+    expect(checkVault(dir)).toEqual({ notes: 1, findings: [] });
+  });
+
   it("reads a numeric order the same as the app's text form", () => {
     const dir = vault({
       "Tasks/Ordered.md": task("order: 3\n"),

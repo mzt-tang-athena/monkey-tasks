@@ -127,7 +127,8 @@ function checkNote(file: string, text: string): Finding[] {
   const bareKeys = new Set<string>();
   block.split(/\r?\n/).forEach((line, index) => {
     if (!BARE_ITEM.test(line) && !BARE_SCALAR.test(line)) return;
-    const key = line.startsWith("  ")
+    // An item belongs to the key above it, at any indent.
+    const key = BARE_ITEM.test(line)
       ? previousKey(block, index)
       : line.slice(0, line.indexOf(":")).trim();
     if (key != null) bareKeys.add(key);

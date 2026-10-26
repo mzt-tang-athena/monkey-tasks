@@ -26,3 +26,16 @@ journal note with a number where the app expects a string stays out of
 the report. The cost: a nested value outside the three folders goes
 unreported, even though Obsidian reads it differently. Widening the
 scope is a one-line change; the walk already covers the whole vault.
+
+## Amendment, 2026-10-26: a list indented with a tab
+
+Ticket 0053 made the app's parser read list items at any indent: none,
+spaces, or a tab. YAML forbids a tab in indentation, so `js-yaml`
+refuses a note that has one. The check keeps that finding. The app
+reads the list, so the task stays on its list tab. A YAML reader does
+not, so the note is still unsafe for other tools. The fix is to put
+spaces in place of the tab.
+
+We did not make the check accept a tab. That would hide a note that a
+YAML reader cannot read, and finding those notes is the job of the
+check.

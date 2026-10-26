@@ -69,11 +69,27 @@ export async function deleteNote(uri: string): Promise<void> {
 }
 
 /**
+ * Write `name` as the note's title when the file name does not hold
+ * it (ADR 0028). A file name can differ from the typed name in two
+ * ways: the app cleans characters a provider refuses, and the provider
+ * appends " (1)" to a name that is taken. The display prefers the
+ * title, so the row keeps the name the user typed after the next read.
+ */
+export function keepTypedName(
+  text: string,
+  fileName: string,
+  name: string,
+): string {
+  return fileName.replace(/\.md$/, "") === name
+    ? text
+    : updateProperty(text, "title", name);
+}
+
+/**
  * Create a note file in a folder and write it. The document provider
  * appends " (1)" when the requested name is taken, so the result
- * carries the name the file really got. When that name differs and a
- * title is given, the title is written into the note: the display
- * prefers it, so the row keeps the name the user typed.
+ * carries the name the file really got. When a title is given and the
+ * file name does not hold it, the title is written into the note.
  */
 export async function createNote(
   folderUri: string,
@@ -87,10 +103,7 @@ export async function createNote(
     "text/markdown",
   );
   const actual = displayName(uri);
-  const text =
-    title != null && actual !== fileName
-      ? updateProperty(content, "title", title)
-      : content;
+  const text = title == null ? content : keepTypedName(content, actual, title);
   await writeNote(uri, text);
   return { uri, fileName: actual, text };
 }
@@ -154,12 +167,12 @@ export function updateProperty(
     return replaceSpan(text, span, lines.join("\n"));
   }
   // Find the extent of the property: its line plus any block list
-  // items that follow it. Any indent counts, because Obsidian, other
-  // editors, and older versions of this app have written two spaces,
-  // four spaces, and tabs. Missing an item here would splice the next
-  // key into the middle of the list.
+  // items that follow it. Any indent counts, none included, because
+  // Obsidian, other editors, and older versions of this app have
+  // written no indent, two spaces, four spaces, and tabs. Missing an
+  // item here would leave it behind under the next key.
   let endIndex = keyIndex + 1;
-  while (endIndex < lines.length && /^[ \t]+- /.test(lines[endIndex])) {
+  while (endIndex < lines.length && /^[ \t]*- /.test(lines[endIndex])) {
     endIndex += 1;
   }
   if (value === null) {

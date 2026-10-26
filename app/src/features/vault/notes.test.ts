@@ -107,6 +107,27 @@ describe("createNote", () => {
       created.text,
     ]);
   });
+
+  it("adds the typed name as the title when the file name was cleaned", async () => {
+    const created = await createNote(
+      "content://vault/Tasks",
+      "Pay bill water.md",
+      '---\ncreated: 2026-10-25\n---\n',
+      "Pay bill: water",
+    );
+    expect(created.fileName).toBe("Pay bill water.md");
+    expect(parsed(created.text).title).toBe("Pay bill: water");
+  });
+
+  it("writes no title when the file name holds the typed name", async () => {
+    const created = await createNote(
+      "content://vault/Tasks",
+      "draw.md",
+      '---\ncreated: 2026-10-25\n---\n',
+      "draw",
+    );
+    expect(created.text).not.toContain("title:");
+  });
 });
 
 describe("updateProperty", () => {
