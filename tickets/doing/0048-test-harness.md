@@ -3,7 +3,7 @@ id: 0048
 title: Test harness and lint baseline
 created: 2026-10-26
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: []
 ---
