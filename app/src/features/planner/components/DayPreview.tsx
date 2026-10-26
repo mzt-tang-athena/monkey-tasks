@@ -1,51 +1,69 @@
-import { StyleSheet, Text, View } from "react-native";
+import * as React from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "../../tasks/query";
-import { PreviewRow } from "../../../components/PreviewRow";
 import type { TaskForm } from "../../../lib/settings";
-import { spacing } from "../../../theme/tokens";
-import { labelHour, MONTHS, WEEKDAYS_FULL } from "../lib/labels";
+import { DropZoneMap } from "../../../lib/dropzone";
+import { MONTHS, WEEKDAYS_FULL } from "../lib/labels";
 import {
+  hasTime,
   inSourceList,
+  isoOf,
   sortOpenFirst,
-  tasksForDay,
   type Source,
 } from "../model";
+import { TaskListSection } from "./TaskListSection";
+import { Timeline } from "./Timeline";
 import { styles as base } from "./plannerStyles";
 
-/** The peek's ruler spans the working day, 7 AM through 7 PM. */
-const peekStart = 7;
-const peekEnd = 19;
+/** Nothing in the preview reacts; every handler the live body
+ *  supplies is replaced by this one. */
+const noop = () => undefined;
 
 /**
- * The neighbouring day as the swipe reveals it: the same heading and
- * ruler as the day spread, its tasks as inert rows. Nothing here
- * takes a pointer, so the gesture that reveals it keeps owning the
- * touch until it commits or springs back.
+ * The neighbouring day as the swipe reveals it: the same markup the
+ * day spread builds, painted inert. Nothing here takes a pointer, so
+ * the gesture that reveals it keeps owning the touch until it commits
+ * or springs back, and the swap to the live body moves nothing.
  */
 export function DayPreview({
   date,
   tasks,
   source,
+  taskForm,
+  timelineHeight,
 }: {
   date: Date;
   tasks: TaskItem[];
   source: Source;
-  /** Accepted with the spread's shape; the peek always shows rows. */
   taskForm: TaskForm;
+  timelineHeight: number;
 }) {
-  const dayTasks = tasksForDay(tasks, date);
-  const rows = sortOpenFirst(
+  // The ruler registers its rows under their hours; the preview never
+  // hit-tests them, but the map must hold steady across renders.
+  const [zones] = React.useState(() => new DropZoneMap());
+
+  // The spread's rows: the whole day, completed ones kept, then the
+  // source's own pool when it is not the day.
+  const dayTasks = sortOpenFirst(
+    tasks.filter(
+      (task) => task.data?.due != null && task.data.due.slice(0, 10) === isoOf(date),
+    ),
+  );
+  const timed = dayTasks.filter(hasTime);
+  const listRows =
     source === "due-period"
       ? dayTasks
-      : dayTasks.filter((task) => inSourceList(task, source)),
-  );
-  const hours: number[] = [];
-  for (let hour = peekStart; hour <= peekEnd; hour++) {
-    hours.push(hour);
-  }
+      : sortOpenFirst(tasks.filter((task) => inSourceList(task, source)));
+  // The pills pool folds the overdue group in first; the preview has
+  // no overdue group of its own, so it is an empty prefix.
+  const sectionTasks =
+    taskForm === "pills" && source === "due-period"
+      ? sortOpenFirst([...listRows])
+      : listRows;
 
   return (
     <View style={styles.preview} pointerEvents="none">
+      {/* Compact day heading: eyebrow, short serif date, accent rule. */}
       <Text style={base.dateMonth}>
         {MONTHS[date.getMonth()]} {date.getFullYear()}
       </Text>
@@ -54,28 +72,56 @@ export function DayPreview({
       </Text>
       <View style={base.dateRule} />
 
-      <View style={styles.rulerPane}>
-        {hours.map((hour) => (
-          <View key={hour} style={[base.rulerRow, styles.hourRow]}>
-            <Text style={base.rulerMark}>{labelHour(hour)}</Text>
-          </View>
-        ))}
+      {/* The timeline pane at the live split's height. */}
+      <View style={[base.pane, { height: timelineHeight }]}>
+        <Text style={base.sectionLabel}>Timeline  {timed.length}</Text>
+        <ScrollView style={base.paneScroll} showsVerticalScrollIndicator={false}>
+          <Timeline
+            tasks={timed}
+            isToday={false}
+            now={new Date()}
+            dragActive={false}
+            hoverHour={null}
+            zones={zones}
+            lifted={null}
+            onToggle={noop}
+            onDragStart={noop}
+          />
+        </ScrollView>
       </View>
 
-      <View style={styles.listPane}>
-        {rows.length === 0 ? (
-          <Text style={base.empty}>Nothing scheduled.</Text>
-        ) : (
-          rows.map((task, index) => (
-            <View key={task.id}>
-              {index > 0 ? <View style={base.groupRow} /> : null}
-              <PreviewRow
-                task={task}
-                done={task.data?.completed != null}
-              />
-            </View>
-          ))
-        )}
+      {/* The dashed drop line and its grabber, at rest. */}
+      <View style={base.divider}>
+        <View style={base.dividerLine} />
+        <View
+          style={base.grabberHit}
+          accessibilityRole="button"
+          accessibilityLabel="resize timeline"
+        >
+          <View style={base.grabberBar} />
+        </View>
+      </View>
+
+      {/* The task list pane: source chip, form toggle, the rows. */}
+      <View style={base.paneList}>
+        <TaskListSection
+          style={base.paneScroll}
+          source={source}
+          mode="day"
+          sourceMenuOpen={false}
+          onCycleSource={noop}
+          onOpenSourceMenu={noop}
+          taskForm={taskForm}
+          onFormChange={noop}
+          onToggle={noop}
+          onDragStart={noop}
+          tasks={sectionTasks}
+          emptyLabel={
+            source === "due-period"
+              ? "Nothing scheduled today."
+              : `Nothing on ${source} yet.`
+          }
+        />
       </View>
     </View>
   );
@@ -84,21 +130,6 @@ export function DayPreview({
 const styles = StyleSheet.create({
   preview: {
     flex: 1,
-    overflow: "hidden",
-  },
-  // The peek's ruler is denser than the live one so most of the
-  // working day reads above the tasks instead of scrolling.
-  hourRow: {
-    minHeight: 30,
-  },
-  rulerPane: {
-    flexShrink: 1,
-    overflow: "hidden",
-  },
-  listPane: {
-    flex: 1,
-    minHeight: 0,
-    paddingTop: spacing.s,
     overflow: "hidden",
   },
 });

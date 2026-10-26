@@ -46,6 +46,8 @@ export function MonthView({
   const monthKey = `${year}-${monthIdx}`;
 
   const { controller, page } = useSwipePager({
+    // The grid sets the height of the fixed half.
+    fill: false,
     pageKey: monthKey,
     // Every month has a neighbour, so a swipe always lands on one and
     // the fixed half never rubber-bands.

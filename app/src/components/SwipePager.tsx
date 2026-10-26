@@ -34,6 +34,10 @@ export type SwipePagerOptions = {
   renderNeighbor: (dir: PagerSide) => React.ReactNode;
   /** The current page. */
   children: React.ReactNode;
+  /** True when the page fills its parent (a list body, a day body).
+      False when the page sets its own height (the month calendar),
+      where the pager must grow with its content. */
+  fill?: boolean;
 };
 
 export type SwipePager = {
@@ -57,6 +61,7 @@ export function useSwipePager({
   onPage,
   renderNeighbor,
   children,
+  fill = true,
 }: SwipePagerOptions): SwipePager {
   const reduced = useReduceMotion();
   const [offset] = React.useState(() => new Animated.Value(0));
@@ -141,16 +146,15 @@ export function useSwipePager({
           }
           // The neighbour stays mounted for the commit: the key change
           // and the offset reset land together, and the frame in
-          // between still shows the neighbour where it settled.
+          // between still shows the neighbour where it settled. It is
+          // dropped once that frame is surely painted, never before.
           const settled = neighborRef.current;
           onPageRef.current(dir);
-          // Once that frame is painted the neighbour is off screen, so
-          // it stops rendering until the next gesture.
-          requestAnimationFrame(() => {
+          setTimeout(() => {
             if (neighborRef.current === settled) {
               setNeighbor(null);
             }
-          });
+          }, 250);
         });
       },
       cancel: back,
@@ -172,10 +176,13 @@ export function useSwipePager({
 
   const side = neighbor == null ? null : neighbor.dir;
   const page = (
-    <View style={styles.viewport} onLayout={onLayout}>
+    <View
+      style={fill ? styles.viewportFill : styles.viewportContent}
+      onLayout={onLayout}
+    >
       <Animated.View
         style={[
-          styles.track,
+          fill ? styles.trackFill : styles.trackContent,
           { width, transform: [{ translateX: offset }] },
         ]}
       >
@@ -202,13 +209,24 @@ export function useSwipePager({
 }
 
 const styles = StyleSheet.create({
-  viewport: {
+  viewportFill: {
+    flex: 1,
+    overflow: "hidden",
+  },
+  // No flex basis: the page's own height is the box's height.
+  viewportContent: {
     flexGrow: 1,
     flexShrink: 1,
     overflow: "hidden",
   },
-  track: {
+  trackFill: {
+    flex: 1,
     flexDirection: "row",
+  },
+  trackContent: {
+    flexDirection: "row",
+    flexGrow: 1,
+    flexShrink: 1,
   },
   cell: {
     flexGrow: 0,

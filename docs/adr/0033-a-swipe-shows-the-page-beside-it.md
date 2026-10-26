@@ -83,3 +83,23 @@ The neighbour also stays mounted through the commit instead of
 disappearing with the old page key. Without it, the settling frame
 showed an empty cell, and the day planner blinked. It is dropped one
 frame after the commit, once the reset has painted.
+
+## Amendment: 2026-10-25 (second)
+
+The pager takes a `fill` flag. A page that fills its parent (a list
+body, a day body) gets `flex: 1`; a page that sets its own height (the
+month calendar) grows with its content. One flex setting could not
+serve both: with no basis the day body's list collapsed, and with
+`flex: 1` the month card collapsed.
+
+The month grid always renders six rows, padding the last week with
+blanks. Months need five or six, so without the padding the card's
+height changed on commit and the pane below jumped.
+
+The day's neighbour is the real body, inert, not a simplified ruler.
+A preview that differs from the page it becomes reads as a flicker at
+the commit.
+
+The neighbour is dropped 250 ms after the commit rather than on the
+next animation frame, so it cannot vanish from the visible cell while
+the offset reset paints.

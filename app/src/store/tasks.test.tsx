@@ -23,6 +23,8 @@ let failWrite = false;
 let loadGate: Promise<void> | null = null;
 let extraTasks: TaskItem[] = [];
 let createFails = false;
+let conflictOnce = false;
+let diskText = "";
 let deleteFails = false;
 let renameOnCreate = false;
 const creates: { fileName: string; content: string }[] = [];
@@ -90,6 +92,10 @@ vi.mock("../features/vault/notes", async (importOriginal) => {
       if (failWrite) {
         throw new Error("disk full");
       }
+      if (conflictOnce) {
+        conflictOnce = false;
+        throw new actual.NoteChangedError(uri);
+      }
       writes.push({ uri, text });
       if (holdWrites && !heldOnce) {
         heldOnce = true;
@@ -128,6 +134,10 @@ vi.mock("../features/vault/notes", async (importOriginal) => {
         throw new Error("locked");
       }
       deletes.push(uri);
+    },
+    readNote: async () => diskText,
+    writeNote: async (uri: string, text: string) => {
+      writes.push({ uri, text });
     },
   };
 });
@@ -299,6 +309,27 @@ beforeEach(() => {
 });
 
 describe("TasksProvider", () => {
+  it("lands a toggle whose note moved on since it was read", async () => {
+    // A fast tick, untick, tick can reach the file behind an earlier
+    // write. The toggle re-reads the note and applies itself to what
+    // is there, instead of failing and leaving the row unticked.
+    await mount();
+    diskText =
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nedited: yes\n---\n\nBody.\n';
+    conflictOnce = true;
+
+    await act(async () => {
+      await latest!.toggle(row());
+    });
+    await flush();
+
+    expect(latest!.lastError).toBeNull();
+    expect(row().data?.completed).toBeDefined();
+    const last = writes[writes.length - 1];
+    expect(last.text).toContain("edited: yes");
+    expect(last.text).toContain("completed:");
+  });
+
   it("ticks the row before the write lands, and does not read the vault", async () => {
     await mount();
     expect(loadCalls).toBe(1);
