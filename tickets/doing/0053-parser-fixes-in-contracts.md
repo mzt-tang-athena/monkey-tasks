@@ -3,7 +3,7 @@ id: 0053
 title: The frontmatter parser reads what YAML reads
 created: 2026-10-26
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: []
 ---
