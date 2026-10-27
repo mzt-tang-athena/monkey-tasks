@@ -26,8 +26,8 @@ these branches too. This ticket adds the missing layer: Maestro flows
 that drive a release APK on an Android emulator. ADR 0038 names this
 ticket as the Android layer.
 
-We pick Maestro because it drives a release APK with no test build and
-no native setup. Flows are YAML, and a React Native `testID` is the
+We pick Maestro because it drives a release APK with no native test
+setup. Only the SAF contract flow below needs a build of its own. Flows are YAML, and a React Native `testID` is the
 Maestro `id`. Detox needs a separate test build and native project
 changes for each SDK bump.
 
@@ -43,10 +43,20 @@ startup behind a config flag
 ([runOnDeviceTests.ts](https://github.com/laurent22/joplin/blob/5321786784c526093ec3aff10e9f87a7ee515c4d/packages/app-mobile/utils/fs-driver/runOnDeviceTests.ts)).
 
 The screen shows only when `EXPO_PUBLIC_VAULT_TEST_HOOKS` is `1`, the
-flag that 0051 uses. The release APK for the phone does not set it.
-The flows therefore need an APK built with the flag: a second
-artifact from `android.yml`, or a build in the new workflow. Record
-the choice and its build minutes in Outcome.
+flag that 0051 uses. The APK that reaches a phone never sets it (ADR
+0037 and its 2026-10-27 amendment). So this one flow needs its own
+build:
+
+- The workflow input `saf-contract` (default `false`) turns the flow
+  on.
+- With it on, the job builds an x86_64 release APK with
+  `EXPO_PUBLIC_VAULT_TEST_HOOKS=1 ./gradlew assembleRelease -PreactNativeArchitectures=x86_64`.
+- That APK never leaves the job. The workflow uploads no artifact of
+  it, and `android.yml` never sets the flag.
+- With it off, the other flows run on the reused release APK and skip
+  this flow.
+
+Record the build minutes of the flagged APK in Outcome.
 
 ### APK
 
@@ -60,8 +70,7 @@ The emulator on a GitHub runner is x86_64.
 
 The new workflow downloads the APK artifact of the latest green
 `android.yml` run with `actions/download-artifact@v4` (`run-id` and
-`github-token`). That APK must carry the test flag (see the SAF
-section above). That skips the build, which took 19 to 45 minutes on
+`github-token`). That skips the build, which took 19 to 45 minutes on
 the last eight runs. With no artifact at hand, it builds with
 `./gradlew assembleRelease -PreactNativeArchitectures=x86_64`.
 
@@ -169,7 +178,8 @@ against a local emulator or a phone over USB. That costs no CI minutes.
 - [ ] Flows cover the ten scenarios of 0049, or Outcome names each gap and its reason.
 - [ ] After the tick flow, the "Call Mum" note on the device holds a `completed:` line.
 - [ ] After the capture flow, the device Tasks folder holds the new note.
-- [ ] A flow runs the 0051 contract suite against the SAF adapter on the emulator, and every case passes.
+- [ ] With `saf-contract` on, a flow runs the 0051 contract suite against the SAF adapter on the emulator, and every case passes.
+- [ ] No uploaded artifact and no `android.yml` build sets `EXPO_PUBLIC_VAULT_TEST_HOOKS`.
 - [ ] The reduced motion flow runs with all three animation scales at 0 and passes.
 - [ ] A React Native `testID` from 0049 selects its view as a Maestro `id`.
 - [ ] Outcome records the measured time of each step and the monthly minutes of the chosen trigger.

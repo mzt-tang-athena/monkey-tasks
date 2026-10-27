@@ -27,8 +27,7 @@ A task due on the 30th skips February every year. A task due on the
 29th skips February in a common year. A yearly task due on 29
 February comes back only in a leap year. Each tick creates the next
 note from the rule (ADR 0027), so the gap comes back for the life of
-the task. The user sees no error. The task is
-missing for a month.
+the task. The user sees no error. The task is missing for a month.
 
 The Obsidian Tasks plugin warns about the same trap, and it
 recommends "every month on the last"
@@ -82,12 +81,12 @@ Each case gets a failing test before its fix:
 
 - [ ] Each case above had a failing test before its fix, and all
       pass.
-- [ ] A month-end task has a due date in every month.
+- [ ] A monthly task due after the 28th has a due date in every month.
 - [ ] An ADR records the rule format and how the app treats a bare
       `FREQ=MONTHLY` note due after the 28th.
 - [ ] `npm run vault:check` reports nothing new for the new rules.
 - [ ] In the browser, three ticks of a month-end sample task show the
-      dates in the table.
+      dates in the table under "The fix".
 
 ## Outcome
 
