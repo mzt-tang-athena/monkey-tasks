@@ -61,8 +61,8 @@ build:
   `app/e2e/maestro/config.yaml` excludes that tag. So
   `maestro test app/e2e/maestro` skips it on a laptop too. The job
   with the input on runs it by its file name.
-- The build makes the job longer. Set `timeout-minutes` from the
-  input, for example `${{ inputs.saf-contract && 75 || 30 }}`.
+- A build makes the job longer. The job also builds when it finds no
+  artifact, with the input on or off. Set `timeout-minutes: 75`.
 
 Record the build minutes of the flagged APK in Outcome.
 
@@ -143,7 +143,9 @@ on:
 jobs:
   maestro:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ inputs.saf-contract && 75 || 30 }}
+    # A build takes 19 to 45 minutes, and the job builds when it finds
+    # no artifact or when saf-contract is on.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - name: Enable KVM

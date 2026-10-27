@@ -81,7 +81,7 @@ Add `@axe-core/playwright` as a dev dependency for the screen scans.
 - [ ] A row body's accessible name holds the task name and its meta.
 - [ ] The timeline tick reports role `checkbox` and `aria-checked`.
 - [ ] A Playwright check reproduces the target bug first. It covers Lists, Planner in day, week and month mode, the editor, and the open capture sheet.
-- [ ] Afterwards every element with role button, tab, checkbox, menuitem, link or switch has a layout box of at least 44 by 44, or appears in the ADR's exception list.
+- [ ] Afterwards every element with role button, tab, checkbox, radio, option, gridcell, menuitem, link or switch has a layout box of at least 44 by 44, or appears in the ADR's exception list.
 - [ ] A test reproduces the silent error first. Afterwards the list write error, the repair notice, the editor save error and the capture failure toast each report role `alert`.
 - [ ] A test reproduces the reorder gap first. Afterwards the Move down action on the first row in My order moves it to second place and writes the new order.
 - [ ] The split grabber reports role `adjustable`, and increment and decrement change the timeline height.

@@ -4,7 +4,7 @@ import { defineConfig } from "@playwright/test";
 // browser preview serves the in-memory sample set, so no vault is
 // needed. Ticket 0049 holds the scenarios.
 // E2E_PORT lets parallel worktrees each serve their own build.
-const port = Number(process.env.E2E_PORT ?? 8094);
+const port = Number(process.env.E2E_PORT) || 8094;
 
 export default defineConfig({
   testDir: "./specs",

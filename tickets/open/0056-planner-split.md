@@ -20,11 +20,13 @@ drop code (`DaySpread.tsx:101-311` and `DaySpread.tsx:385-504`, against
 (`DaySpread.tsx:302-307`). `plannerStyles.ts` (828 lines) serves every
 component, and 20 of its keys have no reader.
 
-Split the planner, give drag one hook, and fix the five bugs below. Each
+Split the planner, give drag one hook, and fix the eight bugs below. Each
 bug gets a failing test before its fix.
 
-Paths and line numbers cite commit `b2c0b10`. Ticket 0050 renames files
-to kebab-case, so look for the same code under its new name.
+Paths and line numbers cite commit `b2c0b10` for bugs 1 to 5, and
+commit `e3ff3ad` for bugs 6 to 8. Ticket 0050 renames files to
+kebab-case, so look for the same code under its new name. The 0050
+Outcome maps each old path to its new one.
 
 ### Target files in `src/features/planner/`
 
@@ -121,14 +123,16 @@ the day body on every render (`DaySpread.tsx:46-48`,
    `lib/day-rows.ts` one sort for a day: open first, then all-day
    tasks, then by time of day.
 7. **Overdue rows have no separators.** The overdue block maps its rows
-   with no hairline between them (`DaySpread.tsx:721-735`). The list
+   with no hairline between them (`DaySpread.tsx:720-743`). The list
    below draws one through `RowSeparator`
-   (`TaskListSection.tsx:104`, `TaskListSection.tsx:152-160`). To
+   (`TaskListSection.tsx:104`, `TaskListSection.tsx:152-156`). To
    reproduce, open day view on today with two overdue tasks. Use the
    same separator in both.
-
-Line numbers in this ticket predate tickets 0048 and 0050. Look each
-one up again, and use the path map in the 0050 Outcome.
+8. **The day list says "Due today" on every day.** `sourceLabel`
+   (`model.ts:33-40`) gives "Due today" for day mode whatever the date.
+   To reproduce, open day view and step to tomorrow: the heading still
+   reads "Due today". Name the day instead: "Due tomorrow", "Due
+   yesterday", or "Due Wed 28 Oct".
 
 ## Acceptance
 
@@ -148,6 +152,7 @@ one up again, and use the path map in the 0050 Outcome.
 - [ ] A Playwright test at 360 by 640 reproduces the menu bug first. Afterwards the open source menu sits fully above the bottom bar.
 - [ ] A Playwright test reproduces the sort bug first. Afterwards the day list, the swipe preview and the month picked-day list each show a day's tasks by time of day.
 - [ ] A Playwright screenshot reproduces the separator bug first. Afterwards overdue rows and list rows show the same hairline.
+- [ ] A Playwright test reproduces the heading bug first. Afterwards the day list heading names the day it shows.
 - [ ] A render-count test shows that a hover change during a day drag re-renders the timeline and not the list pane.
 - [ ] A drag from the list to the ruler still writes the hour, and a drag to a week column or month cell still writes the day.
 - [ ] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
