@@ -4,7 +4,7 @@ title: Test harness and lint baseline
 created: 2026-10-26
 priority: high
 assignee: claude-code
-pr:
+pr: 71
 depends: []
 ---
 
@@ -213,23 +213,56 @@ lint warnings, and CI that runs. ADR 0038 records the test decision.
 
 ## Acceptance
 
-- [ ] `app/vitest.config.mts` replaces `app/vitest.config.ts`, and a run prints no Vite config warning.
-- [ ] `npm run test:unit` runs the node tests and passes.
-- [ ] `npm run test:component` runs in jsdom with `react-native` resolved to `react-native-web` and passes.
-- [ ] `npm test` runs both projects and reports at least 261 passing tests.
-- [ ] No component test calls `vi.mock("react-native")`, or Outcome names each exception and its follow-up ticket.
-- [ ] No component test calls `props.onPress()` or finds a node by type name.
-- [ ] `src/test/rn-standin.ts` is gone, or Outcome names the test that still imports it.
-- [ ] A test imports through `@/`, and `tsc --noEmit` passes.
-- [ ] An app module imports through `@/`, and `expo export --platform web` and `--platform android` both bundle it.
-- [ ] `npx eslint src scripts --max-warnings 0` exits zero.
-- [ ] A `marginBottom` or `marginRight` in a style fails ESLint as an error.
-- [ ] Each screen with a spacing fix matches its before screenshot in the web preview.
-- [ ] `.vitest/` is in `app/.gitignore`, and a JSON reporter run leaves `git status` clean.
-- [ ] ADR 0012 has a dated amendment for the wider rule and names 0054 as the ticket that turns it on.
+- [x] `app/vitest.config.mts` replaces `app/vitest.config.ts`, and a run prints no Vite config warning.
+- [x] `npm run test:unit` runs the node tests and passes.
+- [x] `npm run test:component` runs in jsdom with `react-native` resolved to `react-native-web` and passes.
+- [x] `npm test` runs both projects and reports at least 261 passing tests.
+- [x] No component test calls `vi.mock("react-native")`, or Outcome names each exception and its follow-up ticket.
+- [x] No component test calls `props.onPress()` or finds a node by type name.
+- [x] `src/test/rn-standin.ts` is gone, or Outcome names the test that still imports it.
+- [x] A test imports through `@/`, and `tsc --noEmit` passes.
+- [x] An app module imports through `@/`, and `expo export --platform web` and `--platform android` both bundle it.
+- [x] `npx eslint src scripts --max-warnings 0` exits zero.
+- [x] A `marginBottom` or `marginRight` in a style fails ESLint as an error.
+- [x] Each screen with a spacing fix matches its before screenshot in the web preview.
+- [x] `.vitest/` is in `app/.gitignore`, and a JSON reporter run leaves `git status` clean.
+- [x] ADR 0012 has a dated amendment for the wider rule and names 0054 as the ticket that turns it on.
 - [ ] A commit on a PR branch starts one CI run, not two.
 - [ ] A push to main no longer starts `android.yml`, and the manual run still builds the APK.
-- [ ] The pre-commit hook fails on an ESLint warning.
+- [x] The pre-commit hook fails on an ESLint warning.
 
 ## Outcome
-(filled in before moving to done/)
+
+Landed in PR 71:
+
+- `app/vitest.config.mts` with a `unit` project (node) and a
+  `component` project (jsdom, `react-native-web`, `.web` files first).
+  The store tests and `src/testing/repro` stay in `unit`.
+- `src/testing/dom-setup.ts`. It also defines `__DEV__`, which the
+  gesture handler's web build reads.
+- The five screen tests render through Testing Library. None mocks
+  `react-native`. `rn-standin.ts` is deleted. The month dot carries
+  `testID="month-dot"` for the grid test.
+- `@/` in tsconfig and Vitest. Two routes import through it, and both
+  exports bundle it with no Metro change. ESLint resolves it.
+- Zero lint warnings. The spacing rule is an error, and the hook fails
+  on any warning. The 20 margins moved to their containers. In 26 phone
+  and wide states every text, role and label box sits where it did.
+  Screenshots of 30 of 40 states match pixel for pixel. The 10 month
+  states differ by at most 2 colour levels on a few anti-aliased edge
+  pixels, because the month page layer now ends at the card.
+- Two small behaviour changes from the spacing pass. A week column with
+  more tasks than fit now grows to hold them, and the scroller clips
+  it. The 12 px band under the month card left the month swipe zone.
+- ADR 0012 amendment. Ticket 0054 counts the sites left: 30 margins and
+  2 bleeds.
+
+Left:
+
+- Steps 8 and 10 for the workflows went to 0068. GitHub refused the
+  push, because the agent token lacks the `workflow` scope. 0068 holds
+  the exact diff for the owner. The two CI acceptance lines move there.
+- `react-test-renderer` stays. Two store tests (0052) and three hook
+  tests still use it. 0067 moves the hook tests to `renderHook` and
+  removes the package after 0052.
+- The week column cut-off is bug 2 in 0056.
