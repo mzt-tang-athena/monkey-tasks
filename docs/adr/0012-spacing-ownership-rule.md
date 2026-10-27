@@ -29,9 +29,9 @@ cannot enforce this; the rule lives in ESLint.
 ## Amendment, 2026-10-27: the rule is an error, and it grows
 
 Ticket 0048 ran the cleanup pass. No child declares a bottom or right
-margin now, and the ESLint rule runs at `error`. CI and the pre-commit
-hook also fail on any ESLint warning. A warning that CI ignores goes
-unread, as ADR 0026 found with Vale.
+margin now, and the ESLint rule runs at `error`. Any ESLint warning
+fails the pre-commit hook, and CI gets the same limit in ticket 0068. A
+warning that CI ignores goes unread, as ADR 0026 found with Vale.
 
 The rule covers every margin a child sets outside itself:
 `marginTop`, `marginLeft`, `marginVertical` and `marginHorizontal` as

@@ -58,15 +58,14 @@ make hooks
 ```
 
 It runs ESLint on the staged app code and Vale on the staged docs. An
-ESLint warning fails the commit, as it fails CI. The typecheck, the
-tests and the bundle stay in CI.
+ESLint warning fails the commit. The typecheck, the tests and the
+bundle stay in CI.
 
 ## Install it on a phone
 
 The `android` workflow builds a sideloadable APK on a GitHub runner,
 because a phone needs a native build and the runner already has the
-Android SDK. It runs only when you start it. Run it from Actions, or
-from the CLI:
+Android SDK. Run it from Actions, or from the CLI:
 
 ```bash
 gh workflow run android
@@ -146,7 +145,8 @@ as a bare RRULE value and expands it with `rrule`.
 Ticket 0047 is the current work: a refactor to the Bulletproof React
 layout, a data layer built on mutations, and a motion rebuild on the UI
 thread. It lands on the `epic/0047-rebuild` branch through child tickets
-0048 to 0063 and 0066 (ADR 0035). New feature work waits until it merges.
+0048 to 0063, 0066 and 0068 (ADR 0035). New feature work waits until it
+merges.
 
 Open feature tickets after that:
 
