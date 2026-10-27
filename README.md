@@ -36,8 +36,12 @@ a device.
 Run the app tests from `app`:
 
 ```bash
-npx vitest run
+npm test
 ```
+
+Vitest runs two projects (ADR 0038). `npm run test:unit` runs the logic
+tests in node. `npm run test:component` renders components through
+React Native Web in jsdom.
 
 Run the schema tests from `contracts/packages/schemas`:
 
@@ -53,14 +57,16 @@ Install the local hook once per clone:
 make hooks
 ```
 
-It runs ESLint on the staged app code and Vale on the staged docs. The
-typecheck, the tests and the bundle stay in CI.
+It runs ESLint on the staged app code and Vale on the staged docs. An
+ESLint warning fails the commit, as it fails CI. The typecheck, the
+tests and the bundle stay in CI.
 
 ## Install it on a phone
 
 The `android` workflow builds a sideloadable APK on a GitHub runner,
 because a phone needs a native build and the runner already has the
-Android SDK. Run it from Actions, or from the CLI:
+Android SDK. It runs only when you start it. Run it from Actions, or
+from the CLI:
 
 ```bash
 gh workflow run android

@@ -25,3 +25,24 @@ centered, which is what the row critiques kept asking for. An ESLint
 rule warns when a child declares a bottom or right margin; it becomes
 an error after the cleanup pass. Prettier only formats text, so it
 cannot enforce this; the rule lives in ESLint.
+
+## Amendment, 2026-10-27: the rule is an error, and it grows
+
+Ticket 0048 ran the cleanup pass. No child declares a bottom or right
+margin now, and the ESLint rule runs at `error`. CI and the pre-commit
+hook also fail on any ESLint warning. A warning that CI ignores goes
+unread, as ADR 0026 found with Vale.
+
+The rule covers every margin a child sets outside itself:
+`marginTop`, `marginLeft`, `marginVertical` and `marginHorizontal` as
+well. After 0048 the wider selector matches 30 top, left and vertical
+sites in 10 files, and 2 horizontal bleeds. Phase 3 of 0047 rebuilds
+most of those files. Ticket 0054 widens the selector at `error` and
+clears these sites. We add no `warn` level in between, for the reason
+above.
+
+A `FlatList` cannot put a gap between its header slot and its first
+row. The list owns that space and sets it on the slot with
+`ListHeaderComponentStyle` (see `TaskListSection.tsx`). This is the one
+place a container uses padding on one side only. A child still sets
+no spacing outside itself.

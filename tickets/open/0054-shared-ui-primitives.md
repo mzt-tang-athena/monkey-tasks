@@ -88,12 +88,13 @@ lands as an error here.
 
 Extend the `no-restricted-syntax` selector in `app/eslint.config.js` to
 `marginTop`, `marginLeft`, `marginVertical` and `marginHorizontal`, at
-`error`. The wider selector matches about 36 sites in 10 files: the 33
-that 0048 step 9 lists (`plannerStyles.ts`, `TaskEditorScreen.tsx`,
-`src/app/(tabs)/index.tsx`, `src/app/dev.tsx`, `BottomBar.tsx`,
-`CaptureChips.tsx`, `TaskRow.tsx`, `PreviewRow.tsx`, `PeriodStrip.tsx`,
-`ListPagePreview.tsx`), plus three `marginHorizontal` bleeds
-(`plannerStyles.ts:613`, `plannerStyles.ts:627`, `PeriodStrip.tsx:93`).
+`error`. After 0048 the wider selector matches 32 sites in 10 files:
+30 top, left and vertical margins (`plannerStyles.ts`,
+`TaskEditorScreen.tsx`, `src/app/(tabs)/index.tsx`, `src/app/dev.tsx`,
+`BottomBar.tsx`, `CaptureChips.tsx`, `TaskRow.tsx`, `PreviewRow.tsx`,
+`PeriodStrip.tsx`, `ListPagePreview.tsx`), plus two `marginHorizontal`
+bleeds (`weekScroller` in `plannerStyles.ts`, `railBleed` in
+`PeriodStrip.tsx`). 0048 removed the third bleed with a dead style.
 
 Fix each site by moving the gap to its parent: a `gap` on the
 container, or symmetric padding inside the child. For a bleed, the
