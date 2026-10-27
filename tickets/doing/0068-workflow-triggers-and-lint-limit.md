@@ -3,7 +3,7 @@ id: 0068
 title: Workflow triggers and the CI lint limit
 created: 2026-10-27
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: []
 ---
