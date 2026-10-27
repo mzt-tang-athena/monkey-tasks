@@ -4,7 +4,7 @@ title: Playwright E2E on web
 created: 2026-10-26
 priority: high
 assignee: claude-code
-pr:
+pr: 72
 depends: [0048]
 ---
 
@@ -333,22 +333,65 @@ Also:
 
 ## Acceptance
 
-- [ ] `npm run e2e` exports the web build, serves it, and passes both projects.
-- [ ] `npm run e2e:dev` passes against `npx expo start --web`.
-- [ ] Scenarios 1 to 10 pass in the `motion` and `reduced-motion` projects.
-- [ ] A test reproduces B1, and it carries `test.fail()` and a comment that names 0059.
-- [ ] A test reproduces B2 in a `hasTouch` context, and it carries `test.fail()` and a comment that names 0059.
-- [ ] A test reproduces B3 first: it fails on `aria-selected` before the prop swap and passes after it.
-- [ ] No component passes `accessibilityState`, and `grep -rn accessibilityState app/src` finds no match.
-- [ ] A test reproduces B4 first: `getByRole("button", { name: "reorder handle" })` fails before the label and passes after it.
-- [ ] Each target in the selector table carries its `testID`, and the specs use no pixel coordinate except inside `gestures.ts`.
-- [ ] Specs take task names and dates from `e2e/data.ts` only.
-- [ ] The suite pins the clock with `page.clock.install`, and no file calls `setFixedTime`.
-- [ ] Ten runs in a row with `--repeat-each=10` pass with no failure.
+- [x] `npm run e2e` exports the web build, serves it, and passes both projects.
+- [x] `npm run e2e:dev` passes against `npx expo start --web`.
+- [x] Scenarios 1 to 10 pass in the `motion` and `reduced-motion` projects.
+- [x] A test reproduces B1, and it carries `test.fail()` and a comment that names 0059.
+- [x] A test reproduces B2 in a `hasTouch` context, and it carries `test.fail()` and a comment that names 0059.
+- [x] A test reproduces B3 first: it fails on `aria-selected` before the prop swap and passes after it.
+- [x] No component passes `accessibilityState`, and `grep -rn accessibilityState app/src` finds no match.
+- [x] A test reproduces B4 first: `getByRole("button", { name: "reorder handle" })` fails before the label and passes after it.
+- [x] Each target in the selector table carries its `testID`, and the specs use no pixel coordinate except inside `gestures.ts`.
+- [x] Specs take task names and dates from `e2e/data.ts` only.
+- [x] The suite pins the clock with `page.clock.install`, and no file calls `setFixedTime`.
+- [x] Ten runs in a row with `--repeat-each=10` pass with no failure.
 - [ ] The `e2e-web` job passes in CI in under 5 minutes, and a second run hits the browser cache.
 - [ ] A failing CI run uploads the HTML report with traces.
-- [ ] Vitest does not collect any file under `app/e2e/`.
-- [ ] `tsc --noEmit` and ESLint cover `app/e2e/` and pass.
+- [x] Vitest does not collect any file under `app/e2e/`.
+- [x] `tsc --noEmit` and ESLint cover `app/e2e/` and pass.
 
 ## Outcome
-(filled in before moving to done/)
+
+Landed in PR 72:
+
+- `app/e2e` with the config, fixtures, data, gestures and locators from
+  the spec, and five specs: 18 tests, run in the `motion` and
+  `reduced-motion` projects. Scenarios 1 to 10 pass in both. 360 of 360
+  runs passed with `--repeat-each=10`. A `CI=1` run with two workers
+  took 39 s. `e2e:dev` passed against `npx expo start --web`, run on
+  port 8094 through `E2E_BASE_URL`.
+- B1 carries `test.fail()` in the `motion` project only. With reduced
+  motion the page turns at pointer up, so the row is gone before the
+  click lands and the editor never opens. 0055 guards the click and
+  0059 fixes the pager. Both tickets now say that the first to land
+  removes the mark. B2 fails in both projects, as found.
+- B3: the seven sites send `aria-*` props. The `lists` spec failed on
+  `aria-selected` first, and a `TaskRow` component test failed on
+  `aria-checked` first.
+- B4: the grip is a button named "reorder handle". It failed on its
+  role first. It is no tab stop until 0063 adds keyboard actions.
+- The test ids from the table. A still copy (the day swipe preview, the
+  drag ghost, the month beside the live one) carries none, because
+  Playwright fails at once on two matches. ADR 0038 has an amendment.
+- Specs name a swipe by direction and length. `gestures.ts` holds every
+  pixel value.
+
+Found and fixed on the way, each with a failing test first:
+
+- `serve.py` kept the default listen backlog of 5. Five workers loading
+  the app at once got connection resets, and the first test in each
+  worker failed. It now takes 128.
+- The planner listed "Broken note" as a task row in the week list. It
+  now drops notes that fail validation, as the Lists screen does.
+- A week column sorted a recurring occurrence by its stored day, so
+  7:00 PM sat above 2:30 PM on Tuesday. `sortByTimeOfDay` fixes it.
+
+Left:
+
+- The `e2e-web` CI job and the CI lint over `e2e`. The agent token has
+  no `workflow` scope, so GitHub refuses the change. Ticket 0068 holds
+  one diff for the owner with the triggers, the lint limit and the
+  job, and the two CI acceptance lines moved there. Locally, a failing
+  `CI=1` run wrote the HTML report with the trace zip.
+- The suite runs the browser preview's sample set. 0051 swaps it for
+  the memory adapter. Then only `e2e/data.ts` changes.
