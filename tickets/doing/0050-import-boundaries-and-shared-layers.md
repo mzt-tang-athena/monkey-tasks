@@ -3,7 +3,7 @@ id: 0050
 title: Import boundaries and shared layers
 created: 2026-10-26
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: [0048, 0049]
 ---
