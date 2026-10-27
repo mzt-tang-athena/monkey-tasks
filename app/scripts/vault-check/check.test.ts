@@ -85,7 +85,7 @@ describe("checkVault", () => {
   });
 
   // YAML forbids a tab in indentation. The app reads the list, so the
-  // task keeps its tab, but Obsidian cannot read the note.
+  // task stays on its list page, but Obsidian cannot read the note.
   it("reports a tab-indented list as YAML js-yaml cannot parse", () => {
     const dir = vault({
       "Tasks/Shop.md": task('lists:\n\t- "[[Focus]]"\n'),
@@ -93,8 +93,13 @@ describe("checkVault", () => {
 
     const { findings } = checkVault(dir);
     expect(findings).toHaveLength(1);
-    expect(findings[0].kind).toBe("parser-disagreement");
-    expect(findings[0].reason).toContain("tab characters");
+    // The finding points at the tab, so the user knows which line to fix.
+    expect(findings[0]).toMatchObject({
+      line: 5,
+      kind: "parser-disagreement",
+      reason:
+        "js-yaml cannot parse the frontmatter: tab characters must not be used in indentation",
+    });
   });
 
   it.each([

@@ -6,26 +6,32 @@
 import { describe, expect, it, vi } from "vitest";
 import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
 import { createNote, updateProperty } from "../../features/vault/notes";
-import { displayName } from "../../features/vault/scan";
-import { taskFromText } from "../../features/tasks/query";
+import { loadTasks, taskFromText } from "../../features/tasks/query";
 import { saveTaskEdit } from "../../features/task-editor/save";
 import { captureDraft } from "../../features/capture/write";
 
 const fs = vi.hoisted(() => ({
   writes: [] as { uri: string; text: string }[],
+  /** The files in the one folder, by uri, so a read sees each write. */
+  files: new Map<string, string>(),
 }));
 
-// createNote talks to the document provider. This one keeps the name it
-// is asked for, so no " (1)" suffix is involved.
+// The document provider, with one folder. It keeps the name it is
+// asked for, so no " (1)" suffix is involved.
 vi.mock("expo-file-system/legacy", () => ({
   EncodingType: { UTF8: "utf8" },
   StorageAccessFramework: {
-    createFileAsync: async (_folder: string, fileName: string) =>
-      `content://vault/Tasks/${encodeURIComponent(fileName)}`,
+    createFileAsync: async (_folder: string, fileName: string) => {
+      const uri = `content://vault/Tasks/${encodeURIComponent(fileName)}`;
+      fs.files.set(uri, "");
+      return uri;
+    },
+    readDirectoryAsync: async () => [...fs.files.keys()],
   },
-  readAsStringAsync: async () => "",
+  readAsStringAsync: async (uri: string) => fs.files.get(uri) ?? "",
   writeAsStringAsync: async (uri: string, text: string) => {
     fs.writes.push({ uri, text });
+    fs.files.set(uri, text);
   },
   deleteAsync: async () => undefined,
 }));
@@ -131,26 +137,19 @@ describe("quoted values (ticket 0053, finding 16)", () => {
 });
 
 describe("typed name survives a safe file name (ticket 0053, finding 15)", () => {
-  // safeFileName turns the colon into a space. The provider keeps that
-  // name, so createNote writes no title, and the next read shows the
+  // safeFileName turns the colon into a space, and the provider keeps
+  // that name. createNote wrote no title, so the next read showed the
   // file name instead of what the user typed.
   it("shows the typed name after the next read", async () => {
     const draft = captureDraft({ name: "Pay bill: water" }, { kind: "main" });
-    const created = await createNote(
+    await createNote(
       "content://vault/Tasks",
       draft.fileName,
       draft.content,
       draft.name,
     );
-    const reread = taskFromText(
-      {
-        id: created.uri,
-        uri: created.uri,
-        fileName: created.fileName,
-        name: displayName(created.uri).replace(/\.md$/, ""),
-      },
-      created.text,
-    );
-    expect(reread.name).toBe("Pay bill: water");
+    const rows = await loadTasks("content://vault/Tasks");
+    const row = rows.find((item) => item.fileName === "Pay bill water.md");
+    expect(row?.name).toBe("Pay bill: water");
   });
 });
