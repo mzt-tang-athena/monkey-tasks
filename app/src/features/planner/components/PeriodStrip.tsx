@@ -109,29 +109,27 @@ function PeriodRail({
   activeIdx: number;
   renderItem: (index: number) => React.ReactNode;
 }) {
-  // stripDay 44 + one gap 8: the rail's cell step. The token keeps
-  // the alignment math honest when a pill tune lands.
-  const STEP = periodStep;
   const scroller = React.useRef<React.ComponentRef<typeof ScrollView>>(null);
   const viewport = React.useRef(0);
   const railX = React.useRef(0);
 
   // Align only when the active cell sits outside the viewport: the
   // rail never moves on its own otherwise. Cells live at
-  // pageGutter + i * STEP inside the padded rail content, so both
-  // the boundary test and the targets carry the gutter offset.
+  // pageGutter + i * periodStep inside the padded rail content (one
+  // 44 cell plus one 8 gap per step), so both the boundary test and
+  // the targets carry the gutter offset.
   const alignToActive = React.useCallback(() => {
     if (viewport.current <= 0) {
       return;
     }
-    const lo = Math.floor((railX.current - pageGutter) / STEP);
-    const hi = Math.floor((railX.current - pageGutter + viewport.current) / STEP);
+    const lo = Math.floor((railX.current - pageGutter) / periodStep);
+    const hi = Math.floor((railX.current - pageGutter + viewport.current) / periodStep);
     if (activeIdx < lo) {
-      const x = pageGutter + activeIdx * STEP;
+      const x = pageGutter + activeIdx * periodStep;
       railX.current = x;
       scroller.current?.scrollTo({ x, animated: false });
     } else if (activeIdx > hi - 1) {
-      const x = Math.max(pageGutter + (activeIdx + 1) * STEP - viewport.current, 0);
+      const x = Math.max(pageGutter + (activeIdx + 1) * periodStep - viewport.current, 0);
       railX.current = x;
       scroller.current?.scrollTo({ x, animated: false });
     }
@@ -144,7 +142,7 @@ function PeriodRail({
     scroller.current?.scrollTo({ x: 0, animated: false });
     railX.current = 0;
   }, []);
-  React.useLayoutEffect(alignToActive, [activeIdx, alignToActive, STEP]);
+  React.useLayoutEffect(alignToActive, [activeIdx, alignToActive]);
 
   return (
     <ScrollView
