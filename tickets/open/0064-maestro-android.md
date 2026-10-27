@@ -31,6 +31,17 @@ no native setup. Flows are YAML, and a React Native `testID` is the
 Maestro `id`. Detox needs a separate test build and native project
 changes for each SDK bump.
 
+### The SAF adapter on the device
+
+Vitest cannot run the SAF adapter, because it needs Android. A
+dev-only screen runs the 0051 contract suite against the SAF adapter,
+in a scratch folder under the granted root, and shows a pass or fail
+line per case. A Maestro flow opens the screen and checks that every
+case passes. Joplin tests its React Native file system driver on the
+phone in the same way
+([runOnDeviceTests.ts](https://github.com/laurent22/joplin/blob/dev/packages/app-mobile/utils/fs-driver/runOnDeviceTests.ts)).
+The screen is absent from a release build.
+
 ### APK
 
 The emulator on a GitHub runner is x86_64.
@@ -151,6 +162,7 @@ against a local emulator or a phone over USB. That costs no CI minutes.
 - [ ] Flows cover the ten scenarios of 0049, or Outcome names each gap and its reason.
 - [ ] After the tick flow, the "Call Mum" note on the device holds a `completed:` line.
 - [ ] After the capture flow, the device Tasks folder holds the new note.
+- [ ] A flow runs the 0051 contract suite against the SAF adapter on the emulator, and every case passes.
 - [ ] The reduced motion flow runs with all three animation scales at 0 and passes.
 - [ ] A React Native `testID` from 0049 selects its view as a Maestro `id`.
 - [ ] Outcome records the measured time of each step and the monthly minutes of the chosen trigger.

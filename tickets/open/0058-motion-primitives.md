@@ -147,6 +147,11 @@ useLongPressDrag({
   `preventDefault` while a drag is active. Today's guard shows the
   pattern (`features/planner/hooks/useTouchDragGate.ts:61-86`). That
   listener is the one allowed touch `addEventListener` in the app.
+- Before that listener, try a lighter fix: set `overflow: hidden` on
+  the scroll node while a drag is active. react-native-drax does this
+  ([useWebScrollFreeze.ts](https://github.com/nuclearpasta/react-native-drax/blob/main/src/hooks/useWebScrollFreeze.ts)).
+  The CDP test then also checks that the pane keeps its scroll offset.
+  Add the listener only if this test still fails.
 
 ### 4. Ban the old paths
 

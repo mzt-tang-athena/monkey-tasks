@@ -39,7 +39,7 @@ Line numbers point at today's files.
 
 The drop still hands work from the UI thread to a React commit: the
 data reorders, and the row offsets must reach zero in the same frame.
-Build both options behind a flag and run them on the phone at 60 Hz
+Build the options behind a flag and run them on the phone at 60 Hz
 and at 120 Hz:
 
 - **A.** Offsets live in shared values. The drop commits the new order
@@ -48,10 +48,17 @@ and at 120 Hz:
   items and `itemLayoutAnimation={LinearTransition}`. Each crossing
   reorders a preview copy of the data, and the layout transition moves
   the rows. The dragged row's cell stays empty under the ghost.
+- **C.** Each moved row gets a new React key at the drop, for example
+  `${id}#${dropCount}`. The moved rows mount again at their new places
+  with zero offset, so no reset races the commit.
+  react-native-reorderable-list does this (`createCellKey` and
+  `markCells` in
+  [ReorderableListCore.tsx](https://github.com/omahili/react-native-reorderable-list/blob/master/src/components/ReorderableListCore.tsx)).
+  The landed mark from 0058 stops the entrance on a remount.
 
 Keep the option that shows no blink in a screen recording at both
 rates. Add a dated note with the result to ADR 0032 and delete the
-other option.
+other options.
 
 ### Step 2: the reorder
 
@@ -71,6 +78,11 @@ other option.
 - The drop passes `from` and `to` from the UI thread to
   `scheduleOnRN`, so no callback reads stale state. Every drop resets
   the offsets, a drop in place included.
+- The drop compares the `from` and `to` indexes to decide if the row
+  moved. It never compares positions. A release exactly on the new
+  slot must still reorder and reset. react-native-reorderable-list
+  has this bug open
+  ([#75](https://github.com/omahili/react-native-reorderable-list/issues/75)).
 - The ghost renders a `PreviewRow`, not a `TaskRow`.
 - Every slide passes `ReduceMotion.System`.
 

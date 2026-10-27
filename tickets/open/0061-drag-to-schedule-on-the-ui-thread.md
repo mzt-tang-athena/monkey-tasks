@@ -55,6 +55,22 @@ to the `Menu` primitive in 0054, and 0058 swaps its motion.
   The drag's `onMove` worklet runs `hitZone` and writes the hovered id
   to a shared value. Each zone tints through `useZoneStyle(id)`, so a
   zone change renders nothing.
+- Hour rows, week columns and month cells are uniform grids. A grid
+  can register one rect with its row and column sizes. `hitZone` then
+  finds the cell with `Math.floor` in the worklet, with no measure per
+  cell. @howljs/calendar-kit finds its slot this way
+  ([useDragEventGesture.tsx](https://github.com/howljs/react-native-calendar-kit/blob/main/packages/react-native-calendar-kit/src/hooks/useDragEventGesture.tsx),
+  lines 83 and 134).
+- Each scroll container that holds zones writes its scroll offset to a
+  shared value. `hitZone` adds the change in offset since pickup, so a
+  pane that scrolls during a drag needs no new measure.
+  react-native-drax does this (`hitTestWorklet` and
+  `computeAbsolutePositionWorklet` in
+  [src/math.ts](https://github.com/nuclearpasta/react-native-drax/blob/main/src/math.ts)).
+- Keep `register` stable, and keep the hovered id out of React.
+  react-native-reanimated-dnd keeps it in context. Each hover change
+  then registers every zone again, and fast drops are lost
+  ([#93](https://github.com/entropyconquers/react-native-reanimated-dnd/issues/93)).
 - The drop hands the hovered id to `scheduleOnRN`. An hour zone writes
   that hour and keeps the task's minute. A day zone writes that date
   and keeps the task's time. A drop outside every zone writes nothing.
