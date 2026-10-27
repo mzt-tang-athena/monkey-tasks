@@ -23,5 +23,12 @@ class SPAHandler(SimpleHTTPRequestHandler):
         pass
 
 
+class Server(ThreadingHTTPServer):
+    # The default backlog is 5 connections. Several browsers loading
+    # the app at once (the Playwright workers) overflow it, and the
+    # OS resets the extra connections.
+    request_queue_size = 128
+
+
 handler = functools.partial(SPAHandler, directory=directory)
-ThreadingHTTPServer(("0.0.0.0", port), handler).serve_forever()
+Server(("0.0.0.0", port), handler).serve_forever()
