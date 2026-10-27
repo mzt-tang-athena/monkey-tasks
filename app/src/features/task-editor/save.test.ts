@@ -213,6 +213,41 @@ describe("saveTaskEdit", () => {
     expect(state.writes).toEqual([{ uri: state.createdUri, text: result.text }]);
   });
 
+  it("writes the typed title when the rename cleans the name", async () => {
+    state.createdUri = NEW_URI.replace("New%20name.md", "Pay%20bill%20water.md");
+
+    const result = await saveTaskEdit(task(), edit({ name: "Pay bill: water" }));
+
+    expect(state.creates[0]?.fileName).toBe("Pay bill water.md");
+    expect(result.fileName).toBe("Pay bill water.md");
+    expect(result.data?.title).toBe("Pay bill: water");
+    expect(state.writes).toEqual([{ uri: state.createdUri, text: result.text }]);
+  });
+
+  it("writes the typed title when the cleaned name keeps the file", async () => {
+    const item: TaskItem = {
+      ...task(),
+      fileName: "Pay bill water.md",
+      name: "Pay bill water",
+    };
+
+    const result = await saveTaskEdit(item, edit({ name: "Pay bill: water" }));
+
+    // The file name already fits, so there is no rename.
+    expect(state.creates).toEqual([]);
+    expect(state.deletes).toEqual([]);
+    expect(result.fileName).toBe("Pay bill water.md");
+    expect(result.data?.title).toBe("Pay bill: water");
+    expect(state.writes).toEqual([{ uri: OLD_URI, text: result.text }]);
+  });
+
+  it("writes no title when the file name holds the typed name", async () => {
+    const result = await saveTaskEdit(task(), edit({ body: "\nNew body.\n" }));
+
+    expect(result.text).not.toContain("title:");
+    expect(result.data?.title).toBeUndefined();
+  });
+
   it("refuses when the editor opened an older text than the store holds", async () => {
     const item = task();
     const opened = item.text.replace("Old body.", "Opened body.");

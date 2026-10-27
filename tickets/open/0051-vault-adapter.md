@@ -240,6 +240,9 @@ Out of scope: the write path itself (ticket 0052), the parser
       pick a mock path.
 - [ ] Ticking a recurring sample task in the browser creates its next
       occurrence as a note (ADR 0027).
+- [ ] In the browser, a capture of "Pay bill: water" still shows
+      "Pay bill: water" after a refresh. The note is
+      `Pay bill water.md` with that title (ticket 0053, ADR 0028).
 - [ ] Latency and one failed write can be set from the page query and
       from `globalThis.__vault`.
 - [ ] `globalThis.__vault` is undefined in a release build.

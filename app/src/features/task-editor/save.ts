@@ -3,6 +3,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { displayName } from "../vault/scan";
 import {
   NoteChangedError,
+  keepTypedName,
   readNote,
   updateProperty,
   writeNote,
@@ -97,11 +98,10 @@ async function renameNote(
       fileName,
       "text/markdown",
     );
-    // The provider appends " (1)" when the name is taken. The note
-    // then carries the typed name as its title, so the row keeps it.
-    const actual = displayName(created);
-    const written =
-      actual === fileName ? text : updateProperty(text, "title", title);
+    // The file name may not hold the typed name: the app cleaned it, or
+    // the provider appended " (1)". The note then carries the typed
+    // name as its title, so the row keeps it.
+    const written = keepTypedName(text, displayName(created), title);
     await writeNote(created, written);
     await FileSystem.deleteAsync(oldUri, { idempotent: true });
     return { uri: created, text: written };
@@ -155,13 +155,10 @@ export async function saveTaskEdit(
   // the title instead of creating a new file. An untitled note keeps
   // the old behaviour, where the name is the file name.
   const titled = item.data?.title != null;
-  if (titled) {
-    text = updateProperty(text, "title", edit.name);
-  }
   const requestedName = `${safeFileName(edit.name)}.md`;
   const renaming = !titled && requestedName !== item.fileName;
   let uri = item.uri;
-  let written = text;
+  let written: string;
   if (renaming) {
     const renamed = await renameNote(
       item.uri,
@@ -173,7 +170,13 @@ export async function saveTaskEdit(
     uri = renamed.uri;
     written = renamed.text;
   } else {
-    await writeNoteIfUnchanged(item.uri, expected, text);
+    // An untitled note with no rename can still need a title: the
+    // cleaned name matches the file, but the typed name does not, as
+    // with "Pay bill: water" in "Pay bill water.md".
+    written = titled
+      ? updateProperty(text, "title", edit.name)
+      : keepTypedName(text, item.fileName, edit.name);
+    await writeNoteIfUnchanged(item.uri, expected, written);
   }
 
   // The provider may adjust the file name it was handed, so the row

@@ -113,7 +113,9 @@ A bare link is a `[[link]]` value with no quotes. YAML reads it as a
 list, and Obsidian writes the nested form back on the next edit. That
 is how `Shop.md` lost its Focus list (ticket 0032). A parser
 disagreement is a note where the app and `js-yaml` read the same text
-differently, for example `- - Focus`. The parser check covers the
+differently, for example `- - Focus`. A note that `js-yaml` cannot
+parse counts too, for example a list indented with a tab: the app reads
+it, but YAML forbids the tab (ADR 0029). The parser check covers the
 app's three folders. The wikilink check covers every note.
 
 ## Layout

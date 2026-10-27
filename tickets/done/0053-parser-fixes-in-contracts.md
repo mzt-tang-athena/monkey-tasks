@@ -3,8 +3,8 @@ id: 0053
 title: The frontmatter parser reads what YAML reads
 created: 2026-10-26
 priority: high
-assignee:
-pr:
+assignee: claude-code
+pr: 69
 depends: []
 ---
 
@@ -104,26 +104,67 @@ the bug is there. A fix turns its test into a plain `it`.
 
 ## Acceptance
 
-- [ ] Each bug had its repro test in `app/src/testing/repro/parser.test.ts`
+- [x] Each bug had its repro test in `app/src/testing/repro/parser.test.ts`
       before its fix, as `it.fails`.
-- [ ] Every test in `app/src/testing/repro/parser.test.ts` runs as a
+- [x] Every test in `app/src/testing/repro/parser.test.ts` runs as a
       plain `it` and passes.
-- [ ] The contracts tests cover list items at no indent, two spaces,
+- [x] The contracts tests cover list items at no indent, two spaces,
       four spaces and a tab, and all read `["[[Focus]]"]`.
-- [ ] The contracts tests cover each escape in the bug 2 list and a
+- [x] The contracts tests cover each escape in the bug 2 list and a
       single-quoted `''`.
-- [ ] A value with a quote at one end only keeps its quote.
-- [ ] Every value `serializeValue` writes reads back unchanged, for a
+- [x] A value with a quote at one end only keeps its quote.
+- [x] Every value `serializeValue` writes reads back unchanged, for a
       list of tricky titles in an app test.
 - [ ] The `vault:check` tests show no parser disagreement for a note
       with list items at no indent, four spaces, or a tab.
-- [ ] An editor save on a note with a four-space list keeps the list.
-- [ ] A capture of "Pay bill: water" shows "Pay bill: water" after the
+- [x] An editor save on a note with a four-space list keeps the list.
+- [x] A capture of "Pay bill: water" shows "Pay bill: water" after the
       next read.
-- [ ] ADR 0028 has a dated amendment for the wider title rule.
-- [ ] The contracts PR is merged, and the submodule points at its
+- [x] ADR 0028 has a dated amendment for the wider title rule.
+- [x] The contracts PR is merged, and the submodule points at its
       merge commit.
 
 ## Outcome
 
-(filled in before moving to done/)
+Landed in PR #69 into `epic/0047-rebuild`, with contracts PR #1
+(`mzt-tang-athena/contracts`).
+
+- **Contracts.** The parser reads list items at any indent and decodes
+  YAML's escapes. Quotes come off only when both ends match. Where
+  YAML refuses a note, the parser keeps the text as written. Contracts
+  ADR 0002 records that choice and the rejected YAML library. 48 new
+  tests cover the indents, each escape, single quotes and one-sided
+  quotes.
+- **Bug 1.** `updateProperty` also finds items with no indent, so an
+  editor save keeps a list at any indent and leaves no item behind.
+- **Bug 2.** `serializeValue` escapes every character YAML refuses raw.
+  31 tricky titles round-trip through the app's parser and `js-yaml`.
+- **Bug 3.** `keepTypedName` writes `title` when the final file name
+  differs from the typed name: on a capture, on a rename, and on an
+  editor save with no rename. ADR 0028 has the amendment.
+- **vault:check** finds a list item's key at any indent. A note that
+  `js-yaml` cannot parse is reported at the line where it stopped.
+
+Each repro test failed on the old parser or the old title rule before
+it passed. The typed-name test reads the folder back through
+`loadTasks`, the same path as the app's next read.
+
+Left open, on purpose or for others:
+
+- The `vault:check` line is not ticked. No indent and four spaces read
+  the same in the app and in `js-yaml`. A tab still gives a finding.
+  YAML forbids a tab in indentation, so `js-yaml` and Obsidian cannot
+  read the note. The check reports it at the tab's line, and ADR 0029
+  has an amendment for the choice.
+- The contracts PR merge is the reviewer's step. After the merge, move
+  the `contracts` submodule from the PR head (`f87f877`) to the merge
+  commit. Contracts CI cannot run on that private repo while Actions
+  is blocked on billing, so its gates ran locally: 74 passed and 1
+  skipped, typecheck clean, and no prose alerts.
+- The web preview cannot show the typed name after a read. Its mock
+  store never writes or reads a note, so the preview looks the same
+  before and after this ticket. Ticket 0051 gives the preview a memory
+  adapter, and it now carries an acceptance line for "Pay bill: water"
+  after a refresh.
+- The phone pass for capture, rename and editor save waits for the
+  epic's dev client build.
