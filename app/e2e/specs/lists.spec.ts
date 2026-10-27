@@ -35,8 +35,9 @@ test.describe("tab swipe", () => {
     // B1: a mouse swipe that starts on a row ends with a click on that
     // row, and the pager does not swallow it. With reduced motion the
     // page turns at pointer up, so the row is gone before the click
-    // lands, and the bug does not show. Ticket 0059 fixes it and
-    // removes this mark.
+    // lands, and the bug does not show. Ticket 0055 guards the click,
+    // and ticket 0059 fixes it in the pager. The first to land removes
+    // this mark.
     test.fail(reducedMotion !== "reduce", "B1, fixed by ticket 0059");
 
     await swipe(page, row(page, supplements), "left");
