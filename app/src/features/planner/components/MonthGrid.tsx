@@ -6,6 +6,7 @@ import { addDays, isSameDay } from "../../../lib/dates";
 import { occurrencesBetween } from "../../tasks/recurrence";
 import { isDone, isoOf, startOfMonth } from "../model";
 import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "../lib/labels";
+import { spacing } from "../../../theme/tokens";
 import { styles } from "./plannerStyles";
 
 /** The tapped day, tagged with the month it belongs to. The
@@ -124,7 +125,7 @@ export function MonthGrid({
                     sits on one baseline with or without a dot. */}
                 <View style={styles.monthDotSlot}>
                   {dotted.has(isoOf(day)) ? (
-                    <View style={styles.monthDot} />
+                    <View style={styles.monthDot} testID="month-dot" />
                   ) : null}
                 </View>
               </>
@@ -170,7 +171,9 @@ export function MonthGrid({
 
 const gridStyles = StyleSheet.create({
   // The page keeps its content height inside the pager's stretch.
+  // The title sits one step over the card.
   root: {
     flexShrink: 0,
+    gap: spacing.s,
   },
 });

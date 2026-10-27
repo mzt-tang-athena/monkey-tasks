@@ -90,7 +90,7 @@ export function MonthView({
 
 /** The tapped day's group header above the month list: its name, its
     date, and how many tasks it holds. The rows follow from the
-    shared section, so this stays a label. */
+    shared section, which spaces them, so this stays a label. */
 export function MonthDayHeader({
   day,
   tasks,
@@ -99,13 +99,11 @@ export function MonthDayHeader({
   tasks: TaskItem[];
 }) {
   return (
-    <View style={styles.monthPickedBlock}>
-      <Text style={styles.sectionLabel}>
-        {WEEKDAYS_FULL[day.getDay()]} {day.getDate()}
-        {"  "}
-        {tasks.length}
-      </Text>
-    </View>
+    <Text style={styles.sectionLabel}>
+      {WEEKDAYS_FULL[day.getDay()]} {day.getDate()}
+      {"  "}
+      {tasks.length}
+    </Text>
   );
 }
 

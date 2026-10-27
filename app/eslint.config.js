@@ -7,9 +7,10 @@ module.exports = defineConfig([
   {
     rules: {
       // Spacing ownership (docs/adr/0012): children never declare
-      // bottom or right margins; containers own the gaps.
+      // bottom or right margins; containers own the gaps. Ticket 0054
+      // widens it to top, left and vertical margins.
       'no-restricted-syntax': [
-        'warn',
+        'error',
         {
           selector:
             "Property[key.name=/^margin(Bottom|Right)$/] , Property[key.name='marginBottom'] , Property[key.name='marginRight']",
@@ -38,6 +39,15 @@ module.exports = defineConfig([
           ],
         },
       ],
+    },
+  },
+  {
+    // A test declares its vi.mock calls first and imports the modules
+    // they replace after them, so the reader sees the mocks first.
+    // Vitest hoists the mocks either way.
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'import/first': 'off',
     },
   },
   {

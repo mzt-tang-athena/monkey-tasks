@@ -588,23 +588,32 @@ export function DaySpread({
     return (
       <View style={styles.dayPage}>
       {/* Compact day heading: eyebrow, short serif date, accent rule. */}
-      <Text style={styles.dateMonth}>
-        {MONTHS[date.getMonth()]} {date.getFullYear()}
-      </Text>
-      <Text style={styles.dateHeader}>
-        {WEEKDAYS_FULL[date.getDay()]} {date.getDate()}
-      </Text>
-      <View style={styles.dateRule} />
+      <View style={styles.dayHeading}>
+        <View>
+          <Text style={styles.dateMonth}>
+            {MONTHS[date.getMonth()]} {date.getFullYear()}
+          </Text>
+          <Text style={styles.dateHeader}>
+            {WEEKDAYS_FULL[date.getDay()]} {date.getDate()}
+          </Text>
+        </View>
+        <View style={styles.dateRule} />
+      </View>
 
+      {/* The split opens with the timeline pane, so its top is the
+          pane's top. */}
+      <View
+        style={styles.daySplit}
+        onLayout={(e) => {
+          setPaneY(e.nativeEvent.layout.y);
+        }}
+      >
       {/* The timeline pane: the ruler, resizable by the grabber. */}
       <View
         ref={(node) => {
           paneRef.current = node as HTMLElement | null;
         }}
         style={[styles.pane, { height: timelineHeight }]}
-        onLayout={(e) => {
-          setPaneY(e.nativeEvent.layout.y);
-        }}
       >
         <Text style={styles.sectionLabel}>Timeline  {timed.length}</Text>
         <ScrollView
@@ -712,25 +721,28 @@ export function DaySpread({
                 <Text style={styles.overdueLabel}>
                   Overdue  {overdue.length}
                 </Text>
-                {overdue.map((task) => (
-                  <Pickup
-                    key={task.id}
-                    task={task}
-                    api={dayApi}
-                    lifted={lifted ?? null}
-                    onPointerDown={(e) => startTaskDrag(task, e)}
-                  >
-                    <TaskRow
+                <View>
+                  {overdue.map((task) => (
+                    <Pickup
+                      key={task.id}
                       task={task}
-                      onToggle={guardedToggle}
-                      onOpen={guardedOpen}
-                    />
-                  </Pickup>
-                ))}
+                      api={dayApi}
+                      lifted={lifted ?? null}
+                      onPointerDown={(e) => startTaskDrag(task, e)}
+                    >
+                      <TaskRow
+                        task={task}
+                        onToggle={guardedToggle}
+                        onOpen={guardedOpen}
+                      />
+                    </Pickup>
+                  ))}
+                </View>
               </View>
             ) : undefined
           }
         />
+      </View>
       </View>
 
       </View>

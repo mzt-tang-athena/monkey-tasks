@@ -36,8 +36,12 @@ a device.
 Run the app tests from `app`:
 
 ```bash
-npx vitest run
+npm test
 ```
+
+Vitest runs two projects (ADR 0038). `npm run test:unit` runs the logic
+tests in node. `npm run test:component` renders components through
+React Native Web in jsdom.
 
 Run the schema tests from `contracts/packages/schemas`:
 
@@ -53,8 +57,9 @@ Install the local hook once per clone:
 make hooks
 ```
 
-It runs ESLint on the staged app code and Vale on the staged docs. The
-typecheck, the tests and the bundle stay in CI.
+It runs ESLint on the staged app code and Vale on the staged docs. An
+ESLint warning fails the commit. The typecheck, the tests and the
+bundle stay in CI.
 
 ## Install it on a phone
 
@@ -140,7 +145,8 @@ as a bare RRULE value and expands it with `rrule`.
 Ticket 0047 is the current work: a refactor to the Bulletproof React
 layout, a data layer built on mutations, and a motion rebuild on the UI
 thread. It lands on the `epic/0047-rebuild` branch through child tickets
-0048 to 0063 and 0066 (ADR 0035). New feature work waits until it merges.
+0048 to 0063, 0066 and 0068 (ADR 0035). New feature work waits until it
+merges.
 
 Open feature tickets after that:
 

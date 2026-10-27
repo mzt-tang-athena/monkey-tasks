@@ -44,9 +44,9 @@ to kebab-case, so look for the same code under its new name.
 | `components/drag-ghost.tsx` | One ghost, through `OverlayHost` at `layers.ghost` | `PlannerScreen.tsx:288-307`, `DaySpread.tsx:562-581` |
 | `planner-layout.ts` | The shared frame and pane styles only | parts of `plannerStyles.ts` |
 
-Move every other style next to its component. Delete the keys with no
-reader: `strip*`, `segmented*`, `segmentMiddle`, `liftHold`,
-`liftPicked` and `railBleed`. Their live copies sit in
+Move every other style next to its component. Ticket 0048 deleted the
+keys with no reader (`strip*`, `segmented*`, `segmentMiddle`,
+`liftHold`, `liftPicked` and `railBleed`). Their live copies sit in
 `PeriodStrip.tsx`, `PlannerHeader.tsx` and `drag.tsx`. Use
 `SegmentedControl` for the mode switch and the form toggle,
 `SectionHeader` for the section labels, and the state primitives in

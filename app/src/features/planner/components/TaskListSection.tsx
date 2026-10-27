@@ -15,6 +15,7 @@ import { FormToggle } from "./FormToggle";
 import { Pickup, type DragApi, type LiftState } from "./drag";
 import { SourceToggle } from "./SourceToggle";
 import { TaskPills } from "./TaskPills";
+import { spacing } from "../../../theme/tokens";
 import { styles } from "./plannerStyles";
 
 /** Pills mode has no rows, so the list renders header and footer only. */
@@ -69,6 +70,13 @@ export function TaskListSection({
   api?: DragApi;
   style?: StyleProp<ViewStyle>;
 }) {
+  const pills = taskForm === "pills" && tasks.length > 0;
+  // A FlatList has no gap between its header slot and its first row,
+  // so the list sets that gap on the slot itself (ADR 0012). Rows and
+  // the empty label sit one step under the section head and two steps
+  // under a group header. Pills end the slot, and the footer spaces
+  // itself.
+  const headGap = pills ? 0 : header != null ? spacing.l : spacing.s;
   return (
     <FlatList
       style={style}
@@ -85,8 +93,9 @@ export function TaskListSection({
         </Pickup>
       )}
       ItemSeparatorComponent={RowSeparator}
+      ListHeaderComponentStyle={{ paddingBottom: headGap }}
       ListHeaderComponent={
-        <>
+        <View style={styles.listHead}>
           <View style={styles.sectionHead}>
             <SourceToggle
               source={source}
@@ -98,19 +107,24 @@ export function TaskListSection({
             <View style={styles.sectionSpacer} />
             <FormToggle form={taskForm} onChange={onFormChange} />
           </View>
-          {header}
-          {/* Pills stay a wrapped grid inside the header, not list
-              items: each pill sizes itself to its label and the grid
-              reflows per row, which a vertical list cannot do. */}
-          {taskForm === "pills" ? (
-            <TaskPills
-              tasks={tasks}
-              onDragStart={onDragStart}
-              lifted={lifted ?? null}
-              api={api}
-            />
+          {header != null || pills ? (
+            <View style={styles.listHeadBody}>
+              {header}
+              {/* Pills stay a wrapped grid inside the header, not list
+                  items: each pill sizes itself to its label and the
+                  grid reflows per row, which a vertical list cannot
+                  do. */}
+              {pills ? (
+                <TaskPills
+                  tasks={tasks}
+                  onDragStart={onDragStart}
+                  lifted={lifted ?? null}
+                  api={api}
+                />
+              ) : null}
+            </View>
           ) : null}
-        </>
+        </View>
       }
       ListEmptyComponent={
         tasks.length === 0 ? <Text style={styles.empty}>{emptyLabel}</Text> : undefined

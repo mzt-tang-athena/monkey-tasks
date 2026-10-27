@@ -85,22 +85,24 @@ export function WeekView({
             </Text>
             <View style={styles.weekColRule} />
             {items.length > 0 ? (
-              items.map((task) => (
-                <Pickup
-                  key={task.id}
-                  task={task}
-                  api={api}
-                  lifted={lifted}
-                  onPointerDown={(e) => onDragTask(task, e)}
-                  style={styles.weekTask}
-                >
-                  <View style={styles.taskBar} />
-                  <Text style={styles.weekTaskText} numberOfLines={3}>
-                    {hasTime(task) ? `${timeOf(task)}  ` : ""}
-                    {task.name}
-                  </Text>
-                </Pickup>
-              ))
+              <View style={styles.weekTasks}>
+                {items.map((task) => (
+                  <Pickup
+                    key={task.id}
+                    task={task}
+                    api={api}
+                    lifted={lifted}
+                    onPointerDown={(e) => onDragTask(task, e)}
+                    style={styles.weekTask}
+                  >
+                    <View style={styles.taskBar} />
+                    <Text style={styles.weekTaskText} numberOfLines={3}>
+                      {hasTime(task) ? `${timeOf(task)}  ` : ""}
+                      {task.name}
+                    </Text>
+                  </Pickup>
+                ))}
+              </View>
             ) : (
               <Text style={styles.weekFree}>free</Text>
             )}

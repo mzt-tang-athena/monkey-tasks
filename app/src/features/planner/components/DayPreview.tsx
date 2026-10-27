@@ -14,6 +14,7 @@ import {
 import { TaskListSection } from "./TaskListSection";
 import { Timeline } from "./Timeline";
 import { styles as base } from "./plannerStyles";
+import { spacing } from "../../../theme/tokens";
 
 /** Nothing in the preview reacts; every handler the live body
  *  supplies is replaced by this one. */
@@ -64,14 +65,19 @@ export function DayPreview({
   return (
     <View style={styles.preview} pointerEvents="none">
       {/* Compact day heading: eyebrow, short serif date, accent rule. */}
-      <Text style={base.dateMonth}>
-        {MONTHS[date.getMonth()]} {date.getFullYear()}
-      </Text>
-      <Text style={base.dateHeader}>
-        {WEEKDAYS_FULL[date.getDay()]} {date.getDate()}
-      </Text>
-      <View style={base.dateRule} />
+      <View style={base.dayHeading}>
+        <View>
+          <Text style={base.dateMonth}>
+            {MONTHS[date.getMonth()]} {date.getFullYear()}
+          </Text>
+          <Text style={base.dateHeader}>
+            {WEEKDAYS_FULL[date.getDay()]} {date.getDate()}
+          </Text>
+        </View>
+        <View style={base.dateRule} />
+      </View>
 
+      <View style={base.daySplit}>
       {/* The timeline pane at the live split's height. */}
       <View style={[base.pane, { height: timelineHeight }]}>
         <Text style={base.sectionLabel}>Timeline  {timed.length}</Text>
@@ -123,13 +129,16 @@ export function DayPreview({
           }
         />
       </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // The live day page's spacing: heading, then the split.
   preview: {
     flex: 1,
     overflow: "hidden",
+    gap: spacing.m,
   },
 });

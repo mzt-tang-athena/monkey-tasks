@@ -253,6 +253,7 @@ const styles = StyleSheet.create({
     // may wrap or grow without moving it. The row hugs its content,
     // so single-line tasks sit exactly centered.
     alignItems: "flex-start",
+    gap: spacing.m,
     paddingHorizontal: spacing.l,
     paddingVertical: spacing.m,
   },
@@ -278,7 +279,6 @@ const styles = StyleSheet.create({
     borderColor: colors.inkFaint,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: spacing.m,
   },
   circleDone: {
     backgroundColor: colors.accent,
