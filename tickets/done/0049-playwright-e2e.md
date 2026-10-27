@@ -385,6 +385,14 @@ Found and fixed on the way, each with a failing test first:
   now drops notes that fail validation, as the Lists screen does.
 - A week column sorted a recurring occurrence by its stored day, so
   7:00 PM sat above 2:30 PM on Tuesday. `sortByTimeOfDay` fixes it.
+- The `motion` spec read the tabs after the release in two round
+  trips. On a loaded machine the round trips took longer than the
+  220 ms slide, and the test failed. A 300 ms wait after the release
+  failed it 3 times in 3. The spec now stops the page clock with
+  `pauseClock` before the swipe, and moves it on with
+  `page.clock.runFor`. It passes with the same wait. It still fails
+  when the motion project turns the page at the release, and when the
+  reduced motion project slides.
 
 Left:
 

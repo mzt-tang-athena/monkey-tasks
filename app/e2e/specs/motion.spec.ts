@@ -1,4 +1,4 @@
-import { expect, test } from "../fixtures";
+import { expect, pauseClock, test } from "../fixtures";
 import { sections, tabs, undated } from "../data";
 import { swipe } from "../gestures";
 import { listTab, row, sectionHeader } from "../locators";
@@ -12,23 +12,23 @@ test("a list swipe follows the motion setting", async ({ page, reducedMotion }) 
   const main = listTab(page, tabs.main);
   const next = listTab(page, tabs.next);
 
+  // The slide runs on the page clock. With the clock stopped, the
+  // page stays at the moment the finger lifts until the test moves
+  // the clock on. A slow runner cannot let the slide end between the
+  // release and a read.
+  await pauseClock(page);
   await swipe(page, sectionHeader(page, sections.today), "left");
 
-  // Read the tabs once, at the moment the finger lifts: `swipe`
-  // returns right after the release. A web-first assertion would
-  // wait, and hide the difference.
-  const atRelease = {
-    main: await main.getAttribute("aria-selected"),
-    next: await next.getAttribute("aria-selected"),
-  };
   if (reducedMotion === "reduce") {
-    // Nothing slides: the page turns at the release.
-    expect(atRelease).toEqual({ main: "false", next: "true" });
+    // Nothing slides: the page turns with no clock time.
+    await expect(next).toHaveAttribute("aria-selected", "true");
+    await expect(main).toHaveAttribute("aria-selected", "false");
   } else {
     // The page slides out first, then the tab changes.
-    expect(atRelease).toEqual({ main: "true", next: "false" });
-    await expect(next).toHaveAttribute("aria-selected", "true", {
-      timeout: slideBudgetMs,
-    });
+    await expect(main).toHaveAttribute("aria-selected", "true");
+    await expect(next).toHaveAttribute("aria-selected", "false");
+    await page.clock.runFor(slideBudgetMs);
+    await expect(next).toHaveAttribute("aria-selected", "true");
   }
+  await page.clock.resume();
 });
