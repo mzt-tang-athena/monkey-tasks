@@ -35,8 +35,8 @@ Phases, in order. A later phase builds on the homes an earlier one made.
 | 4. Motion | 0058, 0059, 0060, 0061, 0062 | Reanimated 4 and gesture handler 3 on the UI thread, then each surface ported |
 | 5. Access | 0063 | Labels, roles, states and touch targets |
 
-Later, outside this epic: 0064 (Maestro on Android) and 0065 (the list
-menu actions).
+Later, outside this epic: 0064 (Maestro on Android), 0065 (the list
+menu actions) and 0067 (drop `react-test-renderer`, after 0052).
 
 The decisions live in ADRs 0035 to 0039.
 
