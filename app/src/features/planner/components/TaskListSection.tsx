@@ -50,6 +50,7 @@ export function TaskListSection({
   lifted,
   api,
   style,
+  copy = false,
 }: {
   source: Source;
   mode: Mode;
@@ -68,6 +69,9 @@ export function TaskListSection({
   footer?: React.ReactNode;
   lifted?: LiftState;
   api?: DragApi;
+  /** The rows are a still copy (the day swipe preview), so they carry
+      no test ids. */
+  copy?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const pills = taskForm === "pills" && tasks.length > 0;
@@ -89,7 +93,12 @@ export function TaskListSection({
           lifted={lifted ?? null}
           onPointerDown={(e) => onDragStart(item, e)}
         >
-          <TaskRow task={item} onToggle={onToggle} onOpen={onOpen} />
+          <TaskRow
+            task={item}
+            onToggle={onToggle}
+            onOpen={onOpen}
+            copy={copy}
+          />
         </Pickup>
       )}
       ItemSeparatorComponent={RowSeparator}

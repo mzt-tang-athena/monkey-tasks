@@ -111,6 +111,7 @@ export function DayPreview({
       {/* The task list pane: source chip, form toggle, the rows. */}
       <View style={base.paneList}>
         <TaskListSection
+          copy
           style={base.paneScroll}
           source={source}
           mode="day"

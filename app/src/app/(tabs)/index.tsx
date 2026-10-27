@@ -673,6 +673,7 @@ export default function ListsScreen() {
           </ReorderRow>
           {canDrag ? (
             <ReorderGrip
+              taskName={item.name}
               hidden={lifted}
               onPickup={(x, y) =>
                 armReorderNow(item, index, section.title, x, y)
@@ -818,6 +819,7 @@ export default function ListsScreen() {
         />
       ) : null}
       <View
+        testID="list-pager"
         style={styles.body}
         // The handlers read refs when the gesture runs, not in render.
         // eslint-disable-next-line react-hooks/refs
@@ -865,7 +867,7 @@ export default function ListsScreen() {
                   chipX.current[name] = event.nativeEvent.layout.x;
                 }}
                 accessibilityRole="tab"
-                accessibilityState={{ selected: tab === name }}
+                aria-selected={tab === name}
               >
                 <Text
                   style={[
@@ -973,7 +975,7 @@ export default function ListsScreen() {
             { top: 0, transform: [{ translateY: ghostY }] },
           ]}
         >
-          <TaskRow task={reorder.task} />
+          <TaskRow task={reorder.task} copy />
         </Animated.View>
       ) : null}
 
@@ -999,7 +1001,7 @@ export default function ListsScreen() {
                 setSortMenu(null);
               }}
               accessibilityRole="button"
-              accessibilityState={{ selected: sortMode === option.key }}
+              aria-selected={sortMode === option.key}
               accessibilityLabel={option.label}
             >
               <Text

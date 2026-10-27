@@ -54,11 +54,14 @@ export function ReorderRow({
  * a guess. Only My order shows it.
  */
 export function ReorderGrip({
+  taskName,
   onPickup,
   onMove,
   onEnd,
   hidden = false,
 }: {
+  /** The row's task name, for the test id. */
+  taskName: string;
   onPickup: (x: number, y: number) => void;
   onMove?: (x: number, y: number) => void;
   onEnd?: () => void;
@@ -67,7 +70,15 @@ export function ReorderGrip({
   hidden?: boolean;
 }) {
   const content = (
-    <View style={[styles.grip, hidden && styles.hidden]}>
+    <View
+      testID={`reorder-grip:${taskName}`}
+      accessibilityRole="button"
+      accessibilityLabel="reorder handle"
+      // The grip has no keyboard action yet (ticket 0063 adds the move
+      // actions), so it stays out of the tab order.
+      focusable={false}
+      style={[styles.grip, hidden && styles.hidden]}
+    >
       <View style={styles.gripDots}>
         {[0, 1, 2].map((row) => (
           <View key={row} style={styles.gripRow}>

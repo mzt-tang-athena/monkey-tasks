@@ -551,6 +551,7 @@ export function DaySpread({
       {/* The pager sits under the header: only the day body slides,
           so the date strip and the mode switch never move. */}
       <View
+        testID="day-pager"
         style={bodyFrame}
         onLayout={(e) => setBodyTop(e.nativeEvent.layout.y)}
       >
@@ -588,7 +589,7 @@ export function DaySpread({
     return (
       <View style={styles.dayPage}>
       {/* Compact day heading: eyebrow, short serif date, accent rule. */}
-      <View style={styles.dayHeading}>
+      <View testID="day-heading" style={styles.dayHeading}>
         <View>
           <Text style={styles.dateMonth}>
             {MONTHS[date.getMonth()]} {date.getFullYear()}
@@ -631,6 +632,7 @@ export function DaySpread({
             onToggle={guardedToggle}
             onDragStart={startTaskDrag}
             api={dayApi}
+            testID="timeline-hour"
           />
         </ScrollView>
       </View>

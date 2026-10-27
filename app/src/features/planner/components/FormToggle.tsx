@@ -34,7 +34,7 @@ export function FormToggle({
           onPress={() => onChange(segment.key)}
           accessibilityRole="tab"
           accessibilityLabel={segment.label}
-          accessibilityState={{ selected: form === segment.key }}
+          aria-selected={form === segment.key}
         >
           {segment.key === "rows" ? (
             <View style={styles.formGlyphRows}>
