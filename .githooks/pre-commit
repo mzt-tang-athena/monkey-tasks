@@ -13,7 +13,8 @@ docs=$(printf '%s\n' "$staged" | grep -E '\.md$' || true)
 
 if [ -n "$code" ]; then
   echo "eslint: $(printf '%s\n' "$code" | wc -l) file(s)"
-  (cd "$root/app" && printf '%s\n' "$code" | sed 's|^app/||' | xargs npx --no-install eslint)
+  # A warning fails the commit too: CI runs with the same limit.
+  (cd "$root/app" && printf '%s\n' "$code" | sed 's|^app/||' | xargs npx --no-install eslint --max-warnings 0)
 fi
 
 if [ -n "$docs" ]; then
