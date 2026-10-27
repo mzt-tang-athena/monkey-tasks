@@ -124,7 +124,7 @@ export function MonthGrid({
                     sits on one baseline with or without a dot. */}
                 <View style={styles.monthDotSlot}>
                   {dotted.has(isoOf(day)) ? (
-                    <View style={styles.monthDot} />
+                    <View style={styles.monthDot} testID="month-dot" />
                   ) : null}
                 </View>
               </>
