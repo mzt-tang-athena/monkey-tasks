@@ -3,6 +3,9 @@ name: android
 # Builds a sideloadable APK on a GitHub runner, which already has the
 # Android SDK and NDK. The release build signs with the debug key that
 # prebuild generates, which is enough to install by hand on a phone.
+#
+# It runs only on demand. A build takes 19 to 45 minutes, and a push to
+# main rarely needs a new APK.
 
 on:
   workflow_dispatch:
@@ -11,11 +14,6 @@ on:
         description: Build a development client APK instead of release
         type: boolean
         default: false
-  push:
-    branches: [main]
-    paths:
-      - "app/**"
-      - ".github/workflows/android.yml"
 
 jobs:
   apk:
