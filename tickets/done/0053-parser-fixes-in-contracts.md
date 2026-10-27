@@ -121,7 +121,7 @@ the bug is there. A fix turns its test into a plain `it`.
 - [x] A capture of "Pay bill: water" shows "Pay bill: water" after the
       next read.
 - [x] ADR 0028 has a dated amendment for the wider title rule.
-- [ ] The contracts PR is merged, and the submodule points at its
+- [x] The contracts PR is merged, and the submodule points at its
       merge commit.
 
 ## Outcome
