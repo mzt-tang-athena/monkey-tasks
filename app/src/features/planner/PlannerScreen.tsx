@@ -190,7 +190,7 @@ export default function PlannerScreen() {
           ) : null}
 
           {status === "ready" && mode === "week" ? (
-            <>
+            <View style={styles.weekBody}>
               <WeekView
                 tasks={openTasks}
                 today={new Date()}
@@ -228,7 +228,7 @@ export default function PlannerScreen() {
                   }
                 />
               </View>
-            </>
+            </View>
           ) : null}
           {status === "ready" && mode === "month" ? (
             <MonthView

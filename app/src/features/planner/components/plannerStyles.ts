@@ -18,82 +18,29 @@ export const styles = StyleSheet.create({
     paddingHorizontal: pageGutter,
     // No top padding: the selected strip tab hangs from the screen's
     // top edge, and the content below gains the space.
+    gap: spacing.m,
+  },
+  // Week's calendar and its list pane share one block under the
+  // header: the pane starts where the canvas ends.
+  weekBody: {
+    flex: 1,
   },
   pressedFill: {
     backgroundColor: colors.pressed,
-  },
-
-  // period strip: day cells, then the wider week and month cells
-  strip: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: spacing.s,
-  },
-  stripScroll: {
-    flexDirection: "row",
-    gap: spacing.s,
-    alignItems: "flex-end",
-    // The same bottom spacing the day strip has, so the wide strips
-    // never touch the pills. Page grid inside, screen-edge bleed
-    // outside: the rail cuts at the display, not the gutter.
-    marginBottom: spacing.s,
-    paddingLeft: pageGutter,
-    paddingRight: pageGutter,
-  },
-  stripDay: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 44,
-    height: 44,
-    borderRadius: radius,
-  },
-  stripDayActive: {
-    // The selected tab hangs from the screen's top edge: square top,
-    // rounded bottom, standing taller than its resting neighbours.
-    height: 52,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    backgroundColor: colors.accent,
-  },
-  stripDayToday: {
-    backgroundColor: colors.accentSoft,
-  },
-  stripName: {
-    fontSize: 10,
-    lineHeight: 12,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    letterSpacing: 0.5,
-  },
-  stripNameActive: {
-    color: colors.onAccent,
-  },
-  stripNameToday: {
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  stripNum: {
-    fontSize: 16,
-    lineHeight: 20,
-    fontFamily: fonts.body,
-    color: colors.ink,
-    marginTop: 2,
-  },
-  stripNumActive: {
-    color: colors.onAccent,
-    fontWeight: "600",
-  },
-  stripNumToday: {
-    color: colors.accent,
-    fontWeight: "700",
   },
 
   // shared bottom-half section: source left, form toggle right
   sectionHead: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.s,
+  },
+  // The list's header slot: the section head, then a group header and
+  // the pills one step further apart.
+  listHead: {
+    gap: spacing.s,
+  },
+  listHeadBody: {
+    gap: spacing.l,
   },
   sectionSpacer: {
     flex: 1,
@@ -123,12 +70,6 @@ export const styles = StyleSheet.create({
   // Square corners on a selected segment's open sides; the closed
   // sides keep the shared radius.
   segmentFirst: {
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  segmentMiddle: {
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
   },
@@ -168,40 +109,6 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  // segmented toggle, E's tighter spacing
-  segmented: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
-    borderRadius: radius,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    padding: 3,
-    marginBottom: spacing.m,
-  },
-  segment: {
-    flex: 1,
-    minHeight: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius,
-  },
-  segmentActive: {
-    backgroundColor: colors.accent,
-  },
-  segmentText: {
-    fontSize: 12,
-    lineHeight: 15,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    fontWeight: "500",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  segmentTextActive: {
-    color: colors.onAccent,
-    fontWeight: "600",
-  },
-
   // compact day heading
   dateMonth: {
     fontSize: 11,
@@ -217,16 +124,19 @@ export const styles = StyleSheet.create({
     fontFamily: fonts.display,
     color: colors.ink,
   },
+  // The day heading: eyebrow and date, then the accent rule under
+  // them.
+  dayHeading: {
+    gap: spacing.xs,
+  },
   dateRule: {
     height: 2,
     backgroundColor: colors.accent,
     width: 40,
-    marginTop: spacing.xs,
-    marginBottom: spacing.m,
     borderRadius: 1,
   },
   overdueBlock: {
-    marginBottom: spacing.l,
+    gap: spacing.xs,
   },
   overdueLabel: {
     fontSize: 11,
@@ -236,7 +146,6 @@ export const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: "uppercase",
     color: colors.danger,
-    marginBottom: spacing.xs,
   },
   sectionLabel: {
     fontSize: 11,
@@ -246,7 +155,6 @@ export const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: "uppercase",
     color: colors.accent,
-    marginBottom: spacing.s,
   },
   groupRow: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -320,6 +228,7 @@ export const styles = StyleSheet.create({
   nowLineRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.xs,
     minHeight: 18,
   },
   nowDot: {
@@ -327,7 +236,6 @@ export const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: colors.danger,
-    marginRight: spacing.xs,
   },
   nowLine: {
     flex: 1,
@@ -340,6 +248,7 @@ export const styles = StyleSheet.create({
   // The day page: the swipe slides it sideways inside the root.
   dayPage: {
     flex: 1,
+    gap: spacing.m,
   },
   dayRoot: {
     flex: 1,
@@ -349,8 +258,17 @@ export const styles = StyleSheet.create({
     paddingHorizontal: pageGutter,
     // No top padding: the selected strip tab hangs from the screen's
     // top edge, and the content below gains the space.
+    gap: spacing.m,
   },
-  pane: {},
+  // The resizable split under the heading: timeline pane, divider,
+  // list pane.
+  daySplit: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  pane: {
+    gap: spacing.s,
+  },
   paneList: {
     flex: 1,
   },
@@ -360,8 +278,6 @@ export const styles = StyleSheet.create({
   divider: {
     height: 28,
     justifyContent: "center",
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
   },
   dividerLine: {
     position: "absolute" as const,
@@ -524,21 +440,6 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.s,
     maxWidth: "100%" as const,
   },
-  // The pickup feedback: a quiet tint while the hold is running,
-  // then a visible lift (scale and shadow) once the drag owns the
-  // pointer. The ghost carries the motion after that.
-  liftHold: {
-    backgroundColor: colors.accentSoft,
-  },
-  liftPicked: {
-    backgroundColor: colors.accentSoft,
-    transform: [{ scale: 1.03 }],
-    shadowColor: colors.ink,
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 5,
-  },
   pillGrip: {
     alignItems: "center" as const,
     gap: 2,
@@ -572,9 +473,6 @@ export const styles = StyleSheet.create({
   monthCellHovered: {
     backgroundColor: colors.accentSoft,
   },
-  monthPickedBlock: {
-    marginBottom: spacing.s,
-  },
 
   // timeline task chip: its own circle is the done toggle
   taskBarDone: {
@@ -607,14 +505,6 @@ export const styles = StyleSheet.create({
     color: colors.inkFaint,
   },
 
-  // The period rail bleeds past the page gutter: cells cut at the
-  // display's edges, scrolling until the last one clears the grid.
-  railBleed: {
-    marginHorizontal: -pageGutter,
-  },
-  // week canvas: horizontally scrolling day columns. The scroller
-  // bleeds to the screen's edges: columns cut at the display, not
-  // the page gutter, and scroll till the last one clears it.
   // week canvas: horizontally scrolling day columns. The scroller
   // bleeds to the screen's edges: columns cut at the display, not
   // the page gutter, and scroll till the last one clears it. The
@@ -628,11 +518,14 @@ export const styles = StyleSheet.create({
   },
   weekCanvas: {
     flexDirection: "row",
+    // Each column keeps its own height: at least its minimum, more
+    // when its tasks need it. Stretched, a full column spilled its
+    // tasks past its border.
+    alignItems: "flex-start",
     gap: spacing.s,
     paddingVertical: spacing.xs,
     paddingLeft: pageGutter,
     paddingRight: pageGutter,
-    marginBottom: spacing.xl,
   },
   weekCol: {
     width: weekColWidth,
@@ -680,7 +573,9 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.paper,
     borderRadius: radius,
     padding: spacing.xs,
-    marginBottom: spacing.xs,
+  },
+  weekTasks: {
+    gap: spacing.xs,
   },
   weekTaskText: {
     flex: 1,
@@ -700,6 +595,7 @@ export const styles = StyleSheet.create({
   // month view
   monthColumn: {
     flex: 1,
+    gap: spacing.m,
   },
   // The fixed half: title and grid card. Its own swipe zone shifts
   // months without touching the row drags beneath.
@@ -713,7 +609,6 @@ export const styles = StyleSheet.create({
     color: colors.inkMuted,
     textTransform: "uppercase",
     letterSpacing: 1.5,
-    marginBottom: spacing.s,
   },
   monthCard: {
     backgroundColor: colors.surface,
@@ -721,7 +616,6 @@ export const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     padding: spacing.m,
-    marginBottom: spacing.m,
   },
   monthHead: {
     flexDirection: "row",

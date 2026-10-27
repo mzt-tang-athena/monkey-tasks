@@ -27,16 +27,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    marginBottom: spacing.s,
   },
   stripScroll: {
     flexDirection: "row",
     gap: spacing.s,
     alignItems: "flex-end",
-    // The same bottom spacing the day strip has, so the wide strips
-    // never touch the pills. Page grid inside, screen-edge bleed
-    // outside: the rail cuts at the display, not the gutter.
-    marginBottom: spacing.s,
+    // Page grid inside, screen-edge bleed outside: the rail cuts at
+    // the display, not the gutter.
     paddingLeft: pageGutter,
     paddingRight: pageGutter,
   },

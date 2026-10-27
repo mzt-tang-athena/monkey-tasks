@@ -7,9 +7,10 @@ module.exports = defineConfig([
   {
     rules: {
       // Spacing ownership (docs/adr/0012): children never declare
-      // bottom or right margins; containers own the gaps.
+      // bottom or right margins; containers own the gaps. Ticket 0054
+      // widens it to top, left and vertical margins.
       'no-restricted-syntax': [
-        'warn',
+        'error',
         {
           selector:
             "Property[key.name=/^margin(Bottom|Right)$/] , Property[key.name='marginBottom'] , Property[key.name='marginRight']",

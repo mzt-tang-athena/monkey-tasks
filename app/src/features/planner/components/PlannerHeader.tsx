@@ -4,6 +4,11 @@ import { colors, fonts, radius, spacing } from "../../../theme/tokens";
 import { PeriodStrip } from "./PeriodStrip";
 
 const styles = StyleSheet.create({
+  // The strip and the mode pills, one step apart. The screen spaces
+  // the header from what follows.
+  header: {
+    gap: spacing.s,
+  },
   pressedFill: {
     backgroundColor: colors.pressed,
   },
@@ -15,7 +20,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     padding: 3,
-    marginBottom: spacing.m,
   },
   segment: {
     flex: 1,
@@ -73,7 +77,7 @@ export function PlannerHeader({
   onMode: (mode: Mode) => void;
 }) {
   return (
-    <View>
+    <View style={styles.header}>
       {/* Period strip above the pills: days, weeks, or months to
           match the mode. Tapping a period jumps to it. */}
       <PeriodStrip
