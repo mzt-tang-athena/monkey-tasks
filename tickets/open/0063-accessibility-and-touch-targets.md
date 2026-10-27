@@ -89,6 +89,7 @@ Add `@axe-core/playwright` as a dev dependency for the screen scans.
 - [ ] The selected period strip cell and the selected month cell report `aria-selected`.
 - [ ] A month cell with tasks says so in its accessible name.
 - [ ] The sort and list menu buttons report `aria-expanded`.
+- [ ] Every `aria-checked` sits on a `checkbox`, `radio` or `switch`, and every `aria-selected` on a `tab`, `option`, `gridcell` or `row`. Ticket 0049 put `aria-checked` on the tick and `aria-selected` on the sort options while both still had role `button`, which ARIA does not allow. The sort options become `radio` items in a `radiogroup`.
 - [ ] Each tab group sits inside a `tablist`.
 - [ ] Playwright runs axe-core on each screen and finds no serious or critical issue.
 - [ ] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.

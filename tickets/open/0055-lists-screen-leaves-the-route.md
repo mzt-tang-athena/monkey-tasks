@@ -94,6 +94,13 @@ direct vault write.
    `test.fail()` mark in the motion project only: with reduced motion
    the page turns at pointer up, so the click finds no row. Remove the
    mark with the fix.
+7. **The repair notice crowds out the list.** "Needs repair"
+   (`index.tsx:922-958`) sits fixed above the list. At 412 by 915 it
+   takes about a third of the screen, and while the list scrolls a
+   sliver of a clipped card edge shows under it. To reproduce, load a
+   sample set with a broken note and scroll the list. Let the notice
+   scroll with the list as its header, or fold it to one line that
+   opens the details. Show both states in the PR screenshots.
 
 ## Acceptance
 
@@ -108,6 +115,7 @@ direct vault write.
 - [ ] During a reorder, a slot crossing re-renders only the rows whose first, last or divider state changes.
 - [ ] A test reproduces the remount bug first. Afterwards a group that leaves remounts no row in a later group.
 - [ ] A Playwright test reproduces the swipe bug first. Afterwards a sideways swipe that starts on a row changes the tab and opens no editor.
+- [ ] A Playwright screenshot reproduces the repair notice bug first. Afterwards, at 412 by 915, the notice covers no more than one row height of the list at rest, and no clipped card edge shows under it.
 - [ ] A tap on a row still opens the editor.
 - [ ] A tick still holds its row in place for one beat before it moves to Completed.
 - [ ] A drag in My order still writes the new order.

@@ -58,7 +58,7 @@ alternatives that a later agent could reopen.
 | `SegmentedControl` | Label or icon segments. Squares the inner corners in one place. Targets at least 44 by 44. | `PlannerHeader.tsx:87-117`, `FormToggle.tsx` |
 | `Sheet` | Scrim, dock, keyboard lift and content. Android back closes it. Modal for assistive tech through `OverlayHost`. The motion stays on today's code (`CaptureSheet.tsx:104-124`, `BottomBar.tsx:108-133`) until ticket 0062. | `CaptureSheet.tsx:126-215` |
 | `TextField` | Label, hint, error and multiline. The label names the input for assistive tech. | `TaskEditorScreen.tsx:386-426` |
-| `Icon` | The glyphs the app builds from views, moved into one file with a `name` prop and a color token. No icon font. | `index.tsx:896-913`, `BottomBar.tsx:342-376`, `BottomBar.tsx:476-496`, `FormToggle.tsx:39-68`, `CaptureChips.tsx:81-125`, the two grip dot sets |
+| `Icon` | The glyphs the app builds from views, moved into one file with a `name` prop and a color token. No icon font. | `index.tsx:896-913`, `BottomBar.tsx:342-376`, `BottomBar.tsx:476-496`, `FormToggle.tsx:39-68`, `CaptureChips.tsx:81-125`, the two grip dot sets, and the text `▾` in `SourceToggle.tsx:98`, which shows as a faint dot at 10 px |
 | `Button` with a `text` variant | A label-only button, at least 44 high. | Cancel, Dismiss, Retry, Open in day view |
 
 ### Shared task rows

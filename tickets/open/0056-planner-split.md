@@ -107,6 +107,28 @@ the day body on every render (`DaySpread.tsx:46-48`,
    places the menu below the toggle and clamps the left side only. To
    reproduce at 360 by 640, open month mode and hold the source toggle.
    The last items fall under the bottom bar. `Menu` flips and clamps it.
+6. **Day lists sort a recurring task by the day it is stored on.**
+   `sortOpenFirst` (`model.ts:108-124`) sorts by the full stored
+   timestamp. On a day other than today, the day list holds each
+   recurrence that falls on it (`DaySpread.tsx:364-370`). A daily task
+   stored yesterday at 7:00 PM therefore sorts above a task due that
+   day at 2:30 PM. `DayPreview.tsx:48-62` sorts the same way. The month
+   view's picked-day list (`usePlannerMonth.ts:60`) does not sort at
+   all. The week column already sorts with `sortByTimeOfDay`
+   (`WeekView.tsx:63`). To reproduce in the web preview, keep the e2e
+   clock (Monday 26 October 2026), open day view and step to Tuesday
+   27: Supplements (7:00 PM) shows above Dentist (2:30 PM). Give
+   `lib/day-rows.ts` one sort for a day: open first, then all-day
+   tasks, then by time of day.
+7. **Overdue rows have no separators.** The overdue block maps its rows
+   with no hairline between them (`DaySpread.tsx:721-735`). The list
+   below draws one through `RowSeparator`
+   (`TaskListSection.tsx:104`, `TaskListSection.tsx:152-160`). To
+   reproduce, open day view on today with two overdue tasks. Use the
+   same separator in both.
+
+Line numbers in this ticket predate tickets 0048 and 0050. Look each
+one up again, and use the path map in the 0050 Outcome.
 
 ## Acceptance
 
@@ -124,6 +146,8 @@ the day body on every render (`DaySpread.tsx:46-48`,
 - [ ] A Playwright test reproduces the stacking bug first. Afterwards the ghost draws above the bottom bar in day, week and month mode.
 - [ ] With the source menu open, a tap on the bottom bar closes the menu and does not navigate.
 - [ ] A Playwright test at 360 by 640 reproduces the menu bug first. Afterwards the open source menu sits fully above the bottom bar.
+- [ ] A Playwright test reproduces the sort bug first. Afterwards the day list, the swipe preview and the month picked-day list each show a day's tasks by time of day.
+- [ ] A Playwright screenshot reproduces the separator bug first. Afterwards overdue rows and list rows show the same hairline.
 - [ ] A render-count test shows that a hover change during a day drag re-renders the timeline and not the list pane.
 - [ ] A drag from the list to the ruler still writes the hour, and a drag to a week column or month cell still writes the day.
 - [ ] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
