@@ -3,7 +3,7 @@ id: 0049
 title: Playwright E2E on web
 created: 2026-10-26
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: [0048]
 ---
