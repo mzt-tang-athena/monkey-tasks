@@ -1,1 +1,1 @@
-export { default } from "../../features/planner/PlannerScreen";
+export { default } from "@/features/planner/PlannerScreen";
