@@ -105,8 +105,8 @@ emulator installs. So one build may set
 `EXPO_PUBLIC_VAULT_TEST_HOOKS=1`: the x86_64 APK that
 `android-e2e.yml` builds when its `saf-contract` input is on. That APK
 never leaves the job. The workflow uploads no artifact of it, and
-`android.yml` never sets the flag. Every APK that reaches a phone
-still has no hooks.
+`android.yml` never sets the flag. Every release APK that reaches a
+phone still has no hooks.
 
 We rejected a second, flagged artifact from `android.yml`. That
 workflow also builds the phone APK, so one wrong download would put

@@ -116,7 +116,9 @@ Add `app/src/lib/vault/adapters/memory.ts`:
   `reset(seed)`, `setLatency(ms)` and `failNext(op, name)`. The hooks
   are on when `__DEV__` is true or when
   `process.env.EXPO_PUBLIC_VAULT_TEST_HOOKS === "1"`. Ticket 0049
-  builds its web export with that flag. A release APK never has it.
+  builds its web export with that flag. No release APK has it, except
+  the one the `android-e2e.yml` job builds and keeps (ADR 0037,
+  2026-10-27 amendment).
 - On the web the page query picks the seed and the hooks:
   `?vault=<seed>&latency=<ms>&fail=<op>:<file name>`. These work only
   with the hooks on.

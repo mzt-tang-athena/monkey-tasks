@@ -27,8 +27,8 @@ that drive a release APK on an Android emulator. ADR 0038 names this
 ticket as the Android layer.
 
 We pick Maestro because it drives a release APK with no native test
-setup. Only the SAF contract flow below needs a build of its own. Flows are YAML, and a React Native `testID` is the
-Maestro `id`. Detox needs a separate test build and native project
+setup. Only the SAF contract flow below needs a build of its own.
+Flows are YAML, and a React Native `testID` is the Maestro `id`. Detox needs a separate test build and native project
 changes for each SDK bump.
 
 ### The SAF adapter on the device
@@ -53,8 +53,16 @@ build:
   `EXPO_PUBLIC_VAULT_TEST_HOOKS=1 ./gradlew assembleRelease -PreactNativeArchitectures=x86_64`.
 - That APK never leaves the job. The workflow uploads no artifact of
   it, and `android.yml` never sets the flag.
-- With it off, the other flows run on the reused release APK and skip
-  this flow.
+- With it on, the job installs only the flagged APK and runs every
+  flow on it, this flow last.
+- With it off, the flows run on the reused release APK and skip this
+  flow.
+- The flow carries the Maestro tag `saf-contract`, and
+  `app/e2e/maestro/config.yaml` excludes that tag. So
+  `maestro test app/e2e/maestro` skips it on a laptop too. The job
+  with the input on runs it by its file name.
+- The build makes the job longer. Set `timeout-minutes` from the
+  input, for example `${{ inputs.saf-contract && 75 || 30 }}`.
 
 Record the build minutes of the flagged APK in Outcome.
 
