@@ -53,7 +53,8 @@ export function Button({
       hitSlop={hitSlop}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled: disabled ?? false, busy: busy ?? false }}
+      aria-disabled={disabled ?? false}
+      aria-busy={busy ?? false}
     >
       {circle && children == null ? (
         <Text

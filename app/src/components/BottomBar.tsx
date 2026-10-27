@@ -328,7 +328,7 @@ function IconTab({
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityLabel={label}
-      accessibilityState={{ selected: active }}
+      aria-selected={active}
     >
       {icon}
       <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>

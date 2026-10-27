@@ -27,6 +27,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@types/js-yaml": "^4.0.9",
@@ -49,7 +50,10 @@
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:component": "vitest run --project component",
-    "vault:check": "tsx scripts/vault-check/cli.ts"
+    "vault:check": "tsx scripts/vault-check/cli.ts",
+    "web:export": "expo export --platform web --output-dir dist",
+    "e2e": "npm run web:export && playwright test -c e2e/playwright.config.ts",
+    "e2e:dev": "E2E_BASE_URL=http://localhost:8081 playwright test -c e2e/playwright.config.ts"
   },
   "private": true
 }

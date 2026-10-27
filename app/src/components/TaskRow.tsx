@@ -19,12 +19,16 @@ function TaskRowBase({
   onOpen,
   /** "under" puts the time below the name; "right" adds a planner gutter. */
   timeAlign = "under",
+  copy = false,
 }: {
   task: TaskItem;
   onToggle?: (task: TaskItem) => void;
   /** A press on the body opens the task; the circle stays the toggle. */
   onOpen?: (task: TaskItem) => void;
   timeAlign?: "under" | "right";
+  /** A still copy of a live row: a swipe preview or a drag ghost. A
+      copy carries no test id, so the id finds the live row only. */
+  copy?: boolean;
 }) {
   const [hot, setHot] = React.useState(false);
   // The store is optimistic: a tap flips this row's data in the same
@@ -135,6 +139,7 @@ function TaskRowBase({
 
   return (
     <Animated.View
+      testID={copy ? undefined : `task-row:${task.name}`}
       style={{
         opacity: rise,
         transform: [
@@ -179,7 +184,7 @@ function TaskRowBase({
             onHoverOut={() => setHot(false)}
             accessibilityLabel={done ? "mark not done" : "mark done"}
             accessibilityRole="button"
-            accessibilityState={{ checked: done }}
+            aria-checked={done}
           >
             {/* The glyph travels on its own, so it lands on a circle
                 that is already filling rather than riding it. */}

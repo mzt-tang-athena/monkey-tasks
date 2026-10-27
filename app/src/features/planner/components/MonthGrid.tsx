@@ -88,7 +88,12 @@ export function MonthGrid({
 
   return (
     <View style={gridStyles.root}>
-      <Text style={styles.monthTitle}>
+      {/* Only the live month carries the test id: the pager also draws
+          the month beside it while a swipe travels. */}
+      <Text
+        testID={interactive ? "month-title" : undefined}
+        style={styles.monthTitle}
+      >
         {MONTHS[monthIdx]} {year}
       </Text>
       <View style={styles.monthCard}>

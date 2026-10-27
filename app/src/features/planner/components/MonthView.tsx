@@ -80,7 +80,11 @@ export function MonthView({
 
   return (
     <View style={styles.monthColumn}>
-      <View style={styles.monthFixed} {...swipeProps(controller)}>
+      <View
+        testID="month-pager"
+        style={styles.monthFixed}
+        {...swipeProps(controller)}
+      >
         {page}
       </View>
       {children}

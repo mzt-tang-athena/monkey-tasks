@@ -89,6 +89,11 @@ direct vault write.
    swipe. Arm the guard when the swipe controller passes its slop, and
    let row presses read it. Put the guard in
    `src/hooks/use-press-guard.ts`, so the planner can use it too.
+   Ticket 0049 found this as B1. Its test in
+   `app/e2e/specs/lists.spec.ts` reproduces it and carries a
+   `test.fail()` mark in the motion project only: with reduced motion
+   the page turns at pointer up, so the click finds no row. Remove the
+   mark with the fix.
 
 ## Acceptance
 

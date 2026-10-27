@@ -8,7 +8,7 @@ set -e
 root=$(git rev-parse --show-toplevel)
 staged=$(git diff --cached --name-only --diff-filter=ACM)
 
-code=$(printf '%s\n' "$staged" | grep -E '^app/src/.*\.(ts|tsx)$' || true)
+code=$(printf '%s\n' "$staged" | grep -E '^app/(src|scripts|e2e)/.*\.(ts|tsx)$' || true)
 docs=$(printf '%s\n' "$staged" | grep -E '\.md$' || true)
 
 if [ -n "$code" ]; then

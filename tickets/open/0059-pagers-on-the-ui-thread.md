@@ -94,7 +94,10 @@ CDP touch through the swipe helper in `app/e2e/gestures.ts`, in a
 context with `hasTouch: true`. The scenarios target the test ids from
 0049: `list-pager`, `day-pager`, `day-heading`, `month-pager` and
 `month-title`. Ticket 0049 already holds two tests with `test.fail()`
-in `lists.spec.ts`, for B1 and B2. This ticket removes both marks.
+in `app/e2e/specs/lists.spec.ts`, for B1 and B2. This ticket removes
+both marks, unless 0055 already removed the B1 mark. The B1 mark
+applies to the motion project only: with reduced motion the page turns
+at pointer up, so the click finds no row.
 
 | Scenario | Proves |
 |---|---|
@@ -122,7 +125,7 @@ those.
 - [ ] Each scenario above has a failing Playwright or component test
       before its fix, and all pass after, with the mouse and with
       touch.
-- [ ] The B1 and B2 tests in `app/e2e/lists.spec.ts` pass without
+- [ ] The B1 and B2 tests in `app/e2e/specs/lists.spec.ts` pass without
       `test.fail()`, and the swipe arm of `use-press-guard` is gone.
 - [ ] The list, the day and the month page through `pager.tsx`, and
       `SwipePager` and `lib/swipe.ts` are gone.

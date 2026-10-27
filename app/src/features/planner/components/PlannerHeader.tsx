@@ -106,7 +106,7 @@ export function PlannerHeader({
             ]}
             onPress={() => onMode(option)}
             accessibilityRole="tab"
-            accessibilityState={{ selected: mode === option }}
+            aria-selected={mode === option}
           >
             <Text
               style={[

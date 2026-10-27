@@ -51,7 +51,16 @@ module.exports = defineConfig([
     },
   },
   {
-    ignores: ['dist/*'],
+    // The Playwright suite holds no React code. Its fixtures hand
+    // their value on through a callback named `use`, which the hooks
+    // rule would read as React's `use`.
+    files: ['e2e/**/*.ts'],
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+    },
+  },
+  {
+    ignores: ['dist/*', 'e2e/playwright-report/*', 'e2e/test-results/*'],
   },
 ]);
 

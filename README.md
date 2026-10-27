@@ -43,6 +43,19 @@ Vitest runs two projects (ADR 0038). `npm run test:unit` runs the logic
 tests in node. `npm run test:component` renders components through
 React Native Web in jsdom.
 
+Run the end-to-end tests from `app`:
+
+```bash
+npx playwright install chromium
+npm run e2e
+```
+
+The first command fetches the browser once. `npm run e2e` exports the
+web build to `dist`, serves it on port 8094, and drives the sample set
+with Playwright in `e2e/`. It runs every spec twice: with motion and
+with reduced motion. To test a running `npm run web` instead, use
+`npm run e2e:dev`. A failed test keeps a trace in `e2e/test-results`.
+
 Run the schema tests from `contracts/packages/schemas`:
 
 ```bash
@@ -57,9 +70,9 @@ Install the local hook once per clone:
 make hooks
 ```
 
-It runs ESLint on the staged app code and Vale on the staged docs. An
-ESLint warning fails the commit. The typecheck, the tests and the
-bundle stay in CI.
+It runs ESLint on the staged app code in `src`, `scripts` and `e2e`,
+and Vale on the staged docs. An ESLint warning fails the commit. The
+typecheck, the tests and the bundle stay in CI.
 
 ## Install it on a phone
 

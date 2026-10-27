@@ -24,6 +24,7 @@ export function Timeline({
   onToggle,
   onDragStart,
   api,
+  testID,
 }: {
   tasks: TaskItem[];
   isToday: boolean;
@@ -36,6 +37,10 @@ export function Timeline({
   onToggle: (task: TaskItem) => void;
   onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
   api?: DragApi;
+  /** Each hour row's test id is this prefix and its hour, for example
+      `timeline-hour:10`. The live day sets it; the swipe preview does
+      not, so the id stays unique. */
+  testID?: string;
 }) {
   const hours: TaskItem[][] = [];
   for (let h = RULER_START; h <= RULER_END; h++) {
@@ -82,6 +87,7 @@ export function Timeline({
         return (
           <View
             key={hour}
+            testID={testID == null ? undefined : `${testID}:${hour}`}
             ref={(node) => {
               zones.set(`hour:${hour}`, node);
             }}

@@ -33,6 +33,19 @@ const TARGETS: CaptureTarget[] = [
 ];
 
 /**
+ * The tasks the planner may show. A note that fails validation never
+ * renders as a task row: the Lists screen shows it in its repair
+ * block, and the planner leaves it out, so it never offers a broken
+ * note to tick or drag.
+ */
+function useValid(tasks: TaskItem[]): TaskItem[] {
+  return React.useMemo(
+    () => tasks.filter((task) => (task.errors?.length ?? 0) === 0),
+    [tasks],
+  );
+}
+
+/**
  * The consolidated Planner tab. Day mode is a fixed split: the
  * hour-ruler timeline on top, the dashed drop line as the divider
  * between it and the full today-list below, and a grabber on the
@@ -49,7 +62,7 @@ export default function PlannerScreen() {
   // The mode and the day live in the URL: a link, a tap on another
   // screen, or a remount all read the same route state back.
   const { mode, day, setMode, setDay, openDay } = usePlannerRoute();
-  const tasks = useTaskList();
+  const tasks = useValid(useTaskList());
   const { status } = useStoreMeta();
   const actions = useTaskActions();
   const insets = useSafeAreaInsets();
@@ -128,7 +141,7 @@ export default function PlannerScreen() {
     pointerPickup,
   });
 
-  const openTasks = useOpenTasks();
+  const openTasks = useValid(useOpenTasks());
 
   // The week's placement pool and the month card's state.
   const {

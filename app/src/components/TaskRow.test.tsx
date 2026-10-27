@@ -62,4 +62,40 @@ describe("TaskRow", () => {
     expect(screen.getByRole("button", { name: "mark done" })).toBeTruthy();
     expect(screen.queryByText("✓")).toBeNull();
   });
+
+  it("reports the checked state to the DOM", () => {
+    // React Native Web drops the accessibility state object. The state
+    // must travel as `aria-checked` to reach a screen reader on the web.
+    const { rerender } = render(
+      <TaskRow task={task("Buy milk")} onToggle={vi.fn()} />,
+    );
+    expect(
+      screen.getByRole("button", { name: "mark done" }).getAttribute("aria-checked"),
+    ).toBe("false");
+
+    rerender(<TaskRow task={task("Buy milk", { completed })} onToggle={vi.fn()} />);
+
+    expect(
+      screen.getByRole("button", { name: "mark not done" }).getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("carries a test id named by its task", () => {
+    render(<TaskRow task={task("Buy milk")} />);
+
+    expect(screen.getByTestId("task-row:Buy milk")).toBeTruthy();
+  });
+
+  it("leaves the test id off a copy, so the id finds the live row only", () => {
+    // A swipe preview and a drag ghost draw a second row for the same
+    // task. Playwright fails at once when an id matches twice.
+    render(
+      <>
+        <TaskRow task={task("Buy milk")} onToggle={vi.fn()} />
+        <TaskRow task={task("Buy milk")} copy />
+      </>,
+    );
+
+    expect(screen.getAllByTestId("task-row:Buy milk")).toHaveLength(1);
+  });
 });
