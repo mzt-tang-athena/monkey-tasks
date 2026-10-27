@@ -53,7 +53,9 @@ npm run e2e
 The first command fetches the browser once. `npm run e2e` exports the
 web build to `dist`, serves it on port 8094, and drives the sample set
 with Playwright in `e2e/`. It runs every spec twice: with motion and
-with reduced motion. To test a running `npm run web` instead, use
+with reduced motion. Set `E2E_PORT` to serve on another port, for
+example when two checkouts run the suite at once. The run fails if the
+port is busy. To test a running `npm run web` instead, use
 `npm run e2e:dev`. A failed test keeps a trace in `e2e/test-results`.
 
 Run the schema tests from `contracts/packages/schemas`:

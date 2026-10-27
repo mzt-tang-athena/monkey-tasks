@@ -3,7 +3,8 @@ import { defineConfig } from "@playwright/test";
 // The end-to-end suite drives the exported web build (ADR 0038). The
 // browser preview serves the in-memory sample set, so no vault is
 // needed. Ticket 0049 holds the scenarios.
-const port = 8094;
+// E2E_PORT lets parallel worktrees each serve their own build.
+const port = Number(process.env.E2E_PORT ?? 8094);
 
 export default defineConfig({
   testDir: "./specs",
@@ -39,6 +40,8 @@ export default defineConfig({
         command: `python3 serve.py dist ${port}`,
         cwd: "..",
         url: `http://localhost:${port}`,
-        reuseExistingServer: !process.env.CI,
+        // A server already on the port may serve another checkout's
+        // build, so a busy port fails the run instead.
+        reuseExistingServer: false,
       },
 });
