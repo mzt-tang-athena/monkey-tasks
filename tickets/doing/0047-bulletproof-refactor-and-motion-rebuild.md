@@ -30,7 +30,7 @@ Phases, in order. A later phase builds on the homes an earlier one made.
 |---|---|---|
 | 0. Safety net | 0048, 0049 | Vitest projects, component tests through react-native-web, lint baseline, Playwright on the web build |
 | 1. Layout | 0050 | `@/` alias, shared types, `lib/vault`, `stores/tasks`, kebab-case names, import boundaries at warn |
-| 2. Data | 0051, 0052, 0053 | Vault adapter with SAF and memory adapters, writes as `useMutation` hooks, parser fixes in contracts |
+| 2. Data | 0051, 0052, 0053, 0066 | Vault adapter with SAF and memory adapters, writes as `useMutation` hooks, parser fixes in contracts, month-end recurrence |
 | 3. Screens | 0054, 0055, 0056, 0057 | Shared UI primitives, the Lists screen out of its route, the planner split, the capture dock and editor split |
 | 4. Motion | 0058, 0059, 0060, 0061, 0062 | Reanimated 4 and gesture handler 3 on the UI thread, then each surface ported |
 | 5. Access | 0063 | Labels, roles, states and touch targets |
@@ -46,7 +46,7 @@ other.
 
 ## Acceptance
 
-- [ ] Every child ticket from 0048 to 0063 is in `done/`.
+- [ ] Every child ticket from 0048 to 0063, and 0066, is in `done/`.
 - [ ] Typecheck, lint with no warnings, Vitest and Playwright pass on the
       branch.
 - [ ] The import boundary rule runs at error with no violations.

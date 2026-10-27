@@ -40,6 +40,19 @@ Line numbers point at today's files.
   line 77). It returns `height` and `progress` as shared values that
   the UI thread updates each frame. The dock moves with `translateY`,
   not `bottom`.
+- `KeyboardStickyView` in keyboard-controller 1.22.7 already moves a
+  view by `height` plus an offset from that hook
+  (`src/components/KeyboardStickyView/index.tsx`, lines 55 to 61). Use
+  it for the dock, or copy its pattern.
+- Do not move the sheet into a native overlay window. There
+  keyboard-controller does not track the focused input
+  ([#1707](https://github.com/kirillzyusko/react-native-keyboard-controller/issues/1707)).
+  A React Native `Modal` works, because 1.22.7 attaches to it
+  (`ModalAttachedWatcher`).
+- On the web the keyboard-controller bindings are a stub, so `height`
+  and `progress` stay 0. Playwright therefore sees only the 220 ms
+  timing path. The keyboard path is a phone check, and a Maestro flow
+  in 0064.
 - While the keyboard moves, the sheet's travel follows the keyboard's
   `progress`. The 220 ms timing drives it only when no keyboard
   moves, for example with a hardware keyboard or in the browser.

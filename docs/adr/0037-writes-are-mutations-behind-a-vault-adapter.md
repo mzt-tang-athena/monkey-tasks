@@ -96,3 +96,19 @@ neither.
 
 Tickets 0051 (the adapter) and 0052 (the mutations) carry the work. ADR
 0017 and ADR 0023 each have a dated amendment that points here.
+
+## Amendment, 2026-10-27: one CI-only APK carries the test hooks
+
+Ticket 0064 runs the 0051 contract suite against the SAF adapter on an
+Android emulator. The suite needs the test hooks in an APK that the
+emulator installs. So one build may set
+`EXPO_PUBLIC_VAULT_TEST_HOOKS=1`: the x86_64 APK that
+`android-e2e.yml` builds when its `saf-contract` input is on. That APK
+never leaves the job. The workflow uploads no artifact of it, and
+`android.yml` never sets the flag. Every release APK that reaches a
+phone still has no hooks.
+
+We rejected a second, flagged artifact from `android.yml`. That
+workflow also builds the phone APK, so one wrong download would put
+the hooks on a phone. We rejected a debug build on the emulator. It
+runs JavaScript in development mode, so it tests less of what ships.
