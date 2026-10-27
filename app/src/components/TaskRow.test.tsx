@@ -64,8 +64,8 @@ describe("TaskRow", () => {
   });
 
   it("reports the checked state to the DOM", () => {
-    // React Native Web drops `accessibilityState`, so the state must
-    // travel as `aria-checked` to reach a screen reader on the web.
+    // React Native Web drops the accessibility state object. The state
+    // must travel as `aria-checked` to reach a screen reader on the web.
     const { rerender } = render(
       <TaskRow task={task("Buy milk")} onToggle={vi.fn()} />,
     );

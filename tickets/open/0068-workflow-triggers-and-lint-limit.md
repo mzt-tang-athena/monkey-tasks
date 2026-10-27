@@ -11,10 +11,11 @@ depends: []
 ## Spec
 
 Ticket 0048 steps 8 and 10 change the two workflow files, and ticket
-0049 adds the Playwright job. An agent cannot push them: GitHub refuses a workflow change from a token without
-the `workflow` scope, and the agent tokens have `repo` only. The owner
-pushes this change over SSH, or with a token that has the `workflow`
-scope. Push it to a branch and open a PR into `epic/0047-rebuild`.
+0049 adds the Playwright job. An agent cannot push them: GitHub
+refuses a workflow change from a token without the `workflow` scope,
+and the agent tokens have `repo` only. The owner pushes this change
+over SSH, or with a token that has the `workflow` scope. Push it to a
+branch and open a PR into `epic/0047-rebuild`.
 
 What it fixes:
 
