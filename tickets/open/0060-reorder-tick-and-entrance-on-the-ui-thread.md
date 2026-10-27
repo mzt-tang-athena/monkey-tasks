@@ -53,7 +53,7 @@ and at 120 Hz:
   with zero offset, so no reset races the commit.
   react-native-reorderable-list does this (`createCellKey` and
   `markCells` in
-  [ReorderableListCore.tsx](https://github.com/omahili/react-native-reorderable-list/blob/master/src/components/ReorderableListCore.tsx)).
+  [ReorderableListCore.tsx](https://github.com/omahili/react-native-reorderable-list/blob/291621a050e5fb176984a2270460d5caaf099085/src/components/ReorderableListCore.tsx)).
   The landed mark from 0058 stops the entrance on a remount.
 
 Keep the option that shows no blink in a screen recording at both
@@ -125,6 +125,7 @@ Rows and grips use the 0049 test ids `task-row:<name>` and
 | Tick the last task of a group. The DOM nodes of the rows below stay connected. | V6 |
 | Capture a task, then within 90 seconds tick it, drag it in My order, and switch tabs and back. Each mounted copy shows opacity 1 on its first frame. | V7 |
 | In My order, drag a row one slot and release at once after the crossing. It lands in the slot the gap showed, and every other row rests at offset 0. Drag away and back, then drop in place: all offsets read 0. | V8 |
+| In My order, drag a row onto the next slot and release with no further move once its offset equals that slot. It reorders, and every offset reads 0. | the index rule |
 | Tick two adjacent rows 100 ms apart, top first. Sampled each frame for 400 ms, the third row never rises above the second. | V9 |
 | Drop a row, then tick another row 100 ms later. The tick lands. Drop a row on its own place: nothing toggles and no editor opens. | V10 |
 | Tick a row. At 200 ms it sits in its group, and at 600 ms it sits in Completed. | hold |

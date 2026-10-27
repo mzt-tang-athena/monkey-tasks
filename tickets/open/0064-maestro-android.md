@@ -33,14 +33,20 @@ changes for each SDK bump.
 
 ### The SAF adapter on the device
 
-Vitest cannot run the SAF adapter, because it needs Android. A
-dev-only screen runs the 0051 contract suite against the SAF adapter,
-in a scratch folder under the granted root, and shows a pass or fail
-line per case. A Maestro flow opens the screen and checks that every
-case passes. Joplin tests its React Native file system driver on the
-phone in the same way
-([runOnDeviceTests.ts](https://github.com/laurent22/joplin/blob/dev/packages/app-mobile/utils/fs-driver/runOnDeviceTests.ts)).
-The screen is absent from a release build.
+In Vitest the 0051 contract suite runs the SAF adapter against a fake
+`expo-file-system`. The real Storage Access Framework provider needs
+Android. A test screen runs the same suite against the SAF adapter, in
+a scratch folder under the granted root, and shows a pass or fail line
+per case. A Maestro flow opens the screen and checks that every case
+passes. Joplin also runs its file system driver tests on the phone, at
+startup behind a config flag
+([runOnDeviceTests.ts](https://github.com/laurent22/joplin/blob/5321786784c526093ec3aff10e9f87a7ee515c4d/packages/app-mobile/utils/fs-driver/runOnDeviceTests.ts)).
+
+The screen shows only when `EXPO_PUBLIC_VAULT_TEST_HOOKS` is `1`, the
+flag that 0051 uses. The release APK for the phone does not set it.
+The flows therefore need an APK built with the flag: a second
+artifact from `android.yml`, or a build in the new workflow. Record
+the choice and its build minutes in Outcome.
 
 ### APK
 
@@ -54,7 +60,8 @@ The emulator on a GitHub runner is x86_64.
 
 The new workflow downloads the APK artifact of the latest green
 `android.yml` run with `actions/download-artifact@v4` (`run-id` and
-`github-token`). That skips the build, which took 19 to 45 minutes on
+`github-token`). That APK must carry the test flag (see the SAF
+section above). That skips the build, which took 19 to 45 minutes on
 the last eight runs. With no artifact at hand, it builds with
 `./gradlew assembleRelease -PreactNativeArchitectures=x86_64`.
 

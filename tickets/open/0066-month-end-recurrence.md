@@ -5,31 +5,34 @@ created: 2026-10-27
 priority: high
 assignee:
 pr:
-depends: [0050]
+depends: [0050, 0052]
 ---
 
 ## Spec
 
 A monthly task due on the 31st skips every month with fewer days.
-Capture writes a bare `FREQ=MONTHLY` (`features/capture/parse.ts:29`).
-The rule starts on the task's due date (`buildRule` in
-`features/tasks/recurrence.ts`). rrule follows RFC 5545, so it skips a
-month that has no such day:
+Capture writes a bare `FREQ=MONTHLY` or `FREQ=MONTHLY;INTERVAL=2`
+(`features/capture/parse.ts`, lines 29, 70 and 74). The rule starts on
+the task's due date (`buildRule` in `features/tasks/recurrence.ts`,
+which 0050 moves to `lib/recurrence.ts`). rrule follows RFC 5545, so
+it skips a month that has no such day:
 
 | Rule | Start | Next three |
 |---|---|---|
-| `FREQ=MONTHLY` | 2027-01-31 | 03-31, 05-31, 07-31 |
-| `FREQ=MONTHLY;BYMONTHDAY=-1` | 2027-01-31 | 02-28, 03-31, 04-30 |
+| `FREQ=MONTHLY` | 2027-01-31 | 2027-03-31, 2027-05-31, 2027-07-31 |
+| `FREQ=MONTHLY;BYMONTHDAY=-1` | 2027-01-31 | 2027-02-28, 2027-03-31, 2027-04-30 |
+| `FREQ=MONTHLY;INTERVAL=2` | 2026-12-31 | 2027-08-31, 2027-10-31, 2027-12-31 |
 
-A task due on the 29th or the 30th skips February in the same way. A
-yearly task due on 29 February comes back only in a leap year. Each
-tick creates the next note from the rule (ADR 0027), so the gap comes
-back for the life of the task. The user sees no error. The task is
+A task due on the 30th skips February every year. A task due on the
+29th skips February in a common year. A yearly task due on 29
+February comes back only in a leap year. Each tick creates the next
+note from the rule (ADR 0027), so the gap comes back for the life of
+the task. The user sees no error. The task is
 missing for a month.
 
 The Obsidian Tasks plugin warns about the same trap, and it
 recommends "every month on the last"
-([Recurring Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks/blob/main/docs/Getting%20Started/Recurring%20Tasks.md)).
+([Recurring Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks/blob/f9e3a5a311d8922e71fe1b7af1a6d50ff10782b5/docs/Getting%20Started/Recurring%20Tasks.md)).
 
 ### The fix
 
@@ -38,13 +41,16 @@ goes back to its own day. Write this into the rule, so the rule does
 not depend on the start date, and every reader of the note gets the
 same dates. We checked each rule below against rrule on 2026-10-27:
 
-| Due day | Rule | Dates from January 2027 |
+| Due date | Rule | Dates |
 |---|---|---|
-| 1 to 28 | `FREQ=MONTHLY` (no change) | |
-| 29 | `FREQ=MONTHLY;BYMONTHDAY=28,29;BYSETPOS=-1` | 01-29, 02-28, 03-29 |
-| 30 | `FREQ=MONTHLY;BYMONTHDAY=28,29,30;BYSETPOS=-1` | 01-30, 02-28, 03-30 |
-| 31 | `FREQ=MONTHLY;BYMONTHDAY=-1` | 01-31, 02-28, 03-31, 04-30 |
-| 29 February, yearly | `FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1` | 2028-02-29, 2029-02-28 |
+| Day 1 to 28 | `FREQ=MONTHLY` (no change) | |
+| 2027-01-29 | `FREQ=MONTHLY;BYMONTHDAY=28,29;BYSETPOS=-1` | 2027-01-29, 2027-02-28, 2027-03-29 |
+| 2027-01-30 | `FREQ=MONTHLY;BYMONTHDAY=28,29,30;BYSETPOS=-1` | 2027-01-30, 2027-02-28, 2027-03-30 |
+| 2027-01-31 | `FREQ=MONTHLY;BYMONTHDAY=-1` | 2027-01-31, 2027-02-28, 2027-03-31, 2027-04-30 |
+| 2026-12-30, every other month | `FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=28,29,30;BYSETPOS=-1` | 2026-12-30, 2027-02-28, 2027-04-30 |
+| 2028-02-29, yearly | `FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1` | 2028-02-29, 2029-02-28 |
+
+A rule keeps its `INTERVAL`.
 
 - Capture writes the rule from the due day.
 - A change of due date in the editor writes the rule again for the
@@ -67,6 +73,8 @@ Each case gets a failing test before its fix:
   ticks.
 - The same for the 30th and the 29th, through February in a leap year
   and in a common year.
+- A capture of "pay rent every other month" due 31 December 2026
+  gives 28 February 2027 next.
 - A yearly task due 29 February 2028 comes back on 28 February 2029.
 - A monthly task due on the 15th keeps `FREQ=MONTHLY`.
 

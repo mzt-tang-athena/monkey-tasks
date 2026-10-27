@@ -149,7 +149,7 @@ useLongPressDrag({
   listener is the one allowed touch `addEventListener` in the app.
 - Before that listener, try a lighter fix: set `overflow: hidden` on
   the scroll node while a drag is active. react-native-drax does this
-  ([useWebScrollFreeze.ts](https://github.com/nuclearpasta/react-native-drax/blob/main/src/hooks/useWebScrollFreeze.ts)).
+  ([useWebScrollFreeze.ts](https://github.com/nuclearpasta/react-native-drax/blob/52ff42ec49e84b7ff72808b66c7c75b30978240c/src/hooks/useWebScrollFreeze.ts)).
   The CDP test then also checks that the pane keeps its scroll offset.
   Add the listener only if this test still fails.
 

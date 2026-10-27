@@ -131,7 +131,7 @@ this date.
 
 | Need | Checked | Why not |
 |---|---|---|
-| Reorder | react-native-reorderable-list 0.18, react-native-sortables 1.10, react-native-draggable-flatlist 4.0, react-native-drax 1.1 | None reorders rows inside sections in a pager. None has accessibility actions, which ticket 0063 needs. Draggable-flatlist crashes on React Native 0.87 and later. Sortables does not virtualize. Each one has web support that is untested or broken. |
+| Reorder | react-native-reorderable-list 0.18, react-native-sortables 1.10, react-native-draggable-flatlist 4.0, react-native-drax 1.1, react-native-reanimated-dnd 2.0 | None reorders rows inside sections in a pager. None has accessibility actions, which ticket 0063 needs. Draggable-flatlist breaks in render on React Native 0.87 and later. Sortables does not virtualize. Reanimated-dnd loses fast drops. Each one has web support that is untested or broken. |
 | Pager | react-native-tab-view 4.3, react-native-reanimated-carousel 5.2 | Tab view runs `PanResponder` and React Native `Animated` on the web, and this ADR removes both. The carousel sets one height for every page, but ADR 0033 needs the live page to set it. |
 | Drag to schedule | @howljs/calendar-kit 2.5, react-native-big-calendar 4.19 | Neither accepts a drag from a list, a pill or a month cell. |
 | Capture sheet | @gorhom/bottom-sheet 5.2 | On Android it moves only after the keyboard has finished, from a JS event. Ticket 0062 needs the sheet to move with the keyboard on every frame. |
