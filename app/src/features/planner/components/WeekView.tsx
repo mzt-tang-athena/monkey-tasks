@@ -8,7 +8,14 @@ import {
 import type { TaskItem } from "../../tasks/query";
 import { DropZoneMap } from "../../../lib/dropzone";
 import { addDays, startOfDay, isSameDay } from "../../../lib/dates";
-import { hasTime, isoOf, startOfWeek, tasksForDay, timeOf } from "../model";
+import {
+  hasTime,
+  isoOf,
+  sortByTimeOfDay,
+  startOfWeek,
+  tasksForDay,
+  timeOf,
+} from "../model";
 import { WEEKDAYS, WEEKDAYS_FULL } from "../lib/labels";
 import { Pickup, type DragApi, type LiftState } from "./drag";
 import { styles } from "./plannerStyles";
@@ -53,7 +60,7 @@ export function WeekView({
       contentContainerStyle={styles.weekCanvas}
     >
       {days.map((day) => {
-        const items = tasksForDay(tasks, day);
+        const items = sortByTimeOfDay(tasksForDay(tasks, day));
         const isToday = startOfDay(day).getTime() === todayStart;
         const isSelected =
           startOfDay(day).getTime() === startOfDay(selected).getTime();
