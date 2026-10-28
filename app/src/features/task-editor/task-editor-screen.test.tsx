@@ -2,7 +2,7 @@ import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskItem } from "@/types/task";
-import TaskEditorScreen from "./TaskEditorScreen";
+import TaskEditorScreen from "./task-editor-screen";
 
 // The route and the store are the screen's two inputs: a task id
 // selects the row, and the list holds it.

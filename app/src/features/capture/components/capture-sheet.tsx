@@ -10,11 +10,11 @@ import {
   type TextStyle,
 } from "react-native";
 import { useKeyboardAnimation } from "react-native-keyboard-controller";
-import type { CaptureDraft } from "@/features/capture/hooks/useCaptureDraft";
-import { targetLabel } from "@/features/capture/lib/chipLabels";
-import { CaptureChips } from "./CaptureChips";
-import { Button } from "@/components/ui/Button";
-import { Pill } from "@/components/ui/Pill";
+import type { CaptureDraft } from "@/features/capture/hooks/use-capture-draft";
+import { targetLabel } from "@/features/capture/lib/chip-labels";
+import { CaptureChips } from "./capture-chips";
+import { Button } from "@/components/ui/button";
+import { Pill } from "@/components/ui/pill";
 import {
   captureText,
   colors,

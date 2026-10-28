@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "@/types/task";
 import { DropZoneMap } from "@/features/planner/lib/dropzone";
-import { MonthView } from "./MonthView";
+import { MonthView } from "./month-view";
 
 function task(name: string, data: TaskFrontmatter): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;

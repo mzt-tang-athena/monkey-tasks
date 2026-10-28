@@ -9,14 +9,14 @@ import {
 } from "react-native";
 import type { TaskItem } from "@/types/task";
 import type { TaskForm } from "@/lib/settings";
-import { TaskRow } from "@/components/TaskRow";
+import { TaskRow } from "@/components/task-row";
 import type { Mode, Source } from "@/features/planner/model";
-import { FormToggle } from "./FormToggle";
+import { FormToggle } from "./form-toggle";
 import { Pickup, type DragApi, type LiftState } from "./drag";
-import { SourceToggle } from "./SourceToggle";
-import { TaskPills } from "./TaskPills";
+import { SourceToggle } from "./source-toggle";
+import { TaskPills } from "./task-pills";
 import { spacing } from "@/theme/tokens";
-import { styles } from "./plannerStyles";
+import { styles } from "./planner-styles";
 
 /** Pills mode has no rows, so the list renders header and footer only. */
 const noTasks: TaskItem[] = [];

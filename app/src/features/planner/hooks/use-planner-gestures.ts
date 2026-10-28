@@ -7,7 +7,7 @@ import { addDays, isSameDay, parseStoredDate } from "@/utils/dates";
 import { drag } from "@/theme/tokens";
 import { withKeptTime } from "@/features/planner/model";
 import type { DragApi, LiftState } from "@/features/planner/components/drag";
-import { useTouchDragGate, type PendingDrag } from "./useTouchDragGate";
+import { useTouchDragGate, type PendingDrag } from "./use-touch-drag-gate";
 
 /** What the gesture layer needs from the screen: the route day it
     shifts, the store writes it runs, and the platform pickup mode. */

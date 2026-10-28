@@ -141,11 +141,40 @@ app's three folders. The wikilink check covers every note.
 
 ## Layout
 
-Routes are thin: `app/(tabs)/planner.tsx` re-exports
-`features/planner/PlannerScreen`. A feature owns its model, components,
-hooks and pure helpers. Shared UI lives in `components/`, primitives in
-`components/ui/`, and the store splits state, actions and selectors
-(ADR 0022). `lib/` never imports a feature (ADR 0020).
+The app code in `app/src` follows the Bulletproof React layout
+(ADR 0039).
+
+| Folder | Holds |
+|---|---|
+| `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
+| `features/<name>` | The UI of one feature: `capture`, `diagnostics`, `lists`, `planner`, `task-editor`. |
+| `components` | Shared UI. `components/ui` holds the primitives. |
+| `hooks` | Shared hooks. |
+| `stores/tasks` | The task query and its writes, pure row updaters, selectors and the reminder sync. |
+| `lib` | Libraries set up for this app: `vault`, `react-query`, `recurrence`, `notifications`, `motion`. |
+| `types` | Shared types, such as `TaskItem`. |
+| `utils` | Pure helpers: dates, YAML, schema errors. |
+| `theme` | Design tokens. |
+| `testing` | Test setup and regression tests that cross layers. |
+
+Inside a feature, `components/` holds its UI, `hooks/` its stateful
+glue, `lib/` its pure helpers and `model.ts` its rules (ADR 0022).
+
+Imports follow four zones:
+
+1. A feature imports no other feature.
+2. A feature imports nothing from `app`.
+3. The shared folders import no feature and nothing from `app`. The
+   shared folders are `components`, `hooks`, `lib`, `stores`, `theme`,
+   `types` and `utils`.
+4. `lib`, `utils`, `types` and `theme` import nothing from
+   `components`, `hooks` or `stores`.
+
+An import that leaves its folder uses the `@/` alias. File and folder
+names use kebab-case, except the route files under `app`. A module
+imports the file it needs, not a barrel file. ESLint checks the zones
+with `import/no-restricted-paths` and the names with
+`eslint-plugin-check-file`.
 
 ## Plan
 

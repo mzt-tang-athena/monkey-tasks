@@ -1,6 +1,7 @@
 // https://docs.expo.dev/guides/using-eslint/
 const { defineConfig } = require('eslint/config');
 const expoConfig = require('eslint-config-expo/flat');
+const checkFile = require('eslint-plugin-check-file');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -71,6 +72,21 @@ module.exports = defineConfig([
           ],
         },
       ],
+    },
+  },
+  {
+    // File and folder names use kebab-case (ADR 0039). Route files
+    // under src/app keep the names expo-router needs.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/app/**'],
+    plugins: { 'check-file': checkFile },
+    rules: {
+      'check-file/filename-naming-convention': [
+        'error',
+        { 'src/**/*.{ts,tsx}': 'KEBAB_CASE' },
+        { ignoreMiddleExtensions: true },
+      ],
+      'check-file/folder-naming-convention': ['error', { 'src/!(app)/**/': 'KEBAB_CASE' }],
     },
   },
   {

@@ -1,6 +1,6 @@
 import { Pressable, View } from "react-native";
 import type { TaskForm } from "@/lib/settings";
-import { styles } from "./plannerStyles";
+import { styles } from "./planner-styles";
 
 /**
  * The tiny segmented form toggle at the bottom half's right edge:

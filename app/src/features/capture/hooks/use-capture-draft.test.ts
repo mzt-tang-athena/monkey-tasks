@@ -5,7 +5,7 @@ import * as React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { CaptureTarget, ParsedCapture } from "@/types/task";
-import { useCaptureDraft, type CaptureDraft } from "./useCaptureDraft";
+import { useCaptureDraft, type CaptureDraft } from "./use-capture-draft";
 
 // The hook's contract: the draft and its send lifecycle, with no
 // view attached. A successful send clears the draft, a failed one

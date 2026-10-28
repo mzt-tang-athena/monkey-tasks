@@ -7,7 +7,7 @@ import {
   type Mode,
   type Source,
 } from "@/features/planner/model";
-import { styles } from "./plannerStyles";
+import { styles } from "./planner-styles";
 
 /**
  * The small source toggle above a mode's bottom list. Quiet at rest:

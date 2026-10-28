@@ -17,7 +17,7 @@ import {
 } from "@/features/planner/model";
 import { WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import { Pickup, type DragApi, type LiftState } from "./drag";
-import { styles } from "./plannerStyles";
+import { styles } from "./planner-styles";
 
 
 /** F's week body: day columns with real content, one swipe away. */

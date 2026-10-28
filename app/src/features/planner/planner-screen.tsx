@@ -3,29 +3,29 @@ import { Animated, Platform, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CaptureTarget, TaskItem } from "@/types/task";
-import { BottomBar } from "@/components/BottomBar";
+import { BottomBar } from "@/components/bottom-bar";
 import { useReduceMotion } from "@/lib/motion";
 import { isoOf } from "@/utils/dates";
 import { cycleSource, sourceLabel, SOURCES, type Source } from "./model";
-import { styles } from "./components/plannerStyles";
-import { DaySpread } from "./components/DaySpread";
-import { WeekView } from "./components/WeekView";
+import { styles } from "./components/planner-styles";
+import { DaySpread } from "./components/day-spread";
+import { WeekView } from "./components/week-view";
 import {
   MonthView,
   MonthDayHeader,
   MonthOpenDayButton,
-} from "./components/MonthView";
-import { PlannerHeader } from "./components/PlannerHeader";
-import { TaskListSection } from "./components/TaskListSection";
-import { LoadingState, ErrorState } from "./components/PlannerStates";
+} from "./components/month-view";
+import { PlannerHeader } from "./components/planner-header";
+import { TaskListSection } from "./components/task-list-section";
+import { LoadingState, ErrorState } from "./components/planner-states";
 import { pointerPickup } from "./components/drag";
 import { loadSettings, saveSetting, type TaskForm } from "@/lib/settings";
 import { useTaskList, useStoreMeta } from "@/stores/tasks/task-state";
 import { useTaskActions } from "@/stores/tasks/task-actions";
 import { useOpenTasks } from "@/stores/tasks/selectors";
-import { usePlannerRoute } from "./hooks/usePlannerRoute";
-import { usePlannerGestures } from "./hooks/usePlannerGestures";
-import { usePlannerMonth } from "./hooks/usePlannerMonth";
+import { usePlannerRoute } from "./hooks/use-planner-route";
+import { usePlannerGestures } from "./hooks/use-planner-gestures";
+import { usePlannerMonth } from "./hooks/use-planner-month";
 
 const TARGETS: CaptureTarget[] = [
   { kind: "list", name: "Focus" },

@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "@/types/task";
-import { TaskRow } from "./TaskRow";
+import { TaskRow } from "./task-row";
 
 function task(name: string, extra: Partial<TaskFrontmatter> = {}): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;

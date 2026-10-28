@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from "react-native";
-import { styles } from "./plannerStyles";
+import { styles } from "./planner-styles";
 
 /** The store is still loading: skeleton rows where the list lands. */
 export function LoadingState() {

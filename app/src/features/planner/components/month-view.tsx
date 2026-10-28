@@ -3,10 +3,10 @@ import { Pressable, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { swipeProps } from "@/lib/swipe";
-import { useSwipePager } from "@/components/SwipePager";
-import { MonthGrid, type PickedDay } from "./MonthGrid";
+import { useSwipePager } from "@/components/swipe-pager";
+import { MonthGrid, type PickedDay } from "./month-grid";
 import { WEEKDAYS_FULL } from "@/features/planner/lib/labels";
-import { styles } from "./plannerStyles";
+import { styles } from "./planner-styles";
 
 /** The fixed half of the month: the title and the grid card. The
     container passes the picked-day list pane as children, so both

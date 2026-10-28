@@ -6,7 +6,7 @@ import { formatTime, parseStoredDate } from "@/utils/dates";
 import { hourOf, isDone, minuteOf } from "@/features/planner/model";
 import { labelHour } from "@/features/planner/lib/labels";
 import { Pickup, type DragApi, type LiftState } from "./drag";
-import { styles } from "./plannerStyles";
+import { styles } from "./planner-styles";
 
 /** First and last hour shown by the ruler. */
 const RULER_START = 7;

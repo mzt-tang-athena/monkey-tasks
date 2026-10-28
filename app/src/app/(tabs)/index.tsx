@@ -12,18 +12,18 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CaptureTarget, TaskItem } from "@/types/task";
-import { TaskRow } from "@/components/TaskRow";
-import { ReorderGrip, ReorderRow } from "@/features/lists/ReorderRow";
+import { TaskRow } from "@/components/task-row";
+import { ReorderGrip, ReorderRow } from "@/features/lists/reorder-row";
 import {
   layoutOrder,
   moveItem,
   reorderItems,
 } from "@/features/lists/reorder";
 import { swipeProps, type SwipeController } from "@/lib/swipe";
-import { useSwipePager } from "@/components/SwipePager";
-import { ListPagePreview } from "@/features/lists/ListPagePreview";
+import { useSwipePager } from "@/components/swipe-pager";
+import { ListPagePreview } from "@/features/lists/list-page-preview";
 import { loadSettings, saveSetting, type SortMode } from "@/lib/settings";
-import { BottomBar } from "@/components/BottomBar";
+import { BottomBar } from "@/components/bottom-bar";
 import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
 import { useTaskActions } from "@/stores/tasks/task-actions";
 import {
@@ -33,7 +33,7 @@ import {
   type ListTab,
   type SectionTone,
 } from "@/stores/tasks/selectors";
-import { IconButton } from "@/components/ui/IconButton";
+import { IconButton } from "@/components/ui/icon-button";
 import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "@/theme/tokens";
 
 /**

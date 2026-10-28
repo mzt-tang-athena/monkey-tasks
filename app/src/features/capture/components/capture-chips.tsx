@@ -4,7 +4,7 @@ import {
   dueChipLabel,
   recurrenceKeyword,
   timeChipLabel,
-} from "@/features/capture/lib/chipLabels";
+} from "@/features/capture/lib/chip-labels";
 import { colors, fonts, radius, radii, spacing } from "@/theme/tokens";
 
 /**

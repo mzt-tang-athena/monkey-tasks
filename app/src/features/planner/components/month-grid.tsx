@@ -7,7 +7,7 @@ import { occurrencesBetween } from "@/lib/recurrence";
 import { isDone, startOfMonth } from "@/features/planner/model";
 import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import { spacing } from "@/theme/tokens";
-import { styles } from "./plannerStyles";
+import { styles } from "./planner-styles";
 
 /** The tapped day, tagged with the month it belongs to. The
     container holds it, so a new month from the strip invalidates the

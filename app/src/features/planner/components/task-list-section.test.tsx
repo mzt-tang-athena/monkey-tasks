@@ -2,7 +2,7 @@ import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskItem } from "@/types/task";
-import { TaskListSection } from "./TaskListSection";
+import { TaskListSection } from "./task-list-section";
 
 function task(name: string): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;

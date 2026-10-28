@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { Source } from "@/features/planner/model";
 import type { TaskItem } from "@/types/task";
-import { usePlannerMonth } from "./usePlannerMonth";
+import { usePlannerMonth } from "./use-planner-month";
 
 function task(name: string, data: TaskFrontmatter | null): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;

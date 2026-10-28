@@ -11,9 +11,9 @@ import {
   type Source,
 } from "@/features/planner/model";
 import { isoOf } from "@/utils/dates";
-import { TaskListSection } from "./TaskListSection";
-import { Timeline } from "./Timeline";
-import { styles as base } from "./plannerStyles";
+import { TaskListSection } from "./task-list-section";
+import { Timeline } from "./timeline";
+import { styles as base } from "./planner-styles";
 import { spacing } from "@/theme/tokens";
 
 /** Nothing in the preview reacts; every handler the live body

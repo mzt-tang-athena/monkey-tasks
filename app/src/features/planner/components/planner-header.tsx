@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { Mode } from "@/features/planner/model";
 import { colors, fonts, radius, spacing } from "@/theme/tokens";
-import { PeriodStrip } from "./PeriodStrip";
+import { PeriodStrip } from "./period-strip";
 
 const styles = StyleSheet.create({
   // The strip and the mode pills, one step apart. The screen spaces

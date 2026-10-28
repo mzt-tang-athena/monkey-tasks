@@ -5,7 +5,7 @@ import * as React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { startOfDay } from "@/utils/dates";
-import { usePlannerRoute, type PlannerRoute } from "./usePlannerRoute";
+import { usePlannerRoute, type PlannerRoute } from "./use-planner-route";
 
 // The route is the planner's state: the URL names the mode and the
 // day, and the hook reads them back and writes them out. The mock

@@ -2,7 +2,7 @@ import { Text, View, type PointerEvent as RNPointerEvent } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { pillDateLabel } from "@/features/planner/lib/labels";
 import { Pickup, type DragApi, type LiftState } from "./drag";
-import { styles } from "./plannerStyles";
+import { styles } from "./planner-styles";
 
 /** Round-1 tray pills, back as draggable chips: drag-first, no tick. */
 export function TaskPills({

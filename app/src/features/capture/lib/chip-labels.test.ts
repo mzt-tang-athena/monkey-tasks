@@ -4,7 +4,7 @@ import {
   recurrenceKeyword,
   targetLabel,
   timeChipLabel,
-} from "./chipLabels";
+} from "./chip-labels";
 
 describe("dueChipLabel", () => {
   it("names the weekday and the day of the month", () => {

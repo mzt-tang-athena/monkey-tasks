@@ -1,6 +1,6 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { PreviewRow } from "@/components/PreviewRow";
+import { PreviewRow } from "@/components/preview-row";
 import type { SortMode } from "@/lib/settings";
 import {
   useTabTasks,

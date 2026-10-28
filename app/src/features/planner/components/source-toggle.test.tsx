@@ -2,7 +2,7 @@ import * as React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cycleSource, type Source } from "@/features/planner/model";
-import { SourceToggle } from "./SourceToggle";
+import { SourceToggle } from "./source-toggle";
 
 // The harness owns the source state and cycles it through the same
 // model helper the screen uses.

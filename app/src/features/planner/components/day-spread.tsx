@@ -11,9 +11,9 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { groupByDue } from "@/stores/tasks/selectors";
 import type { TaskItem } from "@/types/task";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import { TaskRow } from "@/components/TaskRow";
+import { TaskRow } from "@/components/task-row";
 import { swipeProps } from "@/lib/swipe";
-import { useSwipePager } from "@/components/SwipePager";
+import { useSwipePager } from "@/components/swipe-pager";
 import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { addDays, isoOf, startOfDay } from "@/utils/dates";
 import { drag } from "@/theme/tokens";
@@ -29,13 +29,13 @@ import {
   type Source,
 } from "@/features/planner/model";
 import { MONTHS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
-import { useTouchDragGate, type PendingDrag } from "@/features/planner/hooks/useTouchDragGate";
-import { DayPreview } from "./DayPreview";
+import { useTouchDragGate, type PendingDrag } from "@/features/planner/hooks/use-touch-drag-gate";
+import { DayPreview } from "./day-preview";
 import { Pickup, pointerPickup, type DragApi, type LiftState } from "./drag";
-import { PlannerHeader } from "./PlannerHeader";
-import { TaskListSection } from "./TaskListSection";
-import { Timeline } from "./Timeline";
-import { styles } from "./plannerStyles";
+import { PlannerHeader } from "./planner-header";
+import { TaskListSection } from "./task-list-section";
+import { Timeline } from "./timeline";
+import { styles } from "./planner-styles";
 
 /**
  * The pager asks for its children when its hook runs, but the day
