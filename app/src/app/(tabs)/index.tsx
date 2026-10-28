@@ -11,31 +11,30 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { TaskItem } from "../../features/tasks/query";
-import type { CaptureTarget } from "../../features/capture/write";
-import { TaskRow } from "../../components/TaskRow";
-import { ReorderGrip, ReorderRow } from "../../features/lists/ReorderRow";
+import type { CaptureTarget, TaskItem } from "@/types/task";
+import { TaskRow } from "@/components/task-row";
+import { ReorderGrip, ReorderRow } from "@/features/lists/reorder-row";
 import {
   layoutOrder,
   moveItem,
   reorderItems,
-} from "../../features/lists/reorder";
-import { swipeProps, type SwipeController } from "../../lib/swipe";
-import { useSwipePager } from "../../components/SwipePager";
-import { ListPagePreview } from "../../features/lists/ListPagePreview";
-import { loadSettings, saveSetting, type SortMode } from "../../lib/settings";
-import { BottomBar } from "../../components/BottomBar";
-import { useStoreMeta, useTaskList } from "../../store/task-state";
-import { useTaskActions } from "../../store/task-actions";
+} from "@/features/lists/reorder";
+import { swipeProps, type SwipeController } from "@/lib/swipe";
+import { useSwipePager } from "@/components/swipe-pager";
+import { ListPagePreview } from "@/features/lists/list-page-preview";
+import { loadSettings, saveSetting, type SortMode } from "@/lib/settings";
+import { BottomBar } from "@/components/bottom-bar";
+import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
+import { useTaskActions } from "@/stores/tasks/task-actions";
 import {
   useListTabs,
   useTabTasks,
   useTaskSections,
   type ListTab,
   type SectionTone,
-} from "../../store/selectors";
-import { IconButton } from "../../components/ui";
-import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
+} from "@/stores/tasks/selectors";
+import { IconButton } from "@/components/ui/icon-button";
+import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "@/theme/tokens";
 
 /**
  * Lists tab: Main first, then one tab per list note, with capture
@@ -673,6 +672,7 @@ export default function ListsScreen() {
           </ReorderRow>
           {canDrag ? (
             <ReorderGrip
+              taskName={item.name}
               hidden={lifted}
               onPickup={(x, y) =>
                 armReorderNow(item, index, section.title, x, y)
@@ -818,6 +818,7 @@ export default function ListsScreen() {
         />
       ) : null}
       <View
+        testID="list-pager"
         style={styles.body}
         // The handlers read refs when the gesture runs, not in render.
         // eslint-disable-next-line react-hooks/refs
@@ -865,7 +866,7 @@ export default function ListsScreen() {
                   chipX.current[name] = event.nativeEvent.layout.x;
                 }}
                 accessibilityRole="tab"
-                accessibilityState={{ selected: tab === name }}
+                aria-selected={tab === name}
               >
                 <Text
                   style={[
@@ -973,7 +974,7 @@ export default function ListsScreen() {
             { top: 0, transform: [{ translateY: ghostY }] },
           ]}
         >
-          <TaskRow task={reorder.task} />
+          <TaskRow task={reorder.task} copy />
         </Animated.View>
       ) : null}
 
@@ -999,7 +1000,7 @@ export default function ListsScreen() {
                 setSortMenu(null);
               }}
               accessibilityRole="button"
-              accessibilityState={{ selected: sortMode === option.key }}
+              aria-selected={sortMode === option.key}
               accessibilityLabel={option.label}
             >
               <Text

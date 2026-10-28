@@ -1,8 +1,7 @@
 import { taskIsDone, type TaskFrontmatter } from "@monkey-tasks/schemas";
-import type { BrokenList, ListItem } from "../features/lists/query";
-import type { TaskItem } from "../features/tasks/query";
-import { addDays, formatLocal, nowStamp, startOfDay } from "./dates";
-import { serializeValue } from "./yaml";
+import type { BrokenList, ListItem, TaskItem } from "@/types/task";
+import { addDays, formatLocal, nowStamp, startOfDay } from "@/utils/dates";
+import { serializeValue } from "@/utils/yaml";
 
 /**
  * Mock tasks for the design exploration. The shape mirrors TaskItem

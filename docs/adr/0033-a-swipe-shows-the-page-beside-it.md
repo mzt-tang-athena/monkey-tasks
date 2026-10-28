@@ -103,3 +103,22 @@ the commit.
 The neighbour is dropped 250 ms after the commit rather than on the
 next animation frame, so it cannot vanish from the visible cell while
 the offset reset paints.
+
+## Amendment, 2026-10-26: the track never resets
+
+ADR 0036 moves the pager to the UI thread, and ticket 0059 builds it.
+Three cells and one live page stay. These parts change:
+
+- Cells sit at their page's place on one track, `page × width`. A
+  commit changes React props only. The track offset already equals
+  the target, so nothing resets in the commit's frame. The 250 ms
+  neighbour hold goes away.
+- A preview cell renders the page at its own track position. The
+  cell beside a landed page no longer shows the page after next.
+- The live page keys on its page, so a landed page mounts at its top,
+  the same as its preview. The live page still never remounts during
+  a gesture.
+- A short release keeps the preview until the page rests.
+- A release reads the finger's velocity, so a flick commits.
+- The day preview builds its rows with the live day's function and
+  the real today state. The list preview draws one screenful.

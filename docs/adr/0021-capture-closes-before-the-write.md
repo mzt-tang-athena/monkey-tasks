@@ -47,3 +47,12 @@ it puts disk latency in front of the user, which is the complaint.
 **Optimistic row with a spinner in the sheet.** The spinner still ties
 the sheet's life to the write, and the user sees a progress state for
 something that should not be visible at all.
+
+## Amendment, 2026-10-26: one clock in fact
+
+The decision stands: the tap closes the sheet, and the write runs
+behind it. The claim of one clock did not hold. The keyboard moved on
+a native value with the system's curve. The sheet and the bar ran a
+220 ms timing on the JS driver. Ticket 0062 rides the keyboard on the
+UI thread with `useReanimatedKeyboardAnimation`. The sheet follows the
+keyboard's progress while the keyboard moves (ADR 0036).

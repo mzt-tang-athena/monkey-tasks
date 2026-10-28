@@ -48,3 +48,17 @@ would stop matching the notes, and a refresh would break it.
 **No hold, only a flash on the circle.** The circle can animate in
 place, but the row still vanishes in the same frame, so the effect
 reads as a flicker.
+
+## Amendment, 2026-10-26: the animation ends the hold
+
+ADR 0036 moves the tick to the UI thread, and ticket 0060 builds it.
+
+- The hold ends from the tick animation's completion callback, after
+  the wash's 320 ms, not from a 250 ms timer.
+- Several holds can run at once. Each held row keeps its place among
+  the rows around it at tick time, so a second tick never moves
+  another row.
+- The rule that a vault change drops the hold never shipped. We drop
+  it, because a hold lasts a third of a second.
+- Sections carry stable keys (ticket 0055), so the end of a hold no
+  longer remounts the rows below.

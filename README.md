@@ -36,8 +36,27 @@ a device.
 Run the app tests from `app`:
 
 ```bash
-npx vitest run
+npm test
 ```
+
+Vitest runs two projects (ADR 0038). `npm run test:unit` runs the logic
+tests in node. `npm run test:component` renders components through
+React Native Web in jsdom.
+
+Run the end-to-end tests from `app`:
+
+```bash
+npx playwright install chromium
+npm run e2e
+```
+
+The first command fetches the browser once. `npm run e2e` exports the
+web build to `dist`, serves it on port 8094, and drives the sample set
+with Playwright in `e2e/`. It runs every spec twice: with motion and
+with reduced motion. Set `E2E_PORT` to serve on another port, for
+example when two checkouts run the suite at once. The run fails if the
+port is busy. To test a running `npm run web` instead, use
+`npm run e2e:dev`. A failed test keeps a trace in `e2e/test-results`.
 
 Run the schema tests from `contracts/packages/schemas`:
 
@@ -53,14 +72,16 @@ Install the local hook once per clone:
 make hooks
 ```
 
-It runs ESLint on the staged app code and Vale on the staged docs. The
+It runs ESLint on the staged app code in `src`, `scripts` and `e2e`,
+and Vale on the staged docs. An ESLint warning fails the commit. The
 typecheck, the tests and the bundle stay in CI.
 
 ## Install it on a phone
 
 The `android` workflow builds a sideloadable APK on a GitHub runner,
 because a phone needs a native build and the runner already has the
-Android SDK. Run it from Actions, or from the CLI:
+Android SDK. It runs only when you start it. Run it from Actions, or
+from the CLI:
 
 ```bash
 gh workflow run android
@@ -89,7 +110,7 @@ bundle, with the host name the phone can reach (a LAN address, or a
 Tailscale address when the phone is off the local network):
 
 ```bash
-REACT_NATIVE_PACKAGER_HOSTNAME=100.124.248.125 npx expo start --dev-client --lan
+REACT_NATIVE_PACKAGER_HOSTNAME=<tailscale-ip> npx expo start --dev-client --lan
 ```
 
 The dev client opens the URL the CLI prints. A JavaScript change reloads
@@ -113,16 +134,47 @@ A bare link is a `[[link]]` value with no quotes. YAML reads it as a
 list, and Obsidian writes the nested form back on the next edit. That
 is how `Shop.md` lost its Focus list (ticket 0032). A parser
 disagreement is a note where the app and `js-yaml` read the same text
-differently, for example `- - Focus`. The parser check covers the
+differently, for example `- - Focus`. A note that `js-yaml` cannot
+parse counts too, for example a list indented with a tab: the app reads
+it, but YAML forbids the tab (ADR 0029). The parser check covers the
 app's three folders. The wikilink check covers every note.
 
 ## Layout
 
-Routes are thin: `app/(tabs)/planner.tsx` re-exports
-`features/planner/PlannerScreen`. A feature owns its model, components,
-hooks and pure helpers. Shared UI lives in `components/`, primitives in
-`components/ui/`, and the store splits state, actions and selectors
-(ADR 0022). `lib/` never imports a feature (ADR 0020).
+The app code in `app/src` follows the Bulletproof React layout
+(ADR 0039).
+
+| Folder | Holds |
+|---|---|
+| `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
+| `features/<name>` | The UI of one feature: `capture`, `diagnostics`, `lists`, `planner`, `task-editor`. |
+| `components` | Shared UI. `components/ui` holds the primitives. |
+| `hooks` | Shared hooks. |
+| `stores/tasks` | The task query and its writes, pure row updaters, selectors and the reminder sync. |
+| `lib` | Libraries set up for this app: `vault`, `react-query`, `recurrence`, `notifications`, `motion`. |
+| `types` | Shared types, such as `TaskItem`. |
+| `utils` | Pure helpers: dates, YAML, schema errors. |
+| `theme` | Design tokens. |
+| `testing` | Test setup and regression tests that cross layers. |
+
+Inside a feature, `components/` holds its UI, `hooks/` its stateful
+glue, `lib/` its pure helpers and `model.ts` its rules (ADR 0022).
+
+Imports follow four zones:
+
+1. A feature imports no other feature.
+2. A feature imports nothing from `app`.
+3. The shared folders import no feature and nothing from `app`. The
+   shared folders are `components`, `hooks`, `lib`, `stores`, `theme`,
+   `types` and `utils`.
+4. `lib`, `utils`, `types` and `theme` import nothing from
+   `components`, `hooks` or `stores`.
+
+An import that leaves its folder uses the `@/` alias. File and folder
+names use kebab-case, except the route files under `app`. A module
+imports the file it needs, not a barrel file. ESLint checks the zones
+with `import/no-restricted-paths` and the names with
+`eslint-plugin-check-file`.
 
 ## Plan
 
@@ -135,16 +187,18 @@ as a bare RRULE value and expands it with `rrule`.
 
 ## Next
 
-The bug queue is clear. Open feature tickets, in the order they are
-likely to land:
+Ticket 0047 is the current work: a refactor to the Bulletproof React
+layout, a data layer built on mutations, and a motion rebuild on the UI
+thread. It lands on the `epic/0047-rebuild` branch through child tickets
+0048 to 0063, 0066 and 0068 (ADR 0035). New feature work waits until it
+merges.
 
-- 0010 a list tab bar
-- 0012 planner week and month polish
-- 0013 a task editor and a note viewer
-- 0014 a my-order sort
-- 0017 a drag-to-schedule tray
+Open feature tickets after that:
+
 - 0018 a keep-style notes board
-- 0003, 0005, 0008, 0017 and 0018 carry the larger ideas.
+- 0039 home screen widgets
+- 0065 the list menu actions
+- 0003, 0005 and 0008 carry the larger ideas.
 
 The app has two tabs: Lists and Planner. The Lists tab shows Focus and
 Main. Main is the catch-all: every task that is not on Focus, including
