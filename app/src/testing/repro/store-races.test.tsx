@@ -22,16 +22,16 @@ import {
 import { act, create } from "react-test-renderer";
 import { Platform } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeQueryClient } from "../../store/query-client";
-import { TasksProvider, type TaskListData } from "../../store/tasks";
+import { makeQueryClient } from "@/lib/react-query";
+import { TasksProvider, type TaskListData } from "@/stores/tasks/tasks-provider";
 import {
   useStoreMeta,
   useTaskList,
   type StoreMeta,
-} from "../../store/task-state";
-import { useTaskActions, type TaskActions } from "../../store/task-actions";
-import type { TaskItem } from "../../features/tasks/query";
-import { reorderItems } from "../../features/lists/reorder";
+} from "@/stores/tasks/task-state";
+import { useTaskActions, type TaskActions } from "@/stores/tasks/task-actions";
+import type { TaskItem } from "@/types/task";
+import { reorderItems } from "@/features/lists/reorder";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
@@ -57,13 +57,13 @@ vi.mock("react-native", () => ({
   },
 }));
 
-vi.mock("../../features/vault/grant", () => ({
+vi.mock("@/lib/vault/grant", () => ({
   getSavedVaultUri: async () => savedUri,
   requestVaultAccess: async () => savedUri,
 }));
 
-vi.mock("../../features/vault/session", async () => {
-  const { taskFromText } = await import("../../features/tasks/query");
+vi.mock("@/stores/tasks/load-vault", async () => {
+  const { taskFromText } = await import("@/stores/tasks/task-notes");
   return {
     // A real scan lists the folder and reads the notes first, then
     // returns. The snapshot is taken at the start for the same reason.
@@ -89,9 +89,9 @@ vi.mock("../../features/vault/session", async () => {
   };
 });
 
-vi.mock("../../features/vault/notes", async (importOriginal) => {
+vi.mock("@/lib/vault/notes", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../features/vault/notes")>();
+    await importOriginal<typeof import("@/lib/vault/notes")>();
   const hold = async () => {
     if (holdWrites > 0) {
       holdWrites -= 1;
@@ -155,7 +155,7 @@ vi.mock("../../features/vault/notes", async (importOriginal) => {
   };
 });
 
-vi.mock("../../features/reminders/sync", () => ({
+vi.mock("@/stores/tasks/reminder-sync", () => ({
   syncReminders: async () => {
     fullSyncs += 1;
     return { scheduled: 0, skipped: true };

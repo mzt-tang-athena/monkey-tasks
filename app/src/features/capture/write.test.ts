@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { load } from "js-yaml";
 import { captureContent } from "./write";
 
-import type { ParsedCapture } from "./parse";
+import type { ParsedCapture } from "@/types/task";
 
 const CREATED = "2026-10-25T14:03";
 

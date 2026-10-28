@@ -10,9 +10,9 @@ import {
   type ViewStyle,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { useRise, useShake } from "../../../lib/motion";
-import { colors, drag } from "../../../theme/tokens";
-import type { TaskItem } from "../../tasks/query";
+import { useRise, useShake } from "@/lib/motion";
+import { colors, drag } from "@/theme/tokens";
+import type { TaskItem } from "@/types/task";
 
 /* -------------------------------------------------------- interaction */
 
@@ -21,7 +21,7 @@ export type LiftState = { task: TaskItem; phase: "hold" | "picked" } | null;
 /** Rows carry the lift: a quiet tint through the hold, then a
     scale-plus-shadow pickup once the drag owns the pointer. Empty
     when no drag concerns this row. */
-export function liftStyleOf(
+function liftStyleOf(
   lifted: LiftState,
   task: TaskItem,
 ): (typeof styles.liftHold | typeof styles.liftPicked)[] {
@@ -66,7 +66,7 @@ export type DragApi = {
 
 /** One drag source on native: the Pan activates after the hold, so
     pane scrolling keeps every gesture that moves too early. */
-export function NativeDragHandle({
+function NativeDragHandle({
   task,
   kind = "row",
   api,

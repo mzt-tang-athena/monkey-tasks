@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import type { TaskItem } from "../tasks/query";
+import type { TaskItem } from "@/types/task";
 import { layoutOrder, reorderItems } from "./reorder";
 
 function task(name: string, order?: number): TaskItem {

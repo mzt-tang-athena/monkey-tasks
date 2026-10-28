@@ -12,8 +12,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   syncReminders,
   syncTaskReminders,
-} from "../../features/reminders/sync";
-import type { TaskItem } from "../../features/tasks/query";
+} from "@/stores/tasks/reminder-sync";
+import type { TaskItem } from "@/types/task";
 
 /** The OS alarm list: alarm id to task name. */
 const alarms = new Map<string, string>();
@@ -28,7 +28,7 @@ function bridge(): Promise<void> {
 
 vi.mock("react-native", () => ({ Platform: { OS: "android" } }));
 
-vi.mock("../../features/reminders/schedule", () => ({
+vi.mock("@/lib/notifications", () => ({
   ensureNotificationPermission: async () => {
     await bridge();
     return true;

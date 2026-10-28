@@ -12,7 +12,7 @@ export default defineConfig({
       { find: /^@\//, replacement: `${src}/` },
       {
         find: "expo-file-system/legacy",
-        replacement: path.resolve(import.meta.dirname, "vitest.stub.ts"),
+        replacement: `${src}/testing/expo-file-system-stub.ts`,
       },
     ],
   },
@@ -28,7 +28,7 @@ export default defineConfig({
             "scripts/**/*.test.ts",
             // Store tests drive the provider in node, with their own
             // react-native mock. Tickets 0051 and 0052 rewrite them.
-            "src/store/**/*.test.tsx",
+            "src/stores/**/*.test.tsx",
             "src/testing/repro/**/*.test.tsx",
           ],
         },
@@ -59,7 +59,7 @@ export default defineConfig({
           include: ["src/**/*.test.tsx"],
           exclude: [
             ...configDefaults.exclude,
-            "src/store/**",
+            "src/stores/**",
             "src/testing/repro/**",
           ],
           setupFiles: ["src/testing/dom-setup.ts"],

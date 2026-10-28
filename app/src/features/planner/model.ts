@@ -1,7 +1,14 @@
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
-import type { TaskItem } from "../tasks/query";
-import { occursOn } from "../tasks/recurrence";
+import {
+  addDays,
+  formatLocal,
+  formatTime,
+  isoOf,
+  parseStoredDate,
+  startOfDay,
+} from "@/utils/dates";
+import type { TaskItem } from "@/types/task";
+import { occursOn } from "@/lib/recurrence";
 
 /*
  * The planner's pure domain layer: the source vocabulary, the period
@@ -209,17 +216,6 @@ export function withKeptTime(
     ),
     true,
   );
-}
-
-export function formatTime(date: Date): string {
-  const h = date.getHours() % 12 || 12;
-  const ampm = date.getHours() >= 12 ? "PM" : "AM";
-  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
-}
-
-export function isoOf(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 /** Sunday of the week holding date. */
