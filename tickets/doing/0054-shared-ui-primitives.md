@@ -3,7 +3,7 @@ id: 0054
 title: Shared UI primitives
 created: 2026-10-26
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: [0050]
 ---
