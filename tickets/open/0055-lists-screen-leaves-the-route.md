@@ -117,7 +117,7 @@ direct vault write.
 - [ ] During a reorder, a slot crossing re-renders only the rows whose first, last or divider state changes.
 - [ ] A test reproduces the remount bug first. Afterwards a group that leaves remounts no row in a later group.
 - [ ] A Playwright test reproduces the swipe bug first. Afterwards a sideways swipe that starts on a row changes the tab and opens no editor.
-- [ ] A Playwright screenshot reproduces the repair notice bug first. Afterwards, at 412 by 915, the fixed area above the list is no taller than one row, and no clipped card edge shows under the notice.
+- [ ] A Playwright screenshot reproduces the repair notice bug first. Afterwards, at 412 by 915, the notice's fixed part is no taller than one row, and no clipped card edge shows under the notice.
 - [ ] A tap on a row still opens the editor.
 - [ ] A tick still holds its row in place for one beat before it moves to Completed.
 - [ ] A drag in My order still writes the new order.

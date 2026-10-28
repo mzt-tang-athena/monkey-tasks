@@ -26,7 +26,8 @@ bug gets a failing test before its fix.
 Paths and line numbers cite commit `b2c0b10` for bugs 1 to 5, and
 commit `e3ff3ad` for bugs 6 to 8. Ticket 0050 renames files to
 kebab-case, so look for the same code under its new name. The 0050
-Outcome maps each old path to its new one.
+Spec maps each old path to its new one, in "Move map" and in "PR 3:
+kebab-case".
 
 ### Target files in `src/features/planner/`
 
@@ -128,11 +129,13 @@ the day body on every render (`DaySpread.tsx:46-48`,
    (`TaskListSection.tsx:104`, `TaskListSection.tsx:152-156`). To
    reproduce, open day view on today with two overdue tasks. Use the
    same separator in both.
-8. **The day list says "Due today" on every day.** `sourceLabel`
-   (`model.ts:33-40`) gives "Due today" for day mode whatever the date.
-   To reproduce, open day view and step to tomorrow: the heading still
-   reads "Due today". Name the day instead: "Due tomorrow", "Due
-   yesterday", or "Due Wed 28 Oct".
+8. **The source toggle names the wrong period.** `sourceLabel`
+   (`model.ts:33-40`) gives "Due today", "Due this week" or "Due this
+   month" for the mode, whatever period is on screen. To reproduce,
+   open day view and step to tomorrow: the source toggle still reads
+   "Due today". Week and month mode do the same for another week or
+   month. Name the period on screen instead, for example "Due
+   tomorrow", "Due Wed, 28 Oct", "Due 9 to 15 Nov" or "Due November".
 
 ## Acceptance
 
@@ -152,7 +155,7 @@ the day body on every render (`DaySpread.tsx:46-48`,
 - [ ] A Playwright test at 360 by 640 reproduces the menu bug first. Afterwards the open source menu sits fully above the bottom bar.
 - [ ] A Playwright test reproduces the sort bug first. Afterwards the day list, the swipe preview and the month picked-day list each show a day's tasks by time of day.
 - [ ] A Playwright screenshot reproduces the separator bug first. Afterwards overdue rows and list rows show the same hairline.
-- [ ] A Playwright test reproduces the heading bug first. Afterwards the day list heading names the day it shows.
+- [ ] A Playwright test reproduces the source toggle bug first. Afterwards, in day, week and month mode, the source toggle names the period on screen.
 - [ ] A render-count test shows that a hover change during a day drag re-renders the timeline and not the list pane.
 - [ ] A drag from the list to the ruler still writes the hour, and a drag to a week column or month cell still writes the day.
 - [ ] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
