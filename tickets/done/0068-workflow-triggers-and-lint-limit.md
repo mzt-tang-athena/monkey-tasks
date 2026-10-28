@@ -183,7 +183,14 @@ Evidence, all on GitHub Actions:
 A push to main no longer matches any trigger in `android.yml`, because
 the file now lists `workflow_dispatch` only.
 
-Both jobs still check out the `contracts` submodule through the optional
-`CONTRACTS_TOKEN` secret. The repo has been public since 2026-10-27, so
-that step works without the secret. Removing it is left for a later
-cleanup.
+The evidence runs used commit 5efbc63, before the rebase onto #73,
+which changed `playwright.config.ts`. The CI run on the final head also
+passed 36 tests with a cache hit.
+
+The `code`, `e2e-web` and `android` jobs still need the
+`CONTRACTS_TOKEN` secret, although `contracts` has been public since
+2026-10-27. `.gitmodules` uses the SSH URL, the runner has no SSH key,
+and only the secret's `insteadOf` line turns the URL into HTTPS. A
+switch of `.gitmodules` to the HTTPS URL would let a later change drop
+the secret, and the "or make that repository public" error text with
+it.
