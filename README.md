@@ -80,7 +80,8 @@ typecheck, the tests and the bundle stay in CI.
 
 The `android` workflow builds a sideloadable APK on a GitHub runner,
 because a phone needs a native build and the runner already has the
-Android SDK. Run it from Actions, or from the CLI:
+Android SDK. It runs only when you start it. Run it from Actions, or
+from the CLI:
 
 ```bash
 gh workflow run android
