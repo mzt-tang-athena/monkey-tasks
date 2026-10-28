@@ -1,5 +1,5 @@
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import { updateProperty } from "@/features/vault/notes";
+import { updateProperty } from "@/lib/vault/frontmatter";
 import type { TaskItem } from "@/types/task";
 
 /**

@@ -1,7 +1,7 @@
-import { ensureSubfolder } from "./scan";
-import { loadLists } from "@/features/lists/query";
+import { ensureSubfolder } from "@/lib/vault/scan";
+import { loadLists } from "./list-notes";
 import type { BrokenList, ListItem, TaskItem } from "@/types/task";
-import { loadTasks } from "@/features/tasks/query";
+import { loadTasks } from "./task-notes";
 
 /**
  * The vault session for one granted root: the Tasks folder inside it,

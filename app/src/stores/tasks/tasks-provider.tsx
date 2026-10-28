@@ -19,9 +19,9 @@ import {
   mockLists,
   toggleMockCompleted,
 } from "@/lib/mock";
-import { getSavedVaultUri, requestVaultAccess } from "@/features/vault/grant";
-import { ensureSubfolder } from "@/features/vault/scan";
-import { loadVaultTasks } from "@/features/vault/session";
+import { getSavedVaultUri, requestVaultAccess } from "@/lib/vault/grant";
+import { ensureSubfolder } from "@/lib/vault/scan";
+import { loadVaultTasks } from "./load-vault";
 import type {
   BrokenList,
   CaptureTarget,
@@ -35,23 +35,31 @@ import {
   createNote,
   deleteNote,
   readNote,
-  updateProperty,
   writeNote,
   writeNoteIfUnchanged,
-} from "@/features/vault/notes";
+} from "@/lib/vault/notes";
+import {
+  frontmatterSpan,
+  replaceBody,
+  setBlockList,
+  updateProperty,
+} from "@/lib/vault/frontmatter";
+// eslint-disable-next-line import/no-restricted-paths -- 0052 moves this
 import { saveTaskEdit } from "@/features/task-editor/save";
-import { applyPatch } from "@/features/tasks/patch";
-import { nextAfter } from "@/features/tasks/recurrence";
+import { applyPatch } from "./patch";
+import { nextAfter } from "@/lib/recurrence";
 import {
   isUntouchedSpawn,
   spawnContent,
   spawnFileName,
   type SpawnInput,
-} from "@/features/tasks/spawn";
-import { syncReminders, syncTaskReminders } from "@/features/reminders/sync";
-import { captureDraft, safeFileName } from "@/features/capture/write";
-import { taskFromText } from "@/features/tasks/query";
-import { makeQueryClient } from "./query-client";
+} from "./spawn";
+import { syncReminders, syncTaskReminders } from "./reminder-sync";
+// eslint-disable-next-line import/no-restricted-paths -- 0052 moves this
+import { captureDraft } from "@/features/capture/write";
+import { safeFileName } from "@/lib/vault/file-name";
+import { taskFromText } from "./task-notes";
+import { makeQueryClient } from "@/lib/react-query";
 import {
   StoreMetaContext,
   TaskListContext,
@@ -100,41 +108,6 @@ const NO_LISTS: ListItem[] = [];
 /** The empty broken-note set, shared for the same reason. */
 const NO_BROKEN: BrokenList[] = [];
 
-/** The frontmatter block that opens a note. */
-const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
-
-/**
- * Write a list property in the vault's block style. `updateProperty`
- * inserts a one-item array on the key's line when the key is missing,
- * which parses as a scalar rather than a list, so the key is seeded
- * empty first and then filled.
- */
-function setBlockList(text: string, key: string, values: string[]): string {
-  if (values.length === 0) {
-    return updateProperty(text, key, null);
-  }
-  return updateProperty(updateProperty(text, key, []), key, values);
-}
-
-/**
- * Replace everything below the frontmatter block. The fence keeps the
- * newline that separates it from the body, so a body starting with a
- * newline keeps its blank line.
- */
-function replaceBody(text: string, body: string): string {
-  const match = FRONTMATTER.exec(text);
-  if (!match) {
-    throw new Error("note has no frontmatter block");
-  }
-  const fence = match[0];
-  if (body === "" || fence.endsWith("\n")) {
-    return `${fence}${body}`;
-  }
-  return `${fence}\n${body}`;
-}
-
-
-
 /**
  * The editor's save without a file, for the browser preview. The same
  * property writers the vault write runs, so the preview's rows move the
@@ -144,7 +117,7 @@ function replaceBody(text: string, body: string): string {
  */
 function editMockTask(item: TaskItem, edit: TaskEdit): TaskItem {
   let text = item.text;
-  if (!FRONTMATTER.test(text)) {
+  if (frontmatterSpan(text) == null) {
     if (item.data == null) {
       throw new Error("note has no frontmatter block");
     }

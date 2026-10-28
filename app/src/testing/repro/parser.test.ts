@@ -5,8 +5,9 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
-import { createNote, updateProperty } from "@/features/vault/notes";
-import { loadTasks, taskFromText } from "@/features/tasks/query";
+import { createNote } from "@/lib/vault/notes";
+import { updateProperty } from "@/lib/vault/frontmatter";
+import { loadTasks, taskFromText } from "@/stores/tasks/task-notes";
 import { saveTaskEdit } from "@/features/task-editor/save";
 import { captureDraft } from "@/features/capture/write";
 
@@ -36,9 +37,9 @@ vi.mock("expo-file-system/legacy", () => ({
   deleteAsync: async () => undefined,
 }));
 
-vi.mock("@/features/vault/notes", async (importOriginal) => {
+vi.mock("@/lib/vault/notes", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("@/features/vault/notes")>();
+    await importOriginal<typeof import("@/lib/vault/notes")>();
   return {
     ...actual,
     // The editor's save compares the file first; this file is unchanged.

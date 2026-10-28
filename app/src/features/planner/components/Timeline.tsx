@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Pressable, Text, View, type PointerEvent as RNPointerEvent } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/lib/dropzone";
+import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { formatTime, parseStoredDate } from "@/utils/dates";
 import { hourOf, isDone, minuteOf } from "@/features/planner/model";
 import { labelHour } from "@/features/planner/lib/labels";

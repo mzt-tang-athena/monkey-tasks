@@ -22,12 +22,12 @@ vi.mock("expo-router", () => ({
   useLocalSearchParams: () => ({ id: "content://vault/Notes/Garden.md" }),
 }));
 
-vi.mock("@/store/task-state", () => ({
+vi.mock("@/stores/tasks/task-state", () => ({
   useTaskList: () => state.tasks,
   useStoreMeta: () => ({ status: state.status }),
 }));
 
-vi.mock("@/store/task-actions", () => ({
+vi.mock("@/stores/tasks/task-actions", () => ({
   useTaskActions: () => ({ edit: async () => undefined }),
 }));
 

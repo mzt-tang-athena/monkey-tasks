@@ -8,7 +8,7 @@ import {
   startOfDay,
 } from "@/utils/dates";
 import type { TaskItem } from "@/types/task";
-import { occursOn } from "@/features/tasks/recurrence";
+import { occursOn } from "@/lib/recurrence";
 
 /*
  * The planner's pure domain layer: the source vocabulary, the period

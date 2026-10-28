@@ -7,7 +7,7 @@ import {
   cancelScheduled,
   ensureNotificationPermission,
   scheduleAt,
-} from "./schedule";
+} from "@/lib/notifications";
 
 type PendingReminder = { uri: string; when: Date; title: string };
 

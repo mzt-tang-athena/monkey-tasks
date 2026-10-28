@@ -1,6 +1,6 @@
 import { listFrontmatter, validateNote } from "@monkey-tasks/schemas";
-import { findSubfolder, listDirectory } from "@/features/vault/scan";
-import { readNote } from "@/features/vault/notes";
+import { findSubfolder, listDirectory } from "@/lib/vault/scan";
+import { readNote } from "@/lib/vault/notes";
 import { formatIssues } from "@/utils/schema-errors";
 import type { BrokenList, ListItem } from "@/types/task";
 

@@ -1,5 +1,4 @@
 import * as React from "react";
-import { groupByDue, inList } from "@/features/tasks/query";
 import type { TaskItem } from "@/types/task";
 import {
   dayLabel,
@@ -31,6 +30,80 @@ export type TaskSection = {
  * other string is a list tab.
  */
 export type ListTab = string;
+
+export function inList(items: TaskItem[], listName: string): TaskItem[] {
+  const link = `[[${listName}]]`;
+  return items.filter((item) => item.data?.lists?.includes(link));
+}
+
+export type DateGroups = {
+  overdue: TaskItem[];
+  today: TaskItem[];
+  upcoming: { date: Date; items: TaskItem[] }[];
+  undated: TaskItem[];
+  completed: TaskItem[];
+};
+
+/**
+ * Group open tasks by due date and collect completed ones. Groups
+ * break ties by title so ordering is stable.
+ */
+export function groupByDue(items: TaskItem[], now: Date): DateGroups {
+  const today = startOfDay(now).getTime();
+  const groups: DateGroups = {
+    overdue: [],
+    today: [],
+    upcoming: [],
+    undated: [],
+    completed: [],
+  };
+  const byDay = new Map<number, { date: Date; items: TaskItem[] }>();
+  for (const item of items) {
+    const due = item.data?.completed
+      ? null
+      : item.data?.due
+        ? parseStoredDate(item.data.due)
+        : null;
+    if (item.data?.completed) {
+      groups.completed.push(item);
+      continue;
+    }
+    if (!due) {
+      groups.undated.push(item);
+      continue;
+    }
+    const day = startOfDay(due.date).getTime();
+    if (day < today) {
+      groups.overdue.push(item);
+    } else if (day === today) {
+      groups.today.push(item);
+    } else {
+      const bucket = byDay.get(day);
+      if (bucket) {
+        bucket.items.push(item);
+      } else {
+        const bucketItems = [item];
+        byDay.set(day, { date: due.date, items: bucketItems });
+      }
+    }
+  }
+  const title = (a: TaskItem, b: TaskItem) => a.name.localeCompare(b.name);
+  // Decorate-time parse: sorting re-parses nothing per comparison.
+  const stamp = (a: TaskItem): number =>
+    a.data?.due ? (parseStoredDate(a.data.due)?.date.getTime() ?? 0) : 0;
+  const sortable = [...groups.overdue, ...groups.today, ...groups.undated];
+  const stamps = new Map(sortable.map((item) => [item.uri, stamp(item)]));
+  const byTime = (a: TaskItem, b: TaskItem) =>
+    (stamps.get(a.uri) ?? 0) - (stamps.get(b.uri) ?? 0) || title(a, b);
+  groups.overdue.sort(byTime);
+  groups.today.sort(byTime);
+  groups.undated.sort(title);
+  groups.completed.sort(title);
+  groups.upcoming = [...byDay.values()]
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .map((bucket) => ({ date: bucket.date, items: bucket.items.sort(byTime) }));
+  return groups;
+}
 
 /**
  * Every open task in one row: overdue, today, undated, then each

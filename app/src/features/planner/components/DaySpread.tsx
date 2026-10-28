@@ -8,13 +8,13 @@ import {
   type PointerEvent as RNPointerEvent,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { groupByDue } from "@/features/tasks/query";
+import { groupByDue } from "@/stores/tasks/selectors";
 import type { TaskItem } from "@/types/task";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { TaskRow } from "@/components/TaskRow";
 import { swipeProps } from "@/lib/swipe";
 import { useSwipePager } from "@/components/SwipePager";
-import { DropZoneMap } from "@/lib/dropzone";
+import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { addDays, isoOf, startOfDay } from "@/utils/dates";
 import { drag } from "@/theme/tokens";
 import type { TaskForm } from "@/lib/settings";

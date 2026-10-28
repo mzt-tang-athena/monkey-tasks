@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { TaskItem } from "@/types/task";
-import { occurrencesBetween } from "@/features/tasks/recurrence";
+import { occurrencesBetween } from "@/lib/recurrence";
 import {
   inSourceList,
   pillsForSource,

@@ -12,10 +12,10 @@ import {
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { parseFrontmatter } from "@monkey-tasks/schemas";
-import { useStoreMeta, useTaskList } from "@/store/task-state";
-import { useTaskActions } from "@/store/task-actions";
+import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
+import { useTaskActions } from "@/stores/tasks/task-actions";
 import type { TaskEdit, TaskItem } from "@/types/task";
-import { safeFileName } from "@/features/capture/write";
+import { safeFileName } from "@/lib/vault/file-name";
 import {
   colors,
   fonts,

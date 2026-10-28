@@ -6,7 +6,7 @@ import {
   useTabTasks,
   useTaskSections,
   type SectionTone,
-} from "@/store/selectors";
+} from "@/stores/tasks/selectors";
 import {
   colors,
   fonts,

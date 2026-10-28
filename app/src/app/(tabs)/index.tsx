@@ -24,15 +24,15 @@ import { useSwipePager } from "@/components/SwipePager";
 import { ListPagePreview } from "@/features/lists/ListPagePreview";
 import { loadSettings, saveSetting, type SortMode } from "@/lib/settings";
 import { BottomBar } from "@/components/BottomBar";
-import { useStoreMeta, useTaskList } from "@/store/task-state";
-import { useTaskActions } from "@/store/task-actions";
+import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
+import { useTaskActions } from "@/stores/tasks/task-actions";
 import {
   useListTabs,
   useTabTasks,
   useTaskSections,
   type ListTab,
   type SectionTone,
-} from "@/store/selectors";
+} from "@/stores/tasks/selectors";
 import { IconButton } from "@/components/ui/IconButton";
 import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "@/theme/tokens";
 

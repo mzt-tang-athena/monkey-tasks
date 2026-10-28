@@ -10,7 +10,9 @@ import {
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CaptureTarget, ParsedCapture } from "@/types/task";
+// eslint-disable-next-line import/no-restricted-paths -- 0057 moves this
 import { CaptureSheet } from "@/features/capture/components/CaptureSheet";
+// eslint-disable-next-line import/no-restricted-paths -- 0057 moves this
 import { useCaptureDraft } from "@/features/capture/hooks/useCaptureDraft";
 import {
   bottomBar,

@@ -37,12 +37,12 @@ vi.mock("react-native", () => ({
   },
 }));
 
-vi.mock("@/features/vault/grant", () => ({
+vi.mock("@/lib/vault/grant", () => ({
   getSavedVaultUri: async () => savedUri,
   requestVaultAccess: async () => savedUri,
 }));
 
-vi.mock("@/features/vault/session", () => ({
+vi.mock("./load-vault", () => ({
   loadVaultTasks: async () => {
     loadCalls += 1;
     if (loadGate) {
@@ -79,9 +79,10 @@ vi.mock("@/lib/mock", async (importOriginal) => {
   };
 });
 
-vi.mock("@/features/vault/notes", async (importOriginal) => {
+vi.mock("@/lib/vault/notes", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("@/features/vault/notes")>();
+    await importOriginal<typeof import("@/lib/vault/notes")>();
+  const { updateProperty } = await import("@/lib/vault/frontmatter");
   return {
     ...actual,
     writeNoteIfUnchanged: async (
@@ -120,7 +121,7 @@ vi.mock("@/features/vault/notes", async (importOriginal) => {
         : fileName;
       const text =
         renameOnCreate && title != null
-          ? actual.updateProperty(content, "title", title)
+          ? updateProperty(content, "title", title)
           : content;
       creates.push({ fileName: actualName, content: text });
       return {
@@ -142,20 +143,20 @@ vi.mock("@/features/vault/notes", async (importOriginal) => {
   };
 });
 
-vi.mock("@/features/reminders/sync", () => ({
+vi.mock("./reminder-sync", () => ({
   syncReminders: async () => ({ scheduled: 0, skipped: true }),
   syncTaskReminders: async () => undefined,
 }));
 
-import { makeQueryClient } from "./query-client";
-import { TasksProvider } from "./tasks";
-import type { TaskListData } from "./tasks";
+import { makeQueryClient } from "@/lib/react-query";
+import { TasksProvider } from "./tasks-provider";
+import type { TaskListData } from "./tasks-provider";
 import { useStoreMeta, useTaskList } from "./task-state";
 import type { StoreMeta } from "./task-state";
 import { useTaskActions } from "./task-actions";
 import type { TaskActions } from "./task-actions";
 import type { TaskItem } from "@/types/task";
-import { spawnContent } from "@/features/tasks/spawn";
+import { spawnContent } from "./spawn";
 
 /** The three contexts read as one snapshot, for the assertions below. */
 type Snapshot = StoreMeta & TaskActions & { tasks: TaskItem[] };

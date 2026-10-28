@@ -1,24 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("./scan", () => ({
+vi.mock("@/lib/vault/scan", () => ({
   ensureSubfolder: vi.fn(
     async (root: string, name: string) => `${root}/${name}`,
   ),
 }));
 
-vi.mock("@/features/tasks/query", () => ({
+vi.mock("./task-notes", () => ({
   loadTasks: vi.fn(async () => []),
 }));
 
-vi.mock("@/features/lists/query", () => ({
+vi.mock("./list-notes", () => ({
   loadLists: vi.fn(async () => ({ lists: [], broken: [] as BrokenList[] })),
 }));
 
-import { loadLists } from "@/features/lists/query";
+import { loadLists } from "./list-notes";
 import type { BrokenList } from "@/types/task";
-import { loadTasks } from "@/features/tasks/query";
-import { ensureSubfolder } from "./scan";
-import { loadVaultTasks } from "./session";
+import { loadTasks } from "./task-notes";
+import { ensureSubfolder } from "@/lib/vault/scan";
+import { loadVaultTasks } from "./load-vault";
 
 /**
  * The Tasks folder is always derived from the granted root. A reload

@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/lib/dropzone";
+import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { MonthView } from "./MonthView";
 
 function task(name: string, data: TaskFrontmatter): TaskItem {

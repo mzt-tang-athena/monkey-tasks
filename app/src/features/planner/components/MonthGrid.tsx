@@ -1,9 +1,9 @@
 import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/lib/dropzone";
+import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { addDays, isoOf, isSameDay } from "@/utils/dates";
-import { occurrencesBetween } from "@/features/tasks/recurrence";
+import { occurrencesBetween } from "@/lib/recurrence";
 import { isDone, startOfMonth } from "@/features/planner/model";
 import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import { spacing } from "@/theme/tokens";

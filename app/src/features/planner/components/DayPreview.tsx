@@ -2,7 +2,7 @@ import * as React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import type { TaskForm } from "@/lib/settings";
-import { DropZoneMap } from "@/lib/dropzone";
+import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { MONTHS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import {
   hasTime,

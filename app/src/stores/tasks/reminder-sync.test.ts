@@ -12,7 +12,7 @@ let cancelledIds: string[] = [];
 let failNext = false;
 
 vi.mock("react-native", () => ({ Platform: { OS: "android" } }));
-vi.mock("./schedule", () => ({
+vi.mock("@/lib/notifications", () => ({
   ensureNotificationPermission: async () => permission,
   cancelAllScheduled: async () => {
     cancelled += 1;
@@ -30,7 +30,7 @@ vi.mock("./schedule", () => ({
   },
 }));
 
-import { syncReminders, syncTaskReminders } from "./sync";
+import { syncReminders, syncTaskReminders } from "./reminder-sync";
 import type { TaskItem } from "@/types/task";
 
 function task(

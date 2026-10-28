@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/lib/dropzone";
+import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { swipeProps } from "@/lib/swipe";
 import { useSwipePager } from "@/components/SwipePager";
 import { MonthGrid, type PickedDay } from "./MonthGrid";

@@ -1,5 +1,5 @@
-import { safeFileName } from "@/features/capture/write";
-import { updateProperty } from "@/features/vault/notes";
+import { safeFileName } from "@/lib/vault/file-name";
+import { updateProperty } from "@/lib/vault/frontmatter";
 import type { TaskItem } from "@/types/task";
 
 /** Everything the next occurrence of a recurring task keeps. */

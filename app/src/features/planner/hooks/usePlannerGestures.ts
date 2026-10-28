@@ -2,7 +2,7 @@ import * as React from "react";
 import { Animated, type PointerEvent as RNPointerEvent } from "react-native";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/lib/dropzone";
+import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { addDays, isSameDay, parseStoredDate } from "@/utils/dates";
 import { drag } from "@/theme/tokens";
 import { withKeptTime } from "@/features/planner/model";

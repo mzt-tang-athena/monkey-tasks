@@ -6,7 +6,7 @@ import {
   type PointerEvent as RNPointerEvent,
 } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/lib/dropzone";
+import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { addDays, isoOf, isSameDay, startOfDay } from "@/utils/dates";
 import {
   hasTime,
