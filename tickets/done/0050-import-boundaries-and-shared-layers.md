@@ -4,7 +4,7 @@ title: Import boundaries and shared layers
 created: 2026-10-26
 priority: high
 assignee: claude-code
-pr:
+pr: 75
 depends: [0048, 0049]
 ---
 
@@ -397,26 +397,161 @@ two folder cycles from the baseline.
 
 ## Acceptance
 
-- [ ] `src/types/task.ts` declares `TaskItem`, `ListItem`, `BrokenList`, `CaptureTarget`, `ParsedCapture` and `TaskEdit`, and no other file declares them.
-- [ ] `src/features` holds `capture`, `diagnostics`, `lists`, `planner` and `task-editor`, and nothing else.
-- [ ] `src/store`, `src/test`, `app/vitest.stub.ts`, and the five `lib` files that leave (`dates`, `yaml`, `schema-errors`, `dropzone`, `insights`) no longer exist.
-- [ ] The source holds one `replaceBody`, one `setBlockList`, one frontmatter regex, one `formatTime`, one `startOfToday`, one `isoOf` and one `pointerPickup`.
-- [ ] `nextDue`, its 8 tests and `components/ui/index.ts` no longer exist, and the nine values in step 7 have no `export`.
-- [ ] No import leaves its folder through `../`.
-- [ ] `app/eslint.config.js` holds the ADR 0039 block at `error` with the TypeScript resolver, and no longer holds the ADR 0020 block.
-- [ ] Exactly four `eslint-disable-next-line import/no-restricted-paths` comments exist, and each one names 0052 or 0057.
-- [ ] The scratch import in step 14 fails ESLint with an error.
-- [ ] A scratch file `src/lib/BadName.ts` and a scratch folder `src/lib/badFolder/` each fail ESLint.
-- [ ] The graph script lists only the four imports from step 13. Its folder cycles are `components` with `features/capture` (0057) and `stores` with `features/task-editor` (0052).
-- [ ] `npx eslint src scripts --max-warnings 0` exits zero.
-- [ ] `tsc --noEmit` passes.
-- [ ] Vitest passes, with the test count after 0048 minus the 8 `nextDue` tests.
-- [ ] Apart from the deleted `nextDue` tests, test files change only in import paths, imported names, `vi.mock` paths and location.
-- [ ] The 0049 Playwright suite gives the same results before and after each PR.
-- [ ] `npx expo export --platform web` and `npx expo export --platform android` both bundle.
-- [ ] Each PR description records the boundary count before and after the PR.
-- [ ] The "Layout" section of `README.md` matches ADR 0039.
+- [x] `src/types/task.ts` declares `TaskItem`, `ListItem`, `BrokenList`, `CaptureTarget`, `ParsedCapture` and `TaskEdit`, and no other file declares them.
+- [x] `src/features` holds `capture`, `diagnostics`, `lists`, `planner` and `task-editor`, and nothing else.
+- [x] `src/store`, `src/test`, `app/vitest.stub.ts`, and the five `lib` files that leave (`dates`, `yaml`, `schema-errors`, `dropzone`, `insights`) no longer exist.
+- [x] The source holds one `replaceBody`, one `setBlockList`, one frontmatter regex, one `formatTime`, one `startOfToday`, one `isoOf` and one `pointerPickup`.
+- [x] `nextDue`, its 8 tests and `components/ui/index.ts` no longer exist, and the nine values in step 7 have no `export`.
+- [x] No import leaves its folder through `../`.
+- [x] `app/eslint.config.js` holds the ADR 0039 block at `error` with the TypeScript resolver, and no longer holds the ADR 0020 block.
+- [x] Exactly four `eslint-disable-next-line import/no-restricted-paths` comments exist, and each one names 0052 or 0057.
+- [x] The scratch import in step 14 fails ESLint with an error.
+- [x] A scratch file `src/lib/BadName.ts` and a scratch folder `src/lib/badFolder/` each fail ESLint.
+- [x] The graph script lists only the four imports from step 13. Its folder cycles are `components` with `features/capture` (0057) and `stores` with `features/task-editor` (0052).
+- [x] `npx eslint src scripts --max-warnings 0` exits zero.
+- [x] `tsc --noEmit` passes.
+- [x] Vitest passes, with the test count after 0048 minus the 8 `nextDue` tests.
+- [x] Apart from the deleted `nextDue` tests, test files change only in import paths, imported names, `vi.mock` paths and location.
+- [x] The 0049 Playwright suite gives the same results before and after each PR.
+- [x] `npx expo export --platform web` and `npx expo export --platform android` both bundle.
+- [x] Each PR description records the boundary count before and after the PR.
+- [x] The "Layout" section of `README.md` matches ADR 0039.
 
 ## Outcome
 
-(filled in before moving to done/)
+PR #75 landed the ticket into `epic/0047-rebuild` as one PR with three
+stage commits, not three PRs. Each stage commit passes typecheck, lint,
+Vitest and the Playwright suite on its own. The PR description records
+the boundary count after each stage.
+
+### What landed
+
+- Stage 1: `types/task.ts`, `utils/`, one copy of each helper, the dead
+  code gone, the TypeScript resolver, and `@/` for every import that
+  leaves its folder.
+- Stage 2: `lib/vault/`, `stores/tasks/`, the other moves in the map,
+  and the ADR 0039 zones at `error` with four named exceptions.
+- Stage 3: the 43 kebab-case renames, `eslint-plugin-check-file` 3.3.2
+  at `error`, and the README Layout section.
+- The epic plan said the boundaries land "at warn". It now says "at
+  error", as ADR 0039 does.
+
+### Steps that phase 0 had done
+
+- Step 2: ticket 0048 added the `@/` alias to tsconfig, Vitest and
+  ESLint. tsconfig has no `baseUrl`. Metro reads the tsconfig paths.
+- `test/rn-standin.ts`: ticket 0048 removed `src/test`, so nothing
+  moved.
+- The 54 lint warnings: ticket 0048 cleared them.
+- Ticket 0053 changed `lib/yaml.ts`, `features/vault/notes.ts` and
+  `task-editor/save.ts`. The moves carried those changes as they were.
+
+### Numbers
+
+| Measure | Before | After |
+|---|---|---|
+| Zone hits in source (tests) | 66 (20) | 0, and 4 suppressed |
+| Graph script, runtime / type | 31 / 35 | 4 / 0 |
+| Folder cycles | 2 | 2, each with a ticket |
+| Vitest | 369 | 361 (the 8 `nextDue` tests) |
+| Playwright | 36 passed, 3 expected fail | the same at each stage |
+| Screenshots, 21 states in 2 projects | baseline | 0 px change with reduced motion, 40 px or less with motion |
+
+### Test files
+
+Test bodies did not change. Three edits follow from a split:
+
+- `frontmatter.test.ts` copies the `parsed` helper from
+  `notes.test.ts`, because both files call it.
+- `rename.test.ts` copies `OLD_URI` and `FOLDER_URI` from
+  `save.test.ts`, because both files use them.
+- The notes mock in `tasks-provider.test.tsx` imports `updateProperty`
+  from `@/lib/vault/frontmatter`. It used `actual.updateProperty`
+  before.
+
+### Path map
+
+Tickets 0051 to 0066 cite the old paths. Paths sit under `app/src/`. A
+test file moved and renamed with its subject.
+
+| Old path | New path |
+|---|---|
+| `store/tasks.tsx` | `stores/tasks/tasks-provider.tsx` |
+| `store/task-state.tsx` | `stores/tasks/task-state.tsx` |
+| `store/task-actions.tsx` | `stores/tasks/task-actions.tsx` |
+| `store/selectors.ts` | `stores/tasks/selectors.ts` |
+| `store/query-client.ts` | `lib/react-query.ts` |
+| `store/tasks.test.tsx` | `stores/tasks/tasks-provider.test.tsx` |
+| `features/vault/grant.ts` | `lib/vault/grant.ts` |
+| `features/vault/scan.ts` | `lib/vault/scan.ts` |
+| `features/vault/notes.ts`, file I/O | `lib/vault/notes.ts` |
+| `features/vault/notes.ts`, `frontmatterSpan`, `updateProperty`, `replaceSpan` | `lib/vault/frontmatter.ts` |
+| `features/vault/session.ts` | `stores/tasks/load-vault.ts` |
+| `features/tasks/query.ts`, `taskFromText`, `loadTasks` | `stores/tasks/task-notes.ts` |
+| `features/tasks/query.ts`, `inList`, `DateGroups`, `groupByDue` | `stores/tasks/selectors.ts` |
+| `features/tasks/patch.ts` | `stores/tasks/patch.ts` |
+| `features/tasks/spawn.ts` | `stores/tasks/spawn.ts` |
+| `features/tasks/recurrence.ts` | `lib/recurrence.ts` |
+| `features/lists/query.ts` | `stores/tasks/list-notes.ts` |
+| `features/reminders/schedule.ts` | `lib/notifications.ts` |
+| `features/reminders/sync.ts` | `stores/tasks/reminder-sync.ts` |
+| `features/capture/write.ts`, `safeFileName` | `lib/vault/file-name.ts` |
+| `features/task-editor/save.ts`, `parentUri`, `renameNote` | `lib/vault/rename.ts` |
+| `replaceBody`, `setBlockList` in `store/tasks.tsx` and `task-editor/save.ts` | `lib/vault/frontmatter.ts` |
+| `formatTime` in `TaskRow.tsx`, `PreviewRow.tsx`, `planner/model.ts`; `formatClock` in `chipLabels.ts` | `formatTime` in `utils/dates.ts` |
+| `startOfToday` in `TaskRow.tsx`, `PreviewRow.tsx` | `utils/dates.ts` |
+| `isoOf` in `planner/model.ts` | `utils/dates.ts` |
+| `pointerPickup` in `useTouchDragGate.ts` | `planner/components/drag.tsx` |
+| The six task types | `types/task.ts` |
+| `lib/dates.ts` | `utils/dates.ts` |
+| `lib/yaml.ts` | `utils/yaml.ts` |
+| `lib/schema-errors.ts` | `utils/schema-errors.ts` |
+| `lib/dropzone.ts` | `features/planner/lib/dropzone.ts` |
+| `lib/insights.ts` | `features/diagnostics/hooks/use-insights.ts` |
+| `app/dev.tsx`, the screen | `features/diagnostics/components/diagnostics-screen.tsx` |
+| `app/vitest.stub.ts` | `testing/expo-file-system-stub.ts` |
+| `components/ui/index.ts` | deleted |
+| `components/BottomBar.tsx` | `components/bottom-bar.tsx` |
+| `components/ErrorBoundary.tsx` | `components/error-boundary.tsx` |
+| `components/PreviewRow.tsx` | `components/preview-row.tsx` |
+| `components/SwipePager.tsx` | `components/swipe-pager.tsx` |
+| `components/TaskRow.tsx` | `components/task-row.tsx` |
+| `components/ui/Button.tsx` | `components/ui/button.tsx` |
+| `components/ui/IconButton.tsx` | `components/ui/icon-button.tsx` |
+| `components/ui/Pill.tsx` | `components/ui/pill.tsx` |
+| `features/capture/components/CaptureChips.tsx` | `features/capture/components/capture-chips.tsx` |
+| `features/capture/components/CaptureSheet.tsx` | `features/capture/components/capture-sheet.tsx` |
+| `features/capture/hooks/useCaptureDraft.ts` | `features/capture/hooks/use-capture-draft.ts` |
+| `features/capture/lib/chipLabels.ts` | `features/capture/lib/chip-labels.ts` |
+| `features/lists/ListPagePreview.tsx` | `features/lists/list-page-preview.tsx` |
+| `features/lists/ReorderRow.tsx` | `features/lists/reorder-row.tsx` |
+| `features/planner/PlannerScreen.tsx` | `features/planner/planner-screen.tsx` |
+| `features/planner/components/DayPreview.tsx` | `features/planner/components/day-preview.tsx` |
+| `features/planner/components/DaySpread.tsx` | `features/planner/components/day-spread.tsx` |
+| `features/planner/components/FormToggle.tsx` | `features/planner/components/form-toggle.tsx` |
+| `features/planner/components/MonthGrid.tsx` | `features/planner/components/month-grid.tsx` |
+| `features/planner/components/MonthView.tsx` | `features/planner/components/month-view.tsx` |
+| `features/planner/components/PeriodStrip.tsx` | `features/planner/components/period-strip.tsx` |
+| `features/planner/components/PlannerHeader.tsx` | `features/planner/components/planner-header.tsx` |
+| `features/planner/components/PlannerStates.tsx` | `features/planner/components/planner-states.tsx` |
+| `features/planner/components/SourceToggle.tsx` | `features/planner/components/source-toggle.tsx` |
+| `features/planner/components/TaskListSection.tsx` | `features/planner/components/task-list-section.tsx` |
+| `features/planner/components/TaskPills.tsx` | `features/planner/components/task-pills.tsx` |
+| `features/planner/components/Timeline.tsx` | `features/planner/components/timeline.tsx` |
+| `features/planner/components/WeekView.tsx` | `features/planner/components/week-view.tsx` |
+| `features/planner/components/plannerStyles.ts` | `features/planner/components/planner-styles.ts` |
+| `features/planner/hooks/usePlannerGestures.ts` | `features/planner/hooks/use-planner-gestures.ts` |
+| `features/planner/hooks/usePlannerMonth.ts` | `features/planner/hooks/use-planner-month.ts` |
+| `features/planner/hooks/usePlannerRoute.ts` | `features/planner/hooks/use-planner-route.ts` |
+| `features/planner/hooks/useTouchDragGate.ts` | `features/planner/hooks/use-touch-drag-gate.ts` |
+| `features/task-editor/TaskEditorScreen.tsx` | `features/task-editor/task-editor-screen.tsx` |
+
+### Left for later tickets
+
+| Item | Ticket |
+|---|---|
+| `tasks-provider.tsx` imports `captureDraft` and `saveTaskEdit` from features, with a disable comment each. | 0052 |
+| `bottom-bar.tsx` imports `CaptureSheet` and `useCaptureDraft`, with a disable comment each. | 0057 |
+| The planner hold gate copies in `day-spread.tsx` and `use-planner-gestures.ts`. | Phase 4 |
+| The planner source chip draws its "▾" chevron as a small dot, far from the label. This shows before and after this ticket. | 0056 |
+| The tab strip on Lists cuts the fourth tab ("Fo" for Focus) hard at the sort button, with no fade. This shows before and after this ticket. | 0055 |
