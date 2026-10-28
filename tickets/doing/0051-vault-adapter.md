@@ -3,7 +3,7 @@ id: 0051
 title: Every file call goes through a vault adapter
 created: 2026-10-26
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: [0050]
 ---
