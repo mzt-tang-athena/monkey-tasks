@@ -61,8 +61,8 @@ build:
   `app/e2e/maestro/config.yaml` excludes that tag. So
   `maestro test app/e2e/maestro` skips it on a laptop too. The job
   with the input on runs it by its file name.
-- The build makes the job longer. Set `timeout-minutes` from the
-  input, for example `${{ inputs.saf-contract && 75 || 30 }}`.
+- A build makes the job longer. The job also builds when it finds no
+  artifact, with the input on or off. Set `timeout-minutes: 75`.
 
 Record the build minutes of the flagged APK in Outcome.
 
@@ -133,10 +133,19 @@ Gestures:
 Add `.github/workflows/android-e2e.yml` with `workflow_dispatch` only:
 
 ```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      saf-contract:
+        type: boolean
+        default: false
+
 jobs:
   maestro:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A build takes 19 to 45 minutes, and the job builds when it finds
+    # no artifact or when saf-contract is on.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - name: Enable KVM
@@ -144,7 +153,8 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      # download the APK artifact, cache the AVD, install Maestro at a pinned version
+      # saf-contract off: download the APK artifact. On: build the flagged APK.
+      # Then cache the AVD and install Maestro at a pinned version.
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -154,7 +164,9 @@ jobs:
 ```
 
 `run.sh` installs the APK, pins the clock, pushes the fixtures, and
-runs `maestro test app/e2e/maestro`.
+runs `maestro test app/e2e/maestro`. With `saf-contract` on, it
+installs the flagged APK instead, and then runs the SAF flow by its
+file name.
 
 ### Cost
 
@@ -179,7 +191,7 @@ against a local emulator or a phone over USB. That costs no CI minutes.
 
 - [ ] `maestro test app/e2e/maestro` passes on a local x86_64 emulator with the fixture vault.
 - [ ] `android-e2e.yml` starts on `workflow_dispatch` only and passes.
-- [ ] The workflow installs the APK from the latest green `android.yml` run when one exists.
+- [ ] With `saf-contract` off, the workflow installs the APK from the latest green `android.yml` run when one exists.
 - [ ] The emulator day and zone match `TODAY` in `app/e2e/fixtures.ts`, or Outcome records the fallback.
 - [ ] After the grant, the app lists the fixture notes from 0051.
 - [ ] The grant subflow passes the system folder picker on API 34.

@@ -77,10 +77,10 @@ future NetInfo hookup would pause every vault write while offline
 (ADR 0003); set `networkMode: "always"` for queries and mutations in
 `store/query-client.ts:30-50`. The comment on `setBlockList` in
 `task-editor/save.ts:118-129` describes a bug that
-`vault/notes.ts:143-149` already fixed; drop the double call. If ticket
-0048 has not set `IS_REACT_ACT_ENVIRONMENT` in its setup file and
-renamed `vitest.config.ts` to `.mts`, do both here: the store test
-prints 74 act warnings per run today.
+`vault/notes.ts:143-149` already fixed; drop the double call. Ticket
+0048 renamed the config to `vitest.config.mts` and set
+`IS_REACT_ACT_ENVIRONMENT` for the component project. The store test
+prints no act warning today. Keep it that way.
 
 ### Target layout
 

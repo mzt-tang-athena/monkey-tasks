@@ -14,11 +14,12 @@ depends: [0054]
 tab state, sections, the tick hold, the manual reorder, two menus, three
 notices and all the styles. ADR 0022 says a route re-exports its screen.
 Move the screen into `src/features/lists/` and split it into hooks and
-components. Fix the six bugs below on the way. Each bug gets a failing
+components. Fix the seven bugs below on the way. Each bug gets a failing
 test before its fix.
 
-Paths and line numbers cite commit `b2c0b10`. Ticket 0050 renames files
-to kebab-case, so look for the same code under its new name.
+Paths and line numbers cite commit `b2c0b10` for bugs 1 to 6, and
+commit `e3ff3ad` for bug 7. Ticket 0050 renames files to kebab-case,
+so look for the same code under its new name.
 
 ### Target files in `src/features/lists/`
 
@@ -94,6 +95,14 @@ direct vault write.
    `test.fail()` mark in the motion project only: with reduced motion
    the page turns at pointer up, so the click finds no row. Remove the
    mark with the fix.
+7. **The repair notice crowds out the list.** "Needs repair"
+   (`index.tsx:922-938`) sits fixed above the list. At 412 by 915 it
+   is 168 points high, about a fifth of the space between the tab strip
+   and the bottom bar. While the list scrolls, a sliver of a clipped
+   card edge shows under it. To reproduce, load a
+   sample set with a broken note and scroll the list. Let the notice
+   scroll with the list as its header, or fold it to one line that
+   opens the details. Show both states in the PR screenshots.
 
 ## Acceptance
 
@@ -108,6 +117,7 @@ direct vault write.
 - [ ] During a reorder, a slot crossing re-renders only the rows whose first, last or divider state changes.
 - [ ] A test reproduces the remount bug first. Afterwards a group that leaves remounts no row in a later group.
 - [ ] A Playwright test reproduces the swipe bug first. Afterwards a sideways swipe that starts on a row changes the tab and opens no editor.
+- [ ] A Playwright screenshot reproduces the repair notice bug first. Afterwards, at 412 by 915, the notice's fixed part is no taller than one row, and no clipped card edge shows under the notice.
 - [ ] A tap on a row still opens the editor.
 - [ ] A tick still holds its row in place for one beat before it moves to Completed.
 - [ ] A drag in My order still writes the new order.
