@@ -1,7 +1,7 @@
 import { RRule } from "rrule";
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
-import type { TaskItem } from "./query";
+import { addDays, formatLocal, parseStoredDate, startOfDay } from "@/utils/dates";
+import type { TaskItem } from "@/types/task";
 
 /**
  * rrule iterates floating wall-clock values: it reads and returns dates
@@ -73,49 +73,6 @@ function ruleFor(recurrence: string, due: string): RRule | null {
   }
   ruleCache.set(key, rule);
   return rule;
-}
-
-/**
- * The next due date for a stored recurrence rule, or null when the rule
- * is unusable or has no future occurrence.
- *
- * Recurrence is stored bare ("FREQ=DAILY", no "RRULE:" prefix). The
- * stored due date is the rule's DTSTART, so a weekly BYDAY rule keeps
- * the week the user meant; with no usable due date, now anchors it.
- * The answer is the first occurrence strictly after max(due, now):
- * ticking a task that is due today must move it on, and a stale due
- * date must never hand the past back.
- */
-export function nextDue(
-  recurrence: string,
-  due: string | null | undefined,
-  now: Date,
-): string | null {
-  if (recurrence.trim() === "") {
-    return null;
-  }
-  const stored = due ? parseStoredDate(due) : null;
-  const hasTime = stored?.hasTime ?? false;
-  const start = stored?.date ?? now;
-  // A usable stored due anchors the cached rule; an absent or unusable
-  // one anchors on now, which changes per call, so it is not cached.
-  const rule =
-    stored != null && due != null
-      ? ruleFor(recurrence, due)
-      : buildRule(recurrence, start);
-  if (rule == null) {
-    return null;
-  }
-  let next: Date | null = null;
-  try {
-    const cursor = toFloating(
-      new Date(Math.max(start.getTime(), now.getTime())),
-    );
-    next = rule.after(cursor, false);
-  } catch {
-    return null;
-  }
-  return next ? formatLocal(fromFloating(next), hasTime) : null;
 }
 
 /**

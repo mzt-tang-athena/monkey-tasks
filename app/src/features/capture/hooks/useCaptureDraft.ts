@@ -1,6 +1,6 @@
 import * as React from "react";
-import { parseCapture, type ParsedCapture } from "../parse";
-import type { CaptureTarget } from "../write";
+import { parseCapture } from "@/features/capture/parse";
+import type { CaptureTarget, ParsedCapture } from "@/types/task";
 
 export type CaptureDraft = {
   text: string;

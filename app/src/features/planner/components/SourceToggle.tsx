@@ -1,7 +1,12 @@
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
-import { drag, spacing } from "../../../theme/tokens";
-import { SOURCES, sourceLabel, type Mode, type Source } from "../model";
+import { drag, spacing } from "@/theme/tokens";
+import {
+  SOURCES,
+  sourceLabel,
+  type Mode,
+  type Source,
+} from "@/features/planner/model";
 import { styles } from "./plannerStyles";
 
 /**

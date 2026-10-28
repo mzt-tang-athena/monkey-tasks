@@ -37,12 +37,12 @@ vi.mock("react-native", () => ({
   },
 }));
 
-vi.mock("../features/vault/grant", () => ({
+vi.mock("@/features/vault/grant", () => ({
   getSavedVaultUri: async () => savedUri,
   requestVaultAccess: async () => savedUri,
 }));
 
-vi.mock("../features/vault/session", () => ({
+vi.mock("@/features/vault/session", () => ({
   loadVaultTasks: async () => {
     loadCalls += 1;
     if (loadGate) {
@@ -67,8 +67,8 @@ vi.mock("../features/vault/session", () => ({
   },
 }));
 
-vi.mock("../lib/mock", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/mock")>();
+vi.mock("@/lib/mock", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/mock")>();
   return {
     ...actual,
     // Count the preview's read: an edit must not reload the sample set.
@@ -79,9 +79,9 @@ vi.mock("../lib/mock", async (importOriginal) => {
   };
 });
 
-vi.mock("../features/vault/notes", async (importOriginal) => {
+vi.mock("@/features/vault/notes", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../features/vault/notes")>();
+    await importOriginal<typeof import("@/features/vault/notes")>();
   return {
     ...actual,
     writeNoteIfUnchanged: async (
@@ -142,7 +142,7 @@ vi.mock("../features/vault/notes", async (importOriginal) => {
   };
 });
 
-vi.mock("../features/reminders/sync", () => ({
+vi.mock("@/features/reminders/sync", () => ({
   syncReminders: async () => ({ scheduled: 0, skipped: true }),
   syncTaskReminders: async () => undefined,
 }));
@@ -154,8 +154,8 @@ import { useStoreMeta, useTaskList } from "./task-state";
 import type { StoreMeta } from "./task-state";
 import { useTaskActions } from "./task-actions";
 import type { TaskActions } from "./task-actions";
-import type { TaskItem } from "../features/tasks/query";
-import { spawnContent } from "../features/tasks/spawn";
+import type { TaskItem } from "@/types/task";
+import { spawnContent } from "@/features/tasks/spawn";
 
 /** The three contexts read as one snapshot, for the assertions below. */
 type Snapshot = StoreMeta & TaskActions & { tasks: TaskItem[] };

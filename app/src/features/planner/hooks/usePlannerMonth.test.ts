@@ -5,8 +5,8 @@ import * as React from "react";
 import { act, create } from "react-test-renderer";
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import type { Source } from "../model";
-import type { TaskItem } from "../../tasks/query";
+import type { Source } from "@/features/planner/model";
+import type { TaskItem } from "@/types/task";
 import { usePlannerMonth } from "./usePlannerMonth";
 
 function task(name: string, data: TaskFrontmatter | null): TaskItem {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   formatLocal,
+  formatTime,
   parseStoredDate,
   todayIso,
 } from "./dates";
@@ -75,6 +76,20 @@ describe("addDays / dayLabel across a DST gap", () => {
 describe("todayIso", () => {
   it("writes the local date", () => {
     expect(todayIso()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("formatTime", () => {
+  it("shows midnight as 12 AM", () => {
+    expect(formatTime(new Date(2026, 0, 1, 0, 0))).toBe("12:00 AM");
+  });
+
+  it("shows noon as 12 PM", () => {
+    expect(formatTime(new Date(2026, 0, 1, 12, 0))).toBe("12:00 PM");
+  });
+
+  it("pads the minutes past noon", () => {
+    expect(formatTime(new Date(2026, 0, 1, 13, 5))).toBe("1:05 PM");
   });
 });
 

@@ -1,23 +1,8 @@
 import { listFrontmatter, validateNote } from "@monkey-tasks/schemas";
-import { findSubfolder, listDirectory } from "../vault/scan";
-import { readNote } from "../vault/notes";
-import { formatIssues } from "../../lib/schema-errors";
-
-/** A list note, as the store exposes it: a tab name and its file. */
-export type ListItem = {
-  /** The note's file name without .md: the tab label. */
-  name: string;
-  uri: string;
-};
-
-/** A note in Lists that fails the list frontmatter, kept for repair. */
-export type BrokenList = {
-  /** The note's file name without .md. */
-  name: string;
-  uri: string;
-  /** One "path: message" line per frontmatter issue. */
-  errors: string[];
-};
+import { findSubfolder, listDirectory } from "@/features/vault/scan";
+import { readNote } from "@/features/vault/notes";
+import { formatIssues } from "@/utils/schema-errors";
+import type { BrokenList, ListItem } from "@/types/task";
 
 /** What the Lists folder holds: the usable tabs and the notes to fix. */
 export type ListRead = {

@@ -4,7 +4,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 // the kind in its frontmatter, and its file name minus the extension.
 // Anything else in the folder comes back as broken, so it can be fixed
 // instead of vanishing.
-vi.mock("../vault/scan", () => ({
+vi.mock("@/features/vault/scan", () => ({
   findSubfolder: vi.fn(),
   listDirectory: vi.fn(),
   displayName: vi.fn((uri: string) => {
@@ -13,12 +13,12 @@ vi.mock("../vault/scan", () => ({
   }),
 }));
 
-vi.mock("../vault/notes", () => ({
+vi.mock("@/features/vault/notes", () => ({
   readNote: vi.fn(),
 }));
 
-import { findSubfolder, listDirectory } from "../vault/scan";
-import { readNote } from "../vault/notes";
+import { findSubfolder, listDirectory } from "@/features/vault/scan";
+import { readNote } from "@/features/vault/notes";
 import { loadLists, parseListNote } from "./query";
 
 const listsDir = "content://root/vault/Tasks/Lists";

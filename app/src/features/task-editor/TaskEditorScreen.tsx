@@ -12,11 +12,10 @@ import {
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { parseFrontmatter } from "@monkey-tasks/schemas";
-import { useStoreMeta, useTaskList } from "../../store/task-state";
-import { useTaskActions } from "../../store/task-actions";
-import type { TaskItem } from "../tasks/query";
-import { safeFileName } from "../capture/write";
-import type { TaskEdit } from "./save";
+import { useStoreMeta, useTaskList } from "@/store/task-state";
+import { useTaskActions } from "@/store/task-actions";
+import type { TaskEdit, TaskItem } from "@/types/task";
+import { safeFileName } from "@/features/capture/write";
 import {
   colors,
   fonts,
@@ -24,7 +23,7 @@ import {
   pageGutter,
   radius,
   spacing,
-} from "../../theme/tokens";
+} from "@/theme/tokens";
 
 /**
  * SAF has no rename call: a rename writes the new file, copies the

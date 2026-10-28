@@ -7,15 +7,15 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import type { TaskItem } from "../../tasks/query";
-import type { TaskForm } from "../../../lib/settings";
-import { TaskRow } from "../../../components/TaskRow";
-import type { Mode, Source } from "../model";
+import type { TaskItem } from "@/types/task";
+import type { TaskForm } from "@/lib/settings";
+import { TaskRow } from "@/components/TaskRow";
+import type { Mode, Source } from "@/features/planner/model";
 import { FormToggle } from "./FormToggle";
 import { Pickup, type DragApi, type LiftState } from "./drag";
 import { SourceToggle } from "./SourceToggle";
 import { TaskPills } from "./TaskPills";
-import { spacing } from "../../../theme/tokens";
+import { spacing } from "@/theme/tokens";
 import { styles } from "./plannerStyles";
 
 /** Pills mode has no rows, so the list renders header and footer only. */

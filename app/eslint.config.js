@@ -21,6 +21,18 @@ module.exports = defineConfig([
     },
   },
   {
+    // The node resolver from eslint-config-expo cannot read the `@/`
+    // alias, and the import rules then skip those imports without a
+    // word. The TypeScript resolver reads the alias from tsconfig.
+    files: ['src/**/*.{ts,tsx}'],
+    settings: {
+      'import/resolver': {
+        typescript: { project: './tsconfig.json' },
+        node: true,
+      },
+    },
+  },
+  {
     // The lib layer is shared: features and routes may import it, but
     // it never reaches back into them. Type-only imports pass because
     // they carry no runtime dependency.

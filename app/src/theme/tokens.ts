@@ -2,7 +2,7 @@ import { Platform } from "react-native";
 
 /**
  * Themes as config. Three named palettes from the round-2 verdicts;
- * screens read the one exported `activeTheme` and never declare a
+ * screens read the active theme through `colors` and never declare a
  * raw color. Every palette shares the same key set, so a screen is
  * theme-agnostic by construction.
  */
@@ -87,7 +87,7 @@ function activeThemeName(): ThemeName {
   return "budget";
 }
 
-export const activeTheme = THEMES[activeThemeName()];
+const activeTheme = THEMES[activeThemeName()];
 
 /** Switch the dev theme and reload, so module constants re-read. */
 export function setDevTheme(name: ThemeName): void {

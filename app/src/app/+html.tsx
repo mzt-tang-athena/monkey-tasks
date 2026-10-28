@@ -1,6 +1,6 @@
 import { ScrollViewStyleReset, useServerDocumentContext } from "expo-router/html";
 import { type PropsWithChildren } from "react";
-import { colors } from "../theme/tokens";
+import { colors } from "@/theme/tokens";
 
 /**
  * Root HTML for web. The paper background is set here so there is no

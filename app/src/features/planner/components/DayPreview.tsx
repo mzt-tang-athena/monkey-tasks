@@ -1,20 +1,20 @@
 import * as React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import type { TaskItem } from "../../tasks/query";
-import type { TaskForm } from "../../../lib/settings";
-import { DropZoneMap } from "../../../lib/dropzone";
-import { MONTHS, WEEKDAYS_FULL } from "../lib/labels";
+import type { TaskItem } from "@/types/task";
+import type { TaskForm } from "@/lib/settings";
+import { DropZoneMap } from "@/lib/dropzone";
+import { MONTHS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import {
   hasTime,
   inSourceList,
-  isoOf,
   sortOpenFirst,
   type Source,
-} from "../model";
+} from "@/features/planner/model";
+import { isoOf } from "@/utils/dates";
 import { TaskListSection } from "./TaskListSection";
 import { Timeline } from "./Timeline";
 import { styles as base } from "./plannerStyles";
-import { spacing } from "../../../theme/tokens";
+import { spacing } from "@/theme/tokens";
 
 /** Nothing in the preview reacts; every handler the live body
  *  supplies is replaced by this one. */

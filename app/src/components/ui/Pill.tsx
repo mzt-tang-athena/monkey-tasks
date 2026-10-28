@@ -7,7 +7,7 @@ import {
   radius,
   radii,
   touchTarget,
-} from "../../theme/tokens";
+} from "@/theme/tokens";
 
 /**
  * Two quiet pill forms: the capture sheet's target list control, and

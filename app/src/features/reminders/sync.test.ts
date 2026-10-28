@@ -31,7 +31,7 @@ vi.mock("./schedule", () => ({
 }));
 
 import { syncReminders, syncTaskReminders } from "./sync";
-import type { TaskItem } from "../tasks/query";
+import type { TaskItem } from "@/types/task";
 
 function task(
   name: string,

@@ -6,16 +6,17 @@ vi.mock("./scan", () => ({
   ),
 }));
 
-vi.mock("../tasks/query", () => ({
+vi.mock("@/features/tasks/query", () => ({
   loadTasks: vi.fn(async () => []),
 }));
 
-vi.mock("../lists/query", () => ({
+vi.mock("@/features/lists/query", () => ({
   loadLists: vi.fn(async () => ({ lists: [], broken: [] as BrokenList[] })),
 }));
 
-import { loadLists, type BrokenList } from "../lists/query";
-import { loadTasks } from "../tasks/query";
+import { loadLists } from "@/features/lists/query";
+import type { BrokenList } from "@/types/task";
+import { loadTasks } from "@/features/tasks/query";
 import { ensureSubfolder } from "./scan";
 import { loadVaultTasks } from "./session";
 

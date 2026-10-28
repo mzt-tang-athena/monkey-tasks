@@ -9,10 +9,9 @@ import {
 } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { ParsedCapture } from "../features/capture/parse";
-import type { CaptureTarget } from "../features/capture/write";
-import { CaptureSheet } from "../features/capture/components/CaptureSheet";
-import { useCaptureDraft } from "../features/capture/hooks/useCaptureDraft";
+import type { CaptureTarget, ParsedCapture } from "@/types/task";
+import { CaptureSheet } from "@/features/capture/components/CaptureSheet";
+import { useCaptureDraft } from "@/features/capture/hooks/useCaptureDraft";
 import {
   bottomBar,
   colors,
@@ -22,7 +21,7 @@ import {
   radiusFloating,
   radii,
   touchTarget,
-} from "../theme/tokens";
+} from "@/theme/tokens";
 
 /**
  * The single bottom bar, shared by both tabs. Left: the Lists and

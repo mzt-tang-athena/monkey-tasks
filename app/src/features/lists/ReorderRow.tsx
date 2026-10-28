@@ -7,7 +7,7 @@ import {
   type PointerEvent as RNPointerEvent,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { colors, drag, touchTarget } from "../../theme/tokens";
+import { colors, drag, touchTarget } from "@/theme/tokens";
 
 /**
  * A row that can be picked up for a manual reorder: a long press on

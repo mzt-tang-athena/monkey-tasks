@@ -14,7 +14,7 @@ export async function getSavedVaultUri(): Promise<string | null> {
   return value.trim() === "" ? null : value;
 }
 
-export async function saveVaultUri(folderUri: string | null): Promise<void> {
+async function saveVaultUri(folderUri: string | null): Promise<void> {
   const uri = `${FileSystem.documentDirectory}${PERMISSION_FILE}`;
   await FileSystem.writeAsStringAsync(uri, folderUri ?? "", {
     encoding: FileSystem.EncodingType.UTF8,

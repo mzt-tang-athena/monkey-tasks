@@ -2,7 +2,7 @@ import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import type { TaskItem } from "@/features/tasks/query";
+import type { TaskItem } from "@/types/task";
 import { TaskRow } from "./TaskRow";
 
 function task(name: string, extra: Partial<TaskFrontmatter> = {}): TaskItem {

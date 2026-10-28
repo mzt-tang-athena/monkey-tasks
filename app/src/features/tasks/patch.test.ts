@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateNote, taskFrontmatter } from "@monkey-tasks/schemas";
 import { applyPatch } from "./patch";
-import type { TaskItem } from "./query";
+import type { TaskItem } from "@/types/task";
 
 function task(text: string): TaskItem {
   return {

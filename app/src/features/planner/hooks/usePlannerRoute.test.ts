@@ -4,7 +4,7 @@
 import * as React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { startOfDay } from "../../../lib/dates";
+import { startOfDay } from "@/utils/dates";
 import { usePlannerRoute, type PlannerRoute } from "./usePlannerRoute";
 
 // The route is the planner's state: the URL names the mode and the

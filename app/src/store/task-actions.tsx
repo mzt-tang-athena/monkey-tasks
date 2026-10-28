@@ -1,9 +1,11 @@
 import * as React from "react";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import type { TaskItem } from "../features/tasks/query";
-import type { TaskEdit } from "../features/task-editor/save";
-import type { CaptureTarget } from "../features/capture/write";
-import type { ParsedCapture } from "../features/capture/parse";
+import type {
+  CaptureTarget,
+  ParsedCapture,
+  TaskEdit,
+  TaskItem,
+} from "@/types/task";
 
 /**
  * The store's write side: the operations a screen can run, kept apart
@@ -21,8 +23,8 @@ export type TaskActions = {
     task: TaskItem,
     patch: Partial<TaskFrontmatter>,
   ): Promise<void>;
-  /** Write the editor's fields to the note. Rejects when the save fails. */
   /**
+   * Write the editor's fields to the note. Rejects when the save fails.
    * `expected` is the note text the editor opened. A save built on a
    * stale draft refuses instead of overwriting a change that landed
    * after the editor seeded.

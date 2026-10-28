@@ -64,6 +64,24 @@ export function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/** Midnight at the start of the local day, in epoch milliseconds. */
+export function startOfToday(): number {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+}
+
+/** A clock time the way the rows write it: "7:05 PM". */
+export function formatTime(date: Date): string {
+  const h = date.getHours() % 12 || 12;
+  const ampm = date.getHours() >= 12 ? "PM" : "AM";
+  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
+}
+
+/** The local calendar day as YYYY-MM-DD. */
+export function isoOf(date: Date): string {
+  return formatLocal(date, false);
+}
+
 export function addDays(date: Date, days: number): Date {
   const next = startOfDay(date);
   next.setDate(next.getDate() + days);

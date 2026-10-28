@@ -1,6 +1,6 @@
 import { Text, View, type PointerEvent as RNPointerEvent } from "react-native";
-import type { TaskItem } from "../../tasks/query";
-import { pillDateLabel } from "../lib/labels";
+import type { TaskItem } from "@/types/task";
+import { pillDateLabel } from "@/features/planner/lib/labels";
 import { Pickup, type DragApi, type LiftState } from "./drag";
 import { styles } from "./plannerStyles";
 

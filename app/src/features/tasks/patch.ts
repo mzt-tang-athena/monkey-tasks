@@ -1,6 +1,6 @@
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import { updateProperty } from "../vault/notes";
-import type { TaskItem } from "./query";
+import { updateProperty } from "@/features/vault/notes";
+import type { TaskItem } from "@/types/task";
 
 /**
  * Apply a frontmatter patch in memory, with the same surgical edit the

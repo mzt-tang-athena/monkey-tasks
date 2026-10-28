@@ -5,18 +5,17 @@ import {
   View,
   type PointerEvent as RNPointerEvent,
 } from "react-native";
-import type { TaskItem } from "../../tasks/query";
-import { DropZoneMap } from "../../../lib/dropzone";
-import { addDays, startOfDay, isSameDay } from "../../../lib/dates";
+import type { TaskItem } from "@/types/task";
+import { DropZoneMap } from "@/lib/dropzone";
+import { addDays, isoOf, isSameDay, startOfDay } from "@/utils/dates";
 import {
   hasTime,
-  isoOf,
   sortByTimeOfDay,
   startOfWeek,
   tasksForDay,
   timeOf,
-} from "../model";
-import { WEEKDAYS, WEEKDAYS_FULL } from "../lib/labels";
+} from "@/features/planner/model";
+import { WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import { Pickup, type DragApi, type LiftState } from "./drag";
 import { styles } from "./plannerStyles";
 

@@ -1,12 +1,12 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { PreviewRow } from "../../components/PreviewRow";
-import type { SortMode } from "../../lib/settings";
+import { PreviewRow } from "@/components/PreviewRow";
+import type { SortMode } from "@/lib/settings";
 import {
   useTabTasks,
   useTaskSections,
   type SectionTone,
-} from "../../store/selectors";
+} from "@/store/selectors";
 import {
   colors,
   fonts,
@@ -14,8 +14,8 @@ import {
   pageGutter,
   radius,
   spacing,
-} from "../../theme/tokens";
-import type { TaskItem } from "../tasks/query";
+} from "@/theme/tokens";
+import type { TaskItem } from "@/types/task";
 
 /**
  * The peek at another list tab while a swipe carries the finger

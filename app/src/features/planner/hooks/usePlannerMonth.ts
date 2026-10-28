@@ -1,6 +1,6 @@
 import * as React from "react";
-import type { TaskItem } from "../../tasks/query";
-import { occurrencesBetween } from "../../tasks/recurrence";
+import type { TaskItem } from "@/types/task";
+import { occurrencesBetween } from "@/features/tasks/recurrence";
 import {
   inSourceList,
   pillsForSource,
@@ -9,7 +9,7 @@ import {
   startOfWeek,
   tasksForDay,
   type Source,
-} from "../model";
+} from "@/features/planner/model";
 
 /** What the month pane reads: the tasks, the source filter, and the
     route day the strip and card follow. */

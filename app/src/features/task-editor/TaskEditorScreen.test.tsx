@@ -1,7 +1,7 @@
 import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { TaskItem } from "@/features/tasks/query";
+import type { TaskItem } from "@/types/task";
 import TaskEditorScreen from "./TaskEditorScreen";
 
 // The route and the store are the screen's two inputs: a task id

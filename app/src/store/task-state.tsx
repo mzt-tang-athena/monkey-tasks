@@ -1,6 +1,5 @@
 import * as React from "react";
-import type { TaskItem } from "../features/tasks/query";
-import type { BrokenList } from "../features/lists/query";
+import type { BrokenList, TaskItem } from "@/types/task";
 
 /**
  * The store's read side, in two contexts: the row list and the store's

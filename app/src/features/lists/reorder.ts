@@ -1,4 +1,4 @@
-import type { TaskItem } from "../tasks/query";
+import type { TaskItem } from "@/types/task";
 
 export type OrderChange = { task: TaskItem; order: number };
 

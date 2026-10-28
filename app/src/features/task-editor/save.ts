@@ -1,6 +1,6 @@
 import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
 import * as FileSystem from "expo-file-system/legacy";
-import { displayName } from "../vault/scan";
+import { displayName } from "@/features/vault/scan";
 import {
   NoteChangedError,
   keepTypedName,
@@ -8,21 +8,11 @@ import {
   updateProperty,
   writeNote,
   writeNoteIfUnchanged,
-} from "../vault/notes";
-import { safeFileName } from "../capture/write";
-import type { TaskItem } from "../tasks/query";
+} from "@/features/vault/notes";
+import { safeFileName } from "@/features/capture/write";
+import type { TaskEdit, TaskItem } from "@/types/task";
 
 const { StorageAccessFramework } = FileSystem;
-
-/** The fields the task editor can change on a note. */
-export type TaskEdit = {
-  name: string;
-  due: string | null;
-  recurrence: string | null;
-  lists: string[];
-  reminders: string[];
-  body: string;
-};
 
 const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
 

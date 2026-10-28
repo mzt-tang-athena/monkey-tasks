@@ -7,7 +7,7 @@ import {
   spawnFileName,
   type SpawnInput,
 } from "./spawn";
-import type { TaskItem } from "./query";
+import type { TaskItem } from "@/types/task";
 
 /** What a standard YAML parser makes of the note spawn wrote. */
 function frontmatter(text: string): Record<string, unknown> {

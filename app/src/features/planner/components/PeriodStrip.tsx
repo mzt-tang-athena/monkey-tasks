@@ -1,14 +1,14 @@
 import * as React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { addDays, startOfDay, isSameDay } from "../../../lib/dates";
+import { addDays, startOfDay, isSameDay } from "@/utils/dates";
 import {
   dayIndexBetween,
   isoWeek,
   railStartIdx,
   startOfWeek,
   type Mode,
-} from "../model";
-import { MONTHS, MONTHS_SHORT, WEEKDAYS, WEEKDAYS_FULL } from "../lib/labels";
+} from "@/features/planner/model";
+import { MONTHS, MONTHS_SHORT, WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import {
   colors,
   fonts,
@@ -16,7 +16,7 @@ import {
   periodStep,
   radius,
   spacing,
-} from "../../../theme/tokens";
+} from "@/theme/tokens";
 
 const styles = StyleSheet.create({
   pressedFill: {

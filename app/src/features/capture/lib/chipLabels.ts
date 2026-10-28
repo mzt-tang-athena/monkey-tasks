@@ -1,5 +1,5 @@
-import { parseStoredDate } from "../../../lib/dates";
-import type { CaptureTarget } from "../write";
+import { formatTime, parseStoredDate } from "@/utils/dates";
+import type { CaptureTarget } from "@/types/task";
 
 /**
  * Labels for the parse chips: one short word or figure per chip, so
@@ -26,13 +26,7 @@ export function timeChipLabel(due: string): string {
   if (!parsedDue) {
     return "";
   }
-  return formatClock(parsedDue.date);
-}
-
-export function formatClock(date: Date): string {
-  const h = date.getHours() % 12 || 12;
-  const ampm = date.getHours() >= 12 ? "PM" : "AM";
-  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
+  return formatTime(parsedDue.date);
 }
 
 export function recurrenceKeyword(rule: string): string {

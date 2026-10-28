@@ -7,7 +7,7 @@ import {
   radius,
   radii,
   touchTarget,
-} from "../../theme/tokens";
+} from "@/theme/tokens";
 
 /**
  * The app's two button shapes, copied from their first homes: the

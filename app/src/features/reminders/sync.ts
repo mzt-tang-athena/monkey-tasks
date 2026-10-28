@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { parseStoredDate } from "../../lib/dates";
-import type { TaskItem } from "../tasks/query";
+import { parseStoredDate } from "@/utils/dates";
+import type { TaskItem } from "@/types/task";
 import {
   cancelAllScheduled,
   cancelScheduled,

@@ -3,17 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 // The loader talks to SAF. The test pins what a broken task note keeps:
 // its row, its file name, and the errors that explain why it cannot
 // render as a task.
-vi.mock("../vault/scan", () => ({
+vi.mock("@/features/vault/scan", () => ({
   listDirectory: vi.fn(),
   displayName: vi.fn((uri: string) => uri.split("/").pop() ?? uri),
 }));
 
-vi.mock("../vault/notes", () => ({
+vi.mock("@/features/vault/notes", () => ({
   readNote: vi.fn(),
 }));
 
-import { listDirectory } from "../vault/scan";
-import { readNote } from "../vault/notes";
+import { listDirectory } from "@/features/vault/scan";
+import { readNote } from "@/features/vault/notes";
 import { loadTasks } from "./query";
 
 const dir = "content://root/Tasks";

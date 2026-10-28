@@ -12,17 +12,24 @@ import {
   validateNote,
   type TaskFrontmatter,
 } from "@monkey-tasks/schemas";
-import { nowStamp, todayIso } from "../lib/dates";
+import { nowStamp, todayIso } from "@/utils/dates";
 import {
   loadMockTasks,
   mockBroken,
   mockLists,
   toggleMockCompleted,
-} from "../lib/mock";
-import { getSavedVaultUri, requestVaultAccess } from "../features/vault/grant";
-import { ensureSubfolder } from "../features/vault/scan";
-import { loadVaultTasks } from "../features/vault/session";
-import { type BrokenList, type ListItem } from "../features/lists/query";
+} from "@/lib/mock";
+import { getSavedVaultUri, requestVaultAccess } from "@/features/vault/grant";
+import { ensureSubfolder } from "@/features/vault/scan";
+import { loadVaultTasks } from "@/features/vault/session";
+import type {
+  BrokenList,
+  CaptureTarget,
+  ListItem,
+  ParsedCapture,
+  TaskEdit,
+  TaskItem,
+} from "@/types/task";
 import {
   NoteChangedError,
   createNote,
@@ -31,25 +38,19 @@ import {
   updateProperty,
   writeNote,
   writeNoteIfUnchanged,
-} from "../features/vault/notes";
-import { type TaskItem } from "../features/tasks/query";
-import { saveTaskEdit, type TaskEdit } from "../features/task-editor/save";
-import { applyPatch } from "../features/tasks/patch";
-import { nextAfter } from "../features/tasks/recurrence";
+} from "@/features/vault/notes";
+import { saveTaskEdit } from "@/features/task-editor/save";
+import { applyPatch } from "@/features/tasks/patch";
+import { nextAfter } from "@/features/tasks/recurrence";
 import {
   isUntouchedSpawn,
   spawnContent,
   spawnFileName,
   type SpawnInput,
-} from "../features/tasks/spawn";
-import { syncReminders, syncTaskReminders } from "../features/reminders/sync";
-import {
-  captureDraft,
-  safeFileName,
-  type CaptureTarget,
-} from "../features/capture/write";
-import type { ParsedCapture } from "../features/capture/parse";
-import { taskFromText } from "../features/tasks/query";
+} from "@/features/tasks/spawn";
+import { syncReminders, syncTaskReminders } from "@/features/reminders/sync";
+import { captureDraft, safeFileName } from "@/features/capture/write";
+import { taskFromText } from "@/features/tasks/query";
 import { makeQueryClient } from "./query-client";
 import {
   StoreMetaContext,

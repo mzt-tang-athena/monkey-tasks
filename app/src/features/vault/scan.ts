@@ -25,7 +25,7 @@ export function displayName(uri: string): string {
  * Listing the child is the only reliable probe: it succeeds for a
  * folder and rejects for a document.
  */
-export async function isDirectoryUri(uri: string): Promise<boolean> {
+async function isDirectoryUri(uri: string): Promise<boolean> {
   try {
     await StorageAccessFramework.readDirectoryAsync(uri);
     return true;

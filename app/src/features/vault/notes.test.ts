@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { load } from "js-yaml";
-import { serializeValue } from "../../lib/yaml";
+import { serializeValue } from "@/utils/yaml";
 
 const fs = vi.hoisted(() => ({
   read: "",

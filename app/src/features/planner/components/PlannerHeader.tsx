@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { Mode } from "../model";
-import { colors, fonts, radius, spacing } from "../../../theme/tokens";
+import type { Mode } from "@/features/planner/model";
+import { colors, fonts, radius, spacing } from "@/theme/tokens";
 import { PeriodStrip } from "./PeriodStrip";
 
 const styles = StyleSheet.create({

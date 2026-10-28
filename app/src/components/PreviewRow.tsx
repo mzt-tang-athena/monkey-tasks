@@ -1,8 +1,8 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { TaskItem } from "../features/tasks/query";
-import { parseStoredDate } from "../lib/dates";
-import { colors, fonts, radii, spacing } from "../theme/tokens";
+import type { TaskItem } from "@/types/task";
+import { formatTime, parseStoredDate, startOfToday } from "@/utils/dates";
+import { colors, fonts, radii, spacing } from "@/theme/tokens";
 
 /**
  * One task as a still picture: the same shape as `TaskRow`, with no
@@ -60,17 +60,6 @@ function PreviewRowBase({
       </View>
     </View>
   );
-}
-
-function startOfToday(): number {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-}
-
-function formatTime(date: Date): string {
-  const h = date.getHours() % 12 || 12;
-  const ampm = date.getHours() >= 12 ? "PM" : "AM";
-  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
 }
 
 const styles = StyleSheet.create({

@@ -1,7 +1,7 @@
-import { nowStamp } from "../../lib/dates";
-import { serializeValue } from "../../lib/yaml";
+import { nowStamp } from "@/utils/dates";
+import { serializeValue } from "@/utils/yaml";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import type { ParsedCapture } from "./parse";
+import type { CaptureTarget, ParsedCapture } from "@/types/task";
 
 /** The frontmatter-only content of a captured task note. */
 export function captureContent(
@@ -25,10 +25,6 @@ export function captureContent(
   lines.push("---", "");
   return `${lines.join("\n")}\n`;
 }
-
-export type CaptureTarget =
-  | { kind: "main" }
-  | { kind: "list"; name: string };
 
 /**
  * A file name a document provider accepts. A task name is free text,

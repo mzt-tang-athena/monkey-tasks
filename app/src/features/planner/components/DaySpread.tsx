@@ -8,28 +8,28 @@ import {
   type PointerEvent as RNPointerEvent,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { groupByDue, type TaskItem } from "../../tasks/query";
+import { groupByDue } from "@/features/tasks/query";
+import type { TaskItem } from "@/types/task";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import { TaskRow } from "../../../components/TaskRow";
-import { swipeProps } from "../../../lib/swipe";
-import { useSwipePager } from "../../../components/SwipePager";
-import { DropZoneMap } from "../../../lib/dropzone";
-import { addDays, startOfDay } from "../../../lib/dates";
-import { drag } from "../../../theme/tokens";
-import type { TaskForm } from "../../../lib/settings";
+import { TaskRow } from "@/components/TaskRow";
+import { swipeProps } from "@/lib/swipe";
+import { useSwipePager } from "@/components/SwipePager";
+import { DropZoneMap } from "@/lib/dropzone";
+import { addDays, isoOf, startOfDay } from "@/utils/dates";
+import { drag } from "@/theme/tokens";
+import type { TaskForm } from "@/lib/settings";
 import {
   hasTime,
   inSourceList,
-  isoOf,
   minuteOf,
   sortOpenFirst,
   tasksForDayAll,
   withTime,
   type Mode,
   type Source,
-} from "../model";
-import { MONTHS, WEEKDAYS_FULL } from "../lib/labels";
-import { useTouchDragGate, type PendingDrag } from "../hooks/useTouchDragGate";
+} from "@/features/planner/model";
+import { MONTHS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
+import { useTouchDragGate, type PendingDrag } from "@/features/planner/hooks/useTouchDragGate";
 import { DayPreview } from "./DayPreview";
 import { Pickup, pointerPickup, type DragApi, type LiftState } from "./drag";
 import { PlannerHeader } from "./PlannerHeader";

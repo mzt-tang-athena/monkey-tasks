@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   dueChipLabel,
-  formatClock,
   recurrenceKeyword,
   targetLabel,
   timeChipLabel,
@@ -28,20 +27,6 @@ describe("timeChipLabel", () => {
 
   it("shows nothing for a value it cannot read", () => {
     expect(timeChipLabel("next tuesday")).toBe("");
-  });
-});
-
-describe("formatClock", () => {
-  it("shows midnight as 12 AM", () => {
-    expect(formatClock(new Date(2026, 0, 1, 0, 0))).toBe("12:00 AM");
-  });
-
-  it("shows noon as 12 PM", () => {
-    expect(formatClock(new Date(2026, 0, 1, 12, 0))).toBe("12:00 PM");
-  });
-
-  it("pads the minutes past noon", () => {
-    expect(formatClock(new Date(2026, 0, 1, 13, 5))).toBe("1:05 PM");
   });
 });
 

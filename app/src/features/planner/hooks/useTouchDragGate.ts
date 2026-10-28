@@ -1,7 +1,7 @@
 import * as React from "react";
-import { Platform } from "react-native";
-import type { TaskItem } from "../../tasks/query";
-import { drag } from "../../../theme/tokens";
+import type { TaskItem } from "@/types/task";
+import { drag } from "@/theme/tokens";
+import { pointerPickup } from "@/features/planner/components/drag";
 
 /** A press waiting on a touch: where it started, when, and what it
     would become if the finger holds long enough. */
@@ -13,11 +13,6 @@ export type PendingDrag = {
   touch: boolean;
   kind?: "pill" | "row";
 };
-
-/** The interaction layer's split: web reads the W3C pointer events
-    straight from React Native; Android gates those off, so its drag
-    sources ride the gesture library instead. */
-const pointerPickup = Platform.OS === "web";
 
 /**
  * While a drag or grab owns the pointer, the browser must keep its

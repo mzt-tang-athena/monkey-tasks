@@ -10,10 +10,11 @@ import {
   type TextStyle,
 } from "react-native";
 import { useKeyboardAnimation } from "react-native-keyboard-controller";
-import type { CaptureDraft } from "../hooks/useCaptureDraft";
-import { targetLabel } from "../lib/chipLabels";
+import type { CaptureDraft } from "@/features/capture/hooks/useCaptureDraft";
+import { targetLabel } from "@/features/capture/lib/chipLabels";
 import { CaptureChips } from "./CaptureChips";
-import { Button, Pill } from "../../../components/ui";
+import { Button } from "@/components/ui/Button";
+import { Pill } from "@/components/ui/Pill";
 import {
   captureText,
   colors,
@@ -23,7 +24,7 @@ import {
   sheetGap,
   sheetMaxShare,
   sheetReserve,
-} from "../../../theme/tokens";
+} from "@/theme/tokens";
 
 // The sheet input carries focus by caret and placeholder alone: no
 // app ring, and the browser's own focus outline is suppressed on

@@ -21,7 +21,7 @@ export async function ensureNotificationPermission(): Promise<boolean> {
   return request.granted;
 }
 
-export async function ensureChannel(): Promise<void> {
+async function ensureChannel(): Promise<void> {
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
     name: "Task reminders",
     importance: AndroidImportance.MAX,

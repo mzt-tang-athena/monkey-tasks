@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { colors, fonts, spacing, radius, radiusFloating, radii, measure, weekColWidth, weekCanvasHeight, pageGutter } from "../../../theme/tokens";
+import { colors, fonts, spacing, radius, radiusFloating, radii, measure, weekColWidth, weekCanvasHeight, pageGutter } from "@/theme/tokens";
 
 export const styles = StyleSheet.create({
   screen: {

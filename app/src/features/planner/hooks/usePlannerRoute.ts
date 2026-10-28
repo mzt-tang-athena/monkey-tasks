@@ -5,7 +5,7 @@ import {
   parsePlannerDay,
   plannerDayParam,
   type Mode,
-} from "../model";
+} from "@/features/planner/model";
 
 /** The planner route state: the mode and day the URL names. */
 export type PlannerRoute = {

@@ -1,14 +1,14 @@
 import * as React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { getSavedVaultUri, requestVaultAccess } from "../features/vault/grant";
-import { listDirectory } from "../features/vault/scan";
+import { getSavedVaultUri, requestVaultAccess } from "@/features/vault/grant";
+import { listDirectory } from "@/features/vault/scan";
 import {
   listScheduled,
   exactAlarmState,
   scheduleAt,
-} from "../features/reminders/schedule";
-import { insightLines, useInsights } from "../lib/insights";
-import { THEMES, colors, radius, setDevTheme, type ThemeName } from "../theme/tokens";
+} from "@/features/reminders/schedule";
+import { insightLines, useInsights } from "@/lib/insights";
+import { THEMES, colors, radius, setDevTheme, type ThemeName } from "@/theme/tokens";
 
 /**
  * Dev-only diagnostics from the spike: alarm state, scheduled

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Pressable, StyleSheet } from "react-native";
-import { colors, radius } from "../../theme/tokens";
+import { colors, radius } from "@/theme/tokens";
 
 /** A quiet 36pt glyph button: hover, pressed, and active states. */
 export function IconButton({

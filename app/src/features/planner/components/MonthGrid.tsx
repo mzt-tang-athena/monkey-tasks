@@ -1,12 +1,12 @@
 import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { TaskItem } from "../../tasks/query";
-import { DropZoneMap } from "../../../lib/dropzone";
-import { addDays, isSameDay } from "../../../lib/dates";
-import { occurrencesBetween } from "../../tasks/recurrence";
-import { isDone, isoOf, startOfMonth } from "../model";
-import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "../lib/labels";
-import { spacing } from "../../../theme/tokens";
+import type { TaskItem } from "@/types/task";
+import { DropZoneMap } from "@/lib/dropzone";
+import { addDays, isoOf, isSameDay } from "@/utils/dates";
+import { occurrencesBetween } from "@/features/tasks/recurrence";
+import { isDone, startOfMonth } from "@/features/planner/model";
+import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
+import { spacing } from "@/theme/tokens";
 import { styles } from "./plannerStyles";
 
 /** The tapped day, tagged with the month it belongs to. The

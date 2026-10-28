@@ -1,11 +1,11 @@
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
-import type { TaskItem } from "../../tasks/query";
-import { DropZoneMap } from "../../../lib/dropzone";
-import { swipeProps } from "../../../lib/swipe";
-import { useSwipePager } from "../../../components/SwipePager";
+import type { TaskItem } from "@/types/task";
+import { DropZoneMap } from "@/lib/dropzone";
+import { swipeProps } from "@/lib/swipe";
+import { useSwipePager } from "@/components/SwipePager";
 import { MonthGrid, type PickedDay } from "./MonthGrid";
-import { WEEKDAYS_FULL } from "../lib/labels";
+import { WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import { styles } from "./plannerStyles";
 
 /** The fixed half of the month: the title and the grid card. The

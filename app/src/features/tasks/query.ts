@@ -1,30 +1,9 @@
-import { taskFrontmatter, validateNote, type TaskFrontmatter } from "@monkey-tasks/schemas";
-import { listDirectory, displayName, type Entry } from "../vault/scan";
-import { readNote } from "../vault/notes";
-import { parseStoredDate, startOfDay } from "../../lib/dates";
-import { formatIssues } from "../../lib/schema-errors";
-
-export type TaskItem = {
-  /**
-   * The row's identity for rendering. It is the uri for a note read
-   * from the vault, and the provisional string for a capture that is
-   * still being written; it stays put when the real uri arrives, so
-   * the row keeps its place instead of remounting.
-   */
-  id: string;
-  uri: string;
-  /** File name with extension, as SAF reports it. */
-  fileName: string;
-  /** Display name without extension: the task name. */
-  name: string;
-  /** Full file text; the source for surgical edits. */
-  text: string;
-  data: TaskFrontmatter | null;
-  /** Body below the frontmatter. */
-  body: string;
-  /** Why the frontmatter failed, when it did. Absent on a valid note. */
-  errors?: string[];
-};
+import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
+import { listDirectory, displayName, type Entry } from "@/features/vault/scan";
+import { readNote } from "@/features/vault/notes";
+import { parseStoredDate, startOfDay } from "@/utils/dates";
+import { formatIssues } from "@/utils/schema-errors";
+import type { TaskItem } from "@/types/task";
 
 /**
  * One task note as the store carries it, from its file text. The

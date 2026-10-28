@@ -7,11 +7,11 @@ import {
   Text,
   View,
 } from "react-native";
-import type { TaskItem } from "../features/tasks/query";
-import { parseStoredDate } from "../lib/dates";
-import { easeOut, useReduceMotion, useRise } from "../lib/motion";
+import type { TaskItem } from "@/types/task";
+import { formatTime, parseStoredDate, startOfToday } from "@/utils/dates";
+import { easeOut, useReduceMotion, useRise } from "@/lib/motion";
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { colors, fonts, spacing, radii } from "../theme/tokens";
+import { colors, fonts, spacing, radii } from "@/theme/tokens";
 
 function TaskRowBase({
   task,
@@ -238,17 +238,6 @@ function play(value: Animated.Value, toValue: number, duration: number) {
     easing: easeOut,
     useNativeDriver: Platform.OS !== "web",
   }).start();
-}
-
-function startOfToday(): number {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-}
-
-function formatTime(date: Date): string {
-  const h = date.getHours() % 12 || 12;
-  const ampm = date.getHours() >= 12 ? "PM" : "AM";
-  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
 }
 
 const styles = StyleSheet.create({

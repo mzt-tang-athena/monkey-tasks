@@ -1,6 +1,6 @@
-import { safeFileName } from "../capture/write";
-import { updateProperty } from "../vault/notes";
-import type { TaskItem } from "./query";
+import { safeFileName } from "@/features/capture/write";
+import { updateProperty } from "@/features/vault/notes";
+import type { TaskItem } from "@/types/task";
 
 /** Everything the next occurrence of a recurring task keeps. */
 export type SpawnInput = {

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { TaskItem } from "@/features/tasks/query";
+import type { TaskItem } from "@/types/task";
 import { TaskListSection } from "./TaskListSection";
 
 function task(name: string): TaskItem {

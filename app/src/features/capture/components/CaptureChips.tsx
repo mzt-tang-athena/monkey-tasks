@@ -1,11 +1,11 @@
 import { StyleSheet, Text, View } from "react-native";
-import type { ParsedCapture } from "../parse";
+import type { ParsedCapture } from "@/types/task";
 import {
   dueChipLabel,
   recurrenceKeyword,
   timeChipLabel,
-} from "../lib/chipLabels";
-import { colors, fonts, radius, radii, spacing } from "../../../theme/tokens";
+} from "@/features/capture/lib/chipLabels";
+import { colors, fonts, radius, radii, spacing } from "@/theme/tokens";
 
 /**
  * The capture sheet's parse feedback: icon chips built from the parse

@@ -1,16 +1,16 @@
 import * as React from "react";
 import { Pressable, Text, View, type PointerEvent as RNPointerEvent } from "react-native";
-import type { TaskItem } from "../../tasks/query";
-import { DropZoneMap } from "../../../lib/dropzone";
-import { parseStoredDate } from "../../../lib/dates";
-import { formatTime, hourOf, isDone, minuteOf } from "../model";
-import { labelHour } from "../lib/labels";
+import type { TaskItem } from "@/types/task";
+import { DropZoneMap } from "@/lib/dropzone";
+import { formatTime, parseStoredDate } from "@/utils/dates";
+import { hourOf, isDone, minuteOf } from "@/features/planner/model";
+import { labelHour } from "@/features/planner/lib/labels";
 import { Pickup, type DragApi, type LiftState } from "./drag";
 import { styles } from "./plannerStyles";
 
 /** First and last hour shown by the ruler. */
-export const RULER_START = 7;
-export const RULER_END = 22;
+const RULER_START = 7;
+const RULER_END = 22;
 
 /** The hour ruler: hour marks down the left, tasks pinned between. */
 export function Timeline({

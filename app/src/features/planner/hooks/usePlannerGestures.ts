@@ -1,12 +1,12 @@
 import * as React from "react";
 import { Animated, type PointerEvent as RNPointerEvent } from "react-native";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import type { TaskItem } from "../../tasks/query";
-import { DropZoneMap } from "../../../lib/dropzone";
-import { addDays, isSameDay, parseStoredDate } from "../../../lib/dates";
-import { drag } from "../../../theme/tokens";
-import { withKeptTime } from "../model";
-import type { DragApi, LiftState } from "../components/drag";
+import type { TaskItem } from "@/types/task";
+import { DropZoneMap } from "@/lib/dropzone";
+import { addDays, isSameDay, parseStoredDate } from "@/utils/dates";
+import { drag } from "@/theme/tokens";
+import { withKeptTime } from "@/features/planner/model";
+import type { DragApi, LiftState } from "@/features/planner/components/drag";
 import { useTouchDragGate, type PendingDrag } from "./useTouchDragGate";
 
 /** What the gesture layer needs from the screen: the route day it

@@ -1,12 +1,13 @@
 import * as React from "react";
-import { groupByDue, inList, type TaskItem } from "../features/tasks/query";
+import { groupByDue, inList } from "@/features/tasks/query";
+import type { TaskItem } from "@/types/task";
 import {
   dayLabel,
   parseStoredDate,
   startOfDay,
   todayIso,
-} from "../lib/dates";
-import type { SortMode } from "../lib/settings";
+} from "@/utils/dates";
+import type { SortMode } from "@/lib/settings";
 import { useStoreMeta, useTaskList } from "./task-state";
 
 /*
@@ -93,7 +94,7 @@ export function isHiddenOccurrence(task: TaskItem, now: Date): boolean {
  * name, so a fresh list reads oldest first instead of alphabetical.
  * The same rule the sort sheet's My order picks.
  */
-export function byManualOrder(a: TaskItem, b: TaskItem): number {
+function byManualOrder(a: TaskItem, b: TaskItem): number {
   const left = a.data?.order;
   const right = b.data?.order;
   if (left != null && right != null) {

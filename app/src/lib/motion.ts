@@ -1,6 +1,6 @@
 import * as React from "react";
 import { AccessibilityInfo, Animated, Easing, Platform } from "react-native";
-import { parseStoredDate } from "./dates";
+import { parseStoredDate } from "@/utils/dates";
 
 /**
  * The system's reduce motion switch. Every animation in the app reads

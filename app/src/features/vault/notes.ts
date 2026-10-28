@@ -1,6 +1,6 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { displayName } from "./scan";
-import { serializeValue } from "../../lib/yaml";
+import { serializeValue } from "@/utils/yaml";
 
 const { StorageAccessFramework } = FileSystem;
 
