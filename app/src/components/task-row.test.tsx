@@ -80,6 +80,23 @@ describe("TaskRow", () => {
     ).toBe("true");
   });
 
+  it("draws no meta line under a name that has nothing to show", () => {
+    // ADR 0012: the text has equal space above and below. An empty meta
+    // line once added 2 px under every single-line row.
+    render(<TaskRow task={task("Buy milk")} />);
+
+    const block = screen.getByText("Buy milk").parentElement!;
+    expect(block.children).toHaveLength(1);
+  });
+
+  it("draws the meta line under the name when the task repeats", () => {
+    render(<TaskRow task={task("Buy milk", { recurrence: "RRULE:FREQ=DAILY" })} />);
+
+    const block = screen.getByText("Buy milk").parentElement!;
+    expect(block.children).toHaveLength(2);
+    expect(block.textContent).toContain("repeats");
+  });
+
   it("carries a test id named by its task", () => {
     render(<TaskRow task={task("Buy milk")} />);
 

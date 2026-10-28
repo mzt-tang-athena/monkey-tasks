@@ -37,6 +37,22 @@ test("an untick puts the task back under No date", async ({ page }) => {
   );
 });
 
+test("a single-line row has equal space above and below its name", async ({ page }) => {
+  // ADR 0012: a row pads its text the same on both sides. The row once
+  // drew an empty meta row under the name, which added 2 px below it.
+  const target = row(page, undated.second);
+  const name = target.getByText(undated.second, { exact: true });
+
+  const outer = await target.boundingBox();
+  const text = await name.boundingBox();
+  expect(outer).not.toBeNull();
+  expect(text).not.toBeNull();
+  const above = text!.y - outer!.y;
+  const below = outer!.y + outer!.height - (text!.y + text!.height);
+
+  expect(below).toBeCloseTo(above, 0);
+});
+
 test("the editor saves a new name", async ({ page }) => {
   await row(page, rename.from).getByRole("button", { name: "open task" }).click();
   const name = page.getByRole("textbox", { name: "Task name" });
