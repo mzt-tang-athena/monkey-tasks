@@ -4,7 +4,7 @@ title: Workflow triggers and the CI lint limit
 created: 2026-10-27
 priority: high
 assignee: claude-code
-pr:
+pr: 74
 depends: []
 ---
 
@@ -157,12 +157,33 @@ start it."
 
 ## Acceptance
 
-- [ ] A commit on a PR branch starts one CI run, not two.
-- [ ] A push to main no longer starts `android.yml`, and the manual run still builds the APK.
-- [ ] The CI lint step fails on an ESLint warning.
-- [ ] The CI lint step covers `app/e2e`.
-- [ ] The `e2e-web` job passes in CI in under 5 minutes, and a second run hits the browser cache.
-- [ ] A failing CI run uploads the HTML report with traces.
+- [x] A commit on a PR branch starts one CI run, not two.
+- [x] A push to main no longer starts `android.yml`, and the manual run still builds the APK.
+- [x] The CI lint step fails on an ESLint warning.
+- [x] The CI lint step covers `app/e2e`.
+- [x] The `e2e-web` job passes in CI in under 5 minutes, and a second run hits the browser cache.
+- [x] A failing CI run uploads the HTML report with traces.
 
 ## Outcome
-(filled in before moving to done/)
+
+Landed in PR #74, after the owner gave the `mzt-tang` token the
+`workflow` scope on 2026-10-28. The diff above applied cleanly, and the
+README sentence went in as written.
+
+Evidence, all on GitHub Actions:
+
+| Check | Result |
+|---|---|
+| Runs per PR commit | One `ci` run per push to the PR branch, event `pull_request` (run 40604627940). |
+| `e2e-web` | 36 passed. The job took 2 minutes 5 seconds on a cold cache. |
+| Browser cache | A rerun of `e2e-web` logged a cache hit for the `playwright-Linux-...` key and took 2 minutes 21 seconds. |
+| Lint limit and e2e failure | A scratch push to `epic/scratch-0068` held one unused variable and one failing test. `Lint app` failed, `Run Playwright` failed with 2 failed and 36 passed, and the job uploaded `playwright-report` (692 KB). The scratch branch is deleted. |
+| Manual APK build | `gh workflow run android --ref feat/0068-workflow-triggers` built `monkey-tasks-apk` (36.7 MB) in 24 minutes (run 40605203057). |
+
+A push to main no longer matches any trigger in `android.yml`, because
+the file now lists `workflow_dispatch` only.
+
+Both jobs still check out the `contracts` submodule through the optional
+`CONTRACTS_TOKEN` secret. The repo has been public since 2026-10-27, so
+that step works without the secret. Removing it is left for a later
+cleanup.
