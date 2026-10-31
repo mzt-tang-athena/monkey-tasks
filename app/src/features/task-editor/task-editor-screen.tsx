@@ -218,20 +218,24 @@ function NoteViewer({ task }: { task: TaskItem }) {
       <EditorHeader showSave={false} />
       <ScrollView
         style={styles.body}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, styles.note]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.noteTitle}>{task.name}</Text>
-        <Text style={styles.noteHint}>
-          This note is not a task, so it opens read-only.
-        </Text>
-        <View style={styles.properties}>
-          {entries.map(([key, value]) => (
-            <View key={key} style={styles.propertyRow}>
-              <Text style={styles.propertyKey}>{key}</Text>
-              <Text style={styles.propertyValue}>{value}</Text>
-            </View>
-          ))}
+        <View style={styles.noteTop}>
+          <View style={styles.noteHead}>
+            <Text style={styles.noteTitle}>{task.name}</Text>
+            <Text style={styles.noteHint}>
+              This note is not a task, so it opens read-only.
+            </Text>
+          </View>
+          <View style={styles.properties}>
+            {entries.map(([key, value]) => (
+              <View key={key} style={styles.propertyRow}>
+                <Text style={styles.propertyKey}>{key}</Text>
+                <Text style={styles.propertyValue}>{value}</Text>
+              </View>
+            ))}
+          </View>
         </View>
         <Text style={styles.noteBody}>{task.body}</Text>
       </ScrollView>
@@ -306,7 +310,7 @@ function TaskEditorForm({ task }: { task: TaskItem }) {
       />
       <ScrollView
         style={styles.body}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, styles.form]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -476,10 +480,24 @@ const styles = StyleSheet.create({
     alignSelf: "center" as const,
     width: "100%" as const,
     paddingHorizontal: pageGutter,
+    paddingTop: spacing.l,
     paddingBottom: spacing.xxxl,
   },
+  // The form: the error banner and the fields, one step apart.
+  form: {
+    gap: spacing.l,
+  },
+  // A note: its head and properties, then the body a step further.
+  note: {
+    gap: spacing.xl,
+  },
+  noteTop: {
+    gap: spacing.l,
+  },
+  noteHead: {
+    gap: spacing.s,
+  },
   noteTitle: {
-    marginTop: spacing.l,
     fontSize: 22,
     lineHeight: 28,
     fontFamily: fonts.body,
@@ -487,14 +505,12 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   noteHint: {
-    marginTop: spacing.s,
     fontSize: 14,
     lineHeight: 20,
     fontFamily: fonts.body,
     color: colors.inkMuted,
   },
   properties: {
-    marginTop: spacing.l,
     gap: spacing.xs,
   },
   propertyRow: {
@@ -517,14 +533,12 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   noteBody: {
-    marginTop: spacing.xl,
     fontSize: 16,
     lineHeight: 24,
     fontFamily: fonts.body,
     color: colors.ink,
   },
   field: {
-    marginTop: spacing.l,
     gap: spacing.xs,
   },
   label: {
@@ -559,7 +573,6 @@ const styles = StyleSheet.create({
     color: colors.inkFaint,
   },
   errorBanner: {
-    marginTop: spacing.l,
     padding: spacing.m,
     borderRadius: radius,
     backgroundColor: colors.dangerSoft,

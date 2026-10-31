@@ -22,8 +22,10 @@ import {
   radius,
   radiusFloating,
   radii,
+  shadows,
   touchTarget,
 } from "@/theme/tokens";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * The single bottom bar, shared by both tabs. Left: the Lists and
@@ -243,7 +245,9 @@ export function BottomBar({
               closeNow();
               router.navigate("/");
             }}
-            icon={<ListGlyph active={pathname === "/"} />}
+            icon={
+              <Icon name="list" color={pathname === "/" ? "accent" : "inkMuted"} />
+            }
           />
           <IconTab
             label="Planner"
@@ -252,7 +256,12 @@ export function BottomBar({
               closeNow();
               router.navigate("/planner");
             }}
-            icon={<CalendarGlyph active={pathname === "/planner"} />}
+            icon={
+              <Icon
+                name="calendar"
+                color={pathname === "/planner" ? "accent" : "inkMuted"}
+              />
+            }
           />
           {/* The air between the nav and the capture control. */}
           <View style={styles.navSpacer} />
@@ -265,10 +274,7 @@ export function BottomBar({
             accessibilityRole="button"
             accessibilityLabel="add task"
           >
-            <View style={styles.capturePlus}>
-              <View style={styles.capturePlusH} />
-              <View style={styles.capturePlusV} />
-            </View>
+            <Icon name="plus" color="onAccent" />
             <Text style={styles.captureLabel}>Add</Text>
           </Pressable>
         </View>
@@ -339,43 +345,6 @@ function IconTab({
   );
 }
 
-/** Simple glyphs built from hairline views; no icon font. */
-function ListGlyph({ active }: { active: boolean }) {
-  const color = active ? colors.accent : colors.inkMuted;
-  return (
-    <View style={styles.glyphList}>
-      <View
-        style={[
-          styles.glyphLine,
-          { backgroundColor: color, width: bottomBar.glyph },
-        ]}
-      />
-      <View
-        style={[
-          styles.glyphLine,
-          { backgroundColor: color, width: bottomBar.glyph - 6 },
-        ]}
-      />
-      <View
-        style={[
-          styles.glyphLine,
-          { backgroundColor: color, width: bottomBar.glyph },
-        ]}
-      />
-    </View>
-  );
-}
-
-function CalendarGlyph({ active }: { active: boolean }) {
-  const color = active ? colors.accent : colors.inkMuted;
-  return (
-    <View style={[styles.glyphCalendar, { borderColor: color }]}>
-      <View style={[styles.glyphCalendarTop, { backgroundColor: color }]} />
-      <View style={[styles.glyphCalendarDot, { backgroundColor: color }]} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   root: {},
   // The navbar's collapse wrapper: the bar slides away under this
@@ -410,9 +379,11 @@ const styles = StyleSheet.create({
 
   // Nav items: icon over label, no dot; weight and color carry the
   // selection.
+  // The icon over its label, one small step apart.
   tab: {
     alignItems: "center",
     justifyContent: "center",
+    gap: 3,
     minHeight: touchTarget,
     minWidth: bottomBar.tabWidth,
     paddingHorizontal: spacing.xs,
@@ -426,40 +397,11 @@ const styles = StyleSheet.create({
     lineHeight: bottomBar.labelLine,
     fontFamily: fonts.body,
     color: colors.inkMuted,
-    marginTop: 3,
   },
   tabLabelActive: {
     color: colors.accent,
     fontWeight: "600",
   },
-  glyphList: {
-    height: 16,
-    alignItems: "flex-start",
-    gap: 4,
-  },
-  glyphLine: {
-    height: 2.5,
-    borderRadius: 1.25,
-  },
-  glyphCalendar: {
-    width: bottomBar.glyph,
-    height: bottomBar.glyph,
-    borderWidth: 1.5,
-    borderRadius: 5,
-    overflow: "hidden",
-  },
-  glyphCalendarTop: {
-    height: 5,
-    width: "100%" as const,
-  },
-  glyphCalendarDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginLeft: 4,
-    marginTop: 3.5,
-  },
-
   // Collapsed capture control: an unmistakable button, glyph and
   // label optically centered on one line.
   captureButton: {
@@ -473,27 +415,6 @@ const styles = StyleSheet.create({
   },
   capturePressed: {
     backgroundColor: colors.accentDeep,
-  },
-  capturePlus: {
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  capturePlusH: {
-    width: 16,
-    height: 2.5,
-    borderRadius: 1.25,
-    backgroundColor: colors.onAccent,
-  },
-  capturePlusV: {
-    position: "absolute" as const,
-    left: 7.75,
-    top: 1,
-    width: 2.5,
-    height: 16,
-    borderRadius: 1.25,
-    backgroundColor: colors.onAccent,
   },
   captureLabel: {
     color: colors.onAccent,
@@ -518,11 +439,7 @@ const styles = StyleSheet.create({
     borderRadius: radiusFloating,
     paddingHorizontal: spacing.m,
     paddingVertical: spacing.s,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.floating,
   },
   toastMessage: {
     flex: 1,

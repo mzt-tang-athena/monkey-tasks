@@ -1,18 +1,16 @@
 import * as React from "react";
-import {
-  Animated,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Animated, Platform, Pressable, StyleSheet, Text } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { formatTime, parseStoredDate, startOfToday } from "@/utils/dates";
+import { parseStoredDate } from "@/utils/dates";
 import { easeOut, useReduceMotion, useRise } from "@/lib/motion";
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { colors, fonts, spacing, radii } from "@/theme/tokens";
+import { colors } from "@/theme/tokens";
+import { faceStyles, TaskRowFace } from "./task-row-face";
 
+/**
+ * The live task row: `TaskRowFace` with the toggle, the open press,
+ * and today's motion (the tick, the wash and the landing).
+ */
 function TaskRowBase({
   task,
   onToggle,
@@ -109,33 +107,57 @@ function TaskRowBase({
     settle(wash, next && !reduced ? 0.9 : 0);
     onToggle(task);
   };
-  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
-  const overdue =
-    !done && due != null && due.date.getTime() < startOfToday();
-  const recurring = task.data?.recurrence != null && task.data.recurrence !== "";
-  const disabled = onToggle == null;
 
-  const body = (
-    <>
-      <Text style={[styles.name, done && styles.nameDone]} numberOfLines={2}>
-        {task.name}
-      </Text>
-      <View style={styles.metaRow}>
-        {timeAlign === "under" && due?.hasTime && !done ? (
-          <Text style={[styles.time, overdue && styles.overdueText]}>
-            {formatTime(due.date)}
-          </Text>
+  // The circle is the ONLY toggle. It top-anchors to the FIRST text
+  // line: 24pt circle on a 24pt line box, so wrapped lines flow
+  // beneath without moving it (Google Tasks' rule).
+  const toggle = (
+    <Animated.View style={{ transform: [{ scale: pop }] }}>
+      <Pressable
+        style={({ pressed }) => [
+          faceStyles.circle,
+          done && faceStyles.circleDone,
+          (hot || pressed) && !done && styles.circleHot,
+          pressed && done && styles.circlePressedDone,
+        ]}
+        onPress={press}
+        disabled={onToggle == null}
+        hitSlop={11}
+        onHoverIn={() => setHot(true)}
+        onHoverOut={() => setHot(false)}
+        accessibilityLabel={done ? "mark not done" : "mark done"}
+        accessibilityRole="button"
+        aria-checked={done}
+      >
+        {/* The glyph travels on its own, so it lands on a circle that
+            is already filling rather than riding it. */}
+        {done ? (
+          <Animated.View style={{ transform: [{ scale: glyph }] }}>
+            <Text style={faceStyles.check}>{"✓"}</Text>
+          </Animated.View>
         ) : null}
-        {!due && task.data?.due ? (
-          <Text style={[styles.badDate, overdue && styles.overdueText]}>
-            bad date
-          </Text>
-        ) : null}
-        {recurring ? <Text style={styles.recur}>repeats</Text> : null}
-        {overdue ? <Text style={styles.overdueText}>overdue</Text> : null}
-      </View>
-    </>
+      </Pressable>
+    </Animated.View>
   );
+
+  // The text beside the circle opens the task when the caller wants
+  // that.
+  const renderText =
+    onOpen == null
+      ? undefined
+      : (content: React.ReactNode) => (
+          <Pressable
+            style={({ pressed }) => [
+              faceStyles.text,
+              pressed && styles.bodyPressed,
+            ]}
+            onPress={() => onOpen(task)}
+            accessibilityRole="button"
+            accessibilityLabel="open task"
+          >
+            {content}
+          </Pressable>
+        );
 
   return (
     <Animated.View
@@ -152,67 +174,19 @@ function TaskRowBase({
         ],
       }}
     >
-    <View>
       {/* The acknowledgement sits behind the content and never takes a
           touch: a tick and a landing both show the same accent wash. */}
       <Animated.View
         pointerEvents="none"
         style={[styles.wash, { opacity: wash }]}
       />
-      <View style={styles.row}>
-        {timeAlign === "right" && due?.hasTime && !done ? (
-          <Text style={[styles.gutterTime, overdue && styles.overdueText]}>
-            {formatTime(due.date)}
-          </Text>
-        ) : null}
-        {/* The circle is the ONLY toggle. It top-anchors to the FIRST
-            text line: 24pt circle on a 24pt line box, so wrapped lines
-            flow beneath without moving it (Google Tasks' rule). The
-            body beside it opens the task when the caller wants that. */}
-        <Animated.View style={{ transform: [{ scale: pop }] }}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.circle,
-              done && styles.circleDone,
-              (hot || pressed) && !done && styles.circleHot,
-              pressed && done && styles.circlePressedDone,
-            ]}
-            onPress={press}
-            disabled={disabled}
-            hitSlop={11}
-            onHoverIn={() => setHot(true)}
-            onHoverOut={() => setHot(false)}
-            accessibilityLabel={done ? "mark not done" : "mark done"}
-            accessibilityRole="button"
-            aria-checked={done}
-          >
-            {/* The glyph travels on its own, so it lands on a circle
-                that is already filling rather than riding it. */}
-            {done ? (
-              <Animated.View style={{ transform: [{ scale: glyph }] }}>
-                <Text style={styles.check}>{"✓"}</Text>
-              </Animated.View>
-            ) : null}
-          </Pressable>
-        </Animated.View>
-
-        {onOpen == null ? (
-          <View style={styles.textBlock}>{body}</View>
-        ) : (
-          <Pressable
-            style={({ pressed }) => [
-              styles.textBlock,
-              pressed && styles.bodyPressed,
-            ]}
-            onPress={() => onOpen(task)}
-            accessibilityRole="button"
-            accessibilityLabel="open task"
-          >
-            {body}
-          </Pressable>
-        )}
-      </View>
-    </View>
+      <TaskRowFace
+        task={task}
+        done={done}
+        timeAlign={timeAlign}
+        toggle={toggle}
+        renderText={renderText}
+      />
     </Animated.View>
   );
 }
@@ -241,16 +215,6 @@ function play(value: Animated.Value, toValue: number, duration: number) {
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    // The circle top-anchors to the first text line; the block below
-    // may wrap or grow without moving it. The row hugs its content,
-    // so single-line tasks sit exactly centered.
-    alignItems: "flex-start",
-    gap: spacing.m,
-    paddingHorizontal: spacing.l,
-    paddingVertical: spacing.m,
-  },
   wash: {
     position: "absolute",
     top: 0,
@@ -265,80 +229,8 @@ const styles = StyleSheet.create({
   circlePressedDone: {
     opacity: 0.7,
   },
-  circle: {
-    width: 24,
-    height: 24,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.inkFaint,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  circleDone: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  check: {
-    color: colors.onAccent,
-    fontSize: 13,
-    lineHeight: 14,
-    fontWeight: "600",
-  },
-  textBlock: {
-    flex: 1,
-  },
   bodyPressed: {
     opacity: 0.6,
-  },
-  name: {
-    fontSize: 17,
-    lineHeight: 24,
-    fontFamily: fonts.body,
-    color: colors.ink,
-  },
-  nameDone: {
-    color: colors.inkFaint,
-    textDecorationLine: "line-through",
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    marginTop: 2,
-  },
-  badDate: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.danger,
-  },
-  time: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-  },
-  gutterTime: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    width: 64,
-    fontVariant: ["tabular-nums"],
-    // Centered on the 24pt first-line box: (24 - 18) / 2.
-    marginTop: 3,
-  },
-  recur: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.accent,
-  },
-  overdueText: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.danger,
   },
 });
 
