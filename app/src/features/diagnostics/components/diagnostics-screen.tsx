@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { getSavedVaultUri, requestVaultAccess } from "@/lib/vault/grant";
-import { listDirectory } from "@/lib/vault/scan";
+import { useVault } from "@/lib/vault/vault-provider";
 import {
   listScheduled,
   exactAlarmState,
@@ -21,6 +20,7 @@ export default function DevScreen() {
   >([]);
   const [message, setMessage] = React.useState("");
   const insights = useInsights();
+  const vault = useVault();
 
   const refresh = React.useCallback(async () => {
     setAlarm((await exactAlarmState()) ? "exact alarms granted" : "exact alarms DENIED");
@@ -56,13 +56,13 @@ export default function DevScreen() {
   };
 
   const peek = async () => {
-    const uri = await getSavedVaultUri();
+    const uri = vault.root;
     if (!uri) {
       setMessage("No vault folder saved.");
       return;
     }
     try {
-      const entries = await listDirectory(uri);
+      const entries = await vault.adapter.list(uri);
       setMessage(`Root has ${entries.length} entries.`);
     } catch (error) {
       setMessage(`List failed: ${String(error)}`);
@@ -98,7 +98,7 @@ export default function DevScreen() {
       <Pressable
         style={styles.button}
         onPress={async () => {
-          await requestVaultAccess();
+          await vault.grant();
           await refresh();
         }}
       >

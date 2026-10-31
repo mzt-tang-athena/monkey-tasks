@@ -1,46 +1,19 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-
-// The loader talks to SAF. The test pins what makes a note a list tab:
-// the kind in its frontmatter, and its file name minus the extension.
-// Anything else in the folder comes back as broken, so it can be fixed
-// instead of vanishing.
-vi.mock("@/lib/vault/scan", () => ({
-  findSubfolder: vi.fn(),
-  listDirectory: vi.fn(),
-  displayName: vi.fn((uri: string) => {
-    const segment = uri.split("/").pop() ?? uri;
-    return decodeURIComponent(segment).split("/").pop() ?? segment;
-  }),
-}));
-
-vi.mock("@/lib/vault/notes", () => ({
-  readNote: vi.fn(),
-}));
-
-import { findSubfolder, listDirectory } from "@/lib/vault/scan";
-import { readNote } from "@/lib/vault/notes";
+import { describe, expect, it } from "vitest";
+import { MEMORY_ROOT, createMemoryVault } from "@/lib/vault/adapters/memory";
 import { loadLists, parseListNote } from "./list-notes";
 
-const listsDir = "content://root/vault/Tasks/Lists";
+// The test pins what makes a note a list tab: the kind in its
+// frontmatter, and its file name minus the extension. Anything else in
+// the folder comes back as broken, so it can be fixed instead of
+// vanishing.
 
-function entry(name: string, folder = false) {
-  return {
-    uri: `${listsDir}/${name}`,
-    name,
-    isFile: !folder,
-  };
-}
+const tasksDir = `${MEMORY_ROOT}/Tasks`;
+const listsDir = `${tasksDir}/Lists`;
 
 const listText = (name: string) =>
   `---\nkind: "[[lists]]"\ncreated: 2026-10-20\n---\n\n${name}\n`;
 
 const taskText = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nBody.\n';
-
-beforeEach(() => {
-  vi.mocked(findSubfolder).mockReset();
-  vi.mocked(listDirectory).mockReset();
-  vi.mocked(readNote).mockReset();
-});
 
 describe("parseListNote", () => {
   it("names a list note after its file, minus the extension", () => {
@@ -116,26 +89,14 @@ describe("parseListNote", () => {
 
 describe("loadLists", () => {
   it("reads the Lists folder inside Tasks and returns its notes sorted", async () => {
-    vi.mocked(findSubfolder).mockResolvedValue(listsDir);
-    vi.mocked(listDirectory).mockResolvedValue([
-      entry("Work.md"),
-      entry("Focus.md"),
-      entry("Archive", true),
-    ]);
-    vi.mocked(readNote).mockImplementation(async (uri: string) => {
-      if (uri.endsWith("/Work.md")) {
-        return listText("Work");
-      }
-      return listText("Focus");
+    const vault = createMemoryVault({
+      "Tasks/Lists/Work.md": listText("Work"),
+      "Tasks/Lists/Focus.md": listText("Focus"),
+      "Tasks/Lists/Archive/Old.md": listText("Old"),
     });
 
-    const result = await loadLists("content://root/vault/Tasks");
+    const result = await loadLists(vault, tasksDir);
 
-    expect(findSubfolder).toHaveBeenCalledWith(
-      "content://root/vault/Tasks",
-      "Lists",
-    );
-    expect(listDirectory).toHaveBeenCalledWith(listsDir);
     expect(result).toEqual({
       lists: [
         { name: "Focus", uri: `${listsDir}/Focus.md` },
@@ -146,23 +107,13 @@ describe("loadLists", () => {
   });
 
   it("reports a note that fails the frontmatter and keeps the good ones", async () => {
-    vi.mocked(findSubfolder).mockResolvedValue(listsDir);
-    vi.mocked(listDirectory).mockResolvedValue([
-      entry("Focus.md"),
-      entry("Tasks.md"),
-      entry("Errands.md"),
-    ]);
-    vi.mocked(readNote).mockImplementation(async (uri: string) => {
-      if (uri.endsWith("/Tasks.md")) {
-        return taskText;
-      }
-      if (uri.endsWith("/Errands.md")) {
-        return '---\nkind: "[[lists]]"\ncreated:\n---\n';
-      }
-      return listText("Focus");
+    const vault = createMemoryVault({
+      "Tasks/Lists/Focus.md": listText("Focus"),
+      "Tasks/Lists/Tasks.md": taskText,
+      "Tasks/Lists/Errands.md": '---\nkind: "[[lists]]"\ncreated:\n---\n',
     });
 
-    const result = await loadLists("content://root/vault/Tasks");
+    const result = await loadLists(vault, tasksDir);
 
     expect(result.lists).toEqual([
       { name: "Focus", uri: `${listsDir}/Focus.md` },
@@ -182,19 +133,13 @@ describe("loadLists", () => {
   });
 
   it("skips a note that cannot be read without dropping the rest", async () => {
-    vi.mocked(findSubfolder).mockResolvedValue(listsDir);
-    vi.mocked(listDirectory).mockResolvedValue([
-      entry("Focus.md"),
-      entry("Locked.md"),
-    ]);
-    vi.mocked(readNote).mockImplementation(async (uri: string) => {
-      if (uri.endsWith("/Locked.md")) {
-        throw new Error("revoked grant");
-      }
-      return listText("Focus");
+    const vault = createMemoryVault({
+      "Tasks/Lists/Focus.md": listText("Focus"),
+      "Tasks/Lists/Locked.md": listText("Locked"),
     });
+    vault.hooks.failNext("read", "Locked.md");
 
-    const result = await loadLists("content://root/vault/Tasks");
+    const result = await loadLists(vault, tasksDir);
 
     expect(result).toEqual({
       lists: [{ name: "Focus", uri: `${listsDir}/Focus.md` }],
@@ -203,12 +148,12 @@ describe("loadLists", () => {
   });
 
   it("returns nothing when the Lists folder does not exist", async () => {
-    vi.mocked(findSubfolder).mockResolvedValue(null);
+    const vault = createMemoryVault({ "Tasks/Call.md": taskText });
 
-    await expect(loadLists("content://root/vault/Tasks")).resolves.toEqual({
+    await expect(loadLists(vault, tasksDir)).resolves.toEqual({
       lists: [],
       broken: [],
     });
-    expect(listDirectory).not.toHaveBeenCalled();
+    expect(Object.keys(vault.hooks.files())).toEqual(["Tasks/Call.md"]);
   });
 });

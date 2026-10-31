@@ -50,7 +50,7 @@ type ListsSection = {
 const tickHoldMs = 250;
 
 export default function ListsScreen() {
-  const { mode, status, lastError, brokenLists } = useStoreMeta();
+  const { rootUri, status, lastError, brokenLists } = useStoreMeta();
   const allTasks = useTaskList();
   const actions = useTaskActions();
   const insets = useSafeAreaInsets();
@@ -826,9 +826,10 @@ export default function ListsScreen() {
       >
         {/* The list tab bar sits ABOVE the scroller: the page's fixed
             chrome. Sections scroll beneath it, the bar never moves.
-            A horizontal swipe on the body walks the tabs. */}
-        {(mode === "mock" || status === "error") &&
-        Platform.OS !== "web" ? (
+            A horizontal swipe on the body walks the tabs. Above it, the
+            folder picker shows once the store knows it has no folder,
+            or when the folder stopped reading. */}
+        {(rootUri == null && status === "ready") || status === "error" ? (
           <Pressable
             style={({ pressed }) => [
               styles.grantRow,

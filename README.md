@@ -30,8 +30,10 @@ npm run android
 npm run web
 ```
 
-The browser build is a preview only. Vault access and notifications need
-a device.
+The browser build is a preview only. It runs on a memory vault, seeded
+from sample notes, and it runs the same write path as the phone (ADR
+0037). Its changes last until the page reloads. Notifications need a
+device. See [The preview's vault](#the-previews-vault).
 
 Run the app tests from `app`:
 
@@ -51,8 +53,8 @@ npm run e2e
 ```
 
 The first command fetches the browser once. `npm run e2e` exports the
-web build to `dist`, serves it on port 8094, and drives the sample set
-with Playwright in `e2e/`. It runs every spec twice: with motion and
+web build to `dist` with the vault test hooks on, serves it on port
+8094, and drives the sample set with Playwright in `e2e/`. It runs every spec twice: with motion and
 with reduced motion. Set `E2E_PORT` to serve on another port, for
 example when two checkouts run the suite at once. The run fails if the
 port is busy. To test a running `npm run web` instead, use
@@ -139,6 +141,58 @@ parse counts too, for example a list indented with a tab: the app reads
 it, but YAML forbids the tab (ADR 0029). The parser check covers the
 app's three folders. The wikilink check covers every note.
 
+## The preview's vault
+
+Every file call goes through one `VaultAdapter` port in `src/lib/vault`
+(ADR 0037). Android uses the SAF adapter. The browser preview, the
+component tests and Playwright use the memory adapter.
+
+The preview seeds the memory adapter from the sample notes in
+`src/lib/vault/sample/<seed>/`. The notes are written against
+2026-10-26. The preview moves every frontmatter date by the days from
+that day to today, so every group on the list stays full.
+
+| Seed | Holds |
+|---|---|
+| `default` | 16 tasks and 9 list notes. `vault:check` finds nothing. |
+| `repair` | `Broken note.md` and `Lists/Garden.md`, for the repair block. |
+
+With no `?vault=` in the page address, the preview loads `default`,
+then `repair`.
+
+Metro cannot import a `.md` file, so the notes reach the app through
+the generated `sample/index.ts`. After a change to a sample note, run
+this from `app`:
+
+```bash
+npm run sample:build
+```
+
+A test fails when `index.ts` is out of date with the notes.
+
+### Test hooks
+
+A dev build has the vault test hooks. So does a build made with
+`EXPO_PUBLIC_VAULT_TEST_HOOKS=1`, which `npm run web:export` sets. A
+release APK has neither. A build without hooks ignores the page query.
+
+| Page query | Effect |
+|---|---|
+| `?vault=<seed>` | Load these seeds, as a comma list. `?vault=` loads an empty vault. |
+| `?latency=<ms>` | Delay every vault call. |
+| `?fail=<call>:<file name>` | Fail the next call of this kind on this file. The calls are `list`, `findFolder`, `makeFolder`, `read`, `write`, `create` and `remove`. |
+
+`globalThis.__vault` reaches the same vault from a test:
+
+| Member | Effect |
+|---|---|
+| `files()` | Every file, by path: `"Tasks/Call Mum.md"` to its text. |
+| `read(path)` | The text of one file, or null. |
+| `write(path, text)` | Write a file and its folders, as another app would. |
+| `reset(seed)` | Replace every file with a seed name, a comma list of seeds, or a map of files. |
+| `setLatency(ms)` | Delay every later call. |
+| `failNext(call, name)` | Fail the next call of this kind on the file with this name. |
+
 ## Layout
 
 The app code in `app/src` follows the Bulletproof React layout
@@ -151,7 +205,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | `components` | Shared UI. `components/ui` holds the primitives. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and its writes, pure row updaters, selectors and the reminder sync. |
-| `lib` | Libraries set up for this app: `vault`, `react-query`, `recurrence`, `notifications`, `motion`. |
+| `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`, `motion`. |
 | `types` | Shared types, such as `TaskItem`. |
 | `utils` | Pure helpers: dates, YAML, schema errors. |
 | `theme` | Design tokens. |
@@ -180,7 +234,8 @@ with `import/no-restricted-paths` and the names with
 
 The app is Expo SDK 58 with React Native 0.88 and expo-router, in
 TypeScript (ADR 0001). The app reads and writes the vault folder over Android
-SAF with `expo-file-system/legacy` (ADR 0002). No backend (ADR 0003).
+SAF with `expo-file-system/legacy` (ADR 0002), through one vault adapter
+port (ADR 0037). No backend (ADR 0003).
 Notifications fire on the device with `expo-notifications` (ADR 0004).
 Capture parses natural-language dates with chrono-node. The app stores recurrence
 as a bare RRULE value and expands it with `rrule`.

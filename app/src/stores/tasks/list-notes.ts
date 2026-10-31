@@ -1,6 +1,5 @@
 import { listFrontmatter, validateNote } from "@monkey-tasks/schemas";
-import { findSubfolder, listDirectory } from "@/lib/vault/scan";
-import { readNote } from "@/lib/vault/notes";
+import type { VaultAdapter } from "@/lib/vault/adapter";
 import { formatIssues } from "@/utils/schema-errors";
 import type { BrokenList, ListItem } from "@/types/task";
 
@@ -38,18 +37,21 @@ export function parseListNote(
  * the list frontmatter is reported as broken, never dropped or
  * counted as a tab; an unreadable note is dropped like before.
  */
-export async function loadLists(tasksDirUri: string): Promise<ListRead> {
-  const folder = await findSubfolder(tasksDirUri, "Lists");
+export async function loadLists(
+  adapter: VaultAdapter,
+  tasksDirUri: string,
+): Promise<ListRead> {
+  const folder = await adapter.findFolder(tasksDirUri, "Lists");
   if (!folder) {
     return { lists: [], broken: [] };
   }
-  const entries = await listDirectory(folder);
+  const entries = await adapter.list(folder);
   const files = entries.filter(
-    (entry) => entry.isFile && entry.name.endsWith(".md"),
+    (entry) => !entry.isFolder && entry.name.endsWith(".md"),
   );
   const settled = await Promise.allSettled(
     files.map(async (file): Promise<ListItem | BrokenList> => {
-      const text = await readNote(file.uri);
+      const text = await adapter.read(file.uri);
       const { name, errors } = parseListNote(file.name, text);
       const title = file.name.replace(/\.md$/, "");
       return name == null

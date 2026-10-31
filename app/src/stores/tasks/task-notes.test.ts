@@ -1,26 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
-
-// The loader talks to SAF. The test pins what a broken task note keeps:
-// its row, its file name, and the errors that explain why it cannot
-// render as a task.
-vi.mock("@/lib/vault/scan", () => ({
-  listDirectory: vi.fn(),
-  displayName: vi.fn((uri: string) => uri.split("/").pop() ?? uri),
-}));
-
-vi.mock("@/lib/vault/notes", () => ({
-  readNote: vi.fn(),
-}));
-
-import { listDirectory } from "@/lib/vault/scan";
-import { readNote } from "@/lib/vault/notes";
+import { describe, expect, it } from "vitest";
+import { MEMORY_ROOT, createMemoryVault } from "@/lib/vault/adapters/memory";
 import { loadTasks } from "./task-notes";
 
-const dir = "content://root/Tasks";
+// The test pins what a broken task note keeps: its row, its file name,
+// and the errors that explain why it cannot render as a task.
 
-function entry(name: string) {
-  return { uri: `${dir}/${name}`, name, isFile: true };
-}
+const dir = `${MEMORY_ROOT}/Tasks`;
 
 const valid =
   '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n  - "[[Focus]]"\n---\n\nBody.\n';
@@ -28,15 +13,12 @@ const broken = '---\nkind: "[[tasks]]"\n---\n\nNo created date.\n';
 
 describe("loadTasks", () => {
   it("keeps a broken note with its errors instead of dropping it", async () => {
-    vi.mocked(listDirectory).mockResolvedValue([
-      entry("Broken.md"),
-      entry("Valid.md"),
-    ]);
-    vi.mocked(readNote).mockImplementation(async (uri: string) =>
-      uri.endsWith("Broken.md") ? broken : valid,
-    );
+    const vault = createMemoryVault({
+      "Tasks/Broken.md": broken,
+      "Tasks/Valid.md": valid,
+    });
 
-    const tasks = await loadTasks(dir);
+    const tasks = await loadTasks(vault, dir);
 
     const brokenRow = tasks.find((task) => task.name === "Broken");
     expect(brokenRow).toBeDefined();
@@ -52,16 +34,38 @@ describe("loadTasks", () => {
   });
 
   it("shows a spawned occurrence by its title, not its file name", async () => {
-    vi.mocked(listDirectory).mockResolvedValue([
-      entry("Water plants 2026-10-27.md"),
-    ]);
-    vi.mocked(readNote).mockResolvedValue(
-      '---\nkind: "[[tasks]]"\ncreated: 2026-10-24\ntitle: Water plants\ndue: 2026-10-27\n---\n\nBody.\n',
-    );
+    const vault = createMemoryVault({
+      "Tasks/Water plants 2026-10-27.md":
+        '---\nkind: "[[tasks]]"\ncreated: 2026-10-24\ntitle: Water plants\ndue: 2026-10-27\n---\n\nBody.\n',
+    });
 
-    const tasks = await loadTasks(dir);
+    const tasks = await loadTasks(vault, dir);
 
     expect(tasks[0].name).toBe("Water plants");
     expect(tasks[0].fileName).toBe("Water plants 2026-10-27.md");
+  });
+
+  it("reads only the notes in the folder, not its subfolders or other files", async () => {
+    const vault = createMemoryVault({
+      "Tasks/Valid.md": valid,
+      "Tasks/Lists/Focus.md": '---\nkind: "[[lists]]"\ncreated: 2026-10-20\n---\n',
+      "Tasks/photo.png": "not a note",
+    });
+
+    const tasks = await loadTasks(vault, dir);
+
+    expect(tasks.map((task) => task.fileName)).toEqual(["Valid.md"]);
+  });
+
+  it("drops a note it cannot read and keeps the rest", async () => {
+    const vault = createMemoryVault({
+      "Tasks/Locked.md": valid,
+      "Tasks/Valid.md": valid,
+    });
+    vault.hooks.failNext("read", "Locked.md");
+
+    const tasks = await loadTasks(vault, dir);
+
+    expect(tasks.map((task) => task.fileName)).toEqual(["Valid.md"]);
   });
 });

@@ -1,58 +1,92 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/vault/scan", () => ({
-  ensureSubfolder: vi.fn(
-    async (root: string, name: string) => `${root}/${name}`,
-  ),
-}));
+// The vault read on both adapters: the SAF adapter over a fake document
+// provider, and the memory adapter.
+vi.mock("expo-file-system/legacy", async () => {
+  const { sharedFakeSaf } = await import("@/testing/fake-saf");
+  return sharedFakeSaf.module;
+});
 
-vi.mock("./task-notes", () => ({
-  loadTasks: vi.fn(async () => []),
-}));
+import { sharedFakeSaf as saf } from "@/testing/fake-saf";
+import type { VaultAdapter } from "@/lib/vault/adapter";
+import { createMemoryVault } from "@/lib/vault/adapters/memory";
+import { safAdapter } from "@/lib/vault/adapters/saf";
+import { ensureTasksFolder, loadVault } from "./load-vault";
 
-vi.mock("./list-notes", () => ({
-  loadLists: vi.fn(async () => ({ lists: [], broken: [] as BrokenList[] })),
-}));
+type Vault = { adapter: VaultAdapter; root: string };
 
-import { loadLists } from "./list-notes";
-import type { BrokenList } from "@/types/task";
-import { loadTasks } from "./task-notes";
-import { ensureSubfolder } from "@/lib/vault/scan";
-import { loadVaultTasks } from "./load-vault";
+const subjects: {
+  name: string;
+  open(files: Record<string, string>): Promise<Vault>;
+}[] = [
+  {
+    name: "memory",
+    async open(files) {
+      const adapter = createMemoryVault(files);
+      return { adapter, root: (await adapter.savedRoot()) as string };
+    },
+  },
+  {
+    name: "SAF",
+    async open(files) {
+      saf.reset();
+      for (const [path, text] of Object.entries(files)) {
+        saf.put(path, text);
+      }
+      return {
+        adapter: safAdapter,
+        root: (await safAdapter.requestRoot()) as string,
+      };
+    },
+  },
+];
 
-/**
- * The Tasks folder is always derived from the granted root. A reload
- * that passed the Tasks folder back in would nest a second Tasks
- * folder inside it and read an empty list.
- */
-describe("loadVaultTasks", () => {
-  it("derives the Tasks folder from the root and reads the notes there", async () => {
-    const result = await loadVaultTasks("content://root/vault");
+const task = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n';
+const list = '---\nkind: "[[lists]]"\ncreated: 2026-10-20\n---\n';
 
-    expect(ensureSubfolder).toHaveBeenCalledWith("content://root/vault", "Tasks");
-    expect(loadTasks).toHaveBeenCalledWith("content://root/vault/Tasks");
-    expect(result.tasksDir).toBe("content://root/vault/Tasks");
+beforeEach(() => {
+  saf.reset();
+});
+
+describe.each(subjects)("loadVault on the $name adapter", (subject) => {
+  // Ticket 0051: the read made the folder when its listing missed it,
+  // so a slow listing left a second Tasks folder and an empty list.
+  it("creates nothing when the root has no Tasks folder", async () => {
+    const vault = await subject.open({ "Inbox/Note.md": "a note" });
+
+    const read = await loadVault(vault.adapter, vault.root);
+
+    expect(read).toEqual({ tasksDir: null, tasks: [], lists: [], broken: [] });
+    expect(await vault.adapter.findFolder(vault.root, "Tasks")).toBeNull();
+    expect((await vault.adapter.list(vault.root)).map((entry) => entry.name)).toEqual([
+      "Inbox",
+    ]);
   });
 
-  it("reads the list notes from the same Tasks folder", async () => {
-    const result = await loadVaultTasks("content://root/vault");
+  it("reads the task notes and the list notes in the Tasks folder", async () => {
+    const vault = await subject.open({
+      "Tasks/Call.md": task,
+      "Tasks/Lists/Focus.md": list,
+      "Tasks/Lists/Garden.md": '---\nkind: "[[list]]"\n---\n',
+    });
 
-    expect(loadLists).toHaveBeenCalledWith("content://root/vault/Tasks");
-    expect(result.lists).toEqual([]);
-    expect(result.broken).toEqual([]);
+    const read = await loadVault(vault.adapter, vault.root);
+
+    expect(read.tasksDir).toBe(await vault.adapter.findFolder(vault.root, "Tasks"));
+    expect(read.tasks.map((row) => row.name)).toEqual(["Call"]);
+    expect(read.lists.map((item) => item.name)).toEqual(["Focus"]);
+    expect(read.broken.map((item) => item.name)).toEqual(["Garden"]);
   });
 
-  it("passes the broken list notes through", async () => {
-    const broken = {
-      name: "Errands",
-      uri: "content://root/vault/Tasks/Lists/Errands.md",
-      errors: ["created: expected a date like 2026-10-21"],
-    };
-    vi.mocked(loadLists).mockResolvedValueOnce({ lists: [], broken: [broken] });
+  it("makes the Tasks folder once for a write, and finds it after", async () => {
+    const vault = await subject.open({});
 
-    const result = await loadVaultTasks("content://root/vault");
+    const made = await ensureTasksFolder(vault.adapter, vault.root);
+    const found = await ensureTasksFolder(vault.adapter, vault.root);
 
-    expect(result.lists).toEqual([]);
-    expect(result.broken).toEqual([broken]);
+    expect(found).toBe(made);
+    expect((await vault.adapter.list(vault.root)).map((entry) => entry.name)).toEqual([
+      "Tasks",
+    ]);
   });
 });

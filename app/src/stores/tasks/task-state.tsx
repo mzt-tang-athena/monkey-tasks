@@ -9,11 +9,11 @@ import type { BrokenList, TaskItem } from "@/types/task";
 export type StoreStatus = "loading" | "ready" | "error";
 
 export type StoreMeta = {
-  mode: "mock" | "vault";
   status: StoreStatus;
   /** The last failed operation's text, for diagnostics. */
   lastError: string | null;
   tasksDir: string | null;
+  /** The granted folder, or null when there is none. */
   rootUri: string | null;
   /** The list notes' names, sorted: the tabs after Main. */
   lists: string[];
@@ -29,7 +29,6 @@ export type StoreMeta = {
 const NO_LIST: TaskItem[] = [];
 
 const NO_META: StoreMeta = {
-  mode: "mock",
   status: "loading",
   lastError: null,
   tasksDir: null,
