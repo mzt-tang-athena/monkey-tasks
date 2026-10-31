@@ -96,14 +96,16 @@ vi.mock("@/stores/tasks/load-vault", async (importOriginal) => {
   return {
     ...actual,
     // A real scan lists the folder and reads the notes first, then
-    // returns. The read serves the files as they were when it started,
-    // however long its gate holds it.
-    loadVault: async (_adapter: VaultAdapter, root: string) => {
-      const snapshot = createMemoryVault(vault.hooks.files());
+    // returns. A gated read serves the files as they were when it
+    // started, however long its gate holds it. A read with no gate runs
+    // on the store's own vault, so a folder it makes stays.
+    loadVault: async (adapter: VaultAdapter, root: string) => {
       const gate = loadGates.shift();
-      if (gate) {
-        await gate;
+      if (gate == null) {
+        return actual.loadVault(adapter, root);
       }
+      const snapshot = createMemoryVault(vault.hooks.files());
+      await gate;
       return actual.loadVault(snapshot, root);
     },
   };
