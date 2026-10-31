@@ -112,3 +112,23 @@ We rejected a second, flagged artifact from `android.yml`. That
 workflow also builds the phone APK, so one wrong download would put
 the hooks on a phone. We rejected a debug build on the emulator. It
 runs JavaScript in development mode, so it tests less of what ships.
+
+## Amendment, 2026-10-31: every web export carries the test hooks
+
+Ticket 0051 built the adapter. It made two choices that this record
+keeps.
+
+`npm run web:export` sets `EXPO_PUBLIC_VAULT_TEST_HOOKS=1`, so every
+web export has the hooks. The web build is a preview. No user gets it,
+and its changes last until the page reloads. Playwright and CI run on
+this export. We rejected a second script for a web export with no
+hooks, because nothing uses one. A web build that ships to users needs
+its own script with no flag. Such a build ignores the page query, and
+`globalThis.__vault` stays undefined.
+
+The app picks the adapter by platform file. `default-adapter.ts` gives
+the SAF adapter, and Metro takes `default-adapter.web.ts` for the web.
+The memory adapter, the sample notes and the hooks never reach the
+Android bundle. We rejected a `Platform.OS` test in one file. Metro
+would then put the memory adapter and the sample notes into the APK,
+with the hooks code beside them.

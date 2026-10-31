@@ -54,8 +54,9 @@ npm run e2e
 
 The first command fetches the browser once. `npm run e2e` exports the
 web build to `dist` with the vault test hooks on, serves it on port
-8094, and drives the sample set with Playwright in `e2e/`. It runs every spec twice: with motion and
-with reduced motion. Set `E2E_PORT` to serve on another port, for
+8094, and drives the sample set with Playwright in `e2e/`. It runs
+every spec twice: with motion and with reduced motion. Set `E2E_PORT`
+to serve on another port, for
 example when two checkouts run the suite at once. The run fails if the
 port is busy. To test a running `npm run web` instead, use
 `npm run e2e:dev`. A failed test keeps a trace in `e2e/test-results`.
@@ -148,9 +149,9 @@ Every file call goes through one `VaultAdapter` port in `src/lib/vault`
 component tests and Playwright use the memory adapter.
 
 The preview seeds the memory adapter from the sample notes in
-`src/lib/vault/sample/<seed>/`. The notes are written against
-2026-10-26. The preview moves every frontmatter date by the days from
-that day to today, so every group on the list stays full.
+`src/lib/vault/sample/<seed>/`. The note dates count from 2026-10-26.
+The preview moves every frontmatter date by the days from that day to
+today, so every group on the list stays full.
 
 | Seed | Holds |
 |---|---|
@@ -172,9 +173,10 @@ A test fails when `index.ts` is out of date with the notes.
 
 ### Test hooks
 
-A dev build has the vault test hooks. So does a build made with
-`EXPO_PUBLIC_VAULT_TEST_HOOKS=1`, which `npm run web:export` sets. A
-release APK has neither. A build without hooks ignores the page query.
+A dev build has the vault test hooks. A build made with
+`EXPO_PUBLIC_VAULT_TEST_HOOKS=1` has them too, and `npm run web:export`
+sets that flag. A release APK has neither. A build without hooks
+ignores the page query, and `globalThis.__vault` stays undefined.
 
 | Page query | Effect |
 |---|---|
