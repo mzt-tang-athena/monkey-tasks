@@ -1,8 +1,8 @@
 import { defineConfig } from "@playwright/test";
 
 // The end-to-end suite drives the exported web build (ADR 0038). The
-// browser preview serves the in-memory sample set, so no vault is
-// needed. Ticket 0049 holds the scenarios.
+// browser preview runs on a memory vault seeded from the sample notes,
+// so no folder is needed (ADR 0037). Ticket 0049 holds the scenarios.
 // E2E_PORT lets parallel worktrees each serve their own build.
 const port = Number(process.env.E2E_PORT) || 8094;
 

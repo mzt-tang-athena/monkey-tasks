@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { makeQueryClient } from "@/lib/react-query";
 import { TasksProvider } from "@/stores/tasks/tasks-provider";
+import { VaultProvider } from "@/lib/vault/vault-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { installErrorAlert } from "@/lib/errors";
 
@@ -42,12 +43,16 @@ export default function RootLayout() {
             outside render. */}
         <ErrorBoundary>
           <QueryClientProvider client={queryClient}>
-            <TasksProvider>
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
-              </Stack>
-            </TasksProvider>
+            {/* The vault the store reads: SAF on a phone, the memory
+                vault in the browser (ADR 0037). */}
+            <VaultProvider>
+              <TasksProvider>
+                <Stack>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
+                </Stack>
+              </TasksProvider>
+            </VaultProvider>
           </QueryClientProvider>
         </ErrorBoundary>
       </KeyboardProvider>
