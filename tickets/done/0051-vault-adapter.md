@@ -4,7 +4,7 @@ title: Every file call goes through a vault adapter
 created: 2026-10-26
 priority: high
 assignee: claude-code
-pr:
+pr: 76
 depends: [0050]
 ---
 
@@ -220,42 +220,97 @@ Out of scope: the write path itself (ticket 0052), the parser
 
 ## Acceptance
 
-- [ ] `app/src/lib/vault/adapter.ts` exports the `VaultAdapter` port.
-- [ ] Only `adapters/saf.ts` imports `expo-file-system/legacy`.
-- [ ] One contract test runs the same cases against both adapters:
+- [x] `app/src/lib/vault/adapter.ts` exports the `VaultAdapter` port.
+- [x] Only `adapters/saf.ts` imports `expo-file-system/legacy`.
+- [x] One contract test runs the same cases against both adapters:
       list, read, write, create with a taken name, remove a missing
       file, find and make a folder.
-- [ ] Two creates of one name in the same tick get two names in the
+- [x] Two creates of one name in the same tick get two names in the
       memory adapter.
-- [ ] `npm run vault:check -- src/lib/vault/sample/default` exits 0.
-- [ ] A test pins the findings `vault:check` reports for the `repair`
+- [x] `npm run vault:check -- src/lib/vault/sample/default` exits 0.
+- [x] A test pins the findings `vault:check` reports for the `repair`
       seed.
-- [ ] A test fails when `sample/index.ts` is out of date with the
+- [x] A test fails when `sample/index.ts` is out of date with the
       notes.
-- [ ] The sample Supplements note stores `recurrence: FREQ=DAILY`.
-- [ ] The sample names and their relative dates match `lib/mock.ts`,
+- [x] The sample Supplements note stores `recurrence: FREQ=DAILY`.
+- [x] The sample names and their relative dates match `lib/mock.ts`,
       or `app/e2e/data.ts` changes in the same PR.
-- [ ] The Playwright suite (`npm run e2e`) passes on the commit before
+- [x] The Playwright suite (`npm run e2e`) passes on the commit before
       this ticket and on its last commit.
-- [ ] `lib/mock.ts` and the `["mock"]` query are gone.
-- [ ] No store action checks `Platform.OS` or `rootUri == null` to
+- [x] `lib/mock.ts` and the `["mock"]` query are gone.
+- [x] No store action checks `Platform.OS` or `rootUri == null` to
       pick a mock path.
-- [ ] Ticking a recurring sample task in the browser creates its next
+- [x] Ticking a recurring sample task in the browser creates its next
       occurrence as a note (ADR 0027).
-- [ ] In the browser, a capture of "Pay bill: water" still shows
+- [x] In the browser, a capture of "Pay bill: water" still shows
       "Pay bill: water" after a refresh. The note is
       `Pay bill water.md` with that title (ticket 0053, ADR 0028).
-- [ ] Latency and one failed write can be set from the page query and
+- [x] Latency and one failed write can be set from the page query and
       from `globalThis.__vault`.
-- [ ] `globalThis.__vault` is undefined in a release build.
-- [ ] A test reproduces each bug in the table first, and passes after
+- [x] `globalThis.__vault` is undefined in a release build.
+- [x] A test reproduces each bug in the table first, and passes after
       the fix.
-- [ ] The three ticket 0051 repro tests in
+- [x] The three ticket 0051 repro tests in
       `app/src/testing/repro/store-races.test.tsx` run as plain `it`.
-- [ ] A read of a root with no `Tasks/` folder creates nothing.
+- [x] A read of a root with no `Tasks/` folder creates nothing.
 - [ ] On the phone, ticking, capture, the editor, a drag and a reorder
       still work against a real vault.
 
 ## Outcome
 
-(filled in before moving to done/)
+Landed in PR #76 into `epic/0047-rebuild`.
+
+- **The port.** `lib/vault/adapter.ts` holds the `VaultAdapter` port as
+  the spec gives it. `adapters/saf.ts` holds every SAF call. An ESLint
+  `no-restricted-imports` rule stops any other file from importing
+  `expo-file-system/legacy`.
+- **The memory adapter.** `adapters/memory.ts` holds the memory
+  adapter. It acts like the provider: a taken name gets " (1)", a
+  create takes its name before it awaits, a write to a missing file
+  fails, and a remove of a missing file does not. One contract test
+  runs the same 10 cases on both adapters. The SAF adapter runs over a
+  fake document provider in `src/testing/fake-saf.ts`.
+- **Choosing the adapter.** `default-adapter.ts` gives the SAF adapter.
+  `default-adapter.web.ts` gives the memory adapter. `VaultProvider`
+  and `useVault()` sit in `app/_layout.tsx`. The Android bundle holds no
+  memory adapter, no sample note and no `__vault`. A release web
+  export has no `__vault` and ignores the page query.
+- **Sample notes.** The `default` seed holds the 16 tasks and 9 lists,
+  and the `repair` seed holds the two broken notes. `npm run
+  sample:build` writes `sample/index.ts`. Every name and relative date
+  matches `lib/mock.ts`. `app/e2e/data.ts` only gained entries for the
+  new vault specs.
+- **The store.** It has one code path. The mock query, the web
+  branches, `editMockTask` and `meta.mode` are gone. `loadVault` uses
+  `findFolder`, and the first capture makes `Tasks/`.
+- **Tests.** The three 0051 repro tests are plain `it`. A fourth test
+  covers the read that made `Tasks/`. It failed on the old read only
+  after the repro harness ran an ungated read on the store's own
+  vault. `e2e/specs/vault.spec.ts` covers the "Pay bill: water" reread,
+  the recurring tick, and the latency and failed write from both the
+  page query and `__vault`.
+- **ADR.** ADR 0037 has a 2026-10-31 amendment. It records why every
+  web export carries the test hooks, and why a platform file picks the
+  adapter.
+
+Changes from the spec:
+
+- `readNote` and `deleteNote` are gone, not given an adapter argument.
+  The callers use `adapter.read` and `adapter.remove`, so a wrapper
+  would add nothing.
+- `loadVault`, `loadTasks` and `loadLists` stay in `stores/tasks/`,
+  where ticket 0050 put them.
+- A create that cannot write its text now removes the file it made. A
+  failed capture used to leave an empty note behind.
+- A recurring tick puts the next note in the folder of the note it
+  ticks (`adapter.parentOf`), as a rename already did. Before, it used
+  the store's `tasksDir`. The two are the same folder.
+
+Left open:
+
+- The phone line is not ticked. No phone ran this branch. The epic's
+  phone pass checks ticking, capture, the editor, a drag and a reorder
+  against a real vault. Ticket 0064 runs the contract suite on an
+  Android emulator.
+- In the web preview, the planner's date strip touches the top edge.
+  It looked the same before this ticket. Ticket 0056 owns that screen.
