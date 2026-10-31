@@ -32,14 +32,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.s,
     alignItems: "flex-end",
-    // Page grid inside, screen-edge bleed outside: the rail cuts at
-    // the display, not the gutter.
+    // Page grid inside, screen edge outside: the rail sits in a frame
+    // with no gutter, so it cuts at the display, not the gutter.
     paddingLeft: pageGutter,
     paddingRight: pageGutter,
   },
+  // The name over the number, a hair apart.
   stripDay: {
     alignItems: "center",
     justifyContent: "center",
+    gap: 2,
     width: 44,
     height: 44,
     borderRadius: radius,
@@ -74,7 +76,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: fonts.body,
     color: colors.ink,
-    marginTop: 2,
   },
   stripNumActive: {
     color: colors.onAccent,
@@ -83,11 +84,6 @@ const styles = StyleSheet.create({
   stripNumToday: {
     color: colors.accent,
     fontWeight: "700",
-  },
-  // The period rail bleeds past the page gutter: cells cut at the
-  // display's edges, scrolling until the last one clears the grid.
-  railBleed: {
-    marginHorizontal: -pageGutter,
   },
 });
 
@@ -146,7 +142,6 @@ function PeriodRail({
       ref={scroller}
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={styles.railBleed}
       contentContainerStyle={styles.stripScroll}
       onLayout={(e) => {
         viewport.current = e.nativeEvent.layout.width;

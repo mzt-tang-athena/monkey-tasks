@@ -195,11 +195,18 @@ export default function PlannerScreen() {
             today={new Date()}
             onSelect={setDay}
             onMode={setMode}
+            inset
           />
 
-          {status === "loading" ? <LoadingState /> : null}
+          {status === "loading" ? (
+            <View style={styles.gutter}>
+              <LoadingState />
+            </View>
+          ) : null}
           {status === "error" ? (
-            <ErrorState onRetry={() => void actions.refresh()} />
+            <View style={styles.gutter}>
+              <ErrorState onRetry={() => void actions.refresh()} />
+            </View>
           ) : null}
 
           {status === "ready" && mode === "week" ? (
@@ -218,7 +225,7 @@ export default function PlannerScreen() {
               />
               {/* Week's foot: the shared section in its own scrolling
                   pane, fed the week's placement pool. */}
-              <View style={styles.paneList}>
+              <View style={[styles.paneList, styles.gutter]}>
                 <TaskListSection
                   style={styles.paneScroll}
                   source={source}

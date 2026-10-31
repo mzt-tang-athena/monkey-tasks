@@ -89,7 +89,9 @@ export function WeekView({
             >
               {day.getDate()}
             </Text>
-            <View style={styles.weekColRule} />
+            <View style={styles.weekColRuleSlot}>
+              <View style={styles.weekColRule} />
+            </View>
             {items.length > 0 ? (
               <View style={styles.weekTasks}>
                 {items.map((task) => (

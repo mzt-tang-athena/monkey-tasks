@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { colors, fonts, spacing, radius, radiusFloating, radii, measure, weekColWidth, weekCanvasHeight, pageGutter } from "@/theme/tokens";
+import { colors, fonts, spacing, radius, radiusFloating, radii, measure, weekColWidth, weekCanvasHeight, pageGutter, shadows } from "@/theme/tokens";
 
 export const styles = StyleSheet.create({
   screen: {
@@ -15,10 +15,15 @@ export const styles = StyleSheet.create({
     width: "100%" as const,
     maxWidth: measure,
     alignSelf: "center" as const,
-    paddingHorizontal: pageGutter,
     // No top padding: the selected strip tab hangs from the screen's
-    // top edge, and the content below gains the space.
+    // top edge, and the content below gains the space. No side padding
+    // either: the period rail and the week canvas run to the screen's
+    // edges, and every other block takes the gutter itself.
     gap: spacing.m,
+  },
+  // The page gutter, for a block in the week and month frame.
+  gutter: {
+    paddingHorizontal: pageGutter,
   },
   // Week's calendar and its list pane share one block under the
   // header: the pane starts where the canvas ends.
@@ -392,11 +397,7 @@ export const styles = StyleSheet.create({
     borderColor: colors.hairline,
     borderRadius: radiusFloating,
     paddingVertical: spacing.xs,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.floating,
   },
   menuItem: {
     flexDirection: "row",
@@ -514,7 +515,6 @@ export const styles = StyleSheet.create({
     flexGrow: 0,
     flexShrink: 0,
     height: weekCanvasHeight,
-    marginHorizontal: -pageGutter,
   },
   weekCanvas: {
     flexDirection: "row",
@@ -561,10 +561,14 @@ export const styles = StyleSheet.create({
     color: colors.accent,
     fontWeight: "700",
   },
+  // The rule under the day's name, a step clear of the name and the
+  // tasks.
+  weekColRuleSlot: {
+    paddingVertical: spacing.s,
+  },
   weekColRule: {
     height: 1,
     backgroundColor: colors.hairline,
-    marginVertical: spacing.s,
   },
   weekTask: {
     flexDirection: "row",
@@ -593,9 +597,11 @@ export const styles = StyleSheet.create({
   },
 
   // month view
+  // The month sits in the week and month frame, which has no gutter.
   monthColumn: {
     flex: 1,
     gap: spacing.m,
+    paddingHorizontal: pageGutter,
   },
   // The fixed half: title and grid card. Its own swipe zone shifts
   // months without touching the row drags beneath.
@@ -665,7 +671,6 @@ export const styles = StyleSheet.create({
   },
   monthDayOpen: {
     alignSelf: "flex-start" as const,
-    marginTop: spacing.s,
     minHeight: 32,
     justifyContent: "center",
     paddingHorizontal: spacing.m,
@@ -686,13 +691,19 @@ export const styles = StyleSheet.create({
   holder: {
     minHeight: 160,
     justifyContent: "center",
+    gap: spacing.m,
     paddingVertical: spacing.xl,
+  },
+  // The lines own their spacing as a group: a step between them and
+  // half that above and below.
+  skeletons: {
+    gap: spacing.xl,
+    paddingVertical: spacing.m,
   },
   skeleton: {
     height: 14,
     borderRadius: radii.pill,
     backgroundColor: colors.hairline,
-    marginVertical: spacing.m,
   },
   empty: {
     fontSize: 15,
@@ -704,7 +715,6 @@ export const styles = StyleSheet.create({
     alignSelf: "center",
     minHeight: 36,
     justifyContent: "center",
-    marginTop: spacing.m,
     paddingHorizontal: spacing.l,
     borderRadius: radius,
     backgroundColor: colors.accent,

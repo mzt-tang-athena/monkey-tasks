@@ -8,7 +8,14 @@ import {
   scheduleAt,
 } from "@/lib/notifications";
 import { insightLines, useInsights } from "@/features/diagnostics/hooks/use-insights";
-import { THEMES, colors, radius, setDevTheme, type ThemeName } from "@/theme/tokens";
+import {
+  THEMES,
+  colors,
+  radius,
+  setDevTheme,
+  spacing,
+  type ThemeName,
+} from "@/theme/tokens";
 
 /**
  * Dev-only diagnostics from the spike: alarm state, scheduled
@@ -71,40 +78,46 @@ export default function DevScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <Text style={styles.label}>layout</Text>
-      {insightLines(insights).map((line) => (
-        <Text key={line} style={styles.line}>
-          {line}
-        </Text>
-      ))}
-      <Text style={styles.label}>alarms</Text>
-      <Text style={styles.line}>{alarm}</Text>
-      <Text style={styles.line}>{scheduled.length} notification(s) scheduled</Text>
-      {scheduled.map((item) => (
-        <Text key={item.id} style={styles.sub}>
-          {item.id.slice(0, 8)}: {item.title ?? "(no title)"}
-          {item.when ? ` at ${new Date(item.when).toLocaleTimeString()}` : ""}
-        </Text>
-      ))}
-      <Pressable style={styles.button} onPress={refresh}>
-        <Text style={styles.buttonText}>Refresh</Text>
-      </Pressable>
-      <Pressable style={styles.button} onPress={test}>
-        <Text style={styles.buttonText}>Test: 10s</Text>
-      </Pressable>
-      <Pressable style={styles.button} onPress={peek}>
-        <Text style={styles.buttonText}>Peek at vault root</Text>
-      </Pressable>
-      <Pressable
-        style={styles.button}
-        onPress={async () => {
-          await requestVaultAccess();
-          await refresh();
-        }}
-      >
-        <Text style={styles.buttonText}>Grant vault folder</Text>
-      </Pressable>
-      <Text style={styles.line}>{message}</Text>
+      <View style={styles.section}>
+        <Text style={styles.label}>layout</Text>
+        {insightLines(insights).map((line) => (
+          <Text key={line} style={styles.line}>
+            {line}
+          </Text>
+        ))}
+      </View>
+      <View style={styles.section}>
+        <Text style={styles.label}>alarms</Text>
+        <Text style={styles.line}>{alarm}</Text>
+        <Text style={styles.line}>{scheduled.length} notification(s) scheduled</Text>
+        {scheduled.map((item) => (
+          <Text key={item.id} style={styles.sub}>
+            {item.id.slice(0, 8)}: {item.title ?? "(no title)"}
+            {item.when ? ` at ${new Date(item.when).toLocaleTimeString()}` : ""}
+          </Text>
+        ))}
+      </View>
+      <View style={styles.actions}>
+        <Pressable style={styles.button} onPress={refresh}>
+          <Text style={styles.buttonText}>Refresh</Text>
+        </Pressable>
+        <Pressable style={styles.button} onPress={test}>
+          <Text style={styles.buttonText}>Test: 10s</Text>
+        </Pressable>
+        <Pressable style={styles.button} onPress={peek}>
+          <Text style={styles.buttonText}>Peek at vault root</Text>
+        </Pressable>
+        <Pressable
+          style={styles.button}
+          onPress={async () => {
+            await requestVaultAccess();
+            await refresh();
+          }}
+        >
+          <Text style={styles.buttonText}>Grant vault folder</Text>
+        </Pressable>
+        <Text style={styles.line}>{message}</Text>
+      </View>
       <ThemeSwitcher />
     </ScrollView>
   );
@@ -131,9 +144,17 @@ function ThemeSwitcher() {
 }
 
 const styles = StyleSheet.create({
+  // The page owns the space between its blocks; each block owns the
+  // space between its lines.
   content: {
-    padding: 16,
-    gap: 8,
+    padding: spacing.l,
+    gap: spacing.l,
+  },
+  section: {
+    gap: spacing.s,
+  },
+  actions: {
+    gap: spacing.m,
   },
   label: {
     fontSize: 11,
@@ -142,18 +163,18 @@ const styles = StyleSheet.create({
     color: colors.inkFaint,
     textTransform: "uppercase",
     letterSpacing: 1.2,
-    marginTop: 8,
   },
   line: {
     fontSize: 14,
     fontFamily: "monospace",
     color: colors.ink,
   },
+  // A scheduled alarm, indented under the count.
   sub: {
     fontSize: 12,
     fontFamily: "monospace",
     color: colors.inkMuted,
-    marginLeft: 12,
+    paddingLeft: spacing.m,
   },
   button: {
     alignSelf: "flex-start",
@@ -161,15 +182,13 @@ const styles = StyleSheet.create({
     borderRadius: radius,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    marginTop: 4,
   },
   buttonText: {
     color: colors.onAccent,
     fontWeight: "600",
   },
   switcher: {
-    marginTop: 16,
-    gap: 8,
+    gap: spacing.s,
   },
   switcherLabel: {
     fontSize: 12,
