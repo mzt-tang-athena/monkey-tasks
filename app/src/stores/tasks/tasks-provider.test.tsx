@@ -6,25 +6,21 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { act, create } from "react-test-renderer";
 import type { ReactTestRenderer } from "react-test-renderer";
-import { Platform } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The store's contract after ADR 0017: a tap changes the row before any
-// file I/O, and the vault is not read again. The mocks count both.
+// file I/O, and the vault is not read again. The store runs on a memory
+// vault (ADR 0037). A thin wrapper around it counts, holds and fails
+// the calls, and the loader mock counts and holds the reads.
 
 const writes: { uri: string; text: string }[] = [];
 let loadCalls = 0;
-let mockLoads = 0;
-let savedUri: string | null = "content://vault";
 let releaseWrite: (() => void) | null = null;
 let holdWrites = false;
 let heldOnce = false;
 let failWrite = false;
 let loadGate: Promise<void> | null = null;
-let extraTasks: TaskItem[] = [];
 let createFails = false;
-let conflictOnce = false;
-let diskText = "";
 let deleteFails = false;
 let renameOnCreate = false;
 const creates: { fileName: string; content: string }[] = [];
@@ -37,108 +33,16 @@ vi.mock("react-native", () => ({
   },
 }));
 
-vi.mock("@/lib/vault/grant", () => ({
-  getSavedVaultUri: async () => savedUri,
-  requestVaultAccess: async () => savedUri,
-}));
-
-vi.mock("./load-vault", () => ({
-  loadVaultTasks: async () => {
-    loadCalls += 1;
-    if (loadGate) {
-      await loadGate;
-    }
-    return {
-      tasksDir: "content://vault/Tasks",
-      lists: [{ name: "Focus", uri: "content://vault/Tasks/Lists/Focus.md" }],
-      broken: [],
-      tasks: [
-        {
-          uri: "content://vault/Tasks/Call.md",
-          fileName: "Call.md",
-          name: "Call",
-          text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nBody.\n',
-          body: "\nBody.\n",
-          data: { kind: "[[tasks]]", created: "2026-10-20" },
-        },
-        ...extraTasks,
-      ],
-    };
-  },
-}));
-
-vi.mock("@/lib/mock", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/mock")>();
+vi.mock("./load-vault", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./load-vault")>();
   return {
     ...actual,
-    // Count the preview's read: an edit must not reload the sample set.
-    loadMockTasks: () => {
-      mockLoads += 1;
-      return actual.loadMockTasks();
-    },
-  };
-});
-
-vi.mock("@/lib/vault/notes", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/lib/vault/notes")>();
-  const { updateProperty } = await import("@/lib/vault/frontmatter");
-  return {
-    ...actual,
-    writeNoteIfUnchanged: async (
-      uri: string,
-      _expected: string,
-      text: string,
-    ) => {
-      if (failWrite) {
-        throw new Error("disk full");
+    loadVault: async (...args: Parameters<typeof actual.loadVault>) => {
+      loadCalls += 1;
+      if (loadGate) {
+        await loadGate;
       }
-      if (conflictOnce) {
-        conflictOnce = false;
-        throw new actual.NoteChangedError(uri);
-      }
-      writes.push({ uri, text });
-      if (holdWrites && !heldOnce) {
-        heldOnce = true;
-        const gate = Promise.withResolvers<void>();
-        releaseWrite = gate.resolve;
-        await gate.promise;
-      }
-    },
-    createNote: async (
-      _folder: string,
-      fileName: string,
-      content: string,
-      title?: string,
-    ) => {
-      if (createFails) {
-        throw new Error("no space");
-      }
-      // The provider appends " (1)" to a taken name, and the note then
-      // carries the typed name as its title.
-      const actualName = renameOnCreate
-        ? fileName.replace(/\.md$/, " (1).md")
-        : fileName;
-      const text =
-        renameOnCreate && title != null
-          ? updateProperty(content, "title", title)
-          : content;
-      creates.push({ fileName: actualName, content: text });
-      return {
-        uri: `content://vault/Tasks/${encodeURIComponent(actualName)}`,
-        fileName: actualName,
-        text,
-      };
-    },
-    deleteNote: async (uri: string) => {
-      if (deleteFails) {
-        throw new Error("locked");
-      }
-      deletes.push(uri);
-    },
-    readNote: async () => diskText,
-    writeNote: async (uri: string, text: string) => {
-      writes.push({ uri, text });
+      return actual.loadVault(...args);
     },
   };
 });
@@ -149,6 +53,16 @@ vi.mock("./reminder-sync", () => ({
 }));
 
 import { makeQueryClient } from "@/lib/react-query";
+import type { VaultAdapter } from "@/lib/vault/adapter";
+import {
+  MEMORY_ROOT,
+  createMemoryVault,
+  type MemoryVault,
+  type VaultSeed,
+} from "@/lib/vault/adapters/memory";
+import { PREVIEW_SEEDS, sampleSeed } from "@/lib/vault/sample/seed";
+import { VaultProvider } from "@/lib/vault/vault-provider";
+import { todayIso } from "@/utils/dates";
 import { TasksProvider } from "./tasks-provider";
 import type { TaskListData } from "./tasks-provider";
 import { useStoreMeta, useTaskList } from "./task-state";
@@ -157,6 +71,52 @@ import { useTaskActions } from "./task-actions";
 import type { TaskActions } from "./task-actions";
 import type { TaskItem } from "@/types/task";
 import { spawnContent } from "./spawn";
+
+const TASKS = `${MEMORY_ROOT}/Tasks`;
+const CALL_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nBody.\n';
+const FOCUS_TEXT = '---\nkind: "[[lists]]"\ncreated: 2026-10-20\n---\n';
+
+/** The vault the store runs on: Call, and the Focus list. */
+let vault: MemoryVault;
+
+/** The memory vault, with each call counted, held or failed. */
+function instrumented(inner: MemoryVault): VaultAdapter {
+  return {
+    ...inner,
+    async write(uri, text) {
+      if (failWrite) {
+        throw new Error("disk full");
+      }
+      writes.push({ uri, text });
+      if (holdWrites && !heldOnce) {
+        heldOnce = true;
+        const gate = Promise.withResolvers<void>();
+        releaseWrite = gate.resolve;
+        await gate.promise;
+      }
+      return inner.write(uri, text);
+    },
+    async create(folderUri, fileName, text) {
+      if (createFails) {
+        throw new Error("no space");
+      }
+      // A provider that appends " (1)" to the name it is handed.
+      const asked = renameOnCreate
+        ? fileName.replace(/\.md$/, " (1).md")
+        : fileName;
+      const made = await inner.create(folderUri, asked, text);
+      creates.push({ fileName: made.fileName, content: text });
+      return made;
+    },
+    async remove(uri) {
+      if (deleteFails) {
+        throw new Error("locked");
+      }
+      deletes.push(uri);
+      return inner.remove(uri);
+    },
+  };
+}
 
 /** The three contexts read as one snapshot, for the assertions below. */
 type Snapshot = StoreMeta & TaskActions & { tasks: TaskItem[] };
@@ -190,7 +150,12 @@ async function flush(): Promise<void> {
   });
 }
 
-async function mount(): Promise<ReactTestRenderer> {
+/** Mount the store on `vault`, or on a new vault with `seed`. */
+async function mount(seed?: VaultSeed): Promise<ReactTestRenderer> {
+  if (seed != null) {
+    vault = createMemoryVault(seed);
+  }
+  const adapter = instrumented(vault);
   const client = makeQueryClient();
   // The app retries a vault read once; a test wants the failure now, and
   // the cache must outlive every render.
@@ -205,13 +170,15 @@ async function mount(): Promise<ReactTestRenderer> {
   await act(async () => {
     renderer = create(
       <QueryClientProvider client={client}>
-        <TasksProvider>
-          <Probe />
-        </TasksProvider>
+        <VaultProvider adapter={adapter}>
+          <TasksProvider>
+            <Probe />
+          </TasksProvider>
+        </VaultProvider>
       </QueryClientProvider>,
     );
   });
-  // Boot: the saved uri, then the vault read behind it.
+  // Boot: the saved root, then the vault read behind it.
   await flush();
   return renderer as unknown as ReactTestRenderer;
 }
@@ -228,77 +195,55 @@ function byFile(fileName: string): TaskItem {
   return task;
 }
 
-/** A recurring occurrence and its successor, for the completion tests. */
-function recurring(due: string, body = "\nWater.\n"): TaskItem {
-  const fileName = "Water plants.md";
-  return {
-    id: `content://vault/Tasks/${fileName}`,
-    uri: `content://vault/Tasks/${fileName}`,
-    fileName,
-    name: "Water plants",
-    text: `---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: ${due}\nrecurrence: FREQ=WEEKLY\n---\n${body}`,
-    body,
-    data: {
-      kind: "[[tasks]]",
-      created: "2026-10-20",
-      due,
-      recurrence: "FREQ=WEEKLY",
-    },
-  };
+function cachedList(): TaskListData | undefined {
+  return queryClient!.getQueryData<TaskListData>(["tasks", MEMORY_ROOT]);
 }
 
-function spawnOf(body = "\nWater.\n"): TaskItem {
-  const fileName = "Water plants 2026-10-27.md";
-  return {
-    id: `content://vault/Tasks/${fileName}`,
-    uri: `content://vault/Tasks/${fileName}`,
-    fileName,
-    name: "Water plants",
-    text: spawnContent(
-      {
-        title: "Water plants",
-        previous: "Water plants",
-        due: "2026-10-27",
-        recurrence: "FREQ=WEEKLY",
-        lists: [],
-        reminders: [],
-        body,
-      },
-      "2026-10-24",
-    ),
-    body,
-    data: {
-      kind: "[[tasks]]",
-      created: "2026-10-24",
+/** A recurring occurrence, for the completion tests. */
+function recurring(due: string, completed?: string): string {
+  return [
+    "---",
+    'kind: "[[tasks]]"',
+    "created: 2026-10-20",
+    `due: ${due}`,
+    "recurrence: FREQ=WEEKLY",
+    ...(completed == null ? [] : [`completed: ${completed}`]),
+    "---",
+    "\nWater.\n",
+  ].join("\n");
+}
+
+const SPAWN_FILE = "Water plants 2026-10-27.md";
+const SPAWN_URI = `${TASKS}/${SPAWN_FILE}`;
+
+/** The successor a tick made, untouched unless `body` differs. */
+function spawnOf(body = "\nWater.\n"): string {
+  return spawnContent(
+    {
       title: "Water plants",
+      previous: "Water plants",
       due: "2026-10-27",
       recurrence: "FREQ=WEEKLY",
-      "recurrence previous": "[[Water plants]]",
+      lists: [],
+      reminders: [],
+      body,
     },
-  };
-}
-
-/** The store reads Platform.OS on every render, so the mock is mutable.
- * React Native types it as a fixed union; the test mock is a plain
- * object, so a named cast is the only way to switch it. */
-const mockPlatform = Platform as { OS: string };
-
-function setPlatform(os: "android" | "web"): void {
-  mockPlatform.OS = os;
+    "2026-10-24",
+  );
 }
 
 beforeEach(() => {
+  vault = createMemoryVault({
+    "Tasks/Call.md": CALL_TEXT,
+    "Tasks/Lists/Focus.md": FOCUS_TEXT,
+  });
   writes.length = 0;
   loadCalls = 0;
-  mockLoads = 0;
-  savedUri = "content://vault";
-  setPlatform("android");
   releaseWrite = null;
   holdWrites = false;
   heldOnce = false;
   failWrite = false;
   loadGate = null;
-  extraTasks = [];
   createFails = false;
   deleteFails = false;
   renameOnCreate = false;
@@ -315,9 +260,11 @@ describe("TasksProvider", () => {
     // write. The toggle re-reads the note and applies itself to what
     // is there, instead of failing and leaving the row unticked.
     await mount();
-    diskText =
-      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nedited: yes\n---\n\nBody.\n';
-    conflictOnce = true;
+    // Another app edits the note after the read.
+    vault.hooks.write(
+      "Tasks/Call.md",
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nedited: yes\n---\n\nBody.\n',
+    );
 
     await act(async () => {
       await latest!.toggle(row());
@@ -348,10 +295,7 @@ describe("TasksProvider", () => {
     expect(row().data?.completed).toBeDefined();
     expect(row().text).toContain("completed:");
     // The tick is in the cache, which is where every row consumer reads.
-    const cached = queryClient!.getQueryData<TaskListData>([
-      "tasks",
-      "content://vault",
-    ]);
+    const cached = cachedList();
     const cachedRow = cached?.tasks.find((item) => item.name === "Call");
     expect(cachedRow?.data?.completed).toBeDefined();
     // The tick changed the rows, not the actions: their identity holds.
@@ -439,9 +383,8 @@ describe("TasksProvider", () => {
 
     expect(latest!.tasks.length).toBe(before + 1);
     const captured = latest!.tasks.find((item) => item.name === "Water plants");
-    expect(captured?.uri).toBe(
-      `content://vault/Tasks/${encodeURIComponent("Water plants.md")}`,
-    );
+    expect(captured?.uri).toBe(`${TASKS}/Water plants.md`);
+    expect(vault.hooks.read("Tasks/Water plants.md")).toBe(captured?.text);
     // A capture still reads no notes: only the boot load happened.
     expect(loadCalls).toBe(1);
   });
@@ -491,10 +434,7 @@ describe("TasksProvider", () => {
     expect(writes).toHaveLength(1);
     expect(writes[0].text).toBe(after.text);
     // The edit moved the rows, not the tabs.
-    const cached = queryClient!.getQueryData<TaskListData>([
-      "tasks",
-      "content://vault",
-    ]);
+    const cached = cachedList();
     expect(cached?.lists.map((item) => item.name)).toEqual(["Focus"]);
     expect(loadCalls).toBe(1);
   });
@@ -528,21 +468,10 @@ describe("TasksProvider", () => {
     expect(latestActions).toBe(actionsBeforeEdit);
   });
 
-  it("edits a sample row in the browser preview without touching the vault", async () => {
-    setPlatform("web");
-    savedUri = null;
-    await mount();
-    // The preview's sample rows land on their own timer.
-    await act(async () => {
-      const { promise, resolve } = Promise.withResolvers<void>();
-      setTimeout(resolve, 300);
-      await promise;
-    });
-    await flush();
-
-    // Mock mode reads the sample set once and never reads the vault.
-    expect(mockLoads).toBe(1);
-    expect(loadCalls).toBe(0);
+  it("edits a sample row in the browser preview through the memory vault", async () => {
+    await mount(sampleSeed(PREVIEW_SEEDS, todayIso()));
+    // The preview reads the sample vault once.
+    expect(loadCalls).toBe(1);
     const before = latest!.tasks.find(
       (item) => item.name === "Water the plants",
     );
@@ -562,29 +491,28 @@ describe("TasksProvider", () => {
     });
     await flush();
 
-    const cached = queryClient!.getQueryData<TaskListData>(["mock"]);
-    const edited = cached?.tasks.find((item) => item.id === before.id);
+    const edited = cachedList()?.tasks.find((item) => item.id === before.id);
     expect(edited?.name).toBe("Water the ferns");
     expect(edited?.fileName).toBe("Water the ferns.md");
     expect(edited?.body).toBe("\nNew body.\n");
-    // The in-memory save keeps the frontmatter the row already had.
+    // The save keeps the frontmatter the row already had.
     expect(edited?.data?.kind).toBe("[[tasks]]");
     expect(edited?.data?.created).toBeDefined();
     expect(edited?.data?.due).toBe("2026-10-30");
     expect(edited?.data?.lists).toEqual(["[[Focus]]"]);
     expect(edited?.data?.reminders).toEqual(["2026-10-30T09:00"]);
-    expect(edited?.text).toContain("due: 2026-10-30");
     expect(latest!.lastError).toBeNull();
-    // No file was written and neither read ran again.
-    expect(writes).toHaveLength(0);
-    expect(mockLoads).toBe(1);
-    expect(loadCalls).toBe(0);
+    // The rename is a new note in the vault, and the old one is gone.
+    expect(vault.hooks.read("Tasks/Water the ferns.md")).toBe(edited?.text);
+    expect(vault.hooks.read("Tasks/Water the plants.md")).toBeNull();
+    // A write never reads the vault again.
+    expect(loadCalls).toBe(1);
   });
 });
 
 describe("recurring completion", () => {
   it("completes the occurrence and creates the next note", async () => {
-    extraTasks = [recurring("2026-10-20")];
+    vault.hooks.write("Tasks/Water plants.md", recurring("2026-10-20"));
     await mount();
 
     await act(async () => {
@@ -611,7 +539,7 @@ describe("recurring completion", () => {
 
   it("leaves the old note open when the new note cannot be created", async () => {
     createFails = true;
-    extraTasks = [recurring("2026-10-20")];
+    vault.hooks.write("Tasks/Water plants.md", recurring("2026-10-20"));
     await mount();
 
     await act(async () => {
@@ -626,7 +554,7 @@ describe("recurring completion", () => {
 
   it("takes the new note back when the completion write fails", async () => {
     failWrite = true;
-    extraTasks = [recurring("2026-10-20")];
+    vault.hooks.write("Tasks/Water plants.md", recurring("2026-10-20"));
     await mount();
 
     await act(async () => {
@@ -634,9 +562,8 @@ describe("recurring completion", () => {
     });
     await flush();
 
-    expect(deletes).toEqual([
-      `content://vault/Tasks/${encodeURIComponent("Water plants 2026-10-27.md")}`,
-    ]);
+    expect(deletes).toEqual([SPAWN_URI]);
+    expect(vault.hooks.read(`Tasks/${SPAWN_FILE}`)).toBeNull();
     expect(byFile("Water plants.md").data?.completed).toBeUndefined();
     expect(latest!.tasks.map((item) => item.fileName)).not.toContain(
       "Water plants 2026-10-27.md",
@@ -645,9 +572,11 @@ describe("recurring completion", () => {
   });
 
   it("takes back an untouched successor when the occurrence reopens", async () => {
-    const done = recurring("2026-10-20");
-    done.data = { ...done.data!, completed: "2026-10-24" };
-    extraTasks = [done, spawnOf()];
+    vault.hooks.write(
+      "Tasks/Water plants.md",
+      recurring("2026-10-20", "2026-10-24"),
+    );
+    vault.hooks.write(`Tasks/${SPAWN_FILE}`, spawnOf());
     await mount();
 
     await act(async () => {
@@ -655,7 +584,7 @@ describe("recurring completion", () => {
     });
     await flush();
 
-    expect(deletes).toEqual([spawnOf().uri]);
+    expect(deletes).toEqual([SPAWN_URI]);
     expect(byFile("Water plants.md").data?.completed).toBeUndefined();
     expect(latest!.tasks.map((item) => item.fileName)).not.toContain(
       "Water plants 2026-10-27.md",
@@ -663,9 +592,11 @@ describe("recurring completion", () => {
   });
 
   it("leaves an edited successor alone when the occurrence reopens", async () => {
-    const done = recurring("2026-10-20");
-    done.data = { ...done.data!, completed: "2026-10-24" };
-    extraTasks = [done, spawnOf("\nEdited.\n")];
+    vault.hooks.write(
+      "Tasks/Water plants.md",
+      recurring("2026-10-20", "2026-10-24"),
+    );
+    vault.hooks.write(`Tasks/${SPAWN_FILE}`, spawnOf("\nEdited.\n"));
     await mount();
 
     await act(async () => {
@@ -674,7 +605,8 @@ describe("recurring completion", () => {
     await flush();
 
     expect(deletes).toEqual([]);
-    expect(byFile("Water plants 2026-10-27.md")).toBeDefined();
+    expect(byFile(SPAWN_FILE)).toBeDefined();
+    expect(vault.hooks.read(`Tasks/${SPAWN_FILE}`)).toContain("Edited.");
     expect(latest!.lastError).toContain("edited");
   });
 });

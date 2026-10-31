@@ -1,6 +1,5 @@
 import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
-import { listDirectory, displayName, type Entry } from "@/lib/vault/scan";
-import { readNote } from "@/lib/vault/notes";
+import type { VaultAdapter } from "@/lib/vault/adapter";
 import { formatIssues } from "@/utils/schema-errors";
 import type { TaskItem } from "@/types/task";
 
@@ -26,14 +25,19 @@ export function taskFromText(
   };
 }
 
-export async function loadTasks(tasksDirUri: string): Promise<TaskItem[]> {
-  const entries: Entry[] = await listDirectory(tasksDirUri);
-  const files = entries.filter((entry) => entry.isFile && entry.name.endsWith(".md"));
+export async function loadTasks(
+  adapter: VaultAdapter,
+  tasksDirUri: string,
+): Promise<TaskItem[]> {
+  const entries = await adapter.list(tasksDirUri);
+  const files = entries.filter(
+    (entry) => !entry.isFolder && entry.name.endsWith(".md"),
+  );
   // One unreadable entry (a folder named "Notes.md", a revoked grant)
   // must not blank the whole list, so failures are dropped per file.
   const settled = await Promise.allSettled(
     files.map(async (file): Promise<TaskItem> => {
-      const text = await readNote(file.uri);
+      const text = await adapter.read(file.uri);
       return taskFromText(
         {
           id: file.uri,
@@ -41,7 +45,7 @@ export async function loadTasks(tasksDirUri: string): Promise<TaskItem[]> {
           fileName: file.name,
           // A spawned occurrence carries a date-suffixed file name, so
           // the display name comes from its title.
-          name: displayName(file.uri).replace(/\.md$/, ""),
+          name: file.name.replace(/\.md$/, ""),
         },
         text,
       );

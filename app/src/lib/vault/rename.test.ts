@@ -1,35 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { parentUri } from "./rename";
+import { MEMORY_ROOT, createMemoryVault } from "./adapters/memory";
+import { NoteChangedError } from "./notes";
+import { renameNote } from "./rename";
 
-const OLD_URI =
-  "content://com.android.externalstorage.documents/tree/primary%3ADocuments%2Fvault/document/primary%3ADocuments%2Fvault%2FTasks%2FCall.md";
-const FOLDER_URI =
-  "content://com.android.externalstorage.documents/tree/primary%3ADocuments%2Fvault/document/primary%3ADocuments%2Fvault%2FTasks";
+const CALL = `${MEMORY_ROOT}/Tasks/Call.md`;
+const TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n';
 
-describe("parentUri", () => {
-  it("cuts the last segment of an external storage document uri", () => {
-    expect(parentUri(OLD_URI)).toBe(FOLDER_URI);
+describe("renameNote", () => {
+  it("creates the new file beside the old one, then removes the old one", async () => {
+    const vault = createMemoryVault({ "Tasks/Call.md": TEXT });
+
+    const renamed = await renameNote(vault, CALL, "Call Mum.md", TEXT, TEXT, "Call Mum");
+
+    expect(renamed.fileName).toBe("Call Mum.md");
+    expect(vault.hooks.files()).toEqual({ "Tasks/Call Mum.md": TEXT });
   });
 
-  it("keeps the encoded document id intact when the name has a space", () => {
-    expect(
-      parentUri(
-        "content://com.android.externalstorage.documents/tree/primary%3ADocuments%2Fvault/document/primary%3ADocuments%2Fvault%2FTasks%2FCall%20Mum.md",
-      ),
-    ).toBe(FOLDER_URI);
+  it("refuses when another writer changed the note", async () => {
+    const vault = createMemoryVault({ "Tasks/Call.md": `${TEXT}\nEdited.\n` });
+
+    await expect(
+      renameNote(vault, CALL, "Call Mum.md", TEXT, TEXT, "Call Mum"),
+    ).rejects.toBeInstanceOf(NoteChangedError);
+
+    expect(Object.keys(vault.hooks.files())).toEqual(["Tasks/Call.md"]);
   });
 
-  it("cuts the last segment of a downloads document uri", () => {
-    expect(
-      parentUri(
-        "content://com.android.providers.downloads.documents/tree/downloads/document/downloads%2Fvault%2FTasks%2FCall.md",
-      ),
-    ).toBe(
-      "content://com.android.providers.downloads.documents/tree/downloads/document/downloads%2Fvault%2FTasks",
-    );
-  });
+  it("keeps only the old note when the old file cannot be removed", async () => {
+    const vault = createMemoryVault({ "Tasks/Call.md": TEXT });
+    vault.hooks.failNext("remove", "Call.md");
 
-  it("has no parent for a bare file name", () => {
-    expect(parentUri("Call.md")).toBe("");
+    await expect(
+      renameNote(vault, CALL, "Call Mum.md", TEXT, TEXT, "Call Mum"),
+    ).rejects.toThrow("remove failed");
+
+    expect(vault.hooks.files()).toEqual({ "Tasks/Call.md": TEXT });
   });
 });
