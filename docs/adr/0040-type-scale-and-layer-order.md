@@ -53,6 +53,17 @@ nothing about where it belongs. We rejected a scale per screen, because
 the drift came from exactly that. We rejected a portal library: the
 host is about 120 lines and adds no native code.
 
+We also rejected a headless UI kit for the primitives that sit on these
+layers. We checked two on 2026-10-31. `@rn-primitives` 1.5 ports Radix
+to React Native. On the web it renders Radix itself, so the Playwright
+suite would test other code than the phone runs (ADR 0038).
+`@gluestack-ui/core` 5.0 builds on react-aria. It adds about 30
+packages and needs `react-native-svg`. Neither kit places a menu clear
+of the bottom bar, and neither docks a sheet on the keyboard. Those are
+the hard parts here. The primitives are about 2,000 lines with a
+component test each, so we keep them in `components/ui`. Ticket 0063
+can reopen this if focus handling turns out to cost more than a kit.
+
 ## Consequences
 
 A new label picks a role, not a size. The screen tickets move their
