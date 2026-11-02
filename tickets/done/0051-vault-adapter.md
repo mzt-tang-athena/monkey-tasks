@@ -280,9 +280,9 @@ Landed in PR #76 into `epic/0047-rebuild`.
   sample:build` writes `sample/index.ts`. Every name and relative date
   matches `lib/mock.ts`. `app/e2e/data.ts` only gained entries for the
   new vault specs.
-- **The store.** It has one code path. The mock query, the web
-  branches, `editMockTask` and `meta.mode` are gone. `loadVault` uses
-  `findFolder`, and the first capture makes `Tasks/`.
+- **The store.** It has one code path. This ticket removed the mock
+  query, the web branches, `editMockTask` and `meta.mode`. `loadVault`
+  uses `findFolder`, and the first capture makes `Tasks/`.
 - **Tests.** The three 0051 repro tests are plain `it`. A fourth test
   covers the read that made `Tasks/`. It failed on the old read only
   after the repro harness ran an ungated read on the store's own
@@ -292,12 +292,17 @@ Landed in PR #76 into `epic/0047-rebuild`.
 - **ADR.** ADR 0037 has a 2026-10-31 amendment. It records why every
   web export carries the test hooks, and why a platform file picks the
   adapter.
+- **Docs lint.** The sample note names hold spaces. CI's prose step
+  and the pre-commit hook gave Vale a space separated list, so Vale
+  stopped at the first such name with an error, and the step passed
+  with no file checked. Both now pass a NUL separated list. Both also
+  fail when Vale exits nonzero with no alerts.
 
 Changes from the spec:
 
-- `readNote` and `deleteNote` are gone, not given an adapter argument.
-  The callers use `adapter.read` and `adapter.remove`, so a wrapper
-  would add nothing.
+- This ticket removed `readNote` and `deleteNote` instead of giving
+  them an adapter argument. The callers use `adapter.read` and
+  `adapter.remove`, so a wrapper would add nothing.
 - `loadVault`, `loadTasks` and `loadLists` stay in `stores/tasks/`,
   where ticket 0050 put them.
 - A create that cannot write its text now removes the file it made. A
@@ -314,3 +319,9 @@ Left open:
   Android emulator.
 - In the web preview, the planner's date strip touches the top edge.
   It looked the same before this ticket. Ticket 0056 owns that screen.
+- `.vale.ini` uses the section `[**.md]`. Vale 3.24 matches only
+  top-level files with it, so no local run or CI run checks `docs/`,
+  `tickets/` or the sample notes. With `[*.md]`, Vale reports 256
+  alerts in 95 older files, and two ticket titles hold YAML that Vale
+  cannot parse. That change edits most tickets at once, so it needs a
+  ticket of its own.
