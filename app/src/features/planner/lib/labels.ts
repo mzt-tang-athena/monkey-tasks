@@ -1,5 +1,5 @@
-import type { TaskItem } from "../../tasks/query";
-import { parseStoredDate } from "../../../lib/dates";
+import type { TaskItem } from "@/types/task";
+import { parseStoredDate } from "@/utils/dates";
 
 export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 

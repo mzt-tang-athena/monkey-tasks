@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NoteChangedError } from "../vault/notes";
+import { NoteChangedError } from "@/lib/vault/notes";
 
 // The editor writes through two doors: the note helpers and the SAF
 // document calls a rename needs. Both are recorded here so a test can
@@ -42,8 +42,9 @@ vi.mock("expo-file-system/legacy", () => ({
   },
 }));
 
-import { parentUri, saveTaskEdit, type TaskEdit } from "./save";
-import type { TaskItem } from "../tasks/query";
+import { safAdapter } from "@/lib/vault/adapters/saf";
+import { saveTaskEdit } from "./save";
+import type { TaskEdit, TaskItem } from "@/types/task";
 
 const OLD_URI =
   "content://com.android.externalstorage.documents/tree/primary%3ADocuments%2Fvault/document/primary%3ADocuments%2Fvault%2FTasks%2FCall.md";
@@ -92,38 +93,10 @@ beforeEach(() => {
   state.fileText = task().text;
 });
 
-describe("parentUri", () => {
-  it("cuts the last segment of an external storage document uri", () => {
-    expect(parentUri(OLD_URI)).toBe(FOLDER_URI);
-  });
-
-  it("keeps the encoded document id intact when the name has a space", () => {
-    expect(
-      parentUri(
-        "content://com.android.externalstorage.documents/tree/primary%3ADocuments%2Fvault/document/primary%3ADocuments%2Fvault%2FTasks%2FCall%20Mum.md",
-      ),
-    ).toBe(FOLDER_URI);
-  });
-
-  it("cuts the last segment of a downloads document uri", () => {
-    expect(
-      parentUri(
-        "content://com.android.providers.downloads.documents/tree/downloads/document/downloads%2Fvault%2FTasks%2FCall.md",
-      ),
-    ).toBe(
-      "content://com.android.providers.downloads.documents/tree/downloads/document/downloads%2Fvault%2FTasks",
-    );
-  });
-
-  it("has no parent for a bare file name", () => {
-    expect(parentUri("Call.md")).toBe("");
-  });
-});
-
 describe("saveTaskEdit", () => {
   it("writes a changed due date and refreshes the row", async () => {
     const item = task();
-    const result = await saveTaskEdit(item, edit({ due: "2026-10-25" }));
+    const result = await saveTaskEdit(safAdapter, item, edit({ due: "2026-10-25" }));
 
     expect(state.writes).toHaveLength(1);
     expect(state.creates).toHaveLength(0);
@@ -139,6 +112,7 @@ describe("saveTaskEdit", () => {
 
   it("clears a property when the edit has no value for it", async () => {
     const result = await saveTaskEdit(
+      safAdapter,
       task(),
       edit({ due: null, reminders: [], lists: [] }),
     );
@@ -160,6 +134,7 @@ describe("saveTaskEdit", () => {
     state.fileText = minimal.text;
 
     const result = await saveTaskEdit(
+      safAdapter,
       minimal,
       edit({
         lists: ["Errands"],
@@ -175,6 +150,7 @@ describe("saveTaskEdit", () => {
 
   it("replaces the body below the frontmatter", async () => {
     const result = await saveTaskEdit(
+      safAdapter,
       task(),
       edit({ body: "\nNew body.\n" }),
     );
@@ -185,7 +161,7 @@ describe("saveTaskEdit", () => {
   });
 
   it("creates the new file, then deletes the old one on a rename", async () => {
-    const result = await saveTaskEdit(task(), edit({ name: "New name" }));
+    const result = await saveTaskEdit(safAdapter, task(), edit({ name: "New name" }));
 
     expect(state.creates).toEqual([
       { folder: FOLDER_URI, fileName: "New name.md", mime: "text/markdown" },
@@ -204,13 +180,55 @@ describe("saveTaskEdit", () => {
   it("writes the typed title when the provider renames on a rename", async () => {
     state.createdUri = NEW_URI.replace("New%20name.md", "New%20name%20(1).md");
 
-    const result = await saveTaskEdit(task(), edit({ name: "New name" }));
+    const result = await saveTaskEdit(safAdapter, task(), edit({ name: "New name" }));
 
     expect(result.fileName).toBe("New name (1).md");
     expect(result.text).toContain("title: New name");
     expect(result.data?.title).toBe("New name");
     expect(result.name).toBe("New name");
+    // The create wrote the text for the name it asked for. The title
+    // the new name needs follows it, into the same file.
+    expect(state.writes.map((write) => write.uri)).toEqual([
+      state.createdUri,
+      state.createdUri,
+    ]);
+    expect(state.writes.at(-1)?.text).toBe(result.text);
+    expect(state.events).toEqual(["create", "write", "write", "delete"]);
+  });
+
+  it("writes the typed title when the rename cleans the name", async () => {
+    state.createdUri = NEW_URI.replace("New%20name.md", "Pay%20bill%20water.md");
+
+    const result = await saveTaskEdit(safAdapter, task(), edit({ name: "Pay bill: water" }));
+
+    expect(state.creates[0]?.fileName).toBe("Pay bill water.md");
+    expect(result.fileName).toBe("Pay bill water.md");
+    expect(result.data?.title).toBe("Pay bill: water");
     expect(state.writes).toEqual([{ uri: state.createdUri, text: result.text }]);
+  });
+
+  it("writes the typed title when the cleaned name keeps the file", async () => {
+    const item: TaskItem = {
+      ...task(),
+      fileName: "Pay bill water.md",
+      name: "Pay bill water",
+    };
+
+    const result = await saveTaskEdit(safAdapter, item, edit({ name: "Pay bill: water" }));
+
+    // The file name already fits, so there is no rename.
+    expect(state.creates).toEqual([]);
+    expect(state.deletes).toEqual([]);
+    expect(result.fileName).toBe("Pay bill water.md");
+    expect(result.data?.title).toBe("Pay bill: water");
+    expect(state.writes).toEqual([{ uri: OLD_URI, text: result.text }]);
+  });
+
+  it("writes no title when the file name holds the typed name", async () => {
+    const result = await saveTaskEdit(safAdapter, task(), edit({ body: "\nNew body.\n" }));
+
+    expect(result.text).not.toContain("title:");
+    expect(result.data?.title).toBeUndefined();
   });
 
   it("refuses when the editor opened an older text than the store holds", async () => {
@@ -221,7 +239,7 @@ describe("saveTaskEdit", () => {
     state.fileText = item.text;
 
     await expect(
-      saveTaskEdit(item, edit({ body: "\nNew body.\n" }), opened),
+      saveTaskEdit(safAdapter, item, edit({ body: "\nNew body.\n" }), opened),
     ).rejects.toBeInstanceOf(NoteChangedError);
 
     expect(state.writes).toHaveLength(0);
@@ -232,7 +250,7 @@ describe("saveTaskEdit", () => {
     state.fileText = item.text.replace("Old body.", "Edited in Obsidian.");
 
     await expect(
-      saveTaskEdit(item, edit({ body: "\nNew body.\n" })),
+      saveTaskEdit(safAdapter, item, edit({ body: "\nNew body.\n" })),
     ).rejects.toBeInstanceOf(NoteChangedError);
 
     expect(state.writes).toHaveLength(0);
@@ -256,6 +274,7 @@ describe("saveTaskEdit", () => {
     state.fileText = item.text;
 
     const result = await saveTaskEdit(
+      safAdapter,
       item,
       edit({ name: "Water the ferns", body: "\nNew body.\n" }),
     );
@@ -273,7 +292,7 @@ describe("saveTaskEdit", () => {
     const item = task();
 
     await expect(
-      saveTaskEdit(item, edit({ name: "New name" })),
+      saveTaskEdit(safAdapter, item, edit({ name: "New name" })),
     ).rejects.toThrow("disk full");
 
     // The half-written copy is gone and the old file is untouched.

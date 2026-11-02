@@ -33,3 +33,15 @@ nothing caught it.
 
 **Move every shared type into `lib`.** It would duplicate the task model
 that the schema package already owns.
+
+## Amendment: 2026-10-26
+
+ADR 0039 replaces the rule in this ADR. The check now covers every
+layer, not only `lib`. Type-only imports no longer pass. In the audit
+on 2026-10-26, 35 of the 66 imports that broke the layering carried
+types only, so the exemption hid half the problem.
+
+The shared row types move to `src/types`. They import the frontmatter
+types from `@monkey-tasks/schemas` and copy nothing from them, so the
+schema package still owns the task model. Ticket 0050 removes the
+`no-restricted-imports` block from `app/eslint.config.js`.

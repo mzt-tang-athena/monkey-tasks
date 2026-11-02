@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import type { TaskItem } from "../tasks/query";
+import type { TaskItem } from "@/types/task";
 import {
   hasTime,
   inSourceList,
   parseMode,
   parsePlannerDay,
   plannerDayParam,
+  sortByTimeOfDay,
   sortOpenFirst,
   tasksForDay,
   tasksForDayAll,
@@ -129,6 +130,36 @@ describe("sortOpenFirst", () => {
     expect(sortOpenFirst(items).map((item) => item.name)).toEqual([
       "Alpha",
       "Bravo",
+    ]);
+  });
+});
+
+describe("sortByTimeOfDay", () => {
+  it("orders a recurring occurrence by its time, not by its stored day", () => {
+    // The daily task is stored a day earlier at 7 PM. On the 27th its
+    // occurrence must still come after the 2:30 PM task.
+    const items = [
+      task("Supplements", recurringDue("2026-10-26T19:00", "RRULE:FREQ=DAILY")),
+      task("Dentist", due("2026-10-27T14:30")),
+    ];
+    expect(sortByTimeOfDay(items).map((item) => item.name)).toEqual([
+      "Dentist",
+      "Supplements",
+    ]);
+  });
+
+  it("puts all day tasks first, by name, then timed ones by time", () => {
+    const items = [
+      task("Late", due("2026-10-27T21:00")),
+      task("Plan", due("2026-10-27")),
+      task("Early", due("2026-10-27T07:15")),
+      task("Groceries", due("2026-10-27")),
+    ];
+    expect(sortByTimeOfDay(items).map((item) => item.name)).toEqual([
+      "Groceries",
+      "Plan",
+      "Early",
+      "Late",
     ]);
   });
 });

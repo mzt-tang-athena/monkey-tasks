@@ -50,3 +50,26 @@ The cost stays O(vault) and the phone stays busy.
 **Watch the folder for changes.** Android SAF has no cheap change feed.
 A content observer over a document tree is unreliable across providers.
 Polling costs more than the foreground reload we chose.
+
+## Amendment, 2026-10-26
+
+The three rules still hold. ADR 0037 changes how the code keeps them.
+
+Rule 1 stands. The optimistic step and the write run the same
+`applyPatch`. A second tap now builds on the first through the query
+cache, not through a ref.
+
+Rule 2 now runs on TanStack mutations. One scope, `{ id: "vault" }`,
+replaces the queue per note. Writes to every note run in one line, in
+call order. A failed write still rolls back only its own change.
+
+Rule 3 was broken in the code: an effect rebuilt every alarm after
+every cache write, not only on load. A full rebuild now runs only after
+a read from disk, and all alarm work runs on one serial chain.
+
+Capture's provisional uri becomes a row id that stays the same for the
+session. The read carries it forward by uri.
+
+A field write now reads the note, applies its patch to the text it
+finds, and writes that. An outside edit to another property survives
+the write. The editor still refuses a save when the note changed.

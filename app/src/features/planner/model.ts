@@ -1,7 +1,14 @@
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
-import type { TaskItem } from "../tasks/query";
-import { occursOn } from "../tasks/recurrence";
+import {
+  addDays,
+  formatLocal,
+  formatTime,
+  isoOf,
+  parseStoredDate,
+  startOfDay,
+} from "@/utils/dates";
+import type { TaskItem } from "@/types/task";
+import { occursOn } from "@/lib/recurrence";
 
 /*
  * The planner's pure domain layer: the source vocabulary, the period
@@ -123,6 +130,21 @@ export function sortOpenFirst(items: TaskItem[]): TaskItem[] {
   ];
 }
 
+/** One day's tasks in the order the day runs: all day tasks first, by
+    name, then timed ones by time of day. A recurring task sorts by its
+    own time of day, so its occurrence lands among the day's times, not
+    by the day it is stored on. */
+export function sortByTimeOfDay(items: TaskItem[]): TaskItem[] {
+  const minutes = (task: TaskItem): number => {
+    const due = task.data?.due ? parseStoredDate(task.data.due) : null;
+    return due?.hasTime ? due.date.getHours() * 60 + due.date.getMinutes() : -1;
+  };
+  return items
+    .map((task) => ({ task, at: minutes(task) }))
+    .sort((a, b) => a.at - b.at || a.task.name.localeCompare(b.task.name))
+    .map((entry) => entry.task);
+}
+
 /** The open tasks touching the day: due that day, or an occurrence
     their rule puts there. */
 export function tasksForDay(tasks: TaskItem[], day: Date): TaskItem[] {
@@ -194,17 +216,6 @@ export function withKeptTime(
     ),
     true,
   );
-}
-
-export function formatTime(date: Date): string {
-  const h = date.getHours() % 12 || 12;
-  const ampm = date.getHours() >= 12 ? "PM" : "AM";
-  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
-}
-
-export function isoOf(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 /** Sunday of the week holding date. */

@@ -11,31 +11,31 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { TaskItem } from "../../features/tasks/query";
-import type { CaptureTarget } from "../../features/capture/write";
-import { TaskRow } from "../../components/TaskRow";
-import { ReorderGrip, ReorderRow } from "../../features/lists/ReorderRow";
+import type { CaptureTarget, TaskItem } from "@/types/task";
+import { TaskRow } from "@/components/task-row";
+import { taskRowFace } from "@/components/task-row-face";
+import { ReorderGrip, ReorderRow } from "@/features/lists/reorder-row";
 import {
   layoutOrder,
   moveItem,
   reorderItems,
-} from "../../features/lists/reorder";
-import { swipeProps, type SwipeController } from "../../lib/swipe";
-import { useSwipePager } from "../../components/SwipePager";
-import { ListPagePreview } from "../../features/lists/ListPagePreview";
-import { loadSettings, saveSetting, type SortMode } from "../../lib/settings";
-import { BottomBar } from "../../components/BottomBar";
-import { useStoreMeta, useTaskList } from "../../store/task-state";
-import { useTaskActions } from "../../store/task-actions";
+} from "@/features/lists/reorder";
+import { swipeProps, type SwipeController } from "@/lib/swipe";
+import { useSwipePager } from "@/components/swipe-pager";
+import { ListPagePreview } from "@/features/lists/list-page-preview";
+import { loadSettings, saveSetting, type SortMode } from "@/lib/settings";
+import { BottomBar } from "@/components/bottom-bar";
+import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
+import { useTaskActions } from "@/stores/tasks/task-actions";
 import {
   useListTabs,
   useTabTasks,
   useTaskSections,
   type ListTab,
   type SectionTone,
-} from "../../store/selectors";
-import { IconButton } from "../../components/ui";
-import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "../../theme/tokens";
+} from "@/stores/tasks/selectors";
+import { IconButton } from "@/components/ui/icon-button";
+import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter, shadows } from "@/theme/tokens";
 
 /**
  * Lists tab: Main first, then one tab per list note, with capture
@@ -51,7 +51,7 @@ type ListsSection = {
 const tickHoldMs = 250;
 
 export default function ListsScreen() {
-  const { mode, status, lastError, brokenLists } = useStoreMeta();
+  const { rootUri, status, lastError, brokenLists } = useStoreMeta();
   const allTasks = useTaskList();
   const actions = useTaskActions();
   const insets = useSafeAreaInsets();
@@ -673,6 +673,7 @@ export default function ListsScreen() {
           </ReorderRow>
           {canDrag ? (
             <ReorderGrip
+              taskName={item.name}
               hidden={lifted}
               onPickup={(x, y) =>
                 armReorderNow(item, index, section.title, x, y)
@@ -818,6 +819,7 @@ export default function ListsScreen() {
         />
       ) : null}
       <View
+        testID="list-pager"
         style={styles.body}
         // The handlers read refs when the gesture runs, not in render.
         // eslint-disable-next-line react-hooks/refs
@@ -825,9 +827,10 @@ export default function ListsScreen() {
       >
         {/* The list tab bar sits ABOVE the scroller: the page's fixed
             chrome. Sections scroll beneath it, the bar never moves.
-            A horizontal swipe on the body walks the tabs. */}
-        {(mode === "mock" || status === "error") &&
-        Platform.OS !== "web" ? (
+            A horizontal swipe on the body walks the tabs. Above it, the
+            folder picker shows once the store knows it has no folder,
+            or when the folder stopped reading. */}
+        {(rootUri == null && status === "ready") || status === "error" ? (
           <Pressable
             style={({ pressed }) => [
               styles.grantRow,
@@ -865,7 +868,7 @@ export default function ListsScreen() {
                   chipX.current[name] = event.nativeEvent.layout.x;
                 }}
                 accessibilityRole="tab"
-                accessibilityState={{ selected: tab === name }}
+                aria-selected={tab === name}
               >
                 <Text
                   style={[
@@ -973,7 +976,7 @@ export default function ListsScreen() {
             { top: 0, transform: [{ translateY: ghostY }] },
           ]}
         >
-          <TaskRow task={reorder.task} />
+          <TaskRow task={reorder.task} copy />
         </Animated.View>
       ) : null}
 
@@ -999,7 +1002,7 @@ export default function ListsScreen() {
                 setSortMenu(null);
               }}
               accessibilityRole="button"
-              accessibilityState={{ selected: sortMode === option.key }}
+              aria-selected={sortMode === option.key}
               accessibilityLabel={option.label}
             >
               <Text
@@ -1089,9 +1092,11 @@ const toneLabel = (() => {
 function LoadingState() {
   return (
     <View style={styles.holder}>
-      <View style={[styles.skeleton, { width: "40%" as const }]} />
-      <View style={[styles.skeleton, { width: "70%" as const }]} />
-      <View style={[styles.skeleton, { width: "55%" as const }]} />
+      <View style={styles.skeletons}>
+        <View style={[styles.skeleton, { width: "40%" as const }]} />
+        <View style={[styles.skeleton, { width: "70%" as const }]} />
+        <View style={[styles.skeleton, { width: "55%" as const }]} />
+      </View>
     </View>
   );
 }
@@ -1191,6 +1196,7 @@ const styles = StyleSheet.create({
     maxWidth: measure,
     alignSelf: "center" as const,
     width: "100%" as const,
+    gap: 2,
     paddingHorizontal: pageGutter,
     paddingTop: spacing.m,
   },
@@ -1209,7 +1215,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: fonts.body,
     color: colors.inkMuted,
-    marginTop: 2,
   },
 
   // Notes that fail validation: a block on the page grid, above the
@@ -1334,15 +1339,13 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
     borderRadius: radiusFloating,
     paddingVertical: spacing.xs,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.floating,
   },
+  // A label and its hint sit one point apart.
   menuItem: {
     minHeight: 40,
     justifyContent: "center",
+    gap: 1,
     paddingHorizontal: spacing.m,
   },
   menuItemPressed: {
@@ -1394,12 +1397,13 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontFamily: fonts.body,
     color: colors.inkMuted,
-    marginTop: 1,
   },
 
-  // Plain groups: a header on the paper, flush rows beneath.
+  // Plain groups: a header on the paper, flush rows beneath. A
+  // SectionList has no gap between its sections, so the list sets the
+  // space above each group on the header slot it renders (ADR 0012).
   group: {
-    marginTop: spacing.xl,
+    paddingTop: spacing.xl,
   },
   groupLabel: {
     fontSize: 12,
@@ -1434,7 +1438,7 @@ const styles = StyleSheet.create({
   // so a dragged row carries its divider with it. Inset to the text.
   cardDivider: {
     position: "absolute" as const,
-    left: spacing.l + 24 + spacing.m,
+    left: taskRowFace.textInset,
     right: 0,
     top: 0,
     height: StyleSheet.hairlineWidth,
@@ -1442,7 +1446,6 @@ const styles = StyleSheet.create({
   },
   completedGroup: {
     opacity: 0.55,
-    marginTop: spacing.xl,
   },
   completedRow: {
     opacity: 0.55,
@@ -1464,11 +1467,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: spacing.xl,
   },
+  // The lines own their spacing as a group: a step between them and
+  // half that above and below.
+  skeletons: {
+    gap: spacing.xl,
+    paddingVertical: spacing.m,
+  },
   skeleton: {
     height: 14,
     borderRadius: radii.pill,
     backgroundColor: colors.hairline,
-    marginVertical: spacing.m,
   },
   empty: {
     fontSize: 15,

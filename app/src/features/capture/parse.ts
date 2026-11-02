@@ -1,5 +1,6 @@
 import * as chrono from "chrono-node";
-import { formatLocal } from "../../lib/dates";
+import { formatLocal } from "@/utils/dates";
+import type { ParsedCapture } from "@/types/task";
 
 /**
  * Offline capture parsing: turn a typed line into task note properties.
@@ -8,20 +9,6 @@ import { formatLocal } from "../../lib/dates";
  * Matched text is stripped; the remainder is the task name. A line the
  * parser cannot date still produces a name, never a failure.
  */
-
-export type ParsedCapture = {
-  name: string;
-  /** Date (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM), local time. */
-  due?: string;
-  /** Datetimes when the phone buzzes; set when the capture has a time. */
-  reminders?: string[];
-  /** One RRULE string, for example FREQ=MONTHLY. */
-  recurrence?: string;
-  /** The matched phrases, so callers can show what was consumed.
-      Spans were dropped: stripping and squashing between matches
-      made input indices drift, and no caller used them. */
-  matches?: { kind: "date" | "recurrence"; text: string }[];
-};
 
 const RECURRENCE_WORDS: Record<string, string> = {
   daily: "FREQ=DAILY",
