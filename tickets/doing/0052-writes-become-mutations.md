@@ -3,7 +3,7 @@ id: 0052
 title: Vault writes become mutations
 created: 2026-10-26
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: [0051]
 ---
