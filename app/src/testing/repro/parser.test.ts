@@ -3,53 +3,17 @@
 // and now runs as a plain `it`. The parser cases hold because ticket
 // 0053 moved the contracts submodule to the parser fix.
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
+import { MEMORY_ROOT, createMemoryVault } from "@/lib/vault/adapters/memory";
 import { createNote } from "@/lib/vault/notes";
 import { updateProperty } from "@/lib/vault/frontmatter";
 import { loadTasks, taskFromText } from "@/stores/tasks/task-notes";
 import { saveTaskEdit } from "@/features/task-editor/save";
 import { captureDraft } from "@/features/capture/write";
 
-const fs = vi.hoisted(() => ({
-  writes: [] as { uri: string; text: string }[],
-  /** The files in the one folder, by uri, so a read sees each write. */
-  files: new Map<string, string>(),
-}));
-
-// The document provider, with one folder. It keeps the name it is
-// asked for, so no " (1)" suffix is involved.
-vi.mock("expo-file-system/legacy", () => ({
-  EncodingType: { UTF8: "utf8" },
-  StorageAccessFramework: {
-    createFileAsync: async (_folder: string, fileName: string) => {
-      const uri = `content://vault/Tasks/${encodeURIComponent(fileName)}`;
-      fs.files.set(uri, "");
-      return uri;
-    },
-    readDirectoryAsync: async () => [...fs.files.keys()],
-  },
-  readAsStringAsync: async (uri: string) => fs.files.get(uri) ?? "",
-  writeAsStringAsync: async (uri: string, text: string) => {
-    fs.writes.push({ uri, text });
-    fs.files.set(uri, text);
-  },
-  deleteAsync: async () => undefined,
-}));
-
-vi.mock("@/lib/vault/notes", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/lib/vault/notes")>();
-  return {
-    ...actual,
-    // The editor's save compares the file first; this file is unchanged.
-    writeNoteIfUnchanged: async (uri: string, _expected: string, next: string) => {
-      fs.writes.push({ uri, text: next });
-    },
-  };
-});
-
-const URI = "content://vault/Tasks/Call.md";
+const TASKS = `${MEMORY_ROOT}/Tasks`;
+const URI = `${TASKS}/Call.md`;
 
 /** A task note whose Focus list item sits at the given indent. */
 function withList(indent: string): string {
@@ -80,12 +44,12 @@ describe("block list indent (ticket 0053, finding 11)", () => {
   // The editor seeds its draft from the parsed lists. A list the parser
   // missed seeds as empty, and the save deletes it from the note.
   it("keeps a four-space list through an editor save", async () => {
-    fs.writes.length = 0;
+    const vault = createMemoryVault({ "Tasks/Call.md": withList("    ") });
     const item = taskFromText(
       { id: URI, uri: URI, fileName: "Call.md", name: "Call" },
       withList("    "),
     );
-    await saveTaskEdit(item, {
+    await saveTaskEdit(vault, item, {
       name: "Call",
       due: "2026-11-01",
       recurrence: null,
@@ -93,7 +57,7 @@ describe("block list indent (ticket 0053, finding 11)", () => {
       reminders: [],
       body: item.body,
     });
-    expect(fs.writes.at(-1)?.text).toContain("[[Focus]]");
+    expect(vault.hooks.read("Tasks/Call.md")).toContain("[[Focus]]");
   });
 
   // The writer found the end of a list only at an indent, so a save
@@ -102,12 +66,12 @@ describe("block list indent (ticket 0053, finding 11)", () => {
     ["no indent", ""],
     ["a tab", "\t"],
   ])("writes a list at %s back once through an editor save", async (_label, indent) => {
-    fs.writes.length = 0;
+    const vault = createMemoryVault({ "Tasks/Call.md": withList(indent) });
     const item = taskFromText(
       { id: URI, uri: URI, fileName: "Call.md", name: "Call" },
       withList(indent),
     );
-    await saveTaskEdit(item, {
+    await saveTaskEdit(vault, item, {
       name: "Call",
       due: "2026-11-01",
       recurrence: null,
@@ -115,7 +79,7 @@ describe("block list indent (ticket 0053, finding 11)", () => {
       reminders: [],
       body: item.body,
     });
-    const saved = fs.writes.at(-1)?.text ?? "";
+    const saved = vault.hooks.read("Tasks/Call.md") ?? "";
     expect(listsOf(saved)).toEqual(["[[Focus]]"]);
     expect(saved.match(/\[\[Focus\]\]/g)).toHaveLength(1);
   });
@@ -142,14 +106,10 @@ describe("typed name survives a safe file name (ticket 0053, finding 15)", () =>
   // that name. createNote wrote no title, so the next read showed the
   // file name instead of what the user typed.
   it("shows the typed name after the next read", async () => {
+    const vault = createMemoryVault({ "Tasks/Call.md": withList("  ") });
     const draft = captureDraft({ name: "Pay bill: water" }, { kind: "main" });
-    await createNote(
-      "content://vault/Tasks",
-      draft.fileName,
-      draft.content,
-      draft.name,
-    );
-    const rows = await loadTasks("content://vault/Tasks");
+    await createNote(vault, TASKS, draft.fileName, draft.content, draft.name);
+    const rows = await loadTasks(vault, TASKS);
     const row = rows.find((item) => item.fileName === "Pay bill water.md");
     expect(row?.name).toBe("Pay bill: water");
   });

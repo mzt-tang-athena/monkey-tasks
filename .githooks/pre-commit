@@ -6,7 +6,9 @@
 set -e
 
 root=$(git rev-parse --show-toplevel)
-staged=$(git diff --cached --name-only --diff-filter=ACM)
+# One name per line, unquoted. Some names hold spaces, so each list goes
+# to xargs NUL separated.
+staged=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACM)
 
 code=$(printf '%s\n' "$staged" | grep -E '^app/(src|scripts|e2e)/.*\.(ts|tsx)$' || true)
 docs=$(printf '%s\n' "$staged" | grep -E '\.md$' || true)
@@ -14,18 +16,24 @@ docs=$(printf '%s\n' "$staged" | grep -E '\.md$' || true)
 if [ -n "$code" ]; then
   echo "eslint: $(printf '%s\n' "$code" | wc -l) file(s)"
   # A warning fails the commit too: CI runs with the same limit.
-  (cd "$root/app" && printf '%s\n' "$code" | sed 's|^app/||' | xargs npx --no-install eslint --max-warnings 0)
+  (cd "$root/app" && printf '%s\n' "$code" | sed 's|^app/||' | tr '\n' '\0' | xargs -0 npx --no-install eslint --max-warnings 0)
 fi
 
 if [ -n "$docs" ]; then
   if command -v vale >/dev/null 2>&1; then
     echo "vale: $(printf '%s\n' "$docs" | wc -l) file(s)"
-    # Vale exits nonzero only on errors, so the warning threshold is
-    # enforced by checking the output instead.
-    alerts=$(cd "$root" && printf '%s\n' "$docs" | xargs vale --minAlertLevel=warning --output=line || true)
+    # Vale exits zero on warnings, so the commit fails on any output. A
+    # nonzero exit with no output means Vale itself failed, for example
+    # on a path it cannot read, so that fails the commit too.
+    vale_exit=0
+    alerts=$(cd "$root" && printf '%s\n' "$docs" | tr '\n' '\0' | xargs -0 vale --minAlertLevel=warning --output=line) || vale_exit=$?
     if [ -n "$alerts" ]; then
       printf '%s\n' "$alerts"
       echo "vale: fix the alerts above" >&2
+      exit 1
+    fi
+    if [ "$vale_exit" -ne 0 ]; then
+      echo "vale: exited with $vale_exit and printed no alerts. Its error is above." >&2
       exit 1
     fi
   else

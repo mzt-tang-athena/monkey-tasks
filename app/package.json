@@ -52,7 +52,8 @@
     "test:unit": "vitest run --project unit",
     "test:component": "vitest run --project component",
     "vault:check": "tsx scripts/vault-check/cli.ts",
-    "web:export": "expo export --platform web --output-dir dist",
+    "sample:build": "tsx scripts/sample-build/cli.ts",
+    "web:export": "EXPO_PUBLIC_VAULT_TEST_HOOKS=1 expo export --platform web --output-dir dist",
     "e2e": "npm run web:export && playwright test -c e2e/playwright.config.ts",
     "e2e:dev": "E2E_BASE_URL=http://localhost:8081 playwright test -c e2e/playwright.config.ts"
   },

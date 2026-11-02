@@ -75,6 +75,27 @@ module.exports = defineConfig([
     },
   },
   {
+    // Every file call goes through the vault adapter (ADR 0037), so
+    // only the SAF adapter talks to the folder. Tests mock the module
+    // with vi.mock, which is not an import.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/lib/vault/adapters/saf.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'expo-file-system/legacy',
+              message:
+                'Only src/lib/vault/adapters/saf.ts imports it. Use the VaultAdapter from useVault() (ADR 0037).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // File and folder names use kebab-case (ADR 0039). Route files
     // under src/app keep the names expo-router needs.
     files: ['src/**/*.{ts,tsx}'],

@@ -1,5 +1,5 @@
 import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
-import { displayName } from "@/lib/vault/scan";
+import type { VaultAdapter } from "@/lib/vault/adapter";
 import { keepTypedName, writeNoteIfUnchanged } from "@/lib/vault/notes";
 import {
   replaceBody,
@@ -16,6 +16,7 @@ import type { TaskEdit, TaskItem } from "@/types/task";
  * survives; only the body is replaced wholesale.
  */
 export async function saveTaskEdit(
+  adapter: VaultAdapter,
   item: TaskItem,
   edit: TaskEdit,
   expected: string = item.text,
@@ -40,9 +41,13 @@ export async function saveTaskEdit(
   const requestedName = `${safeFileName(edit.name)}.md`;
   const renaming = !titled && requestedName !== item.fileName;
   let uri = item.uri;
+  let fileName = item.fileName;
   let written: string;
   if (renaming) {
+    // The provider may adjust the file name it was handed, so the row
+    // reads the name the file really has.
     const renamed = await renameNote(
+      adapter,
       item.uri,
       requestedName,
       text,
@@ -50,6 +55,7 @@ export async function saveTaskEdit(
       edit.name,
     );
     uri = renamed.uri;
+    fileName = renamed.fileName;
     written = renamed.text;
   } else {
     // An untitled note with no rename can still need a title: the
@@ -58,12 +64,9 @@ export async function saveTaskEdit(
     written = titled
       ? updateProperty(text, "title", edit.name)
       : keepTypedName(text, item.fileName, edit.name);
-    await writeNoteIfUnchanged(item.uri, expected, written);
+    await writeNoteIfUnchanged(adapter, item.uri, expected, written);
   }
 
-  // The provider may adjust the file name it was handed, so the row
-  // reads the name the file really has.
-  const fileName = renaming ? displayName(uri) : item.fileName;
   const note = validateNote(fileName, written, taskFrontmatter);
   return {
     // The row keeps its identity: a rename changes the uri, not which

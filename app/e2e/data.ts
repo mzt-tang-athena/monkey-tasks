@@ -1,8 +1,9 @@
 /**
  * The sample set the suite runs against, and where each task lands
- * under TODAY. The preview builds the set in `src/lib/mock.ts`, with
- * dates relative to the current day. Specs take names and dates from
- * this file only, so a change to the sample set changes one file.
+ * under TODAY. The preview seeds its memory vault from the notes in
+ * `src/lib/vault/sample/`, written against TODAY and moved to the
+ * current day. Specs take names and dates from this file only, so a
+ * change to the sample set changes one file.
  */
 
 /** Monday 26 October 2026, 09:00 in Auckland (NZDT). */
@@ -31,6 +32,15 @@ export const undated = {
 
 /** A task due today, at 7:00 PM, that repeats daily. */
 export const supplements = "Supplements";
+
+/** The notes a tick on `supplements` under TODAY touches: its own, and
+    the one it makes for the next date. */
+export const supplementsTick = {
+  note: "Tasks/Supplements.md",
+  completed: "2026-10-26",
+  next: "Tasks/Supplements 2026-10-27.md",
+  nextDue: "2026-10-27T19:00",
+} as const;
 
 /** A task note that fails validation. It never renders as a row. */
 export const broken = "Broken note";
@@ -67,6 +77,21 @@ export const capture = {
   section: "Fri, 30 Oct",
   /** The section after it on Main. */
   nextSection: "No date",
+} as const;
+
+/** A capture whose name a file cannot hold. The note keeps it as its
+    title (ADR 0028). */
+export const colonCapture = {
+  typed: "Pay bill: water",
+  note: "Tasks/Pay bill water.md",
+  title: 'title: "Pay bill: water"',
+} as const;
+
+/** A note another app writes into the vault. */
+export const outsideNote = {
+  name: "Added in Obsidian",
+  path: "Tasks/Added in Obsidian.md",
+  text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-26T09:00\n---\n',
 } as const;
 
 /** The editor rename. */

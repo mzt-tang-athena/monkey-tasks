@@ -26,11 +26,18 @@ jobs:
           find . -maxdepth 1 -name '*.yml' | while read f; do grep -q extends "$f" || rm "$f"; done
       - name: Docs prose lint
         run: |
-          # Vale exits nonzero only on errors, so the warning threshold
-          # is enforced by checking the output instead.
-          alerts=$(git ls-files '*.md' | xargs vale --minAlertLevel=warning --output=line || true)
+          # Vale exits zero on warnings, so the step fails on any output.
+          # A nonzero exit with no output means Vale itself failed, for
+          # example on a path it cannot read, so that fails the step too.
+          # Some note names hold spaces, so the list is NUL separated.
+          vale_exit=0
+          alerts=$(git ls-files -z '*.md' | xargs -0 vale --minAlertLevel=warning --output=line) || vale_exit=$?
           if [ -n "$alerts" ]; then
             echo "$alerts"
+            exit 1
+          fi
+          if [ "$vale_exit" -ne 0 ]; then
+            echo "::error::vale exited with $vale_exit and printed no alerts. Its error is above."
             exit 1
           fi
 
@@ -127,8 +134,9 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
         working-directory: app
+      # The script turns the memory vault's test hooks on (ADR 0037).
       - name: Export the web build
-        run: npx expo export --platform web --output-dir dist
+        run: npm run web:export
         working-directory: app
       - name: Run Playwright
         run: npx playwright test -c e2e/playwright.config.ts

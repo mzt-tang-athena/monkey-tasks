@@ -1,20 +1,5 @@
-import * as FileSystem from "expo-file-system/legacy";
+import type { VaultAdapter } from "./adapter";
 import { updateProperty } from "./frontmatter";
-import { displayName } from "./scan";
-
-const { StorageAccessFramework } = FileSystem;
-
-export async function readNote(uri: string): Promise<string> {
-  return FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
-}
-
-export async function writeNote(uri: string, content: string): Promise<void> {
-  await FileSystem.writeAsStringAsync(uri, content, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
-}
 
 /** Another writer changed the file between the read and the write. */
 export class NoteChangedError extends Error {
@@ -47,25 +32,21 @@ export class NoteUnreadableError extends Error {
  * two. A plain write would drop that change without a word.
  */
 export async function writeNoteIfUnchanged(
+  adapter: VaultAdapter,
   uri: string,
   expected: string,
   next: string,
 ): Promise<void> {
   let current: string;
   try {
-    current = await readNote(uri);
+    current = await adapter.read(uri);
   } catch (error) {
     throw new NoteUnreadableError(uri, error);
   }
   if (current !== expected) {
     throw new NoteChangedError(uri);
   }
-  await writeNote(uri, next);
-}
-
-/** Delete a note file. A file already gone is not an error. */
-export async function deleteNote(uri: string): Promise<void> {
-  await FileSystem.deleteAsync(uri, { idempotent: true });
+  await adapter.write(uri, next);
 }
 
 /**
@@ -90,20 +71,31 @@ export function keepTypedName(
  * appends " (1)" when the requested name is taken, so the result
  * carries the name the file really got. When a title is given and the
  * file name does not hold it, the title is written into the note.
+ *
+ * The text goes in with the create, built for the name asked for. Only
+ * when the provider picked another name is the title written again. If
+ * that write fails, the new file goes too, so the caller never keeps a
+ * note it was told failed.
  */
 export async function createNote(
+  adapter: VaultAdapter,
   folderUri: string,
   fileName: string,
   content: string,
   title?: string,
 ): Promise<{ uri: string; fileName: string; text: string }> {
-  const uri = await StorageAccessFramework.createFileAsync(
-    folderUri,
-    fileName,
-    "text/markdown",
-  );
-  const actual = displayName(uri);
-  const text = title == null ? content : keepTypedName(content, actual, title);
-  await writeNote(uri, text);
-  return { uri, fileName: actual, text };
+  const asked =
+    title == null ? content : keepTypedName(content, fileName, title);
+  const created = await adapter.create(folderUri, fileName, asked);
+  const text =
+    title == null ? content : keepTypedName(content, created.fileName, title);
+  if (text !== asked) {
+    try {
+      await adapter.write(created.uri, text);
+    } catch (error) {
+      await adapter.remove(created.uri).catch(() => undefined);
+      throw error;
+    }
+  }
+  return { ...created, text };
 }
