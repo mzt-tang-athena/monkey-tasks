@@ -46,3 +46,24 @@ row. The list owns that space and sets it on the slot with
 `ListHeaderComponentStyle` (see `TaskListSection.tsx`). This is the one
 place a container uses padding on one side only. A child still sets
 no spacing outside itself.
+
+## Amendment, 2026-10-28: every margin is an error
+
+Ticket 0054 widened the rule. The selector now matches every margin
+property, on any side and in either key form, at `error`. It cleared
+the 32 sites the last amendment counted. Each gap moved to its parent
+in one of three ways:
+
+- A `gap` on the container. Most sites took this.
+- A slot with symmetric padding, where a rule or a group of lines sat
+  between two blocks: the week column's rule, the skeleton lines.
+- A frame with no gutter, for a scroller that runs to the screen's
+  edges. The week and month frame drops its side padding, and each
+  block in it takes the gutter itself. The period rail and the week
+  canvas then reach the edges with no negative margin.
+
+A list has two more slots of its own, like the `FlatList` header slot
+above. A `SectionList` has no gap between its sections, so the Lists
+screen pads the top of each section header it renders. A `FlatList`
+footer sits a step under the rows through `ListFooterComponentStyle`.
+In both, the list sets the space on a slot it owns.

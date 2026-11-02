@@ -1,11 +1,13 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import type { ParsedCapture } from "@/types/task";
 import {
   dueChipLabel,
   recurrenceKeyword,
   timeChipLabel,
 } from "@/features/capture/lib/chip-labels";
-import { colors, fonts, radius, radii, spacing } from "@/theme/tokens";
+import { Icon } from "@/components/ui/icon";
+import { Pill } from "@/components/ui/pill";
+import { spacing } from "@/theme/tokens";
 
 /**
  * The capture sheet's parse feedback: icon chips built from the parse
@@ -22,29 +24,18 @@ export function CaptureChips({
   }
   return (
     <View style={styles.chipRow}>
-      <View style={styles.parseChip}>
-        <View style={styles.glyphMiniCalendar}>
-          <View style={styles.glyphMiniCalendarTop} />
-          <View style={styles.glyphMiniCalendarDot} />
-        </View>
-        <Text style={styles.parseChipText}>{dueChipLabel(parsed.due)}</Text>
-      </View>
+      <Pill tone="chip" label={dueChipLabel(parsed.due)}>
+        <Icon name="calendar-mini" color="accent" />
+      </Pill>
       {parsed.reminders != null && parsed.reminders.length > 0 ? (
-        <View style={styles.parseChip}>
-          <View style={styles.glyphMiniClock}>
-            <View style={styles.glyphMiniClockHand} />
-            <View style={styles.glyphMiniClockHandV} />
-          </View>
-          <Text style={styles.parseChipText}>{timeChipLabel(parsed.due)}</Text>
-        </View>
+        <Pill tone="chip" label={timeChipLabel(parsed.due)}>
+          <Icon name="clock-mini" color="accent" />
+        </Pill>
       ) : null}
       {parsed.recurrence ? (
-        <View style={styles.parseChip}>
-          <Text style={styles.parseGlyph}>{"↻"}</Text>
-          <Text style={styles.parseChipText}>
-            {recurrenceKeyword(parsed.recurrence)}
-          </Text>
-        </View>
+        <Pill tone="chip" label={recurrenceKeyword(parsed.recurrence)}>
+          <Icon name="repeat" color="accent" />
+        </Pill>
       ) : null}
     </View>
   );
@@ -55,72 +46,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.s,
-  },
-  parseChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: colors.accentSoft,
-    borderRadius: radius,
-    paddingHorizontal: spacing.s,
-    height: 24,
-  },
-  parseChipText: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontFamily: fonts.body,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  parseGlyph: {
-    fontSize: 12,
-    lineHeight: 14,
-    color: colors.accent,
-    fontWeight: "700",
-  },
-  glyphMiniCalendar: {
-    width: 11,
-    height: 11,
-    borderWidth: 1.5,
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  glyphMiniCalendarTop: {
-    height: 3,
-    width: "100%",
-    backgroundColor: colors.accent,
-  },
-  glyphMiniCalendarDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    marginLeft: 2,
-    marginTop: 2,
-    backgroundColor: colors.accent,
-  },
-  glyphMiniClock: {
-    width: 11,
-    height: 11,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.accent,
-  },
-  glyphMiniClockHand: {
-    position: "absolute",
-    left: 4,
-    top: 1.5,
-    width: 1.5,
-    height: 4,
-    borderRadius: 1,
-    backgroundColor: colors.accent,
-  },
-  glyphMiniClockHandV: {
-    position: "absolute",
-    left: 5.5,
-    top: 4,
-    width: 3,
-    height: 1.5,
-    borderRadius: 1,
-    backgroundColor: colors.accent,
   },
 });

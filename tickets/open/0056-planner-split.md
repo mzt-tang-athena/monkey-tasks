@@ -36,7 +36,7 @@ kebab-case".
 | `planner-screen.tsx` | Route state, store reads, providers, layout | `PlannerScreen.tsx` |
 | `components/planner-list-context.tsx` | Source, form, menu state, cycle, form change, lift, drag API, toggle, open, drag start | Nine props that `PlannerScreen.tsx:156-173`, `PlannerScreen.tsx:209-229` and `PlannerScreen.tsx:249-281` pass into `DaySpread` (16 props) and `TaskListSection` (17 props) |
 | `hooks/use-planner-source.ts` | Source state and the chooser state | `PlannerScreen.tsx:57-84` |
-| `components/source-menu.tsx` | The chooser on `Menu` | `PlannerScreen.tsx:309-367`, `SourceToggle.tsx:59-64` |
+| `components/source-menu.tsx` | The chooser on `Menu`. The toggle's text `▾` shows as a faint dot at 10 px, so it becomes `Icon name="chevron-down"`. | `PlannerScreen.tsx:309-367`, `SourceToggle.tsx:59-64`, `SourceToggle.tsx:98` |
 | `hooks/use-drag-session.ts` | Pending press, hold, arm, lift, ghost values, touch gate, click guard and drop. It takes the zone map, the ghost origin, and `resolve(hitKey)`, which returns a patch or null. | `usePlannerGestures.ts:46-300`, `DaySpread.tsx:101-311`, `DaySpread.tsx:385-504` |
 | `hooks/use-split-pane.ts` | Root height, body top, pane offset, timeline height, resize, grabber pan and limit | `DaySpread.tsx:90-100`, `DaySpread.tsx:237-243`, `DaySpread.tsx:313-356` |
 | `lib/day-rows.ts` | Day tasks, timed tasks, overdue, list rows and section tasks as pure functions | `DaySpread.tsx:358-383`, `DayPreview.tsx:45-62` |
@@ -44,7 +44,7 @@ kebab-case".
 | `components/day/day-heading.tsx` | Eyebrow, serif date and rule | `DaySpread.tsx:591-597`, `DayPreview.tsx:67-73` |
 | `components/day/timeline-pane.tsx`, `split-handle.tsx`, `day-list-pane.tsx`, `overdue-group.tsx` | The parts of `renderBody` | `DaySpread.tsx:599-735` |
 | `components/week-pane.tsx`, `components/month-pane.tsx` | The week and month bodies | `PlannerScreen.tsx:192-283` |
-| `components/drag-ghost.tsx` | One ghost, through `OverlayHost` at `layers.ghost` | `PlannerScreen.tsx:288-307`, `DaySpread.tsx:562-581` |
+| `components/drag-ghost.tsx` | One ghost, through `OverlayHost` at `layers.dragGhost` | `PlannerScreen.tsx:288-307`, `DaySpread.tsx:562-581` |
 | `planner-layout.ts` | The shared frame and pane styles only | parts of `plannerStyles.ts` |
 
 Move every other style next to its component. Ticket 0048 deleted the

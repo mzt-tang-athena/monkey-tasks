@@ -16,16 +16,16 @@ module.exports = defineConfig([
   expoConfig,
   {
     rules: {
-      // Spacing ownership (docs/adr/0012): children never declare
-      // bottom or right margins; containers own the gaps. Ticket 0054
-      // widens it to top, left and vertical margins.
+      // Spacing ownership (docs/adr/0012): a child never declares
+      // spacing outside itself, so no style sets a margin on any side.
+      // The container owns the gaps: a `gap`, or symmetric padding.
       'no-restricted-syntax': [
         'error',
         {
           selector:
-            "Property[key.name=/^margin(Bottom|Right)$/] , Property[key.name='marginBottom'] , Property[key.name='marginRight']",
+            'Property[key.name=/^margin(Top|Bottom|Left|Right|Vertical|Horizontal|Start|End)?$/], Property[key.value=/^margin(Top|Bottom|Left|Right|Vertical|Horizontal|Start|End)?$/]',
           message:
-            'Spacing ownership: do not use marginBottom/marginRight in styles. The container owns the gaps (see docs/adr/0012-spacing-ownership-rule.md).',
+            'Spacing ownership: do not set a margin in a style. The container owns the gaps with `gap` or symmetric padding (see docs/adr/0012-spacing-ownership-rule.md).',
         },
       ],
     },

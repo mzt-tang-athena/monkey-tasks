@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CaptureTarget, TaskItem } from "@/types/task";
 import { TaskRow } from "@/components/task-row";
+import { taskRowFace } from "@/components/task-row-face";
 import { ReorderGrip, ReorderRow } from "@/features/lists/reorder-row";
 import {
   layoutOrder,
@@ -34,7 +35,7 @@ import {
   type SectionTone,
 } from "@/stores/tasks/selectors";
 import { IconButton } from "@/components/ui/icon-button";
-import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter } from "@/theme/tokens";
+import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter, shadows } from "@/theme/tokens";
 
 /**
  * Lists tab: Main first, then one tab per list note, with capture
@@ -1090,9 +1091,11 @@ const toneLabel = (() => {
 function LoadingState() {
   return (
     <View style={styles.holder}>
-      <View style={[styles.skeleton, { width: "40%" as const }]} />
-      <View style={[styles.skeleton, { width: "70%" as const }]} />
-      <View style={[styles.skeleton, { width: "55%" as const }]} />
+      <View style={styles.skeletons}>
+        <View style={[styles.skeleton, { width: "40%" as const }]} />
+        <View style={[styles.skeleton, { width: "70%" as const }]} />
+        <View style={[styles.skeleton, { width: "55%" as const }]} />
+      </View>
     </View>
   );
 }
@@ -1192,6 +1195,7 @@ const styles = StyleSheet.create({
     maxWidth: measure,
     alignSelf: "center" as const,
     width: "100%" as const,
+    gap: 2,
     paddingHorizontal: pageGutter,
     paddingTop: spacing.m,
   },
@@ -1210,7 +1214,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: fonts.body,
     color: colors.inkMuted,
-    marginTop: 2,
   },
 
   // Notes that fail validation: a block on the page grid, above the
@@ -1335,15 +1338,13 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
     borderRadius: radiusFloating,
     paddingVertical: spacing.xs,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.floating,
   },
+  // A label and its hint sit one point apart.
   menuItem: {
     minHeight: 40,
     justifyContent: "center",
+    gap: 1,
     paddingHorizontal: spacing.m,
   },
   menuItemPressed: {
@@ -1395,12 +1396,13 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontFamily: fonts.body,
     color: colors.inkMuted,
-    marginTop: 1,
   },
 
-  // Plain groups: a header on the paper, flush rows beneath.
+  // Plain groups: a header on the paper, flush rows beneath. A
+  // SectionList has no gap between its sections, so the list sets the
+  // space above each group on the header slot it renders (ADR 0012).
   group: {
-    marginTop: spacing.xl,
+    paddingTop: spacing.xl,
   },
   groupLabel: {
     fontSize: 12,
@@ -1435,7 +1437,7 @@ const styles = StyleSheet.create({
   // so a dragged row carries its divider with it. Inset to the text.
   cardDivider: {
     position: "absolute" as const,
-    left: spacing.l + 24 + spacing.m,
+    left: taskRowFace.textInset,
     right: 0,
     top: 0,
     height: StyleSheet.hairlineWidth,
@@ -1443,7 +1445,6 @@ const styles = StyleSheet.create({
   },
   completedGroup: {
     opacity: 0.55,
-    marginTop: spacing.xl,
   },
   completedRow: {
     opacity: 0.55,
@@ -1465,11 +1466,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: spacing.xl,
   },
+  // The lines own their spacing as a group: a step between them and
+  // half that above and below.
+  skeletons: {
+    gap: spacing.xl,
+    paddingVertical: spacing.m,
+  },
   skeleton: {
     height: 14,
     borderRadius: radii.pill,
     backgroundColor: colors.hairline,
-    marginVertical: spacing.m,
   },
   empty: {
     fontSize: 15,

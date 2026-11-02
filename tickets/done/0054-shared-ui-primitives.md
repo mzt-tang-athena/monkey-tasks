@@ -3,8 +3,8 @@ id: 0054
 title: Shared UI primitives
 created: 2026-10-26
 priority: high
-assignee:
-pr:
+assignee: claude-code
+pr: 77
 depends: [0050]
 ---
 
@@ -105,26 +105,68 @@ now, so the rule can run as an error from this ticket on.
 
 ## Acceptance
 
-- [ ] `tokens.ts` exports `layers`, `type` and `shadows`.
-- [ ] An ADR records the type scale and the layer order.
-- [ ] Each primitive in the table lives in `src/components/ui/` with a component test for its roles, names and states.
-- [ ] The `Menu` test opens a menu from an anchor near the bottom edge and finds it above the anchor, inside the window.
-- [ ] The `Menu` test opens a menu from an anchor at the right edge and finds its right side inside the page gutter.
-- [ ] A press on the backdrop, Android back and web Escape each close an open `Menu`.
-- [ ] A disabled menu item ignores a press and reports `aria-disabled`.
-- [ ] Android back closes an open `Sheet`.
-- [ ] While a `Sheet` shows, the test finds the screen content hidden from assistive tech.
-- [ ] `Banner` and `Toast` report role `alert`.
-- [ ] `TabStrip` and `SegmentedControl` targets measure at least 44 by 44.
-- [ ] A test reproduces the meta row gap first. Afterwards a single-line row has equal space above and below its text.
-- [ ] `TaskRow` and `PreviewRow` render through `TaskRowFace`.
-- [ ] The source holds one `formatTime`.
-- [ ] `CaptureChips` renders `Pill` chips and holds no chip styles of its own.
-- [ ] The spacing rule in `app/eslint.config.js` covers `marginTop`, `marginLeft`, `marginVertical` and `marginHorizontal` at `error`.
-- [ ] No style in `app/src` declares one of those margins, and each former site takes its gap from its parent.
-- [ ] Lists, Planner (day, week and month), the editor and the capture sheet show the same spacing as before at 390 by 800, apart from the meta row fix.
-- [ ] `npx eslint src --max-warnings 0`, `npx tsc --noEmit` and the test suite pass.
+- [x] `tokens.ts` exports `layers`, `type` and `shadows`.
+- [x] An ADR records the type scale and the layer order.
+- [x] Each primitive in the table lives in `src/components/ui/` with a component test for its roles, names and states.
+- [x] The `Menu` test opens a menu from an anchor near the bottom edge and finds it above the anchor, inside the window.
+- [x] The `Menu` test opens a menu from an anchor at the right edge and finds its right side inside the page gutter.
+- [x] A press on the backdrop, Android back and web Escape each close an open `Menu`.
+- [x] A disabled menu item ignores a press and reports `aria-disabled`.
+- [x] Android back closes an open `Sheet`.
+- [x] While a `Sheet` shows, the test finds the screen content hidden from assistive tech.
+- [x] `Banner` and `Toast` report role `alert`.
+- [x] `TabStrip` and `SegmentedControl` targets measure at least 44 by 44.
+- [x] A test reproduces the meta row gap first. Afterwards a single-line row has equal space above and below its text.
+- [x] `TaskRow` and `PreviewRow` render through `TaskRowFace`.
+- [x] The source holds one `formatTime`.
+- [x] `CaptureChips` renders `Pill` chips and holds no chip styles of its own.
+- [x] The spacing rule in `app/eslint.config.js` covers `marginTop`, `marginLeft`, `marginVertical` and `marginHorizontal` at `error`.
+- [x] No style in `app/src` declares one of those margins, and each former site takes its gap from its parent.
+- [x] Lists, Planner (day, week and month), the editor and the capture sheet show the same spacing as before at 390 by 800, apart from the meta row fix.
+- [x] `npx eslint src --max-warnings 0`, `npx tsc --noEmit` and the test suite pass.
 
 ## Outcome
 
-(filled in before moving to done/)
+PR #77 landed the ticket on `epic/0047-rebuild`.
+
+- `tokens.ts` exports `type`, `layers`, `shadows` and `menuWidth`.
+  ADR 0040 records the type scale and the layer order. It also records
+  why the primitives use no headless UI kit: `@rn-primitives` 1.5 and
+  `@gluestack-ui/core` 5.0 were checked on 2026-10-31.
+- `components/ui` holds every primitive in the table, each with a
+  component test. `hooks/use-dismiss` closes the newest surface on
+  Android back or Escape. `lib/motion` keeps the menu entrance and the
+  sheet clock behind `useMenuEntrance` and `useSheetMotion` for 0058
+  and 0062. The README lists the primitives under Layout.
+- `TaskRowFace` draws both task rows, and one `formatTime` lives in
+  `utils/dates.ts`. The meta row renders only with content. A
+  Playwright test fails on the old build with 12 px above the name and
+  14 px below, and passes now.
+- `CaptureChips` renders `Pill` chips with `Icon` glyphs. The bottom
+  bar draws its glyphs through `Icon` too.
+- ESLint bans every margin property at `error`. The 32 sites take
+  their gap from their parent. The ADR 0012 amendment of 2026-10-28
+  lists the three ways.
+
+Screens at 390 by 800, before and after, in both Playwright projects:
+Lists (Main, a list, an empty list, both menus, the swipe preview),
+Planner (day, the source menu, week, month, a picked day), the editor
+(task, note, missing task), the capture sheet and diagnostics. Three
+changes show:
+
+- Each single-line row is 2 px shorter. This is the meta row fix.
+- The calendar glyph on the capture chip is accent green. It had no
+  border color before, so it drew black.
+- Diagnostics has even 16 px padding and 16 px between blocks. A
+  stray label margin made its top 24 px before.
+
+The loading, error and toast states did not show in the web preview.
+Their gaps were checked by arithmetic instead: each moved margin
+became a `gap` or a padding of the same size.
+
+Left for the screen tickets, as the spec planned: 0055, 0056 and 0057
+adopt `Menu`, `Banner`, the list states, `SectionHeader`,
+`CardGroupRow`, `TabStrip`, `SegmentedControl`, `Sheet`, `TextField`
+and `Icon`, and move their `fontSize` literals onto `type`. The text
+`▾` in the planner's source toggle still shows as a faint dot. The
+`chevron-down` icon replaces it in 0056.

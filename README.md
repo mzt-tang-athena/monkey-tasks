@@ -160,6 +160,31 @@ The app code in `app/src` follows the Bulletproof React layout
 Inside a feature, `components/` holds its UI, `hooks/` its stateful
 glue, `lib/` its pure helpers and `model.ts` its rules (ADR 0022).
 
+### Shared UI
+
+`components/ui` holds the primitives that the screens share. Each file
+documents its props, and each primitive has a component test.
+
+| Primitive | What it draws |
+|---|---|
+| `Button` | A solid or quiet pill, a round send control, or a `text` label at least 44 pt high. |
+| `IconButton`, `Pill` | An icon in a 44 pt target. A control pill, or a `chip` that reads a parsed field. |
+| `Icon` | Every glyph the app draws, by `name` and color token. The app has no icon font. |
+| `OverlayHost`, `Overlay` | The root portal in `app/_layout.tsx`. An overlay draws above every screen at its layer. A `modal` overlay hides the screen from assistive tech. |
+| `Menu`, `placeMenu` | A menu that opens from an anchor. It flips above near the bottom bar and stays inside the page gutter. |
+| `Sheet` | A scrim, a dock that rides the keyboard, and a panel. The scrim and Android back close it. |
+| `Banner`, `Toast` | A danger or info message with role `alert`. A toast floats above every other layer. |
+| `LoadingState`, `EmptyState`, `ErrorState` | One look for a list that loads, holds nothing or fails. |
+| `SectionHeader` | An eyebrow label over a group, with a count and a tone. |
+| `CardGroupRow` | One row of a group card, with its edges and an inset divider. |
+| `TabStrip`, `SegmentedControl` | Tabs that scroll, and segments. Every target is at least 44 by 44. |
+| `TextField` | A labelled input, with a hint or an error. |
+
+`components/task-row-face` draws the still task row that `TaskRow` and
+`PreviewRow` share. `hooks/use-dismiss` closes a surface on Android
+back and on Escape in the browser. `theme/tokens.ts` holds the type
+scale, the layer order and the shadows (ADR 0040).
+
 Imports follow four zones:
 
 1. A feature imports no other feature.

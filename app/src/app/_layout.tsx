@@ -8,6 +8,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { makeQueryClient } from "@/lib/react-query";
 import { TasksProvider } from "@/stores/tasks/tasks-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { OverlayHost } from "@/components/ui/overlay-host";
 import { installErrorAlert } from "@/lib/errors";
 
 Notifications.setNotificationHandler({
@@ -43,10 +44,14 @@ export default function RootLayout() {
         <ErrorBoundary>
           <QueryClientProvider client={queryClient}>
             <TasksProvider>
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
-              </Stack>
+              {/* Menus, sheets and toasts draw here, above every
+                  screen, in one z order (ADR 0040). */}
+              <OverlayHost>
+                <Stack>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
+                </Stack>
+              </OverlayHost>
             </TasksProvider>
           </QueryClientProvider>
         </ErrorBoundary>

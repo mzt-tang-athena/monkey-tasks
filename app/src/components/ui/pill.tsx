@@ -2,11 +2,11 @@ import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
   colors,
-  fonts,
   spacing,
   radius,
   radii,
   touchTarget,
+  type,
 } from "@/theme/tokens";
 
 /**
@@ -70,9 +70,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   controlText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: fonts.body,
+    ...type.control,
     color: colors.accent,
     fontWeight: "600",
   },
@@ -91,9 +89,7 @@ const styles = StyleSheet.create({
     height: 24,
   },
   chipText: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontFamily: fonts.body,
+    ...type.caption,
     color: colors.accent,
     fontWeight: "600",
   },

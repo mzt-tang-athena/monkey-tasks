@@ -138,6 +138,9 @@ export function TaskListSection({
       ListEmptyComponent={
         tasks.length === 0 ? <Text style={styles.empty}>{emptyLabel}</Text> : undefined
       }
+      // The footer sits one step under the rows. Like the header slot,
+      // the list sets that gap on the slot (ADR 0012).
+      ListFooterComponentStyle={{ paddingTop: spacing.s }}
       ListFooterComponent={
         footer == null ? undefined : <View>{footer}</View>
       }

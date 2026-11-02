@@ -1,6 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { PreviewRow } from "@/components/preview-row";
+import { taskRowFace } from "@/components/task-row-face";
 import type { SortMode } from "@/lib/settings";
 import {
   useTabTasks,
@@ -68,7 +69,7 @@ export function ListPagePreview({
     <View style={styles.root} pointerEvents="none">
       <View style={styles.content}>
         {sections.map((section) => (
-          <View key={section.title} style={styles.group}>
+          <View key={section.title}>
             <Text
               style={
                 section.tone === "faint"
@@ -121,16 +122,16 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   // The same page grid the scroller uses, so the peek lines up with
-  // the page it becomes.
+  // the page it becomes. The live list puts spacing.xl above each
+  // group's header, under its own spacing.m top; here the content
+  // owns both.
   content: {
     maxWidth: measure,
     alignSelf: "center" as const,
     width: "100%" as const,
+    gap: spacing.xl,
     paddingHorizontal: pageGutter,
-    paddingTop: spacing.m,
-  },
-  group: {
-    marginTop: spacing.xl,
+    paddingTop: spacing.m + spacing.xl,
   },
   groupLabel: {
     fontSize: 12,
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
   },
   cardDivider: {
     position: "absolute" as const,
-    left: spacing.l + 24 + spacing.m,
+    left: taskRowFace.textInset,
     right: 0,
     top: 0,
     height: StyleSheet.hairlineWidth,

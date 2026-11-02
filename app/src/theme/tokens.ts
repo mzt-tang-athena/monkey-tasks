@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Platform, type TextStyle, type ViewStyle } from "react-native";
 
 /**
  * Themes as config. Three named palettes from the round-2 verdicts;
@@ -118,6 +118,79 @@ export const fonts = {
   }) as string | undefined,
 };
 
+/**
+ * The type scale, named by role (ADR 0040). Each step is a size and
+ * the line height that goes with it. A style spreads a step and adds
+ * its own color and, where it needs one, a weight:
+ * `{ ...type.meta, color: colors.inkMuted }`. The eyebrow is a whole
+ * form, so it carries its weight, tracking and case too.
+ */
+export const type = {
+  /** Small caps over a group: section and field labels. */
+  eyebrow: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  /** The smallest text: chips, week cards, ruler marks. */
+  caption: { fontSize: 11, lineHeight: 14, fontFamily: fonts.body },
+  /** Secondary lines: a row's time, banners, hints. */
+  meta: { fontSize: 13, lineHeight: 18, fontFamily: fonts.body },
+  /** Labels on things you press: buttons, menu items, pills. */
+  control: { fontSize: 14, lineHeight: 20, fontFamily: fonts.body },
+  /** Running text and field values. */
+  body: { fontSize: 16, lineHeight: 22, fontFamily: fonts.body },
+  /** Task names, list tabs and the capture input. */
+  bodyLarge: { fontSize: 17, lineHeight: 24, fontFamily: fonts.body },
+  /** A screen's own heading, such as the note title in the editor. */
+  title: { fontSize: 22, lineHeight: 28, fontFamily: fonts.body },
+  /** The serif date on the day view. */
+  display: { fontSize: 26, lineHeight: 32, fontFamily: fonts.display },
+} as const satisfies Record<string, TextStyle>;
+
+/**
+ * One z scale for every surface that floats (ADR 0040). Without it,
+ * floating surfaces stack in tree order, and `elevation` reorders
+ * them on Android only. `OverlayHost` draws each overlay at its
+ * layer, with the same number as its Android elevation.
+ */
+export const layers = {
+  content: 0,
+  bottomBar: 10,
+  dragGhost: 20,
+  menuBackdrop: 30,
+  menu: 40,
+  sheetScrim: 50,
+  sheet: 60,
+  toast: 70,
+} as const;
+
+export type Layer = keyof typeof layers;
+
+/**
+ * Shadows for surfaces that float above the page. `floating` is the
+ * menu, sheet and toast. `lifted` is a row under the finger.
+ */
+export const shadows = {
+  floating: {
+    shadowColor: colors.ink,
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  lifted: {
+    shadowColor: colors.ink,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+} as const satisfies Record<string, ViewStyle>;
+
 /** 8pt scale, with the half steps 4pt and 12pt. */
 export const spacing = {
   xs: 4,
@@ -178,6 +251,9 @@ export const pageGutter = 20;
 
 /** The smallest touch target the platform guidance allows. */
 export const touchTarget = 44;
+
+/** Every menu's width: the widest item label fits on one line. */
+export const menuWidth = 216;
 
 /**
  * The bottom bar's rhythm: a taller row, a 44pt nav target, and a

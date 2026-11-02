@@ -82,6 +82,73 @@ export function useRise(created: string | undefined): Animated.Value {
   return entry.rise;
 }
 
+/**
+ * A menu's entrance: 0 to 1 over 140 ms when it opens, at once with
+ * reduced motion. The menu fades and grows from its corner on this
+ * one value. It is today's code from the planner's source menu, kept
+ * behind this hook so ticket 0058 can swap it for Reanimated.
+ */
+export function useMenuEntrance(open: boolean): Animated.Value {
+  const reduced = useReduceMotion();
+  const [progress] = React.useState(() => new Animated.Value(0));
+  React.useEffect(() => {
+    if (!open) {
+      progress.setValue(0);
+      return;
+    }
+    if (reduced) {
+      progress.setValue(1);
+      return;
+    }
+    progress.setValue(0);
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 140,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  }, [open, progress, reduced]);
+  return progress;
+}
+
+/**
+ * A sheet's travel: 0 closed to 1 open over 220 ms, the clock the
+ * bottom bar runs today. `onClosed` runs when the exit has played, so
+ * the caller can unmount the sheet then and not on a timer. Ticket
+ * 0062 moves the sheet onto the keyboard's own clock.
+ */
+export function useSheetMotion(
+  open: boolean,
+  onClosed: () => void,
+): Animated.Value {
+  const reduced = useReduceMotion();
+  const [progress] = React.useState(() => new Animated.Value(0));
+  const closed = React.useRef(onClosed);
+  React.useEffect(() => {
+    closed.current = onClosed;
+  }, [onClosed]);
+  React.useEffect(() => {
+    if (reduced) {
+      progress.setValue(open ? 1 : 0);
+      if (!open) {
+        closed.current();
+      }
+      return;
+    }
+    const animation = Animated.timing(progress, {
+      toValue: open ? 1 : 0,
+      duration: 220,
+      useNativeDriver: false,
+    });
+    animation.start(({ finished }) => {
+      if (finished && !open) {
+        closed.current();
+      }
+    });
+    return () => animation.stop();
+  }, [open, progress, reduced]);
+  return progress;
+}
+
 export type Shake = {
   /** The offset to apply as a translateX. */
   offset: Animated.Value;

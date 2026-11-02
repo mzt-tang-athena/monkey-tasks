@@ -5,9 +5,11 @@ import { styles } from "./planner-styles";
 export function LoadingState() {
   return (
     <View style={styles.holder}>
-      <View style={[styles.skeleton, { width: "60%" as const, height: 28 }]} />
-      <View style={[styles.skeleton, { width: "85%" as const }]} />
-      <View style={[styles.skeleton, { width: "70%" as const }]} />
+      <View style={styles.skeletons}>
+        <View style={[styles.skeleton, { width: "60%" as const, height: 28 }]} />
+        <View style={[styles.skeleton, { width: "85%" as const }]} />
+        <View style={[styles.skeleton, { width: "70%" as const }]} />
+      </View>
     </View>
   );
 }

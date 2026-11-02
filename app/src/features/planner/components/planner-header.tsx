@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { Mode } from "@/features/planner/model";
-import { colors, fonts, radius, spacing } from "@/theme/tokens";
+import { colors, fonts, pageGutter, radius, spacing } from "@/theme/tokens";
 import { PeriodStrip } from "./period-strip";
 
 const styles = StyleSheet.create({
@@ -8,6 +8,9 @@ const styles = StyleSheet.create({
   // the header from what follows.
   header: {
     gap: spacing.s,
+  },
+  gutter: {
+    paddingHorizontal: pageGutter,
   },
   pressedFill: {
     backgroundColor: colors.pressed,
@@ -62,19 +65,26 @@ const styles = StyleSheet.create({
   },
 });
 
-/** The shared top block: period strip and the mode pills. */
+/**
+ * The shared top block: period strip and the mode pills. With `inset`
+ * the header takes the page gutter itself, so the week and month
+ * rails can run to the screen's edges. The day view's frame holds the
+ * gutter for it instead.
+ */
 export function PlannerHeader({
   mode,
   selected,
   today,
   onSelect,
   onMode,
+  inset = false,
 }: {
   mode: Mode;
   selected: Date;
   today: Date;
   onSelect: (date: Date) => void;
   onMode: (mode: Mode) => void;
+  inset?: boolean;
 }) {
   return (
     <View style={styles.header}>
@@ -88,36 +98,38 @@ export function PlannerHeader({
       />
 
       {/* E's economy: the toggle pills lead the header block. */}
-      <View style={styles.segmented}>
-        {(["day", "week", "month"] as Mode[]).map((option, index) => (
-          <Pressable
-            key={option}
-            style={({ pressed }) => [
-              styles.segment,
-              mode === option && styles.segmentActive,
-              pressed && styles.pressedFill,
-              // Square corners on the selected segment's open sides.
-              mode === option &&
-                (index === 0
-                  ? styles.segmentFirst
-                  : index === 2
-                    ? styles.segmentLast
-                    : styles.segmentMiddle),
-            ]}
-            onPress={() => onMode(option)}
-            accessibilityRole="tab"
-            aria-selected={mode === option}
-          >
-            <Text
-              style={[
-                styles.segmentText,
-                mode === option && styles.segmentTextActive,
+      <View style={inset && styles.gutter}>
+        <View style={styles.segmented}>
+          {(["day", "week", "month"] as Mode[]).map((option, index) => (
+            <Pressable
+              key={option}
+              style={({ pressed }) => [
+                styles.segment,
+                mode === option && styles.segmentActive,
+                pressed && styles.pressedFill,
+                // Square corners on the selected segment's open sides.
+                mode === option &&
+                  (index === 0
+                    ? styles.segmentFirst
+                    : index === 2
+                      ? styles.segmentLast
+                      : styles.segmentMiddle),
               ]}
+              onPress={() => onMode(option)}
+              accessibilityRole="tab"
+              aria-selected={mode === option}
             >
-              {option === "day" ? "Day" : option === "week" ? "Week" : "Month"}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                style={[
+                  styles.segmentText,
+                  mode === option && styles.segmentTextActive,
+                ]}
+              >
+                {option === "day" ? "Day" : option === "week" ? "Week" : "Month"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
     </View>
   );
