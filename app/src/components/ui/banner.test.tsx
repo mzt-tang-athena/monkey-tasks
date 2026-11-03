@@ -22,19 +22,26 @@ describe("Banner", () => {
     );
   });
 
-  it("runs its action under the name it is given", () => {
-    const onPress = vi.fn();
+  it("runs each action under the name it is given", () => {
+    const retry = vi.fn();
+    const dismiss = vi.fn();
     render(
       <Banner
         tone="danger"
         lines={["Save failed."]}
-        action={{ label: "Dismiss", accessibilityLabel: "dismiss error", onPress }}
+        actions={[
+          { label: "Retry", accessibilityLabel: "retry tick", onPress: retry },
+          { label: "Dismiss", accessibilityLabel: "dismiss error", onPress: dismiss },
+        ]}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "dismiss error" }));
 
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(retry).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "retry tick" }));
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 
   it("has no button without an action", () => {

@@ -22,7 +22,7 @@ export type RowStep = { previous: TaskItem; text: string };
 export type Written = { before: TaskItem; after: TaskItem };
 
 const spec: VaultMutationSpec<PatchVariables, Written, RowStep | undefined> = {
-  label: "field write",
+  label: "change",
   optimistic(rows, { id, patch }) {
     const previous = rowById(rows, id);
     if (previous == null) {

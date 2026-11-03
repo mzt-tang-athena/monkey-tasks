@@ -100,6 +100,29 @@ describe("updateProperty", () => {
     const result = updateProperty(base, "completed", null);
     expect(result).toBe(base);
   });
+
+  it("keeps the blank line between the frontmatter and the body", () => {
+    const text = '---\nkind: "[[tasks]]"\n---\n\nBody.\n';
+    const ticked = updateProperty(text, "completed", "2026-10-26");
+    expect(ticked).toBe(
+      '---\nkind: "[[tasks]]"\ncompleted: 2026-10-26\n---\n\nBody.\n',
+    );
+    expect(updateProperty(ticked, "completed", null)).toBe(text);
+  });
+
+  it("keeps a body that starts right after the fence", () => {
+    const text = '---\nkind: "[[tasks]]"\n---\nBody.\n';
+    expect(updateProperty(text, "due", "2026-10-26")).toBe(
+      '---\nkind: "[[tasks]]"\ndue: 2026-10-26\n---\nBody.\n',
+    );
+  });
+
+  it("ends the fence with a newline when the note ends at it", () => {
+    const text = '---\nkind: "[[tasks]]"\n---';
+    expect(updateProperty(text, "due", "2026-10-26")).toBe(
+      '---\nkind: "[[tasks]]"\ndue: 2026-10-26\n---\n',
+    );
+  });
 });
 
 describe("setBlockList", () => {

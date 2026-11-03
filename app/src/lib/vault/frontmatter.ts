@@ -89,9 +89,11 @@ function replaceSpan(
   span: FrontmatterSpan,
   newBody: string,
 ): string {
+  // The span ends after the closing fence's own newline, so the text
+  // after it is the body as it was, blank first line and all.
   const before = text.slice(0, span.start);
   const after = text.slice(span.end);
-  return `${before}---\n${newBody}\n---${after.startsWith("\n") ? "" : "\n"}${after}`;
+  return `${before}---\n${newBody}\n---\n${after}`;
 }
 
 /**

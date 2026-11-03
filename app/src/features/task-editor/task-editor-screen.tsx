@@ -13,7 +13,7 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { parseFrontmatter } from "@monkey-tasks/schemas";
 import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
-import { useTaskActions } from "@/stores/tasks/task-actions";
+import { useEditTask } from "@/stores/tasks/mutations/use-edit-task";
 import type { TaskEdit, TaskItem } from "@/types/task";
 import { safeFileName } from "@/lib/vault/file-name";
 import {
@@ -244,7 +244,7 @@ function NoteViewer({ task }: { task: TaskItem }) {
 }
 
 function TaskEditorForm({ task }: { task: TaskItem }) {
-  const actions = useTaskActions();
+  const editTask = useEditTask();
   // Seeded at mount and never reset: a failed save keeps every
   // keystroke.
   const [draft, setDraft] = React.useState<TaskEdit>(() => draftOf(task));
@@ -292,7 +292,7 @@ function TaskEditorForm({ task }: { task: TaskItem }) {
     setSaving(true);
     setError(null);
     try {
-      await actions.edit(task, edit, openedText);
+      await editTask(task, edit, openedText);
       router.back();
     } catch (caught) {
       // The draft stays put: the user fixes what the write refused.

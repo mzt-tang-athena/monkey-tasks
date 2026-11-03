@@ -9,26 +9,27 @@ import {
 import { VAULT_SCOPE } from "./read-gate";
 import { messageOf, type VaultMeta } from "./mutations/use-vault-mutation";
 
-/** One line in the failure list: a write that failed, or a notice. */
-export type VaultFailure = {
+type Entry = {
   /** Stable for the entry's life, for a React key. */
   key: number;
   kind: "failure" | "notice";
   /** The write's label, for example "tick". */
   label: string;
   message: string;
-  /** Take the entry off the list. */
-  dismiss(): void;
-  /** Run the same write again. Only a failure has it. */
-  retry?(): void;
 };
 
-type Entry = {
-  key: number;
-  kind: VaultFailure["kind"];
-  label: string;
-  message: string;
-};
+/** One line in the failure list: a write that failed, or a notice. */
+export type VaultFailure = Omit<Entry, "kind"> & {
+  /** Take the entry off the list. */
+  dismiss(): void;
+} & (
+    | {
+        kind: "failure";
+        /** Run the same write again, as a new mutation. */
+        retry(): void;
+      }
+    | { kind: "notice" }
+  );
 
 function noticeOf(data: unknown): string | null {
   if (typeof data !== "object" || data == null || !("notice" in data)) {
@@ -79,7 +80,7 @@ export function useVaultFailures(): VaultFailure[] {
   });
   return React.useMemo(
     () =>
-      entries.flatMap((entry) => {
+      entries.flatMap((entry): VaultFailure[] => {
         if (entry == null) {
           return [];
         }
@@ -98,10 +99,11 @@ export function useVaultFailures(): VaultFailure[] {
           void observer.mutate(mutation.state.variables).catch(() => undefined);
           client.getMutationCache().remove(mutation);
         };
+        const { key, label, message } = entry;
         return [
           entry.kind === "failure"
-            ? { ...entry, dismiss, retry }
-            : { ...entry, dismiss },
+            ? { key, label, message, kind: "failure", dismiss, retry }
+            : { key, label, message, kind: "notice", dismiss },
         ];
       }),
     [client, entries],

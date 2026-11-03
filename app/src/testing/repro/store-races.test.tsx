@@ -2,16 +2,14 @@
 // The Probe pattern: the test reads the provider's hooks through module
 // bindings, which is the shape the rule forbids in app code.
 
-// Reproductions of the data-layer audit findings, written before the
-// fixes. Each `it.fails` asserts the behaviour we want, so it passes
-// today only because the bug is still there. The ticket that fixes a
-// finding turns its test into a plain `it`; a fixed bug with `it.fails`
-// left in place fails the suite.
+// Reproductions of the data-layer audit findings, written as `it.fails`
+// before the fixes: each asserted the behaviour we want, so it passed
+// only while the bug was there. The ticket that fixed a finding turned
+// its test into a plain `it`.
 //
-// Store findings belong to ticket 0052 (writes become mutations). The
-// browser preview findings belong to ticket 0051 (vault adapter), which
-// fixed them. Ticket 0052 deletes the actions context these tests
-// drive, so it rewrites them against the new mutation hooks first.
+// Ticket 0052 (writes become mutations) fixed the store findings, and
+// ticket 0051 (vault adapter) fixed the browser preview findings. The
+// tests drive the store through the hooks a screen calls.
 //
 // The store runs on a memory vault (ADR 0037). A thin wrapper around it
 // holds and fails single calls, and the loader mock gates whole reads.
@@ -35,13 +33,7 @@ import { VaultProvider } from "@/lib/vault/vault-provider";
 import { makeQueryClient } from "@/lib/react-query";
 import { TasksProvider } from "@/stores/tasks/tasks-provider";
 import type { TaskListData } from "@/stores/tasks/query";
-import {
-  useStoreMeta,
-  useTaskList,
-  type StoreMeta,
-} from "@/stores/tasks/task-state";
-import { useTaskActions, type TaskActions } from "@/stores/tasks/task-actions";
-import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
+import { useStoreSnapshot, type StoreSnapshot } from "@/testing/store-snapshot";
 import type { TaskItem } from "@/types/task";
 import { reorderItems } from "@/features/lists/reorder";
 
@@ -168,27 +160,17 @@ function instrumented(inner: MemoryVault): VaultAdapter {
   };
 }
 
-type Snapshot = StoreMeta &
-  TaskActions & {
-    tasks: TaskItem[];
-    reorder: ReturnType<typeof useReorderSection>;
-  };
-
-let latest: Snapshot | null = null;
+let latest: StoreSnapshot | null = null;
 let client: QueryClient | null = null;
 let onRender: ((tasks: TaskItem[]) => void) | null = null;
 
 function Probe() {
-  const tasks = useTaskList();
-  const meta = useStoreMeta();
-  const actions = useTaskActions();
-  const reorder = useReorderSection();
-  latest = { ...meta, ...actions, tasks, reorder };
-  onRender?.(tasks);
+  latest = useStoreSnapshot();
+  onRender?.(latest.tasks);
   return null;
 }
 
-function store(): Snapshot {
+function store(): StoreSnapshot {
   if (latest == null) {
     throw new Error("the store has not rendered");
   }
@@ -349,7 +331,7 @@ describe("store races (ticket 0052)", () => {
     });
     await flush(8);
     expect(createCalls).toBe(1);
-    expect(store().lastError).toBeNull();
+    expect(store().failures).toEqual([]);
   });
 
   // Finding 4. tasks.tsx readVault: the third read attempt neither waits
@@ -365,7 +347,7 @@ describe("store races (ticket 0052)", () => {
     const dues = ["2026-11-01", "2026-11-02", "2026-11-03"];
     for (const [index, due] of dues.entries()) {
       await act(async () => {
-        await store().writeFields(row(), { due });
+        await store().patch(row(), { due });
       });
       await flush();
       opens[index]();
@@ -439,13 +421,15 @@ describe("store races (ticket 0052)", () => {
     await mount();
     failAfter = 0;
     await act(async () => {
-      await store().writeFields(row("Call"), { order: 1 });
+      await store().patch(row("Call"), { order: 1 });
     });
     await act(async () => {
-      await store().writeFields(row("Bread"), { order: 2 });
+      await store().patch(row("Bread"), { order: 2 });
     });
     await flush();
-    expect(store().lastError).not.toBeNull();
+    expect(store().failures.map((entry) => entry.message)).toEqual([
+      "disk full",
+    ]);
   });
 
   // Finding 8. app/(tabs)/index.tsx endReorder wrote one row at a time
@@ -521,7 +505,7 @@ describe("store races (ticket 0052)", () => {
       await store().toggle(row());
     });
     await flush();
-    expect(store().lastError).not.toBeNull();
+    expect(store().failures).toHaveLength(1);
   });
 
   // Finding 18. tasks.tsx spawnNext compensation removes the new row
@@ -547,11 +531,17 @@ describe("store races (ticket 0052)", () => {
     const before = fullSyncs;
     for (const due of ["2026-11-01", "2026-11-02", "2026-11-03"]) {
       await act(async () => {
-        await store().writeFields(row(), { due });
+        await store().patch(row(), { due });
       });
       await flush();
     }
     expect(fullSyncs - before).toBe(0);
+    // A read from disk does rebuild them.
+    await act(async () => {
+      await store().refresh();
+    });
+    await flush();
+    expect(fullSyncs - before).toBe(1);
   });
 });
 
@@ -568,6 +558,9 @@ describe("preview and empty folder (ticket 0051)", () => {
     await flush();
     expect(store().tasks).toHaveLength(0);
     expect(store().status).toBe("ready");
+    // No read ran, so none failed.
+    expect(store().readError).toBeNull();
+    expect(store().failures).toEqual([]);
   });
 
   // Finding 13. The sample query refetched on focus and rebuilt the set,
@@ -635,7 +628,7 @@ describe("preview and empty folder (ticket 0051)", () => {
       await store().toggle(row("Milk"));
     });
     await flush();
-    expect(store().lastError).toBeNull();
+    expect(store().failures).toEqual([]);
     expect(disk.get(`${TASKS}/Milk.md`)).toContain("completed:");
   });
 
@@ -670,6 +663,6 @@ describe("preview and empty folder (ticket 0051)", () => {
       'recurrence previous: "[[Supplements]]"',
     );
     expect(disk.get(`${TASKS}/Supplements.md`)).toContain("completed:");
-    expect(store().lastError).toBeNull();
+    expect(store().failures).toEqual([]);
   });
 });

@@ -26,8 +26,11 @@ import { ListPagePreview } from "@/features/lists/list-page-preview";
 import { loadSettings, saveSetting, type SortMode } from "@/lib/settings";
 import { BottomBar } from "@/components/bottom-bar";
 import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
-import { useTaskActions } from "@/stores/tasks/task-actions";
+import { useCaptureTask } from "@/stores/tasks/mutations/use-capture-task";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
+import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
+import { useGrantFolder, useRefreshTasks } from "@/stores/tasks/use-vault-read";
+import { FailureBanner } from "@/features/lists/failure-banner";
 import {
   useListTabs,
   useTabTasks,
@@ -52,10 +55,13 @@ type ListsSection = {
 const tickHoldMs = 250;
 
 export default function ListsScreen() {
-  const { rootUri, status, lastError, brokenLists } = useStoreMeta();
+  const { rootUri, status, readError, brokenLists } = useStoreMeta();
   const allTasks = useTaskList();
-  const actions = useTaskActions();
+  const toggleTask = useToggleTask();
+  const capture = useCaptureTask();
   const reorderSection = useReorderSection();
+  const refresh = useRefreshTasks();
+  const grant = useGrantFolder();
   const insets = useSafeAreaInsets();
   const tabs = useListTabs();
   const [tab, setTab] = React.useState<ListTab>("Main");
@@ -138,7 +144,6 @@ export default function ListsScreen() {
   // so the error state keeps its retry affordance (also wired to
   // the list's pull-to-refresh).
   const [refreshing, setRefreshing] = React.useState(false);
-  const refresh = actions.refresh;
   const reload = React.useCallback(async () => {
     setRefreshing(true);
     try {
@@ -508,7 +513,6 @@ export default function ListsScreen() {
   // row into Completed at once, so the row's own check animation would
   // be cut off. The hold keeps it where it was until the animation
   // lands, then the sections memo lets it move.
-  const toggleTask = actions.toggle;
   const toggle = React.useCallback(
     (task: TaskItem) => {
       const section = displaySections.find(
@@ -748,7 +752,7 @@ export default function ListsScreen() {
             <LoadingState />
           ) : status === "error" ? (
             <EmptyState
-              label={lastError ?? "Something went wrong. Pull to retry."}
+              label={readError ?? "Something went wrong. Pull to retry."}
             />
           ) : (
             <EmptyState label="Nothing on this list yet." />
@@ -832,7 +836,7 @@ export default function ListsScreen() {
               styles.grantRow,
               pressed && styles.grantRowPressed,
             ]}
-            onPress={() => void actions.grant()}
+            onPress={() => void grant()}
             accessibilityRole="button"
             accessibilityLabel="connect vault folder"
           >
@@ -933,28 +937,9 @@ export default function ListsScreen() {
             </View>
           </View>
         ) : null}
-        {/* A failed tick or field write leaves the list usable, so the
-            message is a quiet banner over it, not the error state. */}
-        {lastError != null && status !== "error" ? (
-          <View style={styles.bannerSlot}>
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorText} numberOfLines={3}>
-                {lastError}
-              </Text>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.errorDismiss,
-                  pressed && styles.errorDismissPressed,
-                ]}
-                onPress={actions.clearError}
-                accessibilityRole="button"
-                accessibilityLabel="dismiss error"
-              >
-                <Text style={styles.errorDismissText}>Dismiss</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
+        {/* A failed tick or field write leaves the list usable, so each
+            one is a quiet banner over it, not the error state. */}
+        {status !== "error" ? <FailureBanner /> : null}
         {page}
       </View>
       {/* The dragged row rides the pointer while the list reflows
@@ -1068,7 +1053,7 @@ export default function ListsScreen() {
       <BottomBar
         targets={targets}
         defaultTargetIndex={defaultTargetIndex}
-        onSend={(parsed, target) => actions.capture(parsed, target)}
+        onSend={(parsed, target) => capture(parsed, target)}
       />
     </View>
   );
@@ -1253,47 +1238,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     fontFamily: fonts.body,
-    color: colors.danger,
-  },
-
-  // A failed write that leaves the screen usable: a compact strip on
-  // the page grid, dismissed by hand.
-  bannerSlot: {
-    maxWidth: measure,
-    alignSelf: "center" as const,
-    width: "100%" as const,
-    paddingHorizontal: pageGutter,
-    paddingTop: spacing.m,
-  },
-  errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.m,
-    backgroundColor: colors.dangerSoft,
-    borderRadius: radius,
-    paddingVertical: spacing.s,
-    paddingHorizontal: spacing.m,
-  },
-  errorText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.danger,
-  },
-  errorDismiss: {
-    paddingVertical: 2,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius,
-  },
-  errorDismissPressed: {
-    backgroundColor: colors.pressed,
-  },
-  errorDismissText: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    fontWeight: "600",
     color: colors.danger,
   },
 
