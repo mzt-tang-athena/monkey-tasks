@@ -4,7 +4,7 @@ title: Vault writes become mutations
 created: 2026-10-26
 priority: high
 assignee: claude-code
-pr:
+pr: 79
 depends: [0051]
 ---
 
@@ -255,40 +255,40 @@ Land this as three PRs into `epic/0047-rebuild`, in this order.
 
 ## Acceptance
 
-- [ ] Each bug in the table had its repro test in the repo before its
+- [x] Each bug in the table had its repro test in the repo before its
       fix, as `it.fails`.
-- [ ] Every repro test in the "store races (ticket 0052)" block runs
+- [x] Every repro test in the "store races (ticket 0052)" block runs
       as a plain `it` and passes.
-- [ ] Both tests in `app/src/testing/repro/reminders-race.test.ts` run
+- [x] Both tests in `app/src/testing/repro/reminders-race.test.ts` run
       as plain `it` and pass.
-- [ ] Every vault write runs through a hook under
+- [x] Every vault write runs through a hook under
       `app/src/stores/tasks/mutations/`.
-- [ ] Every vault mutation uses `scope: { id: "vault" }` and a key
+- [x] Every vault mutation uses `scope: { id: "vault" }` and a key
       that starts with `"vault"`.
-- [ ] `grep -rn "tasksRef\|writeSeq\|queueWork\|lastError\|TaskActionsContext" app/src`
+- [x] `grep -rn "tasksRef\|writeSeq\|queueWork\|lastError\|TaskActionsContext" app/src`
       finds no match.
-- [ ] No `onSettled` or `onSuccess` calls `invalidateQueries` on the
+- [x] No `onSettled` or `onSuccess` calls `invalidateQueries` on the
       tasks key.
-- [ ] A test shows that a tap reads no notes: the vault read count
+- [x] A test shows that a tap reads no notes: the vault read count
       stays at one.
-- [ ] A test shows two quick taps on one note chain: the second builds
+- [x] A test shows two quick taps on one note chain: the second builds
       on the first, and the writes land in order.
-- [ ] A test shows a failed write rolls back only its own row, and
+- [x] A test shows a failed write rolls back only its own row, and
       leaves a later tap on the same row alone.
-- [ ] A test shows a read that starts during a write waits for it.
-- [ ] A test shows a read cancelled by a write runs again once the last
+- [x] A test shows a read that starts during a write waits for it.
+- [x] A test shows a read cancelled by a write runs again once the last
       write settles.
-- [ ] A test shows a capture row appears before its file exists and
+- [x] A test shows a capture row appears before its file exists and
       keeps its id after the file lands.
-- [ ] A test shows a full alarm rebuild runs after a read from disk and
+- [x] A test shows a full alarm rebuild runs after a read from disk and
       after no cache write.
-- [ ] A test shows a failure stays listed until it is dismissed or
+- [x] A test shows a failure stays listed until it is dismissed or
       retried.
-- [ ] A test shows a retry runs the same write again.
-- [ ] The query client sets `networkMode: "always"` for queries and
+- [x] A test shows a retry runs the same write again.
+- [x] The query client sets `networkMode: "always"` for queries and
       mutations.
-- [ ] A run of the store tests prints no act warning.
-- [ ] The Playwright suite (`npm run e2e`) passes after each of the
+- [x] A run of the store tests prints no act warning.
+- [x] The Playwright suite (`npm run e2e`) passes after each of the
       three PRs.
 - [ ] On the phone: tick, untick, a recurring tick and untick, capture,
       a drag to schedule, a reorder drop and an editor save all land in
@@ -296,4 +296,87 @@ Land this as three PRs into `epic/0047-rebuild`, in this order.
 
 ## Outcome
 
-(filled in before moving to done/)
+Landed in PR #79 into `epic/0047-rebuild`, as one PR with three stage
+commits and a follow-up commit. The epic lands one PR per child ticket,
+and ticket 0050 did the same. Each stage commit passed typecheck, lint,
+Vitest and the Playwright suite (46 passed, B1 and B2 expected fail).
+
+### What landed
+
+- **Stage 1.** `reminder-sync.ts` runs every alarm call on one chain.
+  `useReminderSync` rebuilds every alarm after a read from disk only.
+  `query.ts` carries row ids across a read. The query client sets
+  `networkMode: "always"`. `setBlockList` makes one `updateProperty`
+  call.
+- **Stage 2.** `read-gate.ts`, `rows.ts`, the wrapper and the five
+  hooks. The queue, `tasksRef`, `writeSeq` and the read retry loop went.
+  The reorder drop became one call.
+- **Stage 3.** `useVaultFailures` and `features/lists/failure-banner.tsx`,
+  one `Banner` per failed write or notice. The screens call the hooks.
+  `task-actions.tsx`, `lastError` and `clearError` went. `StoreMeta`
+  has `readError`. `useRefreshTasks` and `useGrantFolder` replace the
+  read side of the actions.
+- The store tests and the repro tests drive the hooks through
+  `testing/store-snapshot.ts`. The acceptance tests above are in
+  `stores/tasks/tasks-provider.test.tsx`, `testing/repro/` and
+  `lib/react-query.test.ts`.
+
+### Changes from the spec
+
+ADR 0037 has a 2026-11-03 amendment for the first four.
+
+- `onMutate` cancels the read and changes the rows before `mutate()`
+  returns, then awaits the cancel. An `await` first would order two
+  taps by promise timing.
+- A finished write leaves the mutation cache through a cache
+  subscription on its `success` state. The `MutationCache` `onSuccess`
+  option runs while the write still counts as pending.
+- Capture and editor failures are not in the banner. The capture bar
+  and the editor show them, and the bar has its own Retry.
+- Each hook returns a command, such as `toggle(task)`. The command
+  reads the row from the cache to pick a tick's direction and to make
+  the successor id.
+- `shareRows` carries ids first and then runs `replaceEqualDeep`, so a
+  read that changes nothing keeps each row object.
+- An untick reads the successor's file before it deletes it, and does
+  not trust the cached row alone.
+- A capture runs `ensureTasksFolder` each time instead of reading the
+  cached `tasksDir`. The one scope stops two captures from making two
+  folders, and a test shows it.
+- The paths follow ticket 0050. `spawn.ts` stays in `stores/tasks`.
+  `captureDraft` moved to `stores/tasks/capture-draft.ts` and
+  `saveTaskEdit` to `lib/vault/save-task-edit.ts`, so both
+  `eslint-disable` comments went.
+
+### Fixed on the way
+
+- `updateProperty` dropped the blank line under the frontmatter, so a
+  tick and an untick changed the note. A test now checks the round
+  trip.
+- `TaskRow` kept a wash and a shrunken circle on a row whose write
+  failed at once, because the press set the tick's start values before
+  the data flipped. The tick now starts from the data. A Playwright
+  frame trace in the browser shows a failed tick at rest, and a good
+  tick that starts on the frame its circle fills.
+- `notifications.web.ts` makes each alarm call a no-op on the web, so
+  `/dev` logs no error. The web bundle no longer loads
+  expo-notifications, so its two load warnings went too. The layout no
+  longer sets the notification handler twice.
+- The `selectSections` comment in `selectors.ts` sits on its function.
+- The three 0051 review notes: one scope for folder creation with a
+  test, the no-folder refresh test checks `readError` and the failure
+  list, and ADR 0039 has a 2026-11-03 amendment for the sample note
+  names.
+
+### Left open
+
+- The phone line is not ticked. No phone ran this branch. The epic's
+  phone pass covers it.
+- The Lists screen still lives in its route. Ticket 0055 moves it and
+  can fold `FailureBanner` into the planned `list-notices`.
+- `StoreMeta.tasksDir` has no reader in the screens. Ticket 0055 can
+  drop it.
+- The planner gesture hook still names its patch callback
+  `writeFields`. Ticket 0056 splits the planner and can rename it.
+- The store tests still render through `react-test-renderer`, which
+  logs a deprecation line. Ticket 0067 removes it.
