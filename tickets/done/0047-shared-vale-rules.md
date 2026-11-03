@@ -35,11 +35,15 @@ overrides: the pack owns the rule files, not the config.
 
 ## Outcome
 
-Blocked on registry auth. CI cannot read the private package
-`@mzt-tang-athena/vale-rules` with `GITHUB_TOKEN`. The package is
-private and linked to `mzt-tang-athena/contracts`, so the token from
-`monkey-tasks` gets 403 `read_package` in the docs job and 401 in the
-code job. The work is ready on PR 78.
+Done. The repo uses `@mzt-tang-athena/vale-rules@0.1.0`.
+
+The first CI run could not read the package: `GITHUB_TOKEN` belongs to
+`monkey-tasks`, and the package is linked to `mzt-tang-athena/contracts`.
+The docs job got 403 `read_package` and the code job got 401.
+
+Both jobs now pass `secrets.VALE_RULES_TOKEN` as `NODE_AUTH_TOKEN`. That
+is an organization secret with visibility all, which carries a personal
+access token with `read:packages`. No per-repo package grant is needed.
 
 The repo now installs `@mzt-tang-athena/vale-rules@0.1.0` from GitHub
 Packages. The local `MyRules` files and `Readability/LIX.yml` are no
