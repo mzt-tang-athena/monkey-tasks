@@ -158,10 +158,6 @@ export function isHiddenOccurrence(task: TaskItem, now: Date): boolean {
 }
 
 /**
- * The lists tab's dated sections, empty ones dropped: Past, Today, one
- * per upcoming day, then No date. `now` labels the day buckets.
- */
-/**
  * Manual order: `order` ascending, tasks without one after. The
  * unplaced ones fall back to the order they were created in, then by
  * name, so a fresh list reads oldest first instead of alphabetical.
@@ -181,6 +177,10 @@ function byManualOrder(a: TaskItem, b: TaskItem): number {
   );
 }
 
+/**
+ * The lists tab's dated sections, empty ones dropped: Past, Today, one
+ * per upcoming day, then No date. `now` labels the day buckets.
+ */
 export function selectSections(
   visible: TaskItem[],
   now: Date,

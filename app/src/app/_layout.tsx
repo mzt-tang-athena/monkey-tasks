@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Stack } from "expo-router";
-import * as Notifications from "expo-notifications";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -11,15 +10,6 @@ import { VaultProvider } from "@/lib/vault/vault-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { OverlayHost } from "@/components/ui/overlay-host";
 import { installErrorAlert } from "@/lib/errors";
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
 
 // Before anything renders: a release build closes on the first
 // uncaught error, and a closed app cannot report what broke.

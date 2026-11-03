@@ -163,3 +163,19 @@ Ticket 0050 turns the rule on at error. CI runs ESLint with
 Four imports still break the rule when 0050 lands. Each one carries an
 `eslint-disable-next-line` comment that names the ticket that removes
 it: 0052 for the two in the store, 0057 for the two in `BottomBar`.
+
+## Amendment, 2026-11-03: sample notes keep vault names
+
+The sample notes under `src/lib/vault/sample/<seed>/Tasks/` break the
+kebab-case rule. Their names hold spaces and capitals, for example
+`Call Mum.md` and `Lists/Errands.md`. They mirror a real Obsidian
+vault, where a note's file name is its title and a list's file name is
+its tab label. The browser preview shows these names as they are, and
+the e2e suite finds rows by them. The rule covers code, not notes.
+`eslint-plugin-check-file` checks only the files ESLint lints, so it
+never reads a `.md` file.
+
+Ticket 0052 removed the two store imports that broke the zones. The
+store imports no feature now: `captureDraft` moved to
+`stores/tasks/capture-draft.ts` and `saveTaskEdit` to
+`lib/vault/save-task-edit.ts`.

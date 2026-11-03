@@ -1,31 +1,25 @@
-import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import { AndroidImportance } from "expo-notifications";
 
 /**
- * The browser preview has no alarm API. Every call here is a quiet
- * no-op on the web, so a screen that asks for the alarm state there
- * gets an empty answer and the console stays clean.
+ * The phone's alarms. The web build takes `notifications.web.ts`
+ * instead, where every call is a no-op.
  */
-export const alarmsSupported = Platform.OS !== "web";
+export const alarmsSupported = true;
 
-if (alarmsSupported) {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
-}
+// A reminder that fires while the app is open still shows and rings.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const CHANNEL_ID = "reminders";
 
 export async function ensureNotificationPermission(): Promise<boolean> {
-  if (!alarmsSupported) {
-    return false;
-  }
   const settings = await Notifications.getPermissionsAsync();
   if (settings.granted) {
     return true;
@@ -50,9 +44,6 @@ export async function scheduleAt(
   title: string,
   body: string,
 ): Promise<string> {
-  if (!alarmsSupported) {
-    throw new Error("alarms are not available on the web");
-  }
   const granted = await ensureNotificationPermission();
   if (!granted) {
     throw new Error("notification permission not granted");
@@ -70,25 +61,16 @@ export async function scheduleAt(
 }
 
 export async function cancelAllScheduled(): Promise<void> {
-  if (!alarmsSupported) {
-    return;
-  }
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
 export async function cancelScheduled(id: string): Promise<void> {
-  if (!alarmsSupported) {
-    return;
-  }
   await Notifications.cancelScheduledNotificationAsync(id);
 }
 
 export async function listScheduled(): Promise<
   { id: string; title?: string; when?: number }[]
 > {
-  if (!alarmsSupported) {
-    return [];
-  }
   const requests = await Notifications.getAllScheduledNotificationsAsync();
   return requests.map((request) => {
     const trigger = request.trigger as { date?: number | Date } | null;
@@ -105,9 +87,6 @@ export async function listScheduled(): Promise<
 }
 
 export async function exactAlarmState(): Promise<boolean> {
-  if (!alarmsSupported) {
-    return false;
-  }
   const exact = await Notifications.getExactAlarmPermissionsAsync();
   return exact.granted;
 }
