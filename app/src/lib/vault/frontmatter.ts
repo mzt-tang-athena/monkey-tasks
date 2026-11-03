@@ -95,20 +95,15 @@ function replaceSpan(
 }
 
 /**
- * Write a list property in the vault's block style. `updateProperty`
- * inserts a one-item array on the key's line when the key is missing,
- * which parses as a scalar rather than a list, so the key is seeded
- * empty first and then filled.
+ * Write a list property in the vault's block style, or remove the
+ * property when the list is empty, so a note never keeps an empty key.
  */
 export function setBlockList(
   text: string,
   key: string,
   values: string[],
 ): string {
-  if (values.length === 0) {
-    return updateProperty(text, key, null);
-  }
-  return updateProperty(updateProperty(text, key, []), key, values);
+  return updateProperty(text, key, values.length === 0 ? null : values);
 }
 
 /**

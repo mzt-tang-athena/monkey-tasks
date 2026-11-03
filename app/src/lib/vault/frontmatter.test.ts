@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { load } from "js-yaml";
-import { updateProperty } from "./frontmatter";
+import { setBlockList, updateProperty } from "./frontmatter";
 
 const base =
   '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n---\n\nbody\n';
@@ -99,5 +99,26 @@ describe("updateProperty", () => {
   it("clearing an absent property is a no-op", () => {
     const result = updateProperty(base, "completed", null);
     expect(result).toBe(base);
+  });
+});
+
+describe("setBlockList", () => {
+  const minimal = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n';
+
+  it("adds a missing one-item list as a block", () => {
+    const result = setBlockList(minimal, "lists", ["[[Focus]]"]);
+    expect(result).toContain('lists:\n  - "[[Focus]]"');
+    expect(parsed(result).lists).toEqual(["[[Focus]]"]);
+  });
+
+  it("replaces a list that is there", () => {
+    const listed = setBlockList(minimal, "lists", ["[[Focus]]"]);
+    const result = setBlockList(listed, "lists", ["[[Home]]", "[[Work]]"]);
+    expect(parsed(result).lists).toEqual(["[[Home]]", "[[Work]]"]);
+  });
+
+  it("removes the key when the list is empty", () => {
+    const listed = setBlockList(minimal, "lists", ["[[Focus]]"]);
+    expect(setBlockList(listed, "lists", [])).toBe(minimal);
   });
 });

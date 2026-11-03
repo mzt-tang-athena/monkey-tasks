@@ -1,4 +1,6 @@
+import * as React from "react";
 import { Platform } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
 import { taskIsDone } from "@monkey-tasks/schemas";
 import { parseStoredDate } from "@/utils/dates";
 import type { TaskItem } from "@/types/task";
@@ -8,6 +10,7 @@ import {
   ensureNotificationPermission,
   scheduleAt,
 } from "@/lib/notifications";
+import { TASKS_KEY, type TaskListData } from "./query";
 
 type PendingReminder = { uri: string; when: Date; title: string };
 
@@ -16,6 +19,20 @@ type PendingReminder = { uri: string; when: Date; title: string };
  * task's alarms without touching the rest. Rebuilt by `syncReminders`.
  */
 const alarmIds = new Map<string, string[]>();
+
+/**
+ * Every alarm change waits for the one before it. A rebuild cancels
+ * every alarm and then schedules each one, with a native call between
+ * each step. Two runs that overlap would both schedule, and one
+ * reminder would ring twice.
+ */
+let chain: Promise<unknown> = Promise.resolve();
+
+function inTurn<T>(work: () => Promise<T>): Promise<T> {
+  const next = chain.then(work, work);
+  chain = next.catch(() => undefined);
+  return next;
+}
 
 /** The future reminders on an open task, in order. */
 function reminderTimes(task: TaskItem | null): number[] {
@@ -52,7 +69,13 @@ function sameTimes(before: number[], after: number[]): boolean {
  * Alarms are best effort: the store calls this fire-and-forget, so it
  * reports what it managed and never throws.
  */
-export async function syncReminders(
+export function syncReminders(
+  tasks: TaskItem[],
+): Promise<{ scheduled: number; skipped: boolean }> {
+  return inTurn(() => rebuild(tasks));
+}
+
+async function rebuild(
   tasks: TaskItem[],
 ): Promise<{ scheduled: number; skipped: boolean }> {
   // Web has no notification API; the design preview never asks for one.
@@ -99,11 +122,18 @@ export async function syncReminders(
 /**
  * Move one task's alarms to match its new state. A tick cancels that
  * task's alarms and schedules its new ones; the rest of the list is
- * untouched, so a tap no longer rebuilds every alarm in the vault.
+ * untouched, so a tap never rebuilds every alarm in the vault.
  *
  * Same contract as `syncReminders`: best effort, never throws.
  */
-export async function syncTaskReminders(
+export function syncTaskReminders(
+  before: TaskItem | null,
+  after: TaskItem | null,
+): Promise<void> {
+  return inTurn(() => moveTaskAlarms(before, after));
+}
+
+async function moveTaskAlarms(
   before: TaskItem | null,
   after: TaskItem | null,
 ): Promise<void> {
@@ -146,4 +176,32 @@ export async function syncTaskReminders(
   } catch {
     // Best effort: a missing channel or permission leaves the task open.
   }
+}
+
+/**
+ * Rebuild every alarm after each read of the vault, and only then. A
+ * read from disk is the one time the store learns about notes another
+ * app changed. A tap writes the cache with `setQueryData`, which is a
+ * manual update, and its mutation moves that one task's alarms.
+ */
+export function useReminderSync(): void {
+  const client = useQueryClient();
+  React.useEffect(
+    () =>
+      client.getQueryCache().subscribe((event) => {
+        if (
+          event.type !== "updated" ||
+          event.action.type !== "success" ||
+          event.action.manual === true ||
+          event.query.queryKey[0] !== TASKS_KEY
+        ) {
+          return;
+        }
+        const data = event.query.state.data as TaskListData | undefined;
+        if (data != null) {
+          void syncReminders(data.tasks);
+        }
+      }),
+    [client],
+  );
 }

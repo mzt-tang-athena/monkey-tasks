@@ -33,7 +33,8 @@ import {
 import { defaultAdapter as browserVault } from "@/lib/vault/default-adapter.web";
 import { VaultProvider } from "@/lib/vault/vault-provider";
 import { makeQueryClient } from "@/lib/react-query";
-import { TasksProvider, type TaskListData } from "@/stores/tasks/tasks-provider";
+import { TasksProvider } from "@/stores/tasks/tasks-provider";
+import type { TaskListData } from "@/stores/tasks/query";
 import {
   useStoreMeta,
   useTaskList,
@@ -111,12 +112,15 @@ vi.mock("@/stores/tasks/load-vault", async (importOriginal) => {
   };
 });
 
-vi.mock("@/stores/tasks/reminder-sync", () => ({
-  syncReminders: async () => {
+// The alarm code runs for real on a fake OS. A full rebuild always
+// starts by cancelling every alarm, so that call counts the rebuilds.
+vi.mock("@/lib/notifications", () => ({
+  ensureNotificationPermission: async () => true,
+  scheduleAt: async () => "alarm",
+  cancelAllScheduled: async () => {
     fullSyncs += 1;
-    return { scheduled: 0, skipped: true };
   },
-  syncTaskReminders: async () => undefined,
+  cancelScheduled: async () => undefined,
 }));
 
 async function hold(): Promise<void> {
@@ -460,7 +464,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 9. tasks.tsx capture keeps the provisional id; the next read
   // hands the row the uri as its id, so the editor loses it.
-  it.fails("keeps a captured row's id across a read", async () => {
+  it("keeps a captured row's id across a read", async () => {
     await mount();
     await act(async () => {
       await store().capture({ name: "Milk" }, { kind: "main" });
@@ -526,7 +530,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 2, store side. tasks.tsx runs the full alarm rebuild on every
   // cache change, so each tap reschedules every alarm in the vault.
-  it.fails("rebuilds alarms only after a vault read", async () => {
+  it("rebuilds alarms only after a vault read", async () => {
     await mount();
     const before = fullSyncs;
     for (const due of ["2026-11-01", "2026-11-02", "2026-11-03"]) {

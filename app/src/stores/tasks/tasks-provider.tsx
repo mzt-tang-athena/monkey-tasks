@@ -37,7 +37,8 @@ import {
   spawnFileName,
   type SpawnInput,
 } from "./spawn";
-import { syncReminders, syncTaskReminders } from "./reminder-sync";
+import { syncTaskReminders, useReminderSync } from "./reminder-sync";
+import { shareRows, tasksKey, type TaskListData } from "./query";
 // eslint-disable-next-line import/no-restricted-paths -- 0052 moves this
 import { captureDraft } from "@/features/capture/write";
 import { taskFromText } from "./task-notes";
@@ -65,16 +66,6 @@ import { TaskActionsContext, type TaskActions } from "./task-actions";
  * read on boot, on refresh, on a new grant, and when the app returns to
  * the foreground, never after a write. See ADR 0017.
  */
-
-/** What the list query caches: the folder the rows came from, the rows,
- * and the list notes that become the extra tabs. */
-export type TaskListData = {
-  tasksDir: string | null;
-  tasks: TaskItem[];
-  lists: ListItem[];
-  /** Notes in Lists/ that fail validation: shown, never dropped. */
-  broken: BrokenList[];
-};
 
 /** A row that exists only in memory until its file lands. */
 let pendingSeq = 0;
@@ -159,7 +150,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
   // never read from the wrong place. With no root there is nothing to
   // read, and the store is an empty list.
   const vault = useQuery({
-    queryKey: ["tasks", rootUri],
+    queryKey: tasksKey(rootUri),
     queryFn: () => readVault(rootUri as string),
     enabled: rootUri != null,
     // A cache entry never goes stale on its own, so focus must ask for
@@ -167,6 +158,7 @@ function TaskStore({ children }: { children: React.ReactNode }) {
     // return to the foreground is when the vault wins over the local
     // list.
     refetchOnWindowFocus: "always",
+    structuralSharing: shareRows,
   });
 
   const { refetch } = vault;
@@ -317,16 +309,9 @@ function TaskStore({ children }: { children: React.ReactNode }) {
     return "ready";
   }, [booted, rootUri, vault.isError, vault.isPending]);
 
-  // The alarm list is rebuilt from the notes just read, so a capture, a
-  // tick or a drag all leave the schedule matching the list. Fire and
-  // forget: notifications must never hold up the store.
-  const loaded = vault.data;
-  React.useEffect(() => {
-    if (loaded == null) {
-      return;
-    }
-    void syncReminders(loaded.tasks).catch(() => undefined);
-  }, [loaded]);
+  // A read from disk rebuilds every alarm. A write moves only its own
+  // task's alarms.
+  useReminderSync();
 
   /**
    * Complete a recurring occurrence and create its successor. The

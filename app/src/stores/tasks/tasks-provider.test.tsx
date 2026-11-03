@@ -47,9 +47,12 @@ vi.mock("./load-vault", async (importOriginal) => {
   };
 });
 
-vi.mock("./reminder-sync", () => ({
-  syncReminders: async () => ({ scheduled: 0, skipped: true }),
-  syncTaskReminders: async () => undefined,
+// The alarm code runs for real on a fake OS that schedules nothing.
+vi.mock("@/lib/notifications", () => ({
+  ensureNotificationPermission: async () => true,
+  scheduleAt: async () => "alarm",
+  cancelAllScheduled: async () => undefined,
+  cancelScheduled: async () => undefined,
 }));
 
 import { makeQueryClient } from "@/lib/react-query";
@@ -64,7 +67,7 @@ import { PREVIEW_SEEDS, sampleSeed } from "@/lib/vault/sample/seed";
 import { VaultProvider } from "@/lib/vault/vault-provider";
 import { todayIso } from "@/utils/dates";
 import { TasksProvider } from "./tasks-provider";
-import type { TaskListData } from "./tasks-provider";
+import type { TaskListData } from "./query";
 import { useStoreMeta, useTaskList } from "./task-state";
 import type { StoreMeta } from "./task-state";
 import { useTaskActions } from "./task-actions";

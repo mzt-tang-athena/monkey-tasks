@@ -40,11 +40,17 @@ export function makeQueryClient(): QueryClient {
         retry: 1,
         refetchOnWindowFocus: true,
         refetchOnReconnect: false,
+        // The vault is a folder on the device, not a server. A read
+        // never waits for a network, even when a future NetInfo hookup
+        // reports the phone offline (ADR 0003).
+        networkMode: "always",
       },
       mutations: {
         // A note write is not safe to repeat blindly: a second attempt
         // would rewrite a file another app may have changed since.
         retry: 0,
+        // A write to the folder never pauses for a network either.
+        networkMode: "always",
       },
     },
   });
