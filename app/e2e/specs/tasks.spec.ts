@@ -60,7 +60,7 @@ test("a single-line row has equal space above and below its name", async ({ page
 
 test("the editor saves a new name", async ({ page }) => {
   await row(page, rename.from).getByRole("button", { name: "open task" }).click();
-  const name = page.getByRole("textbox", { name: "Task name" });
+  const name = page.getByRole("textbox", { name: "Name", exact: true });
   await expect(name).toHaveValue(rename.from);
 
   await name.fill(rename.to);
