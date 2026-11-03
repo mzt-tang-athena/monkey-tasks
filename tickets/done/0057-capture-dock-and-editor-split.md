@@ -123,6 +123,12 @@ What landed:
   `target list: <target>`.
 - Bug 3: the bar row, the sheet, the toast and the editor header hold to
   the 720 measure. The bar surface spans the window.
+- Toast scope: the overlay host sits above the whole stack, so the
+  toast drew over the editor and over the other tab. The dock now draws
+  the toast only while its tab is focused (`useIsFocused`). The draft
+  and the toast state stay, so the toast returns with the tab. A
+  component test and an e2e test cover it: fail a capture, open a task,
+  and find no alert.
 - Menu fix from the 0054 review: `Menu` resets its box and height when
   it closes.
 - Tests: `capture-dock.test.tsx`, `draft.test.ts`, the keyboard test, the

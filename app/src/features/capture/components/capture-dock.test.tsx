@@ -13,6 +13,7 @@ import { CaptureDock } from "./capture-dock";
 const state = vi.hoisted(() => ({
   capture: vi.fn(),
   navigate: vi.fn(),
+  focused: true,
 }));
 
 vi.mock("react-native-safe-area-context", () => ({
@@ -22,6 +23,7 @@ vi.mock("react-native-safe-area-context", () => ({
 vi.mock("expo-router", () => ({
   router: { navigate: state.navigate, back: vi.fn() },
   usePathname: () => "/",
+  useIsFocused: () => state.focused,
 }));
 
 vi.mock("react-native-keyboard-controller", async () => {
@@ -81,6 +83,7 @@ describe("CaptureDock", () => {
     vi.useFakeTimers();
     state.capture.mockReset();
     state.capture.mockResolvedValue(undefined);
+    state.focused = true;
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -210,6 +213,28 @@ describe("CaptureDock", () => {
     expect(state.capture).toHaveBeenCalledTimes(2);
     expect(state.capture.mock.calls[1]).toEqual(state.capture.mock.calls[0]);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("draws the toast only while its tab is focused", async () => {
+    state.capture.mockRejectedValueOnce(new Error("create failed: Buy milk.md"));
+    const view = render(<Screen />);
+    openSheet();
+    type("Buy milk");
+    fireEvent.click(screen.getByRole("button", { name: "send task" }));
+    await flush();
+    finishMotion();
+    expect(screen.getByRole("alert")).toBeTruthy();
+
+    // Another screen takes focus: the toast leaves, the draft stays.
+    state.focused = false;
+    view.rerender(<Screen />);
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    state.focused = true;
+    view.rerender(<Screen />);
+    expect(screen.getByRole("alert").textContent).toContain(
+      "create failed: Buy milk.md",
+    );
   });
 
   it("dismisses the toast", async () => {

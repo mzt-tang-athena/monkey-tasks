@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useIsFocused } from "expo-router";
 import { Pressable, StyleSheet, Text } from "react-native";
 import { useBar } from "@/components/bottom-bar/bottom-bar";
 import type { CaptureSlot } from "@/components/bottom-bar/dock-slot";
@@ -18,6 +19,7 @@ import { CaptureForm } from "./capture-form";
  */
 export function CaptureDock(slot: CaptureSlot) {
   const bar = useBar();
+  const focused = useIsFocused();
   const sheet = useCaptureSheet({ ...slot, bar });
 
   return (
@@ -51,7 +53,10 @@ export function CaptureDock(slot: CaptureSlot) {
       {/* A failed write reports above the bar, with the draft kept for
           Retry. The sheet stays closed: the toast takes its place, and
           opening the sheet again clears the toast. */}
-      {sheet.toast != null ? (
+      {/* The toast belongs to its tab. The overlay host sits above the
+          whole stack, so a tab that is not focused draws nothing: the
+          editor and the other tab stay clear. */}
+      {sheet.toast != null && focused ? (
         <Toast
           message={sheet.toast.message}
           bottom={bar.height + spacing.s}

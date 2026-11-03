@@ -81,3 +81,29 @@ test("a failed capture shows the toast, and Retry sends the same draft", async (
   await expect(row(page, capture.name)).toBeVisible();
   await expect(page.getByText(/create failed/)).toHaveCount(0);
 });
+
+test("a failed capture toast belongs to its tab and shows over no other screen", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(row(page, undated.second)).toBeVisible();
+  await failCapture(page);
+
+  await page.getByRole("button", { name: "add task" }).click();
+  await page.getByPlaceholder("Add a task").fill(capture.typed);
+  await page.getByRole("button", { name: "send task" }).click();
+  await expect(page.getByRole("alert")).toHaveCount(1);
+
+  // The editor opens over the tab. No toast floats over it.
+  await row(page, undated.second).click();
+  await expect(page.getByRole("button", { name: "save task" })).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+
+  // Back on the tab, the toast is still there, with its draft.
+  await page.getByRole("button", { name: "cancel editing" }).click();
+  await expect(page.getByRole("alert")).toHaveCount(1);
+
+  // The other tab shows no toast of this tab.
+  await page.getByRole("tab", { name: "Planner" }).click();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
