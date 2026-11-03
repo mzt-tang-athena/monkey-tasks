@@ -4,7 +4,7 @@ title: The capture dock leaves the bottom bar, and the editor splits
 created: 2026-10-26
 priority: high
 assignee: claude-code
-pr:
+pr: 80
 depends: [0054]
 ---
 
@@ -85,21 +85,57 @@ The editor saves through the edit mutation from ticket 0052.
 
 ## Acceptance
 
-- [ ] No file under `src/components` imports from `src/features`.
-- [ ] The import boundary rule in `app/eslint.config.js` runs at `error`, and `npx eslint src` passes.
-- [ ] The tab routes pass the capture dock to their screens, and neither screen imports the capture feature.
-- [ ] A test reproduces the back bug first. Afterwards, with the sheet open, Android back closes the sheet and the screen stays.
-- [ ] While the sheet shows, assistive tech cannot reach the screen content under it.
-- [ ] The target pill's accessible name holds the current target.
-- [ ] A test with the keyboard controller mock reproduces the editor bug first. Afterwards the form renders in `KeyboardAwareScrollView`.
+- [x] No file under `src/components` imports from `src/features`.
+- [x] The import boundary rule in `app/eslint.config.js` runs at `error`, and `npx eslint src` passes.
+- [x] The tab routes pass the capture dock to their screens, and neither screen imports the capture feature.
+- [x] A test reproduces the back bug first. Afterwards, with the sheet open, Android back closes the sheet and the screen stays.
+- [x] While the sheet shows, assistive tech cannot reach the screen content under it.
+- [x] The target pill's accessible name holds the current target.
+- [x] A test with the keyboard controller mock reproduces the editor bug first. Afterwards the form renders in `KeyboardAwareScrollView`.
 - [ ] The epic's phone pass confirms that Body stays above the keyboard. jsdom has no keyboard to check it.
-- [ ] `lib/draft.ts` has unit tests for every helper.
-- [ ] A Playwright test at 1280 by 800 reproduces the width bug first. Afterwards the bar row, the sheet, the toast and the editor header sit inside the 720 column.
-- [ ] Capture still opens, sends and closes.
-- [ ] A failed capture still shows the toast, and Retry sends the same draft again.
-- [ ] Save, Cancel and the rename warning in the editor still work.
-- [ ] `npx tsc --noEmit`, the test suite and the Playwright suite pass.
+- [x] `lib/draft.ts` has unit tests for every helper.
+- [x] A Playwright test at 1280 by 800 reproduces the width bug first. Afterwards the bar row, the sheet, the toast and the editor header sit inside the 720 column.
+- [x] Capture still opens, sends and closes.
+- [x] A failed capture still shows the toast, and Retry sends the same draft again.
+- [x] Save, Cancel and the rename warning in the editor still work.
+- [x] `npx tsc --noEmit`, the test suite and the Playwright suite pass.
 
 ## Outcome
 
-(filled in before moving to done/)
+The capture dock left the bottom bar, and the editor split. Bugs 1 to 3
+each have a test that failed first.
+
+What landed:
+
+- `components/bottom-bar/` is the shell, with an `action` slot and a
+  `useBar` hook for the bar height and lift. It imports no feature.
+- `features/capture/` holds `capture-dock.tsx`, `capture-form.tsx` and
+  `hooks/use-capture-sheet.ts`. The motion is today's code, so ticket
+  0062 can change it without a change to the shell.
+- The tab routes pass the dock into their screens. The Lists screen
+  moved to `features/lists/lists-screen.tsx` for this, because the route
+  held it. ADR 0039 has an amendment with the design and the rejected
+  alternative.
+- The editor split into the six files of the spec. The form scrolls in
+  `KeyboardAwareScrollView`.
+- Bug 1: the sheet runs on `Sheet`, so back and Escape close it and the
+  screen under it is hidden from assistive tech. The pill reads
+  `target list: <target>`.
+- Bug 3: the bar row, the sheet, the toast and the editor header hold to
+  the 720 measure. The bar surface spans the window.
+- Menu fix from the 0054 review: `Menu` resets its box and height when
+  it closes.
+- Tests: `capture-dock.test.tsx`, `draft.test.ts`, the keyboard test, the
+  menu reopen test, and `e2e/specs/capture-dock.spec.ts`.
+
+Left:
+
+- The phone check that Body stays above the keyboard. jsdom has no
+  keyboard. The epic's phone pass owns it.
+- The editor Name field is now named by its label, `Name`, and no longer
+  by its placeholder. `e2e/specs/tasks.spec.ts` follows.
+- On a wide window the sheet and toast edges sit 20 px outside the card
+  edges, because the sheet gutter is `spacing.m` and the page gutter is
+  `pageGutter`. Ticket 0063 can unify them.
+- Ticket 0055 moves the same Lists code. Whichever PR merges second
+  resolves the move.
