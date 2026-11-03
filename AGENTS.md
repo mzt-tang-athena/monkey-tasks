@@ -6,14 +6,15 @@ decision record. The tickets in `tickets/` are the work queue.
 ## Rules for any change
 
 0. Workflow: do not push to main. Work on a branch, open a PR, wait for
-   CI, and squash-merge when green. Branch protection is not available on
-   the free plan, so this rule is convention, not enforcement.
+   CI, and squash-merge when green. Branch protection is not available
+   on the free plan. This rule is convention only, because nothing
+   enforces it.
 1. All work starts as a ticket. Claim one by moving it to `tickets/doing/`
    and filling `assignee` in the same commit. The rules live in
    `tickets/README.md`.
-2. Write an ADR the same day a decision carries a trade-off: an
-   alternative existed, and a future agent could plausibly reopen it.
-   Copy `docs/adr/adr-template.md`, take the next free number, and record
+2. Write an ADR the same day a decision carries a trade-off. That means
+   an alternative existed, and a future agent could plausibly reopen it.
+   Copy `docs/adr/adr-template.md` and take the next free number. Record
    later changes as dated amendments at the bottom of the same file
    (never rewrite the original decision). Adjustments with no real
    alternative only need a commit.

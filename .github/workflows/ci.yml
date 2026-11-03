@@ -6,6 +6,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      # The docs job needs the shared Vale rules package from GitHub Packages.
+      - name: Install root dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.VALE_RULES_TOKEN }}
+        run: npm ci
       - name: Install vale
         run: |
           curl -fsSL https://github.com/errata-ai/vale/releases/download/v3.24.0/vale_3.24.0_Linux_64-bit.tar.gz -o vale.tgz
@@ -18,6 +28,8 @@ jobs:
           cd .vale/styles/write-good
           if [ -d write-good ]; then mv write-good/* .; rmdir write-good; fi
           find . -maxdepth 1 -name '*.yml' | while read f; do grep -q extends "$f" || rm "$f"; done
+      - name: Sync shared Vale rules
+        run: npx vale-rules sync
       - name: Docs prose lint
         run: |
           # Vale exits nonzero only on errors, so the warning threshold
@@ -58,6 +70,8 @@ jobs:
             app/package-lock.json
       # Root install brings in the file: schemas dependency (and its vitest) used by the schemas tests.
       - name: Install root dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.VALE_RULES_TOKEN }}
         run: npm ci
       - name: Install app dependencies
         run: npm ci

@@ -3,6 +3,7 @@ VALE_STYLES = .vale/styles
 .PHONY: lint ensure-styles hooks
 
 lint: ensure-styles
+	npx vale-rules sync
 	vale README.md docs/adr/*.md tickets/README.md
 
 ensure-styles:
