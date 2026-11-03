@@ -3,7 +3,7 @@ id: 0055
 title: The Lists screen leaves the route
 created: 2026-10-26
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: [0054]
 ---
