@@ -35,6 +35,34 @@ export async function putNote(page: Page, path: string, text: string) {
   );
 }
 
+/** The paths of the notes whose path starts with `prefix`, sorted. */
+export function notePaths(page: Page, prefix: string): Promise<string[]> {
+  return page.evaluate(
+    ({ prefix, missing }) => {
+      if (globalThis.__vault == null) {
+        throw new Error(missing);
+      }
+      return Object.keys(globalThis.__vault.files())
+        .filter((path) => path.startsWith(prefix))
+        .sort();
+    },
+    { prefix, missing: NO_HOOKS },
+  );
+}
+
+/** Fail the next `write` of one file. */
+export async function failNextWrite(page: Page, fileName: string) {
+  await page.evaluate(
+    ({ fileName, missing }) => {
+      if (globalThis.__vault == null) {
+        throw new Error(missing);
+      }
+      globalThis.__vault.failNext("write", fileName);
+    },
+    { fileName, missing: NO_HOOKS },
+  );
+}
+
 /** Slow every vault call, and fail the next `write` of one file. */
 export async function slowVaultAndFailWrite(
   page: Page,

@@ -80,6 +80,7 @@ import { TasksProvider } from "./tasks-provider";
 import type { TaskListData } from "./query";
 import type { TaskItem } from "@/types/task";
 import { spawnContent } from "./spawn";
+import type { VaultFailure } from "./use-vault-failures";
 
 const TASKS = `${MEMORY_ROOT}/Tasks`;
 const CALL_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nBody.\n';
@@ -251,6 +252,35 @@ function recurring(due: string, completed?: string): string {
 
 const SPAWN_FILE = "Water plants 2026-10-27.md";
 const SPAWN_URI = `${TASKS}/${SPAWN_FILE}`;
+
+/** The Water plants notes in the vault, sorted. */
+function waterFiles(): string[] {
+  return Object.keys(vault.hooks.files())
+    .filter((path) => path.startsWith("Tasks/Water plants"))
+    .sort();
+}
+
+/** The file names of the Water plants rows, sorted. */
+function waterRows(tasks: TaskItem[] = store().tasks): string[] {
+  return tasks
+    .filter((item) => item.name === "Water plants")
+    .map((item) => item.fileName)
+    .sort();
+}
+
+/** Retry a listed failure, and return the rows its tap put up. */
+async function retryFailure(failure: VaultFailure): Promise<TaskItem[]> {
+  let shown: TaskItem[] = [];
+  await act(async () => {
+    if (failure.kind === "failure") {
+      failure.retry();
+    }
+    // The retry's optimistic step ran before `retry()` returned.
+    shown = cachedList()?.tasks ?? [];
+  });
+  await flush();
+  return shown;
+}
 
 /** The successor a tick made, untouched unless `body` differs. */
 function spawnOf(body = "\nWater.\n"): string {
@@ -778,6 +808,107 @@ describe("recurring completion", () => {
       "Water plants 2026-10-27.md",
     );
     expect(failures()).toEqual(["tick: disk full"]);
+  });
+
+  it("makes no second next note when a stale tick is retried", async () => {
+    vault.hooks.write("Tasks/Water plants.md", recurring("2026-10-20"));
+    await mount();
+    // The completion write fails, so the new note goes back.
+    failNext = true;
+    await act(async () => {
+      await store().toggle(byFile("Water plants.md"));
+    });
+    await flush();
+    const [failure] = store().failures;
+    expect(failure.kind).toBe("failure");
+
+    // A second tap lands, and the failure stays listed.
+    await act(async () => {
+      await store().toggle(byFile("Water plants.md"));
+    });
+    await flush();
+    expect(vault.hooks.read(`Tasks/${SPAWN_FILE}`)).not.toBeNull();
+    const writesBefore = writes.length;
+
+    const shown = await retryFailure(failure);
+
+    // The row already shows the tick, so the retry puts up no row.
+    expect(waterRows(shown)).toEqual([SPAWN_FILE, "Water plants.md"]);
+    // The note already holds the tick, so the retry writes nothing.
+    expect(waterFiles()).toEqual([`Tasks/${SPAWN_FILE}`, "Tasks/Water plants.md"]);
+    expect(writes).toHaveLength(writesBefore);
+    expect(waterRows()).toEqual([SPAWN_FILE, "Water plants.md"]);
+    expect(byFile("Water plants.md").data?.completed).toBeDefined();
+    expect(failures()).toEqual([]);
+  });
+
+  it("writes nothing when a stale untick is retried", async () => {
+    vault.hooks.write(
+      "Tasks/Water plants.md",
+      recurring("2026-10-20", "2026-10-24"),
+    );
+    vault.hooks.write(`Tasks/${SPAWN_FILE}`, spawnOf());
+    await mount();
+    failNext = true;
+    await act(async () => {
+      await store().toggle(byFile("Water plants.md"));
+    });
+    await flush();
+    const [failure] = store().failures;
+    expect(failure.kind).toBe("failure");
+
+    // A second tap lands: the note reopens, and the next note goes.
+    await act(async () => {
+      await store().toggle(byFile("Water plants.md"));
+    });
+    await flush();
+    expect(waterFiles()).toEqual(["Tasks/Water plants.md"]);
+    const writesBefore = writes.length;
+
+    await retryFailure(failure);
+
+    expect(writes).toHaveLength(writesBefore);
+    expect(waterFiles()).toEqual(["Tasks/Water plants.md"]);
+    expect(byFile("Water plants.md").data?.completed).toBeUndefined();
+    expect(failures()).toEqual([]);
+  });
+
+  it("makes no second next note when a tick with a kept one is retried", async () => {
+    vault.hooks.write("Tasks/Water plants.md", recurring("2026-10-20"));
+    await mount();
+    // The completion fails, and so does the delete of the new note.
+    failNext = true;
+    deleteFails = true;
+    await act(async () => {
+      await store().toggle(byFile("Water plants.md"));
+    });
+    await flush();
+    expect(waterRows()).toEqual([SPAWN_FILE, "Water plants.md"]);
+    const [failure] = store().failures;
+    expect(failure.kind).toBe("failure");
+
+    // The retry fails too. It made no note, so it takes none back, and
+    // the kept note's row stays.
+    deleteFails = false;
+    failNext = true;
+    let shown = await retryFailure(failure);
+    expect(waterRows(shown)).toEqual([SPAWN_FILE, "Water plants.md"]);
+    expect(deletes).toEqual([]);
+    expect(waterRows()).toEqual([SPAWN_FILE, "Water plants.md"]);
+    const [again] = store().failures;
+    expect(failures()).toEqual(["tick: disk full"]);
+
+    shown = await retryFailure(again);
+
+    // The retry completes the note and keeps the next note it has.
+    expect(waterRows(shown)).toEqual([SPAWN_FILE, "Water plants.md"]);
+    expect(waterFiles()).toEqual([`Tasks/${SPAWN_FILE}`, "Tasks/Water plants.md"]);
+    expect(creates).toHaveLength(1);
+    expect(vault.hooks.read("Tasks/Water plants.md")).toContain("completed:");
+    expect(waterRows()).toEqual([SPAWN_FILE, "Water plants.md"]);
+    const ids = store().tasks.map((item) => item.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(failures()).toEqual([]);
   });
 
   it("takes back an untouched successor when the occurrence reopens", async () => {

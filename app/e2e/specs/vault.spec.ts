@@ -8,7 +8,14 @@ import {
   undated,
 } from "../data";
 import { expectInSection, row, sectionHeader } from "../locators";
-import { noteText, putNote, returnToTab, slowVaultAndFailWrite } from "../vault";
+import {
+  failNextWrite,
+  notePaths,
+  noteText,
+  putNote,
+  returnToTab,
+  slowVaultAndFailWrite,
+} from "../vault";
 
 // The preview runs the same write path as the phone, on a memory vault
 // (ticket 0051). These specs read the notes it writes.
@@ -63,6 +70,42 @@ test("a tick on a repeating task makes its next occurrence a note", async ({
     "true",
   );
   await expectInSection(done, sectionHeader(page, sections.completed));
+});
+
+test("a Retry on a tick that landed since makes no second next occurrence", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const target = row(page, supplements);
+  await expect(target).toHaveCount(1);
+  const retry = page.getByRole("button", { name: "retry tick" });
+
+  await failNextWrite(page, `${supplements}.md`);
+  await target.getByRole("button", { name: "mark done" }).click();
+  await expect(retry).toBeVisible();
+  await expect(target.getByRole("button", { name: "mark done" })).toHaveAttribute(
+    "aria-checked",
+    "false",
+  );
+
+  // A second tap lands. The failure stays on the banner.
+  await target.getByRole("button", { name: "mark done" }).click();
+  await expect.poll(() => noteText(page, supplementsTick.next)).not.toBeNull();
+  await expect(retry).toBeVisible();
+
+  await retry.click();
+  await expect(retry).toHaveCount(0);
+  // Writes run one at a time in call order, so once a later tick lands,
+  // the retry has run too.
+  await row(page, undated.second).getByRole("button", { name: "mark done" }).click();
+  await expect.poll(() => noteText(page, `Tasks/${undated.second}.md`)).toContain(
+    "completed:",
+  );
+
+  expect(await notePaths(page, `Tasks/${supplements}`)).toEqual([
+    supplementsTick.next,
+    supplementsTick.note,
+  ]);
 });
 
 test.describe("a slow vault and a failed write", () => {

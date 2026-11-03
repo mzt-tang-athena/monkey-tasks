@@ -38,7 +38,10 @@ import type { RowStep } from "./use-patch-task";
 
 export type ToggleVariables = {
   id: string;
-  /** The opposite of what the row showed when it was tapped. */
+  /**
+   * The opposite of what the row showed when it was tapped. A toggle
+   * whose note already holds this state changes nothing.
+   */
   to: "done" | "open";
   /**
    * The provisional id of the next occurrence, set when a recurring
@@ -98,6 +101,37 @@ function nextDue(task: TaskItem): string | null {
   return rule ? nextAfter(rule, task.data?.due) : null;
 }
 
+/**
+ * Whether the task is already in the state a toggle asks for. A retry
+ * runs the variables of an old tap, and a later tap can have landed
+ * that state since.
+ */
+function holds(task: TaskItem, to: ToggleVariables["to"]): boolean {
+  return task.data != null && taskIsDone(task.data) === (to === "done");
+}
+
+/**
+ * Make the next occurrence's row agree with its note. `shown` is the
+ * text of the row the tap put up, when it put one up. `note` is the
+ * note the tick made or kept, or undefined when no note exists.
+ */
+function placeSuccessor(
+  rows: TaskItem[],
+  successorId: string,
+  shown: string | undefined,
+  note: TaskItem | undefined,
+): TaskItem[] {
+  if (note == null) {
+    // A row with no note goes, whatever happened to it since. A row
+    // this tap did not put up belongs to a note, so it stays.
+    return shown == null ? rows : removeRow(rows, successorId);
+  }
+  if (shown != null) {
+    return settleRow(rows, successorId, shown, note);
+  }
+  return rowById(rows, successorId) == null ? insertRow(rows, note) : rows;
+}
+
 const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefined> = {
   label: "tick",
   optimistic(rows, { id, to, successorId }) {
@@ -105,13 +139,22 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
     if (previous == null) {
       return { rows, context: undefined };
     }
+    if (holds(previous, to)) {
+      return { rows, context: { previous, text: previous.text } };
+    }
     const updated = applyPatch(previous, {
       completed: to === "done" ? todayIso() : null,
     });
     let next = patchRow(rows, id, () => updated);
     const due = nextDue(previous);
     let successorText: string | undefined;
-    if (successorId != null && due != null) {
+    // A retry can find the row of the next note its first try kept. It
+    // puts up no second row with the same id.
+    if (
+      successorId != null &&
+      due != null &&
+      rowById(rows, successorId) == null
+    ) {
       const input = spawnInput(previous, due);
       const taken = new Set(rows.map((row) => row.fileName));
       const successor = taskFromText(
@@ -130,6 +173,11 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
   },
   async run({ id, to, successorId }, io) {
     const before = await readRow(io.adapter, requireRow(io.rows(), id));
+    if (holds(before, to)) {
+      // A later tap landed this state. A second tick would make a
+      // second next occurrence, so the write does nothing.
+      return { before, after: before };
+    }
     if (to === "open") {
       return reopen(before, io);
     }
@@ -138,6 +186,15 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
     if (successorId == null || due == null) {
       await io.adapter.write(before.uri, after.text);
       return { before, after };
+    }
+    const kept = rowById(io.rows(), successorId);
+    if (kept != null && !kept.uri.startsWith(PENDING)) {
+      // A retry after a SuccessorKeptError. The first try made the next
+      // note and could not take it back, so this try keeps that note
+      // and only completes this one. A failure here takes back nothing,
+      // because this try made nothing.
+      await io.adapter.write(before.uri, after.text);
+      return { before, after, successor: kept };
     }
     // The next note comes first: a failed create leaves the series as
     // it was. A failed completion takes the new note back, so the worst
@@ -184,10 +241,7 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
     }
     let next = settleRow(rows, id, c.text, r.after);
     if (successorId != null) {
-      next =
-        r.successor != null && c.successorText != null
-          ? settleRow(next, successorId, c.successorText, r.successor)
-          : removeRow(next, successorId);
+      next = placeSuccessor(next, successorId, c.successorText, r.successor);
     }
     return r.removed == null ? next : removeRow(next, r.removed.id);
   },
@@ -197,17 +251,20 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
     }
     let next = rollbackRow(rows, id, c.text, c.previous);
     if (successorId != null) {
-      // A successor whose note was never made, or was taken back, has
-      // no file, so its row goes whatever happened to it since.
-      next =
-        error instanceof SuccessorKeptError && c.successorText != null
-          ? settleRow(next, successorId, c.successorText, error.successor)
-          : removeRow(next, successorId);
+      // Only a SuccessorKeptError leaves a next note that this try made.
+      next = placeSuccessor(
+        next,
+        successorId,
+        c.successorText,
+        error instanceof SuccessorKeptError ? error.successor : undefined,
+      );
     }
     return next;
   },
   alarms(r): AlarmMove[] {
-    const moves: AlarmMove[] = [[r.before, r.after]];
+    // A toggle that found its state already on disk moved no alarm.
+    const moves: AlarmMove[] =
+      r.after === r.before ? [] : [[r.before, r.after]];
     if (r.successor != null) {
       moves.push([null, r.successor]);
     }
