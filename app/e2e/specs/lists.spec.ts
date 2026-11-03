@@ -2,6 +2,7 @@ import { expect, test } from "../fixtures";
 import { sections, supplements, tabs, undated } from "../data";
 import { holdDrag, swipe, touchSwipe } from "../gestures";
 import { expectAbove, listTab, row, sectionHeader } from "../locators";
+import { putNote, returnToTab } from "../vault";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -30,16 +31,10 @@ test.describe("tab swipe", () => {
 
   test("a swipe that starts on a row does not open the editor", async ({
     page,
-    reducedMotion,
   }) => {
     // B1: a mouse swipe that starts on a row ends with a click on that
-    // row, and the pager does not swallow it. With reduced motion the
-    // page turns at pointer up, so the row is gone before the click
-    // lands, and the bug does not show. Ticket 0055 guards the click,
-    // and ticket 0059 fixes it in the pager. The first to land removes
-    // this mark.
-    test.fail(reducedMotion !== "reduce", "B1, fixed by ticket 0059");
-
+    // row. The press guard arms when the swipe passes its slop and
+    // blocks that click.
     await swipe(page, row(page, supplements), "left");
 
     await expect(
@@ -47,6 +42,12 @@ test.describe("tab swipe", () => {
       "the swipe turns the page, and the row's editor stays closed",
     ).toHaveAttribute("aria-selected", "true");
     await expect(page).toHaveURL("/");
+  });
+
+  test("a plain tap on a row still opens the editor", async ({ page }) => {
+    await row(page, undated.second).getByRole("button", { name: "open task" }).click();
+
+    await expect(page).toHaveURL(/\/task\//);
   });
 });
 
@@ -70,19 +71,19 @@ test.describe("tab swipe on a touch screen", () => {
 test.describe("My order", () => {
   test.beforeEach(async ({ page }) => {
     await page.getByRole("button", { name: "sort list" }).click();
-    await page.getByRole("button", { name: "My order" }).click();
+    await page.getByRole("menuitem", { name: "My order" }).click();
     await expectAbove(row(page, undated.first), row(page, undated.second));
   });
 
   test("the sort sheet marks the order in use", async ({ page }) => {
     await page.getByRole("button", { name: "sort list" }).click();
 
-    await expect(page.getByRole("button", { name: "My order" })).toHaveAttribute(
-      "aria-selected",
+    await expect(page.getByRole("menuitem", { name: "My order" })).toHaveAttribute(
+      "aria-checked",
       "true",
     );
-    await expect(page.getByRole("button", { name: "Due date" })).toHaveAttribute(
-      "aria-selected",
+    await expect(page.getByRole("menuitem", { name: "Due date" })).toHaveAttribute(
+      "aria-checked",
       "false",
     );
   });
@@ -122,5 +123,124 @@ test.describe("My order", () => {
     );
 
     await expectAbove(row(page, undated.second), row(page, undated.first));
+  });
+});
+
+test.describe("the tab strip", () => {
+  test("a clipped tab name has a fade over its edge", async ({ page }) => {
+    // At 412 wide the strip holds more tabs than fit, so the last one
+    // shows cut ("Fo"). A fade tells the user that more waits there.
+    await expect(page.getByTestId("tab-fade-end")).toBeVisible();
+    await expect(page.getByTestId("tab-fade-start")).toHaveCount(0);
+
+    const strip = await page.getByRole("tablist", { name: "Lists" }).boundingBox();
+    if (strip == null) {
+      throw new Error("the tab strip has no box");
+    }
+    await page.mouse.move(strip.x + strip.width / 2, strip.y + strip.height / 2);
+    await page.mouse.wheel(600, 0);
+
+    await expect(page.getByTestId("tab-fade-end")).toHaveCount(0);
+    await expect(page.getByTestId("tab-fade-start")).toBeVisible();
+  });
+});
+
+test.describe("list menu", () => {
+  test("a tap on a row, with the menu open, closes the menu and opens no editor", async ({
+    page,
+  }) => {
+    // Bug 1: the backdrop sat under the list body, so the tap reached
+    // the row. The mouse clicks by position, because a click through
+    // the locator waits for a row that the backdrop covers.
+    await page.getByRole("button", { name: "list menu" }).click();
+    await expect(page.getByText("Diagnostics")).toBeVisible();
+
+    // Supplements sits high on the page, so the click lands on screen.
+    const box = await row(page, supplements).boundingBox();
+    if (box == null) {
+      throw new Error("the row has no box");
+    }
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+
+    await expect(page.getByText("Diagnostics")).toBeHidden();
+    await expect(page).toHaveURL("/");
+  });
+
+  test("the overflow menu shows only what works", async ({ page }) => {
+    // Bug 2: three items closed the menu and did nothing. Two used the
+    // danger color, so a user could think a delete ran. Ticket 0065
+    // builds them.
+    await page.getByRole("button", { name: "list menu" }).click();
+
+    await expect(page.getByText("Diagnostics")).toBeVisible();
+    await expect(page.getByText("Rename list")).toHaveCount(0);
+    await expect(page.getByText("Delete list")).toHaveCount(0);
+    await expect(page.getByText("Delete all completed tasks")).toHaveCount(0);
+  });
+});
+
+test.describe("on a wide screen", () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test("the top chrome is one band from edge to edge", async ({ page }) => {
+    // Bug 3: the tab bar capped its surface at the reading measure, and
+    // the status strip spanned the window, so the chrome read as an L.
+    const tab = await listTab(page, tabs.main).boundingBox();
+    if (tab == null) {
+      throw new Error("the Main tab has no box");
+    }
+
+    const paint = await page.evaluate((y) => {
+      const at = (x: number) => {
+        let node = document.elementFromPoint(x, y);
+        while (node != null) {
+          const color = getComputedStyle(node).backgroundColor;
+          if (color !== "rgba(0, 0, 0, 0)") {
+            return color;
+          }
+          node = node.parentElement;
+        }
+        return "none";
+      };
+      return {
+        left: at(2),
+        middle: at(window.innerWidth / 2),
+        right: at(window.innerWidth - 3),
+      };
+    }, tab.y + tab.height / 2);
+
+    expect(paint.left).toBe(paint.middle);
+    expect(paint.right).toBe(paint.middle);
+  });
+});
+
+test.describe("a note that needs repair", () => {
+  test.beforeEach(async ({ page }) => {
+    await putNote(
+      page,
+      "Tasks/Broken note.md",
+      '---\nkind: "[[tasks]]"\n---\n\nNo created date.\n',
+    );
+    await returnToTab(page);
+    await expect(page.getByText("Needs repair")).toBeVisible();
+  });
+
+  test("the notice scrolls with the list", async ({ page }) => {
+    // Bug 7: the notice sat fixed above the list, 168 points tall, and
+    // cards slid under its edge. It is the list's header now.
+    await page.setViewportSize({ width: 412, height: 560 });
+    const notice = page.getByText("Needs repair");
+    const before = (await notice.boundingBox())?.y ?? Number.NaN;
+
+    await page.mouse.move(206, 450);
+    await page.mouse.wheel(0, 150);
+
+    await expect
+      .poll(async () => (await notice.boundingBox())?.y ?? Number.NaN)
+      .toBeLessThan(before - 50);
+  });
+
+  test("the notice names the file and its error", async ({ page }) => {
+    await expect(page.getByText("Broken note.md")).toBeVisible();
   });
 });

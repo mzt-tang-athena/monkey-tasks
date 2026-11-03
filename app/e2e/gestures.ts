@@ -46,9 +46,8 @@ async function swipePath(page: Page, from: Locator, dir: Direction, travel: Trav
 }
 
 /**
- * A horizontal mouse swipe that starts on `from`. Until 0059, start on
- * a section header, not a row: a swipe that starts on a row also opens
- * it (B1).
+ * A horizontal mouse swipe that starts on `from`. The press guard
+ * keeps a swipe that starts on a row from opening it (ticket 0055).
  */
 export async function swipe(
   page: Page,

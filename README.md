@@ -233,12 +233,15 @@ documents its props, and each primitive has a component test.
 | `LoadingState`, `EmptyState`, `ErrorState` | One look for a list that loads, holds nothing or fails. |
 | `SectionHeader` | An eyebrow label over a group, with a count and a tone. |
 | `CardGroupRow` | One row of a group card, with its edges and an inset divider. |
-| `TabStrip`, `SegmentedControl` | Tabs that scroll, and segments. Every target is at least 44 by 44. |
+| `TabStrip`, `SegmentedControl` | Tabs that scroll, with a fade over an edge that hides more tabs, and segments. Every target is at least 44 by 44. |
 | `TextField` | A labelled input, with a hint or an error. |
 
 `components/task-row-face` draws the still task row that `TaskRow` and
 `PreviewRow` share. `hooks/use-dismiss` closes a surface on Android
-back and on Escape in the browser. `theme/tokens.ts` holds the type
+back and on Escape in the browser. `hooks/use-press-guard` blocks the
+click that ends a swipe or a drop, and `hooks/use-stable-callback`
+gives a handler one identity for a memoized row (ADR 0041).
+`theme/tokens.ts` holds the type
 scale, the layer order and the shadows (ADR 0040).
 
 Imports follow four zones:
