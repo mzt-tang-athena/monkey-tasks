@@ -3,7 +3,7 @@ id: 0057
 title: The capture dock leaves the bottom bar, and the editor splits
 created: 2026-10-26
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: [0054]
 ---
