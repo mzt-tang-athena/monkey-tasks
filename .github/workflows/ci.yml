@@ -70,6 +70,8 @@ jobs:
             app/package-lock.json
       # Root install brings in the file: schemas dependency (and its vitest) used by the schemas tests.
       - name: Install root dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm ci
       - name: Install app dependencies
         run: npm ci
