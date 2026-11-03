@@ -132,3 +132,51 @@ The memory adapter, the sample notes and the hooks never reach the
 Android bundle. We rejected a `Platform.OS` test in one file. Metro
 would then put the memory adapter and the sample notes into the APK,
 with the hooks code beside them.
+
+## Amendment, 2026-11-03: how the mutation hooks behave
+
+Ticket 0052 built the hooks. It made six choices that the decision
+above leaves open.
+
+`onMutate` cancels a read in flight and then changes the rows, and both
+steps run before `mutate()` returns. Only then does it await the
+cancel. A cancel takes effect at once, so no read result can land over
+the change. We rejected an `await` on the cancel before the change.
+Two taps in one frame would then apply in the order their cancels
+resolve, and that order rests on promise timing, not on call order.
+
+A finished write leaves the mutation cache when it reaches its
+`success` state, unless its result carries a notice. A subscription on
+the cache does this. We rejected the `MutationCache` `onSuccess`
+option. It runs while the write still counts as pending. A remove
+there would let a waiting read start before the write lands its
+result, and the last write would miss its turn to run a cancelled
+read.
+
+The capture bar and the editor show their own failures. Their
+mutations still reject, but the failure list leaves them out. We
+rejected a second entry in the banner. The capture bar has its own
+Retry, so one failure would carry two Retry buttons, and one of them
+would stay after the other ran.
+
+Each hook returns a command, such as `toggle(task)`, not the
+`useMutation` result. The command reads the row from the cache at call
+time. It picks the direction of a tick, makes the next
+occurrence's id, and skips a change that changes nothing. We rejected
+variables that each screen builds. Every screen would then repeat that
+logic, and a stale render would pick the wrong direction.
+
+A toggle that finds its note already in the asked state writes
+nothing. A Retry runs the variables of an old tap, and a later tap can
+have landed that state since. A second tick would then make a second
+next occurrence. When the first try made the next note and could not
+delete it, a retry keeps that note and makes no other. We rejected a
+Retry that picks its direction again from the row. It would then undo
+a tick that the user made by hand.
+
+The alarm calls follow the adapter's pattern. `notifications.ts` holds
+the phone's alarms, and Metro takes `notifications.web.ts` for the web,
+where every call does nothing. The web bundle never loads
+expo-notifications, so the preview logs no error and no warning. We
+rejected a `Platform.OS` test in each function. The web bundle would
+still load the module, and the module warns as it loads.

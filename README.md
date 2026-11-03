@@ -206,7 +206,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | `features/<name>` | The UI of one feature: `capture`, `diagnostics`, `lists`, `planner`, `task-editor`. |
 | `components` | Shared UI. `components/ui` holds the primitives. |
 | `hooks` | Shared hooks. |
-| `stores/tasks` | The task query and its writes, pure row updaters, selectors and the reminder sync. |
+| `stores/tasks` | The task query, one mutation hook per write in `mutations/` (ADR 0037), the failure list, pure row updaters, selectors and the reminder sync. |
 | `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`, `motion`. |
 | `types` | Shared types, such as `TaskItem`. |
 | `utils` | Pure helpers: dates, YAML, schema errors. |

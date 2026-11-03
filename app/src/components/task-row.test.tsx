@@ -51,6 +51,25 @@ describe("TaskRow", () => {
     expect(screen.getByText("✓")).toBeTruthy();
   });
 
+  it("stays at rest when a tap never reaches the data", () => {
+    // A write that fails at once rolls the tick back before the row
+    // renders it. The row then never sees its data change, and must not
+    // keep a half-played tick: a wash over it, a shrunken circle.
+    const { container } = render(
+      <TaskRow task={task("Buy milk")} onToggle={vi.fn()} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "mark done" }));
+
+    const styles = [...container.querySelectorAll<HTMLElement>("*")].map(
+      (element) => element.style,
+    );
+    expect(styles.filter((style) => style.opacity === "0.9")).toEqual([]);
+    expect(
+      styles.filter((style) => style.transform.includes("scale(0.9)")),
+    ).toEqual([]);
+  });
+
   it("returns to an empty circle when the data says not done", () => {
     const { rerender } = render(
       <TaskRow task={task("Buy milk", { completed })} onToggle={vi.fn()} />,

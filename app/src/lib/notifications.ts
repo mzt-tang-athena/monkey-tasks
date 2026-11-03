@@ -1,6 +1,13 @@
 import * as Notifications from "expo-notifications";
 import { AndroidImportance } from "expo-notifications";
 
+/**
+ * The phone's alarms. The web build takes `notifications.web.ts`
+ * instead, where every call is a no-op.
+ */
+export const alarmsSupported = true;
+
+// A reminder that fires while the app is open still shows and rings.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,

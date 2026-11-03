@@ -27,8 +27,8 @@ vi.mock("@/stores/tasks/task-state", () => ({
   useStoreMeta: () => ({ status: state.status }),
 }));
 
-vi.mock("@/stores/tasks/task-actions", () => ({
-  useTaskActions: () => ({ edit: async () => undefined }),
+vi.mock("@/stores/tasks/mutations/use-edit-task", () => ({
+  useEditTask: () => async () => undefined,
 }));
 
 const NOTE_ID = "content://vault/Notes/Garden.md";

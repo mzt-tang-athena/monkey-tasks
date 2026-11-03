@@ -1,12 +1,11 @@
-// Reproductions of audit finding 2, written before the fix (ticket
-// 0052). Each `it.fails` asserts the behaviour we want, so it passes
-// today only because the bug is still there. The fix turns it into a
-// plain `it`.
+// Reproductions of audit finding 2, written as `it.fails` before the
+// fix. Ticket 0052 fixed the bug and made them plain tests.
 //
-// The store runs a full alarm rebuild on every cache change, and a
-// per-task sync after each write. Nothing orders them, so two rebuilds,
-// or a rebuild and a per-task sync, interleave and schedule one
-// reminder twice. The phone then rings twice.
+// The store ran a full alarm rebuild on every cache change, and a
+// per-task sync after each write. Nothing ordered them, so two
+// rebuilds, or a rebuild and a per-task sync, interleaved and
+// scheduled one reminder twice. The phone then rang twice. Now every
+// alarm call waits its turn on one chain.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -74,13 +73,13 @@ beforeEach(() => {
 });
 
 describe("alarm sync races (ticket 0052)", () => {
-  it.fails("schedules each reminder once when two rebuilds overlap", async () => {
+  it("schedules each reminder once when two rebuilds overlap", async () => {
     const tasks = ["A", "B", "C", "D"].map((name) => task(name));
     await Promise.all([syncReminders(tasks), syncReminders(tasks)]);
     expect(alarms.size).toBe(4);
   });
 
-  it.fails("schedules a reopened task once when a rebuild overlaps", async () => {
+  it("schedules a reopened task once when a rebuild overlaps", async () => {
     const before = [task("A"), task("B"), task("C"), task("D", false)];
     await syncReminders(before);
     expect(alarms.size).toBe(3);

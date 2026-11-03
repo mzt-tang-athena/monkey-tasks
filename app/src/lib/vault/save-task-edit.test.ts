@@ -43,7 +43,7 @@ vi.mock("expo-file-system/legacy", () => ({
 }));
 
 import { safAdapter } from "@/lib/vault/adapters/saf";
-import { saveTaskEdit } from "./save";
+import { saveTaskEdit } from "./save-task-edit";
 import type { TaskEdit, TaskItem } from "@/types/task";
 
 const OLD_URI =

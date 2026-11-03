@@ -60,9 +60,14 @@ function TaskRowBase({
   const [land] = React.useState(() => new Animated.Value(fresh ? 0 : 1));
 
   // A row that is already done at mount is not a tick. Every later
-  // change plays, or lands at once when motion is reduced.
+  // change plays, or lands at once when motion is reduced. The tick
+  // starts from the data, not from the press: a write that fails at
+  // once rolls the tick back before the row renders it, and a tick the
+  // row never sees must leave nothing behind. A layout effect puts the
+  // values where the tick starts before the frame paints, so the first
+  // frame never shows the end state.
   const played = React.useRef(false);
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!played.current) {
       played.current = true;
       return;
@@ -73,6 +78,9 @@ function TaskRowBase({
       settle(wash, 0);
       return;
     }
+    settle(pop, 0.9);
+    settle(glyph, 0.6);
+    settle(wash, 0.9);
     play(pop, 1, 120);
     play(glyph, 1, 120);
     play(wash, 0, 320);
@@ -95,17 +103,7 @@ function TaskRowBase({
   }, [fresh, reduced, land, wash]);
 
   const press = () => {
-    if (onToggle == null) {
-      return;
-    }
-    // The press puts the values where the animation starts, before the
-    // data flips, so the first frame of the tick never shows the end
-    // state. The effect above then plays them out.
-    const next = !done;
-    settle(pop, next && !reduced ? 0.9 : 1);
-    settle(glyph, next && !reduced ? 0.6 : 1);
-    settle(wash, next && !reduced ? 0.9 : 0);
-    onToggle(task);
+    onToggle?.(task);
   };
 
   // The circle is the ONLY toggle. It top-anchors to the FIRST text

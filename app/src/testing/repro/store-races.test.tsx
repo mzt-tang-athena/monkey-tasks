@@ -2,16 +2,14 @@
 // The Probe pattern: the test reads the provider's hooks through module
 // bindings, which is the shape the rule forbids in app code.
 
-// Reproductions of the data-layer audit findings, written before the
-// fixes. Each `it.fails` asserts the behaviour we want, so it passes
-// today only because the bug is still there. The ticket that fixes a
-// finding turns its test into a plain `it`; a fixed bug with `it.fails`
-// left in place fails the suite.
+// Reproductions of the data-layer audit findings, written as `it.fails`
+// before the fixes: each asserted the behaviour we want, so it passed
+// only while the bug was there. The ticket that fixed a finding turned
+// its test into a plain `it`.
 //
-// Store findings belong to ticket 0052 (writes become mutations). The
-// browser preview findings belong to ticket 0051 (vault adapter), which
-// fixed them. Ticket 0052 deletes the actions context these tests
-// drive, so it rewrites them against the new mutation hooks first.
+// Ticket 0052 (writes become mutations) fixed the store findings, and
+// ticket 0051 (vault adapter) fixed the browser preview findings. The
+// tests drive the store through the hooks a screen calls.
 //
 // The store runs on a memory vault (ADR 0037). A thin wrapper around it
 // holds and fails single calls, and the loader mock gates whole reads.
@@ -33,13 +31,9 @@ import {
 import { defaultAdapter as browserVault } from "@/lib/vault/default-adapter.web";
 import { VaultProvider } from "@/lib/vault/vault-provider";
 import { makeQueryClient } from "@/lib/react-query";
-import { TasksProvider, type TaskListData } from "@/stores/tasks/tasks-provider";
-import {
-  useStoreMeta,
-  useTaskList,
-  type StoreMeta,
-} from "@/stores/tasks/task-state";
-import { useTaskActions, type TaskActions } from "@/stores/tasks/task-actions";
+import { TasksProvider } from "@/stores/tasks/tasks-provider";
+import type { TaskListData } from "@/stores/tasks/query";
+import { useStoreSnapshot, type StoreSnapshot } from "@/testing/store-snapshot";
 import type { TaskItem } from "@/types/task";
 import { reorderItems } from "@/features/lists/reorder";
 
@@ -76,7 +70,8 @@ const openGates: (() => void)[] = [];
 /** How many of the next writes or creates wait for a release. */
 let holdWrites = 0;
 const held: (() => void)[] = [];
-let failNextWrite = false;
+/** Let this many writes through, then fail the next one. */
+let failAfter: number | null = null;
 let deleteFails = false;
 let createCalls = 0;
 let fullSyncs = 0;
@@ -111,12 +106,15 @@ vi.mock("@/stores/tasks/load-vault", async (importOriginal) => {
   };
 });
 
-vi.mock("@/stores/tasks/reminder-sync", () => ({
-  syncReminders: async () => {
+// The alarm code runs for real on a fake OS. A full rebuild always
+// starts by cancelling every alarm, so that call counts the rebuilds.
+vi.mock("@/lib/notifications", () => ({
+  ensureNotificationPermission: async () => true,
+  scheduleAt: async () => "alarm",
+  cancelAllScheduled: async () => {
     fullSyncs += 1;
-    return { scheduled: 0, skipped: true };
   },
-  syncTaskReminders: async () => undefined,
+  cancelScheduled: async () => undefined,
 }));
 
 async function hold(): Promise<void> {
@@ -134,9 +132,12 @@ function instrumented(inner: MemoryVault): VaultAdapter {
     ...inner,
     savedRoot: async () => (noFolder ? null : inner.savedRoot()),
     async write(uri, text) {
-      if (failNextWrite) {
-        failNextWrite = false;
+      if (failAfter === 0) {
+        failAfter = null;
         throw new Error("disk full");
+      }
+      if (failAfter != null) {
+        failAfter -= 1;
       }
       await hold();
       return inner.write(uri, text);
@@ -159,22 +160,17 @@ function instrumented(inner: MemoryVault): VaultAdapter {
   };
 }
 
-type Snapshot = StoreMeta & TaskActions & { tasks: TaskItem[] };
-
-let latest: Snapshot | null = null;
+let latest: StoreSnapshot | null = null;
 let client: QueryClient | null = null;
 let onRender: ((tasks: TaskItem[]) => void) | null = null;
 
 function Probe() {
-  const tasks = useTaskList();
-  const meta = useStoreMeta();
-  const actions = useTaskActions();
-  latest = { ...meta, ...actions, tasks };
-  onRender?.(tasks);
+  latest = useStoreSnapshot();
+  onRender?.(latest.tasks);
   return null;
 }
 
-function store(): Snapshot {
+function store(): StoreSnapshot {
   if (latest == null) {
     throw new Error("the store has not rendered");
   }
@@ -267,7 +263,7 @@ beforeEach(() => {
   disk.set(CALL, CALL_TEXT);
   loadGates.length = 0;
   holdWrites = 0;
-  failNextWrite = false;
+  failAfter = null;
   deleteFails = false;
   createCalls = 0;
   fullSyncs = 0;
@@ -290,7 +286,7 @@ afterEach(async () => {
 describe("store races (ticket 0052)", () => {
   // Finding 1. tasks.tsx capture: a capture never registers as a write,
   // so a read already in flight lands without the new row.
-  it.fails("keeps a capture made while a read is in flight", async () => {
+  it("keeps a capture made while a read is in flight", async () => {
     await mount();
     const open = gateNextRead();
     let refreshing: Promise<void> = Promise.resolve();
@@ -312,7 +308,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 3. tasks.tsx toggle/spawnNext: a recurring tick waits for
   // the create before the row moves.
-  it.fails("shows a recurring tick before the new note lands", async () => {
+  it("shows a recurring tick before the new note lands", async () => {
     disk.set(WATER, WATER_TEXT);
     await mount();
     holdWrites = 1;
@@ -325,7 +321,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 3. A second tap before the first lands spawns a second
   // successor, which the compensation deletes, and reports an error.
-  it.fails("takes a double tap on a recurring task without an error", async () => {
+  it("takes a double tap on a recurring task without an error", async () => {
     disk.set(WATER, WATER_TEXT);
     await mount();
     await act(async () => {
@@ -335,12 +331,12 @@ describe("store races (ticket 0052)", () => {
     });
     await flush(8);
     expect(createCalls).toBe(1);
-    expect(store().lastError).toBeNull();
+    expect(store().failures).toEqual([]);
   });
 
   // Finding 4. tasks.tsx readVault: the third read attempt neither waits
   // for writes nor checks the write counter.
-  it.fails("never lands a read that overlapped a write", async () => {
+  it("never lands a read that overlapped a write", async () => {
     await mount();
     const opens = [gateNextRead(), gateNextRead(), gateNextRead()];
     let refreshing: Promise<void> = Promise.resolve();
@@ -351,7 +347,7 @@ describe("store races (ticket 0052)", () => {
     const dues = ["2026-11-01", "2026-11-02", "2026-11-03"];
     for (const [index, due] of dues.entries()) {
       await act(async () => {
-        await store().writeFields(row(), { due });
+        await store().patch(row(), { due });
       });
       await flush();
       opens[index]();
@@ -367,7 +363,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 5. tasks.tsx toggle: the first write's result replaces the
   // row even after a second tap moved it on.
-  it.fails("never shows an earlier tap over a later one", async () => {
+  it("never shows an earlier tap over a later one", async () => {
     await mount();
     holdWrites = 2;
     await act(async () => {
@@ -388,7 +384,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 6. tasks.tsx applyTasks: a tap writes a list built from the
   // ref, which lags the cache until the effect runs.
-  it.fails("keeps a read that lands just before a tap", async () => {
+  it("keeps a read that lands just before a tap", async () => {
     await mount();
     const key = ["tasks", MEMORY_ROOT];
     const cache = client;
@@ -419,24 +415,26 @@ describe("store races (ticket 0052)", () => {
     expect(hasRow("Obsidian")).toBe(true);
   });
 
-  // Finding 7. tasks.tsx lastError: one string, cleared by any success.
-  it.fails("keeps a failure on screen after an unrelated success", async () => {
+  // Finding 7. tasks.tsx kept one error string, cleared by any success.
+  it("keeps a failure on screen after an unrelated success", async () => {
     disk.set(`${TASKS}/Bread.md`, CALL_TEXT);
     await mount();
-    failNextWrite = true;
+    failAfter = 0;
     await act(async () => {
-      await store().writeFields(row("Call"), { order: 1 });
+      await store().patch(row("Call"), { order: 1 });
     });
     await act(async () => {
-      await store().writeFields(row("Bread"), { order: 2 });
+      await store().patch(row("Bread"), { order: 2 });
     });
     await flush();
-    expect(store().lastError).not.toBeNull();
+    expect(store().failures.map((entry) => entry.message)).toEqual([
+      "disk full",
+    ]);
   });
 
-  // Finding 8. app/(tabs)/index.tsx endReorder writes one row at a time
-  // and rolls back only the row that failed.
-  it.fails("rolls back a whole reorder drop when one write fails", async () => {
+  // Finding 8. app/(tabs)/index.tsx endReorder wrote one row at a time
+  // and rolled back only the row that failed. The drop is now one call.
+  it("rolls back a whole reorder drop when one write fails", async () => {
     for (const name of ["Bread", "Eggs"]) {
       disk.set(`${TASKS}/${name}.md`, CALL_TEXT);
     }
@@ -444,23 +442,25 @@ describe("store races (ticket 0052)", () => {
     const section = [row("Bread"), row("Call"), row("Eggs")];
     // Move Eggs to the top: every row gets a new number.
     const changes = reorderItems(section, 2, 0);
-    // The same loop as the Lists screen's drop handler.
-    for (const [index, change] of changes.entries()) {
-      failNextWrite = index === 1;
-      await act(async () => {
-        await store().writeFields(change.task, { order: change.order });
-      });
-    }
+    // The second note write fails.
+    failAfter = 1;
+    await act(async () => {
+      await store().reorder(changes);
+    });
     await flush();
     const orders = ["Bread", "Call", "Eggs"].map((name) => row(name).data?.order);
     const untouched = orders.every((order) => order == null);
     const applied = orders.join(",") === "2,3,1";
     expect(untouched || applied).toBe(true);
+    // The notes agree with the rows: none keeps a new number.
+    for (const name of ["Bread", "Call", "Eggs"]) {
+      expect(disk.get(`${TASKS}/${name}.md`)).not.toContain("order:");
+    }
   });
 
   // Finding 9. tasks.tsx capture keeps the provisional id; the next read
   // hands the row the uri as its id, so the editor loses it.
-  it.fails("keeps a captured row's id across a read", async () => {
+  it("keeps a captured row's id across a read", async () => {
     await mount();
     await act(async () => {
       await store().capture({ name: "Milk" }, { kind: "main" });
@@ -475,7 +475,7 @@ describe("store races (ticket 0052)", () => {
   });
 
   // Finding 10. tasks.tsx toggle drops a tap on a pending row.
-  it.fails("lands a tick on a row whose file is still being created", async () => {
+  it("lands a tick on a row whose file is still being created", async () => {
     await mount();
     holdWrites = 1;
     let capturing: Promise<void> = Promise.resolve();
@@ -498,22 +498,22 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 17. tasks.tsx queuePatch: when the note on disk no longer
   // parses, the retry writes it back unchanged and reports success.
-  it.fails("reports a tick that could not land on a broken note", async () => {
+  it("reports a tick that could not land on a broken note", async () => {
     await mount();
     disk.set(CALL, '---\nkind: "[[tasks]]"\n---\n');
     await act(async () => {
       await store().toggle(row());
     });
     await flush();
-    expect(store().lastError).not.toBeNull();
+    expect(store().failures).toHaveLength(1);
   });
 
   // Finding 18. tasks.tsx spawnNext compensation removes the new row
   // even when its delete failed, so a live note hides.
-  it.fails("keeps showing a successor whose delete failed", async () => {
+  it("keeps showing a successor whose delete failed", async () => {
     disk.set(WATER, WATER_TEXT);
     await mount();
-    failNextWrite = true;
+    failAfter = 0;
     deleteFails = true;
     await act(async () => {
       await store().toggle(row("Water"));
@@ -526,16 +526,22 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 2, store side. tasks.tsx runs the full alarm rebuild on every
   // cache change, so each tap reschedules every alarm in the vault.
-  it.fails("rebuilds alarms only after a vault read", async () => {
+  it("rebuilds alarms only after a vault read", async () => {
     await mount();
     const before = fullSyncs;
     for (const due of ["2026-11-01", "2026-11-02", "2026-11-03"]) {
       await act(async () => {
-        await store().writeFields(row(), { due });
+        await store().patch(row(), { due });
       });
       await flush();
     }
     expect(fullSyncs - before).toBe(0);
+    // A read from disk does rebuild them.
+    await act(async () => {
+      await store().refresh();
+    });
+    await flush();
+    expect(fullSyncs - before).toBe(1);
   });
 });
 
@@ -552,6 +558,9 @@ describe("preview and empty folder (ticket 0051)", () => {
     await flush();
     expect(store().tasks).toHaveLength(0);
     expect(store().status).toBe("ready");
+    // No read ran, so none failed.
+    expect(store().readError).toBeNull();
+    expect(store().failures).toEqual([]);
   });
 
   // Finding 13. The sample query refetched on focus and rebuilt the set,
@@ -619,7 +628,7 @@ describe("preview and empty folder (ticket 0051)", () => {
       await store().toggle(row("Milk"));
     });
     await flush();
-    expect(store().lastError).toBeNull();
+    expect(store().failures).toEqual([]);
     expect(disk.get(`${TASKS}/Milk.md`)).toContain("completed:");
   });
 
@@ -654,6 +663,6 @@ describe("preview and empty folder (ticket 0051)", () => {
       'recurrence previous: "[[Supplements]]"',
     );
     expect(disk.get(`${TASKS}/Supplements.md`)).toContain("completed:");
-    expect(store().lastError).toBeNull();
+    expect(store().failures).toEqual([]);
   });
 });

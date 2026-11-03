@@ -21,7 +21,10 @@ import { LoadingState, ErrorState } from "./components/planner-states";
 import { pointerPickup } from "./components/drag";
 import { loadSettings, saveSetting, type TaskForm } from "@/lib/settings";
 import { useTaskList, useStoreMeta } from "@/stores/tasks/task-state";
-import { useTaskActions } from "@/stores/tasks/task-actions";
+import { useCaptureTask } from "@/stores/tasks/mutations/use-capture-task";
+import { usePatchTask } from "@/stores/tasks/mutations/use-patch-task";
+import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
+import { useRefreshTasks } from "@/stores/tasks/use-vault-read";
 import { useOpenTasks } from "@/stores/tasks/selectors";
 import { usePlannerRoute } from "./hooks/use-planner-route";
 import { usePlannerGestures } from "./hooks/use-planner-gestures";
@@ -64,7 +67,10 @@ export default function PlannerScreen() {
   const { mode, day, setMode, setDay, openDay } = usePlannerRoute();
   const tasks = useValid(useTaskList());
   const { status } = useStoreMeta();
-  const actions = useTaskActions();
+  const toggleTask = useToggleTask();
+  const patchTask = usePatchTask();
+  const capture = useCaptureTask();
+  const refresh = useRefreshTasks();
   const insets = useSafeAreaInsets();
 
   // The task source for the bottom list, shared by all three modes:
@@ -135,9 +141,9 @@ export default function PlannerScreen() {
   } = usePlannerGestures({
     day,
     setDay,
-    toggle: actions.toggle,
+    toggle: toggleTask,
     open: openTask,
-    writeFields: actions.writeFields,
+    writeFields: patchTask,
     pointerPickup,
   });
 
@@ -205,7 +211,7 @@ export default function PlannerScreen() {
           ) : null}
           {status === "error" ? (
             <View style={styles.gutter}>
-              <ErrorState onRetry={() => void actions.refresh()} />
+              <ErrorState onRetry={() => void refresh()} />
             </View>
           ) : null}
 
@@ -392,7 +398,7 @@ export default function PlannerScreen() {
         targets={TARGETS}
         defaultTargetIndex={1}
         onSend={(parsed, target) =>
-          actions.capture(parsed, target, isoOf(day))
+          capture(parsed, target, isoOf(day))
         }
       />
     </View>

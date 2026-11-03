@@ -10,8 +10,11 @@ export type StoreStatus = "loading" | "ready" | "error";
 
 export type StoreMeta = {
   status: StoreStatus;
-  /** The last failed operation's text, for diagnostics. */
-  lastError: string | null;
+  /**
+   * Why the last read of the vault failed, or null. A failed write is
+   * not here: `useVaultFailures` lists those.
+   */
+  readError: string | null;
   tasksDir: string | null;
   /** The granted folder, or null when there is none. */
   rootUri: string | null;
@@ -30,7 +33,7 @@ const NO_LIST: TaskItem[] = [];
 
 const NO_META: StoreMeta = {
   status: "loading",
-  lastError: null,
+  readError: null,
   tasksDir: null,
   rootUri: null,
   lists: [],

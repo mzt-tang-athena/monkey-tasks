@@ -8,10 +8,16 @@ import { act, create } from "react-test-renderer";
 import type { ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// The store's contract after ADR 0017: a tap changes the row before any
-// file I/O, and the vault is not read again. The store runs on a memory
-// vault (ADR 0037). A thin wrapper around it counts, holds and fails
-// the calls, and the loader mock counts and holds the reads.
+// The store's contract after ADR 0017 and ADR 0037: a tap changes the
+// row before any file I/O, every write is a mutation in one scope, and
+// the vault is not read again after a write. The store runs on a memory
+// vault. A thin wrapper around it counts, holds and fails the calls,
+// and the loader mock counts and holds the reads.
+
+// Each render and update runs inside act, so React checks that none
+// leaks out of it.
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
+  true;
 
 const writes: { uri: string; text: string }[] = [];
 let loadCalls = 0;
@@ -19,7 +25,10 @@ let releaseWrite: (() => void) | null = null;
 let holdWrites = false;
 let heldOnce = false;
 let failWrite = false;
+/** Fail the next write, after its hold if it has one. */
+let failNext = false;
 let loadGate: Promise<void> | null = null;
+let createGate: Promise<void> | null = null;
 let createFails = false;
 let deleteFails = false;
 let renameOnCreate = false;
@@ -47,9 +56,12 @@ vi.mock("./load-vault", async (importOriginal) => {
   };
 });
 
-vi.mock("./reminder-sync", () => ({
-  syncReminders: async () => ({ scheduled: 0, skipped: true }),
-  syncTaskReminders: async () => undefined,
+// The alarm code runs for real on a fake OS that schedules nothing.
+vi.mock("@/lib/notifications", () => ({
+  ensureNotificationPermission: async () => true,
+  scheduleAt: async () => "alarm",
+  cancelAllScheduled: async () => undefined,
+  cancelScheduled: async () => undefined,
 }));
 
 import { makeQueryClient } from "@/lib/react-query";
@@ -62,15 +74,13 @@ import {
 } from "@/lib/vault/adapters/memory";
 import { PREVIEW_SEEDS, sampleSeed } from "@/lib/vault/sample/seed";
 import { VaultProvider } from "@/lib/vault/vault-provider";
+import { useStoreSnapshot, type StoreSnapshot } from "@/testing/store-snapshot";
 import { todayIso } from "@/utils/dates";
 import { TasksProvider } from "./tasks-provider";
-import type { TaskListData } from "./tasks-provider";
-import { useStoreMeta, useTaskList } from "./task-state";
-import type { StoreMeta } from "./task-state";
-import { useTaskActions } from "./task-actions";
-import type { TaskActions } from "./task-actions";
+import type { TaskListData } from "./query";
 import type { TaskItem } from "@/types/task";
 import { spawnContent } from "./spawn";
+import type { VaultFailure } from "./use-vault-failures";
 
 const TASKS = `${MEMORY_ROOT}/Tasks`;
 const CALL_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nBody.\n';
@@ -94,9 +104,16 @@ function instrumented(inner: MemoryVault): VaultAdapter {
         releaseWrite = gate.resolve;
         await gate.promise;
       }
+      if (failNext) {
+        failNext = false;
+        throw new Error("disk full");
+      }
       return inner.write(uri, text);
     },
     async create(folderUri, fileName, text) {
+      if (createGate) {
+        await createGate;
+      }
       if (createFails) {
         throw new Error("no space");
       }
@@ -118,19 +135,11 @@ function instrumented(inner: MemoryVault): VaultAdapter {
   };
 }
 
-/** The three contexts read as one snapshot, for the assertions below. */
-type Snapshot = StoreMeta & TaskActions & { tasks: TaskItem[] };
-
-let latest: Snapshot | null = null;
-let latestActions: TaskActions | null = null;
+let latest: StoreSnapshot | null = null;
 let queryClient: QueryClient | null = null;
 
 function Probe() {
-  const tasks = useTaskList();
-  const meta = useStoreMeta();
-  const actions = useTaskActions();
-  latest = { ...meta, ...actions, tasks };
-  latestActions = actions;
+  latest = useStoreSnapshot();
   return null;
 }
 
@@ -183,6 +192,13 @@ async function mount(seed?: VaultSeed): Promise<ReactTestRenderer> {
   return renderer as unknown as ReactTestRenderer;
 }
 
+function store(): StoreSnapshot {
+  if (latest == null) {
+    throw new Error("the store has not rendered");
+  }
+  return latest;
+}
+
 function row(): TaskItem {
   return byFile("Call.md");
 }
@@ -195,8 +211,29 @@ function byFile(fileName: string): TaskItem {
   return task;
 }
 
+function byName(name: string): TaskItem {
+  const task = latest?.tasks.find((item) => item.name === name);
+  if (task == null) {
+    throw new Error(`the task ${name} is not in the store`);
+  }
+  return task;
+}
+
 function cachedList(): TaskListData | undefined {
   return queryClient!.getQueryData<TaskListData>(["tasks", MEMORY_ROOT]);
+}
+
+/** The failure list as "label: message" lines. */
+function failures(): string[] {
+  return store().failures.map((entry) => `${entry.label}: ${entry.message}`);
+}
+
+async function release(): Promise<void> {
+  await act(async () => {
+    releaseWrite?.();
+    await Promise.resolve();
+  });
+  await flush();
 }
 
 /** A recurring occurrence, for the completion tests. */
@@ -215,6 +252,35 @@ function recurring(due: string, completed?: string): string {
 
 const SPAWN_FILE = "Water plants 2026-10-27.md";
 const SPAWN_URI = `${TASKS}/${SPAWN_FILE}`;
+
+/** The Water plants notes in the vault, sorted. */
+function waterFiles(): string[] {
+  return Object.keys(vault.hooks.files())
+    .filter((path) => path.startsWith("Tasks/Water plants"))
+    .sort();
+}
+
+/** The file names of the Water plants rows, sorted. */
+function waterRows(tasks: TaskItem[] = store().tasks): string[] {
+  return tasks
+    .filter((item) => item.name === "Water plants")
+    .map((item) => item.fileName)
+    .sort();
+}
+
+/** Retry a listed failure, and return the rows its tap put up. */
+async function retryFailure(failure: VaultFailure): Promise<TaskItem[]> {
+  let shown: TaskItem[] = [];
+  await act(async () => {
+    if (failure.kind === "failure") {
+      failure.retry();
+    }
+    // The retry's optimistic step ran before `retry()` returned.
+    shown = cachedList()?.tasks ?? [];
+  });
+  await flush();
+  return shown;
+}
 
 /** The successor a tick made, untouched unless `body` differs. */
 function spawnOf(body = "\nWater.\n"): string {
@@ -243,35 +309,34 @@ beforeEach(() => {
   holdWrites = false;
   heldOnce = false;
   failWrite = false;
+  failNext = false;
   loadGate = null;
+  createGate = null;
   createFails = false;
   deleteFails = false;
   renameOnCreate = false;
   creates.length = 0;
   deletes.length = 0;
   latest = null;
-  latestActions = null;
   queryClient = null;
 });
 
 describe("TasksProvider", () => {
   it("lands a toggle whose note moved on since it was read", async () => {
-    // A fast tick, untick, tick can reach the file behind an earlier
-    // write. The toggle re-reads the note and applies itself to what
-    // is there, instead of failing and leaving the row unticked.
+    // Another app edits the note after the read. The tick reads the
+    // note and applies itself to what is there, so the edit survives.
     await mount();
-    // Another app edits the note after the read.
     vault.hooks.write(
       "Tasks/Call.md",
       '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nedited: yes\n---\n\nBody.\n',
     );
 
     await act(async () => {
-      await latest!.toggle(row());
+      await store().toggle(row());
     });
     await flush();
 
-    expect(latest!.lastError).toBeNull();
+    expect(failures()).toEqual([]);
     expect(row().data?.completed).toBeDefined();
     const last = writes[writes.length - 1];
     expect(last.text).toContain("edited: yes");
@@ -281,11 +346,11 @@ describe("TasksProvider", () => {
   it("ticks the row before the write lands, and does not read the vault", async () => {
     await mount();
     expect(loadCalls).toBe(1);
-    const actionsBeforeTick = latestActions;
+    const toggleBeforeTick = store().toggle;
     holdWrites = true;
 
     await act(async () => {
-      void latest!.toggle(row());
+      void store().toggle(row());
     });
     // The write is still held; only the cache and the render move.
     await flush();
@@ -298,16 +363,12 @@ describe("TasksProvider", () => {
     const cached = cachedList();
     const cachedRow = cached?.tasks.find((item) => item.name === "Call");
     expect(cachedRow?.data?.completed).toBeDefined();
-    // The tick changed the rows, not the actions: their identity holds.
-    expect(latestActions).toBe(actionsBeforeTick);
+    // The tick changed the rows, not the hook: its identity holds.
+    expect(store().toggle).toBe(toggleBeforeTick);
     // No reload: the vault read count did not move.
     expect(loadCalls).toBe(1);
 
-    await act(async () => {
-      releaseWrite?.();
-      await Promise.resolve();
-    });
-    await flush();
+    await release();
     expect(loadCalls).toBe(1);
   });
 
@@ -320,14 +381,14 @@ describe("TasksProvider", () => {
     // The read starts and blocks inside the loader.
     let refreshing: Promise<void> | null = null;
     await act(async () => {
-      refreshing = latest!.refresh();
+      refreshing = store().refresh();
     });
     await flush();
     expect(loadCalls).toBe(booted + 1);
 
     // A write is queued and lands while that read is still open.
     await act(async () => {
-      void latest!.toggle(row());
+      void store().toggle(row());
     });
     await flush();
 
@@ -342,36 +403,34 @@ describe("TasksProvider", () => {
     expect(loadCalls).toBe(booted + 2);
   });
 
-  it("chains two quick taps on one note", async () => {
+  it("chains two quick taps on one note, and lands the writes in order", async () => {
     await mount();
     holdWrites = true;
 
     await act(async () => {
-      void latest!.toggle(row());
-      void latest!.toggle(row());
+      void store().toggle(row());
+      void store().toggle(row());
     });
     await flush();
     // The row already shows the second tap's result.
     expect(row().data?.completed).toBeUndefined();
-    // Writes to one note are serialized: the second waits its turn.
+    // Writes run one at a time: the second waits its turn.
     expect(writes).toHaveLength(1);
+    expect(writes[0].text).toContain("completed:");
 
-    await act(async () => {
-      releaseWrite?.();
-      await Promise.resolve();
-    });
-    await flush();
+    await release();
     expect(writes).toHaveLength(2);
     expect(writes[1].text).not.toContain("completed");
+    expect(vault.hooks.read("Tasks/Call.md")).toBe(CALL_TEXT);
     expect(loadCalls).toBe(1);
   });
 
   it("captures a row before its file exists", async () => {
     await mount();
-    const before = latest!.tasks.length;
+    const before = store().tasks.length;
 
     await act(async () => {
-      await latest!.capture(
+      await store().capture(
         {
           name: "Water plants",
           due: "2026-10-23",
@@ -381,10 +440,10 @@ describe("TasksProvider", () => {
     });
     await flush();
 
-    expect(latest!.tasks.length).toBe(before + 1);
-    const captured = latest!.tasks.find((item) => item.name === "Water plants");
-    expect(captured?.uri).toBe(`${TASKS}/Water plants.md`);
-    expect(vault.hooks.read("Tasks/Water plants.md")).toBe(captured?.text);
+    expect(store().tasks.length).toBe(before + 1);
+    const captured = byName("Water plants");
+    expect(captured.uri).toBe(`${TASKS}/Water plants.md`);
+    expect(vault.hooks.read("Tasks/Water plants.md")).toBe(captured.text);
     // A capture still reads no notes: only the boot load happened.
     expect(loadCalls).toBe(1);
   });
@@ -394,19 +453,19 @@ describe("TasksProvider", () => {
     await mount();
 
     await act(async () => {
-      await latest!.capture(
+      await store().capture(
         { name: "Water plants", due: "2026-10-23" },
         { kind: "main" },
       );
     });
     await flush();
 
-    const captured = latest!.tasks.find((item) => item.name === "Water plants");
-    expect(captured?.fileName).toBe("Water plants (1).md");
+    const captured = byName("Water plants");
+    expect(captured.fileName).toBe("Water plants (1).md");
     // The row carries the text and data the file really has, so the
     // next write compares against the right bytes.
-    expect(captured?.text).toContain("title: Water plants");
-    expect(captured?.data?.title).toBe("Water plants");
+    expect(captured.text).toContain("title: Water plants");
+    expect(captured.data?.title).toBe("Water plants");
   });
 
   it("edits the row by id and keeps the list tabs", async () => {
@@ -414,7 +473,7 @@ describe("TasksProvider", () => {
     const before = row();
 
     await act(async () => {
-      await latest!.edit(before, {
+      await store().edit(before, {
         name: "Call",
         due: "2026-10-25",
         recurrence: null,
@@ -442,12 +501,12 @@ describe("TasksProvider", () => {
   it("leaves the row in place when an edit fails", async () => {
     await mount();
     const before = row();
-    const actionsBeforeEdit = latestActions;
+    const editBeforeFailure = store().edit;
     failWrite = true;
 
     await act(async () => {
       await expect(
-        latest!.edit(before, {
+        store().edit(before, {
           name: "Call",
           due: "2026-10-25",
           recurrence: null,
@@ -463,24 +522,19 @@ describe("TasksProvider", () => {
     expect(after.text).toBe(before.text);
     expect(after.data?.due).toBeUndefined();
     expect(after.name).toBe("Call");
-    expect(latest!.lastError).toContain("task edit");
-    // The failure changed the banner, not the actions' identity.
-    expect(latestActions).toBe(actionsBeforeEdit);
+    // The editor shows the refusal, so the failure list stays clear.
+    expect(failures()).toEqual([]);
+    expect(store().edit).toBe(editBeforeFailure);
   });
 
   it("edits a sample row in the browser preview through the memory vault", async () => {
     await mount(sampleSeed(PREVIEW_SEEDS, todayIso()));
     // The preview reads the sample vault once.
     expect(loadCalls).toBe(1);
-    const before = latest!.tasks.find(
-      (item) => item.name === "Water the plants",
-    );
-    if (before == null) {
-      throw new Error("the sample task is not in the store");
-    }
+    const before = byName("Water the plants");
 
     await act(async () => {
-      await latest!.edit(before, {
+      await store().edit(before, {
         name: "Water the ferns",
         due: "2026-10-30",
         recurrence: null,
@@ -501,11 +555,195 @@ describe("TasksProvider", () => {
     expect(edited?.data?.due).toBe("2026-10-30");
     expect(edited?.data?.lists).toEqual(["[[Focus]]"]);
     expect(edited?.data?.reminders).toEqual(["2026-10-30T09:00"]);
-    expect(latest!.lastError).toBeNull();
+    expect(failures()).toEqual([]);
     // The rename is a new note in the vault, and the old one is gone.
     expect(vault.hooks.read("Tasks/Water the ferns.md")).toBe(edited?.text);
     expect(vault.hooks.read("Tasks/Water the plants.md")).toBeNull();
     // A write never reads the vault again.
+    expect(loadCalls).toBe(1);
+  });
+});
+
+describe("vault writes are mutations (ADR 0037)", () => {
+  it("rolls back only its own row, and leaves a later tap on it alone", async () => {
+    await mount({
+      "Tasks/Call.md": CALL_TEXT,
+      "Tasks/Bread.md": CALL_TEXT,
+    });
+    // The tick's write waits, then fails.
+    holdWrites = true;
+    failNext = true;
+    await act(async () => {
+      void store().toggle(row());
+    });
+    await flush();
+    // A later tap moves the same row on, and another row is ticked.
+    await act(async () => {
+      void store().patch(row(), { due: "2026-11-01" });
+      void store().toggle(byFile("Bread.md"));
+    });
+    await flush();
+
+    await release();
+
+    // The failed tick rolled back nothing a later tap owned: the row
+    // keeps the date, and Bread keeps its tick.
+    expect(row().data?.due).toBe("2026-11-01");
+    expect(row().data?.completed).toBeUndefined();
+    expect(byFile("Bread.md").data?.completed).toBeDefined();
+    expect(vault.hooks.read("Tasks/Call.md")).toContain("due: 2026-11-01");
+    expect(vault.hooks.read("Tasks/Call.md")).not.toContain("completed:");
+    expect(failures()).toEqual(["tick: disk full"]);
+  });
+
+  it("makes a read that starts during a write wait for it", async () => {
+    await mount();
+    holdWrites = true;
+    await act(async () => {
+      void store().toggle(row());
+    });
+    await flush();
+
+    let refreshing: Promise<void> = Promise.resolve();
+    await act(async () => {
+      refreshing = store().refresh();
+    });
+    await flush();
+    // The read waits: the loader has not run.
+    expect(loadCalls).toBe(1);
+
+    await release();
+    await act(async () => {
+      await refreshing;
+    });
+    await flush();
+    expect(loadCalls).toBe(2);
+    // The read ran after the write, so it agrees with it.
+    expect(row().data?.completed).toBeDefined();
+  });
+
+  it("runs a read the writes cancelled once, after the last write settles", async () => {
+    await mount();
+    const gate = Promise.withResolvers<void>();
+    loadGate = gate.promise;
+    await act(async () => {
+      void store().refresh();
+    });
+    await flush();
+    expect(loadCalls).toBe(2);
+
+    // Two writes cancel the read in flight.
+    holdWrites = true;
+    await act(async () => {
+      void store().toggle(row());
+      void store().patch(row(), { due: "2026-11-01" });
+    });
+    await flush();
+    loadGate = null;
+    gate.resolve();
+    await flush();
+    // The writes are still pending, so nothing reads yet.
+    expect(loadCalls).toBe(2);
+
+    await release();
+    // One read follows the last write, and it holds both writes.
+    expect(loadCalls).toBe(3);
+    expect(row().data?.completed).toBeDefined();
+    expect(row().data?.due).toBe("2026-11-01");
+  });
+
+  it("shows a captured row before its file exists, and keeps its id after", async () => {
+    await mount();
+    const gate = Promise.withResolvers<void>();
+    createGate = gate.promise;
+    let capturing: Promise<void> = Promise.resolve();
+    await act(async () => {
+      capturing = store().capture({ name: "Milk" }, { kind: "main" });
+    });
+    await flush();
+
+    const pending = byName("Milk");
+    expect(pending.uri).toMatch(/^pending:\/\//);
+    expect(vault.hooks.read("Tasks/Milk.md")).toBeNull();
+
+    createGate = null;
+    gate.resolve();
+    await act(async () => {
+      await capturing;
+    });
+    await flush();
+
+    const landed = byName("Milk");
+    expect(landed.id).toBe(pending.id);
+    expect(landed.uri).toBe(`${TASKS}/Milk.md`);
+    expect(vault.hooks.read("Tasks/Milk.md")).toBe(landed.text);
+  });
+
+  it("makes one Tasks folder for two captures in flight", async () => {
+    await mount({ "Inbox/Note.md": "a note" });
+    await act(async () => {
+      void store().capture({ name: "Milk" }, { kind: "main" });
+      void store().capture({ name: "Eggs" }, { kind: "main" });
+    });
+    await flush();
+
+    expect(Object.keys(vault.hooks.files()).sort()).toEqual([
+      "Inbox/Note.md",
+      "Tasks/Eggs.md",
+      "Tasks/Milk.md",
+    ]);
+  });
+
+  it("keeps a failure listed until it is dismissed", async () => {
+    await mount({
+      "Tasks/Call.md": CALL_TEXT,
+      "Tasks/Bread.md": CALL_TEXT,
+    });
+    failWrite = true;
+    await act(async () => {
+      await store().toggle(row());
+    });
+    await flush();
+    expect(failures()).toEqual(["tick: disk full"]);
+    expect(row().data?.completed).toBeUndefined();
+
+    // A later write that lands leaves the failure on the list.
+    failWrite = false;
+    await act(async () => {
+      await store().toggle(byFile("Bread.md"));
+    });
+    await flush();
+    expect(failures()).toEqual(["tick: disk full"]);
+
+    await act(async () => {
+      store().failures[0].dismiss();
+    });
+    await flush();
+    expect(failures()).toEqual([]);
+  });
+
+  it("retries the same write", async () => {
+    await mount();
+    failWrite = true;
+    await act(async () => {
+      await store().toggle(row());
+    });
+    await flush();
+    const [failure] = store().failures;
+    expect(failure.kind).toBe("failure");
+    expect(row().data?.completed).toBeUndefined();
+
+    failWrite = false;
+    await act(async () => {
+      if (failure.kind === "failure") {
+        failure.retry();
+      }
+    });
+    await flush();
+
+    expect(failures()).toEqual([]);
+    expect(row().data?.completed).toBeDefined();
+    expect(vault.hooks.read("Tasks/Call.md")).toContain("completed:");
     expect(loadCalls).toBe(1);
   });
 });
@@ -516,7 +754,7 @@ describe("recurring completion", () => {
     await mount();
 
     await act(async () => {
-      await latest!.toggle(byFile("Water plants.md"));
+      await store().toggle(byFile("Water plants.md"));
     });
     await flush();
 
@@ -531,7 +769,7 @@ describe("recurring completion", () => {
     const old = byFile("Water plants.md");
     expect(old.data?.completed).toBeDefined();
     expect(old.data?.due).toBe("2026-10-20");
-    expect(latest!.tasks.map((item) => item.fileName)).toContain(
+    expect(store().tasks.map((item) => item.fileName)).toContain(
       "Water plants 2026-10-27.md",
     );
     expect(writes.at(-1)?.text).toContain("completed:");
@@ -543,13 +781,14 @@ describe("recurring completion", () => {
     await mount();
 
     await act(async () => {
-      await latest!.toggle(byFile("Water plants.md"));
+      await store().toggle(byFile("Water plants.md"));
     });
     await flush();
 
     expect(writes).toHaveLength(0);
     expect(byFile("Water plants.md").data?.completed).toBeUndefined();
-    expect(latest!.lastError).toContain("recurring create");
+    expect(store().tasks.map((item) => item.fileName)).not.toContain(SPAWN_FILE);
+    expect(failures()).toEqual(["tick: no space"]);
   });
 
   it("takes the new note back when the completion write fails", async () => {
@@ -558,17 +797,118 @@ describe("recurring completion", () => {
     await mount();
 
     await act(async () => {
-      await latest!.toggle(byFile("Water plants.md"));
+      await store().toggle(byFile("Water plants.md"));
     });
     await flush();
 
     expect(deletes).toEqual([SPAWN_URI]);
     expect(vault.hooks.read(`Tasks/${SPAWN_FILE}`)).toBeNull();
     expect(byFile("Water plants.md").data?.completed).toBeUndefined();
-    expect(latest!.tasks.map((item) => item.fileName)).not.toContain(
+    expect(store().tasks.map((item) => item.fileName)).not.toContain(
       "Water plants 2026-10-27.md",
     );
-    expect(latest!.lastError).toContain("recurring complete");
+    expect(failures()).toEqual(["tick: disk full"]);
+  });
+
+  it("makes no second next note when a stale tick is retried", async () => {
+    vault.hooks.write("Tasks/Water plants.md", recurring("2026-10-20"));
+    await mount();
+    // The completion write fails, so the new note goes back.
+    failNext = true;
+    await act(async () => {
+      await store().toggle(byFile("Water plants.md"));
+    });
+    await flush();
+    const [failure] = store().failures;
+    expect(failure.kind).toBe("failure");
+
+    // A second tap lands, and the failure stays listed.
+    await act(async () => {
+      await store().toggle(byFile("Water plants.md"));
+    });
+    await flush();
+    expect(vault.hooks.read(`Tasks/${SPAWN_FILE}`)).not.toBeNull();
+    const writesBefore = writes.length;
+
+    const shown = await retryFailure(failure);
+
+    // The row already shows the tick, so the retry puts up no row.
+    expect(waterRows(shown)).toEqual([SPAWN_FILE, "Water plants.md"]);
+    // The note already holds the tick, so the retry writes nothing.
+    expect(waterFiles()).toEqual([`Tasks/${SPAWN_FILE}`, "Tasks/Water plants.md"]);
+    expect(writes).toHaveLength(writesBefore);
+    expect(waterRows()).toEqual([SPAWN_FILE, "Water plants.md"]);
+    expect(byFile("Water plants.md").data?.completed).toBeDefined();
+    expect(failures()).toEqual([]);
+  });
+
+  it("writes nothing when a stale untick is retried", async () => {
+    vault.hooks.write(
+      "Tasks/Water plants.md",
+      recurring("2026-10-20", "2026-10-24"),
+    );
+    vault.hooks.write(`Tasks/${SPAWN_FILE}`, spawnOf());
+    await mount();
+    failNext = true;
+    await act(async () => {
+      await store().toggle(byFile("Water plants.md"));
+    });
+    await flush();
+    const [failure] = store().failures;
+    expect(failure.kind).toBe("failure");
+
+    // A second tap lands: the note reopens, and the next note goes.
+    await act(async () => {
+      await store().toggle(byFile("Water plants.md"));
+    });
+    await flush();
+    expect(waterFiles()).toEqual(["Tasks/Water plants.md"]);
+    const writesBefore = writes.length;
+
+    await retryFailure(failure);
+
+    expect(writes).toHaveLength(writesBefore);
+    expect(waterFiles()).toEqual(["Tasks/Water plants.md"]);
+    expect(byFile("Water plants.md").data?.completed).toBeUndefined();
+    expect(failures()).toEqual([]);
+  });
+
+  it("makes no second next note when a tick with a kept one is retried", async () => {
+    vault.hooks.write("Tasks/Water plants.md", recurring("2026-10-20"));
+    await mount();
+    // The completion fails, and so does the delete of the new note.
+    failNext = true;
+    deleteFails = true;
+    await act(async () => {
+      await store().toggle(byFile("Water plants.md"));
+    });
+    await flush();
+    expect(waterRows()).toEqual([SPAWN_FILE, "Water plants.md"]);
+    const [failure] = store().failures;
+    expect(failure.kind).toBe("failure");
+
+    // The retry fails too. It made no note, so it takes none back, and
+    // the kept note's row stays.
+    deleteFails = false;
+    failNext = true;
+    let shown = await retryFailure(failure);
+    expect(waterRows(shown)).toEqual([SPAWN_FILE, "Water plants.md"]);
+    expect(deletes).toEqual([]);
+    expect(waterRows()).toEqual([SPAWN_FILE, "Water plants.md"]);
+    const [again] = store().failures;
+    expect(failures()).toEqual(["tick: disk full"]);
+
+    shown = await retryFailure(again);
+
+    // The retry completes the note and keeps the next note it has.
+    expect(waterRows(shown)).toEqual([SPAWN_FILE, "Water plants.md"]);
+    expect(waterFiles()).toEqual([`Tasks/${SPAWN_FILE}`, "Tasks/Water plants.md"]);
+    expect(creates).toHaveLength(1);
+    expect(vault.hooks.read("Tasks/Water plants.md")).toContain("completed:");
+    expect(waterRows()).toEqual([SPAWN_FILE, "Water plants.md"]);
+    const ids = store().tasks.map((item) => item.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(failures()).toEqual([]);
   });
 
   it("takes back an untouched successor when the occurrence reopens", async () => {
@@ -580,15 +920,16 @@ describe("recurring completion", () => {
     await mount();
 
     await act(async () => {
-      await latest!.toggle(byFile("Water plants.md"));
+      await store().toggle(byFile("Water plants.md"));
     });
     await flush();
 
     expect(deletes).toEqual([SPAWN_URI]);
     expect(byFile("Water plants.md").data?.completed).toBeUndefined();
-    expect(latest!.tasks.map((item) => item.fileName)).not.toContain(
+    expect(store().tasks.map((item) => item.fileName)).not.toContain(
       "Water plants 2026-10-27.md",
     );
+    expect(failures()).toEqual([]);
   });
 
   it("leaves an edited successor alone when the occurrence reopens", async () => {
@@ -600,13 +941,17 @@ describe("recurring completion", () => {
     await mount();
 
     await act(async () => {
-      await latest!.toggle(byFile("Water plants.md"));
+      await store().toggle(byFile("Water plants.md"));
     });
     await flush();
 
     expect(deletes).toEqual([]);
     expect(byFile(SPAWN_FILE)).toBeDefined();
     expect(vault.hooks.read(`Tasks/${SPAWN_FILE}`)).toContain("Edited.");
-    expect(latest!.lastError).toContain("edited");
+    // The reopen landed, and the list says why both notes stay.
+    expect(byFile("Water plants.md").data?.completed).toBeUndefined();
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toContain("edited");
   });
 });

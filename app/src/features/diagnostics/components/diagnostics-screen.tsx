@@ -2,6 +2,7 @@ import * as React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useVault } from "@/lib/vault/vault-provider";
 import {
+  alarmsSupported,
   listScheduled,
   exactAlarmState,
   scheduleAt,
@@ -15,6 +16,13 @@ import {
   spacing,
   type ThemeName,
 } from "@/theme/tokens";
+
+function alarmLabel(exact: boolean): string {
+  if (!alarmsSupported) {
+    return "no alarms on the web";
+  }
+  return exact ? "exact alarms granted" : "exact alarms DENIED";
+}
 
 /**
  * Dev-only diagnostics from the spike: alarm state, scheduled
@@ -30,7 +38,7 @@ export default function DevScreen() {
   const vault = useVault();
 
   const refresh = React.useCallback(async () => {
-    setAlarm((await exactAlarmState()) ? "exact alarms granted" : "exact alarms DENIED");
+    setAlarm(alarmLabel(await exactAlarmState()));
     setScheduled(await listScheduled());
   }, []);
 
@@ -40,7 +48,7 @@ export default function DevScreen() {
       const exact = await exactAlarmState();
       const items = await listScheduled();
       if (active) {
-        setAlarm(exact ? "exact alarms granted" : "exact alarms DENIED");
+        setAlarm(alarmLabel(exact));
         setScheduled(items);
       }
     })();

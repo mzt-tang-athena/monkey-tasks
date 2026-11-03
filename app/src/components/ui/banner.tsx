@@ -18,21 +18,21 @@ const tones = {
 /**
  * A message on the page grid that leaves the screen usable: a failed
  * write, a note that needs repair. It has a tone, an optional title,
- * lines of text and an optional action. Extra content, such as one
- * block per broken note, goes in `children`. Assistive tech reads it
- * as an alert, politely, when it appears.
+ * lines of text and up to two actions, as the toast has. Extra
+ * content, such as one block per broken note, goes in `children`.
+ * Assistive tech reads it as an alert, politely, when it appears.
  */
 export function Banner({
   tone,
   title,
   lines = [],
-  action,
+  actions = [],
   children,
 }: {
   tone: "danger" | "info";
   title?: string;
   lines?: string[];
-  action?: BannerAction;
+  actions?: [BannerAction] | [BannerAction, BannerAction] | [];
   children?: React.ReactNode;
 }) {
   const { fill, ink } = tones[tone];
@@ -53,15 +53,16 @@ export function Banner({
         ))}
         {children}
       </View>
-      {action != null ? (
+      {actions.map((action) => (
         <Button
+          key={action.label}
           variant="text"
           tone={tone === "danger" ? "danger" : "accent"}
           label={action.label}
           accessibilityLabel={action.accessibilityLabel}
           onPress={action.onPress}
         />
-      ) : null}
+      ))}
     </View>
   );
 }
