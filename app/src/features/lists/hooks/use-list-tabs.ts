@@ -51,15 +51,14 @@ export function useListTabState() {
 
   const onPage = React.useCallback(
     (dir: PagerSide) => {
-      setSelected((current) => {
-        const index = tabs.indexOf(current);
-        if (index === -1) {
-          return current;
-        }
-        return tabs[dir === "left" ? index + 1 : index - 1] ?? current;
-      });
+      // Step from the derived tab, as canGo does. The raw selection can
+      // name a vanished list.
+      const next = tabs[tabs.indexOf(tab) + (dir === "left" ? 1 : -1)];
+      if (next != null) {
+        setSelected(next);
+      }
     },
-    [tabs],
+    [tabs, tab],
   );
 
   /** The tab the finger travels toward, or null at either end. */

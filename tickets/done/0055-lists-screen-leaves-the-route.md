@@ -134,10 +134,11 @@ Landed in PR 81.
 - The four open findings are fixed: the tab strip fades an edge (the "Fo" cut), the repair notice, `textInset` reuses `circle`, and `tasks.spec.ts` uses one `locator.evaluate`.
 - A tick on the only row of a group put the group after later groups during the hold, with an empty Completed header. The splice now restores the group at its own place.
 - ADR 0041 records the choices.
+- A list note can vanish while its tab is open, so the screen falls back to Main. The pager now steps from that derived tab. A test removes the open list note and then swipes.
 
 Left open:
 
-- The slot crossing acceptance line has a row-level test (`task-card-row.test.tsx`) and stable callbacks, but no screen-level render count during a live drag. jsdom has no layout, so a drag test needs a layout stub. Ticket 0059 swaps the reorder internals and can add it.
+- The slot crossing acceptance line has a row-level test (`task-card-row.test.tsx`) and stable callbacks, but no screen-level render count during a live drag. jsdom has no layout, so a drag test needs a layout stub. Ticket 0060 owns `use-row-reorder` and plans the J2 test that replaces the looser crossing test.
 - B2 (touch swipe) stays `test.fail` until 0059.
 - Ticket 0057 owns the bottom bar, the sheet and the toast on wide screens.
 
