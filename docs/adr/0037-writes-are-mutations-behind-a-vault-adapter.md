@@ -135,7 +135,7 @@ with the hooks code beside them.
 
 ## Amendment, 2026-11-03: how the mutation hooks behave
 
-Ticket 0052 built the hooks. It made five choices that the decision
+Ticket 0052 built the hooks. It made six choices that the decision
 above leaves open.
 
 `onMutate` cancels a read in flight and then changes the rows, and both
@@ -165,6 +165,14 @@ time. It picks the direction of a tick, makes the next
 occurrence's id, and skips a change that changes nothing. We rejected
 variables that each screen builds. Every screen would then repeat that
 logic, and a stale render would pick the wrong direction.
+
+A toggle that finds its note already in the asked state writes
+nothing. A Retry runs the variables of an old tap, and a later tap can
+have landed that state since. A second tick would then make a second
+next occurrence. When the first try made the next note and could not
+delete it, a retry keeps that note and makes no other. We rejected a
+Retry that picks its direction again from the row. It would then undo
+a tick that the user made by hand.
 
 The alarm calls follow the adapter's pattern. `notifications.ts` holds
 the phone's alarms, and Metro takes `notifications.web.ts` for the web,

@@ -323,7 +323,7 @@ Vitest and the Playwright suite (46 passed, B1 and B2 expected fail).
 
 ### Changes from the spec
 
-ADR 0037 has a 2026-11-03 amendment for the first four.
+ADR 0037 has a 2026-11-03 amendment for the first five.
 
 - `onMutate` cancels the read and changes the rows before `mutate()`
   returns, then awaits the cancel. An `await` first would order two
@@ -336,6 +336,11 @@ ADR 0037 has a 2026-11-03 amendment for the first four.
 - Each hook returns a command, such as `toggle(task)`. The command
   reads the row from the cache to pick a tick's direction and to make
   the successor id.
+- A toggle whose note already holds the asked state writes nothing
+  and puts up no row. So a Retry on a tick that a later tap landed
+  makes no second next occurrence. A retry after a
+  failed take-back keeps the next note the first try made, and makes
+  no other. Store tests and a Playwright test show both.
 - `shareRows` carries ids first and then runs `replaceEqualDeep`, so a
   read that changes nothing keeps each row object.
 - An untick reads the successor's file before it deletes it, and does
