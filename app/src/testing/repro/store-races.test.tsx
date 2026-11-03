@@ -41,6 +41,7 @@ import {
   type StoreMeta,
 } from "@/stores/tasks/task-state";
 import { useTaskActions, type TaskActions } from "@/stores/tasks/task-actions";
+import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
 import type { TaskItem } from "@/types/task";
 import { reorderItems } from "@/features/lists/reorder";
 
@@ -77,7 +78,8 @@ const openGates: (() => void)[] = [];
 /** How many of the next writes or creates wait for a release. */
 let holdWrites = 0;
 const held: (() => void)[] = [];
-let failNextWrite = false;
+/** Let this many writes through, then fail the next one. */
+let failAfter: number | null = null;
 let deleteFails = false;
 let createCalls = 0;
 let fullSyncs = 0;
@@ -138,9 +140,12 @@ function instrumented(inner: MemoryVault): VaultAdapter {
     ...inner,
     savedRoot: async () => (noFolder ? null : inner.savedRoot()),
     async write(uri, text) {
-      if (failNextWrite) {
-        failNextWrite = false;
+      if (failAfter === 0) {
+        failAfter = null;
         throw new Error("disk full");
+      }
+      if (failAfter != null) {
+        failAfter -= 1;
       }
       await hold();
       return inner.write(uri, text);
@@ -163,7 +168,11 @@ function instrumented(inner: MemoryVault): VaultAdapter {
   };
 }
 
-type Snapshot = StoreMeta & TaskActions & { tasks: TaskItem[] };
+type Snapshot = StoreMeta &
+  TaskActions & {
+    tasks: TaskItem[];
+    reorder: ReturnType<typeof useReorderSection>;
+  };
 
 let latest: Snapshot | null = null;
 let client: QueryClient | null = null;
@@ -173,7 +182,8 @@ function Probe() {
   const tasks = useTaskList();
   const meta = useStoreMeta();
   const actions = useTaskActions();
-  latest = { ...meta, ...actions, tasks };
+  const reorder = useReorderSection();
+  latest = { ...meta, ...actions, tasks, reorder };
   onRender?.(tasks);
   return null;
 }
@@ -271,7 +281,7 @@ beforeEach(() => {
   disk.set(CALL, CALL_TEXT);
   loadGates.length = 0;
   holdWrites = 0;
-  failNextWrite = false;
+  failAfter = null;
   deleteFails = false;
   createCalls = 0;
   fullSyncs = 0;
@@ -294,7 +304,7 @@ afterEach(async () => {
 describe("store races (ticket 0052)", () => {
   // Finding 1. tasks.tsx capture: a capture never registers as a write,
   // so a read already in flight lands without the new row.
-  it.fails("keeps a capture made while a read is in flight", async () => {
+  it("keeps a capture made while a read is in flight", async () => {
     await mount();
     const open = gateNextRead();
     let refreshing: Promise<void> = Promise.resolve();
@@ -316,7 +326,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 3. tasks.tsx toggle/spawnNext: a recurring tick waits for
   // the create before the row moves.
-  it.fails("shows a recurring tick before the new note lands", async () => {
+  it("shows a recurring tick before the new note lands", async () => {
     disk.set(WATER, WATER_TEXT);
     await mount();
     holdWrites = 1;
@@ -329,7 +339,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 3. A second tap before the first lands spawns a second
   // successor, which the compensation deletes, and reports an error.
-  it.fails("takes a double tap on a recurring task without an error", async () => {
+  it("takes a double tap on a recurring task without an error", async () => {
     disk.set(WATER, WATER_TEXT);
     await mount();
     await act(async () => {
@@ -344,7 +354,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 4. tasks.tsx readVault: the third read attempt neither waits
   // for writes nor checks the write counter.
-  it.fails("never lands a read that overlapped a write", async () => {
+  it("never lands a read that overlapped a write", async () => {
     await mount();
     const opens = [gateNextRead(), gateNextRead(), gateNextRead()];
     let refreshing: Promise<void> = Promise.resolve();
@@ -371,7 +381,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 5. tasks.tsx toggle: the first write's result replaces the
   // row even after a second tap moved it on.
-  it.fails("never shows an earlier tap over a later one", async () => {
+  it("never shows an earlier tap over a later one", async () => {
     await mount();
     holdWrites = 2;
     await act(async () => {
@@ -392,7 +402,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 6. tasks.tsx applyTasks: a tap writes a list built from the
   // ref, which lags the cache until the effect runs.
-  it.fails("keeps a read that lands just before a tap", async () => {
+  it("keeps a read that lands just before a tap", async () => {
     await mount();
     const key = ["tasks", MEMORY_ROOT];
     const cache = client;
@@ -424,10 +434,10 @@ describe("store races (ticket 0052)", () => {
   });
 
   // Finding 7. tasks.tsx lastError: one string, cleared by any success.
-  it.fails("keeps a failure on screen after an unrelated success", async () => {
+  it("keeps a failure on screen after an unrelated success", async () => {
     disk.set(`${TASKS}/Bread.md`, CALL_TEXT);
     await mount();
-    failNextWrite = true;
+    failAfter = 0;
     await act(async () => {
       await store().writeFields(row("Call"), { order: 1 });
     });
@@ -438,9 +448,9 @@ describe("store races (ticket 0052)", () => {
     expect(store().lastError).not.toBeNull();
   });
 
-  // Finding 8. app/(tabs)/index.tsx endReorder writes one row at a time
-  // and rolls back only the row that failed.
-  it.fails("rolls back a whole reorder drop when one write fails", async () => {
+  // Finding 8. app/(tabs)/index.tsx endReorder wrote one row at a time
+  // and rolled back only the row that failed. The drop is now one call.
+  it("rolls back a whole reorder drop when one write fails", async () => {
     for (const name of ["Bread", "Eggs"]) {
       disk.set(`${TASKS}/${name}.md`, CALL_TEXT);
     }
@@ -448,18 +458,20 @@ describe("store races (ticket 0052)", () => {
     const section = [row("Bread"), row("Call"), row("Eggs")];
     // Move Eggs to the top: every row gets a new number.
     const changes = reorderItems(section, 2, 0);
-    // The same loop as the Lists screen's drop handler.
-    for (const [index, change] of changes.entries()) {
-      failNextWrite = index === 1;
-      await act(async () => {
-        await store().writeFields(change.task, { order: change.order });
-      });
-    }
+    // The second note write fails.
+    failAfter = 1;
+    await act(async () => {
+      await store().reorder(changes);
+    });
     await flush();
     const orders = ["Bread", "Call", "Eggs"].map((name) => row(name).data?.order);
     const untouched = orders.every((order) => order == null);
     const applied = orders.join(",") === "2,3,1";
     expect(untouched || applied).toBe(true);
+    // The notes agree with the rows: none keeps a new number.
+    for (const name of ["Bread", "Call", "Eggs"]) {
+      expect(disk.get(`${TASKS}/${name}.md`)).not.toContain("order:");
+    }
   });
 
   // Finding 9. tasks.tsx capture keeps the provisional id; the next read
@@ -479,7 +491,7 @@ describe("store races (ticket 0052)", () => {
   });
 
   // Finding 10. tasks.tsx toggle drops a tap on a pending row.
-  it.fails("lands a tick on a row whose file is still being created", async () => {
+  it("lands a tick on a row whose file is still being created", async () => {
     await mount();
     holdWrites = 1;
     let capturing: Promise<void> = Promise.resolve();
@@ -502,7 +514,7 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 17. tasks.tsx queuePatch: when the note on disk no longer
   // parses, the retry writes it back unchanged and reports success.
-  it.fails("reports a tick that could not land on a broken note", async () => {
+  it("reports a tick that could not land on a broken note", async () => {
     await mount();
     disk.set(CALL, '---\nkind: "[[tasks]]"\n---\n');
     await act(async () => {
@@ -514,10 +526,10 @@ describe("store races (ticket 0052)", () => {
 
   // Finding 18. tasks.tsx spawnNext compensation removes the new row
   // even when its delete failed, so a live note hides.
-  it.fails("keeps showing a successor whose delete failed", async () => {
+  it("keeps showing a successor whose delete failed", async () => {
     disk.set(WATER, WATER_TEXT);
     await mount();
-    failNextWrite = true;
+    failAfter = 0;
     deleteFails = true;
     await act(async () => {
       await store().toggle(row("Water"));

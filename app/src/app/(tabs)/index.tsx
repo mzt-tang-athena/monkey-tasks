@@ -27,6 +27,7 @@ import { loadSettings, saveSetting, type SortMode } from "@/lib/settings";
 import { BottomBar } from "@/components/bottom-bar";
 import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
 import { useTaskActions } from "@/stores/tasks/task-actions";
+import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
 import {
   useListTabs,
   useTabTasks,
@@ -54,6 +55,7 @@ export default function ListsScreen() {
   const { rootUri, status, lastError, brokenLists } = useStoreMeta();
   const allTasks = useTaskList();
   const actions = useTaskActions();
+  const reorderSection = useReorderSection();
   const insets = useSafeAreaInsets();
   const tabs = useListTabs();
   const [tab, setTab] = React.useState<ListTab>("Main");
@@ -483,17 +485,11 @@ export default function ListsScreen() {
     if (next !== items) {
       setSettling({ section: current.section, data: next });
     }
-    const changes = reorderItems(items, current.from, current.to);
-    void (async () => {
-      try {
-        for (const change of changes) {
-          await actions.writeFields(change.task, { order: change.order });
-        }
-      } finally {
-        setSettling(null);
-      }
-    })();
-  }, [actions, clearHold, reorder, sections]);
+    // One drop is one write: it lands whole or rolls back whole.
+    void reorderSection(reorderItems(items, current.from, current.to)).finally(
+      () => setSettling(null),
+    );
+  }, [clearHold, reorder, reorderSection, sections]);
 
   // The list keeps its own order while a drag is live; only transforms
   // move the rows. After a drop the written order takes over.

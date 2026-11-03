@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { load } from "js-yaml";
-import { captureContent } from "./write";
+import { captureContent } from "./capture-draft";
 
 import type { ParsedCapture } from "@/types/task";
 

@@ -466,8 +466,9 @@ describe("TasksProvider", () => {
     expect(after.text).toBe(before.text);
     expect(after.data?.due).toBeUndefined();
     expect(after.name).toBe("Call");
-    expect(latest!.lastError).toContain("task edit");
-    // The failure changed the banner, not the actions' identity.
+    // The editor shows the refusal, so the banner stays clear.
+    expect(latest!.lastError).toBeNull();
+    // The failure did not change the actions' identity.
     expect(latestActions).toBe(actionsBeforeEdit);
   });
 
@@ -552,7 +553,7 @@ describe("recurring completion", () => {
 
     expect(writes).toHaveLength(0);
     expect(byFile("Water plants.md").data?.completed).toBeUndefined();
-    expect(latest!.lastError).toContain("recurring create");
+    expect(latest!.lastError).toContain("tick: no space");
   });
 
   it("takes the new note back when the completion write fails", async () => {
@@ -571,7 +572,7 @@ describe("recurring completion", () => {
     expect(latest!.tasks.map((item) => item.fileName)).not.toContain(
       "Water plants 2026-10-27.md",
     );
-    expect(latest!.lastError).toContain("recurring complete");
+    expect(latest!.lastError).toContain("tick: disk full");
   });
 
   it("takes back an untouched successor when the occurrence reopens", async () => {

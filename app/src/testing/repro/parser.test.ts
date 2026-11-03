@@ -9,8 +9,8 @@ import { MEMORY_ROOT, createMemoryVault } from "@/lib/vault/adapters/memory";
 import { createNote } from "@/lib/vault/notes";
 import { updateProperty } from "@/lib/vault/frontmatter";
 import { loadTasks, taskFromText } from "@/stores/tasks/task-notes";
-import { saveTaskEdit } from "@/features/task-editor/save";
-import { captureDraft } from "@/features/capture/write";
+import { saveTaskEdit } from "@/lib/vault/save-task-edit";
+import { captureDraft } from "@/stores/tasks/capture-draft";
 
 const TASKS = `${MEMORY_ROOT}/Tasks`;
 const URI = `${TASKS}/Call.md`;
