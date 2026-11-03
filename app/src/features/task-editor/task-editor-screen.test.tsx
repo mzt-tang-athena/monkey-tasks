@@ -22,6 +22,14 @@ vi.mock("expo-router", () => ({
   useLocalSearchParams: () => ({ id: "content://vault/Notes/Garden.md" }),
 }));
 
+// The keyboard controller has no keyboard in jsdom. The mock marks the
+// view that lifts its content above the keyboard.
+vi.mock("react-native-keyboard-controller", () => ({
+  KeyboardAwareScrollView: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="keyboard-aware">{children}</div>
+  ),
+}));
+
 vi.mock("@/stores/tasks/task-state", () => ({
   useTaskList: () => state.tasks,
   useStoreMeta: () => ({ status: state.status }),
@@ -112,5 +120,15 @@ describe("TaskEditorScreen", () => {
     expect(screen.getByRole("button", { name: "save task" })).toBeTruthy();
     expect(screen.getByText("Save")).toBeTruthy();
     expect(screen.getAllByRole("textbox").length).toBeGreaterThan(0);
+  });
+
+  it("scrolls the form in a keyboard-aware view, so Body clears the keyboard", () => {
+    mount(task());
+
+    // Android runs edge to edge and never resizes the window for the
+    // keyboard (ADR 0014), so a plain ScrollView lets it cover Body.
+    const form = screen.getByTestId("keyboard-aware");
+    expect(form.contains(screen.getByRole("textbox", { name: "Body" }))).toBe(true);
+    expect(form.contains(screen.getByRole("textbox", { name: "Reminders" }))).toBe(true);
   });
 });

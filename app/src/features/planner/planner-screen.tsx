@@ -3,7 +3,8 @@ import { Animated, Platform, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CaptureTarget, TaskItem } from "@/types/task";
-import { BottomBar } from "@/components/bottom-bar";
+import { BottomBar } from "@/components/bottom-bar/bottom-bar";
+import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { useReduceMotion } from "@/lib/motion";
 import { isoOf } from "@/utils/dates";
 import { cycleSource, sourceLabel, SOURCES, type Source } from "./model";
@@ -21,7 +22,6 @@ import { LoadingState, ErrorState } from "./components/planner-states";
 import { pointerPickup } from "./components/drag";
 import { loadSettings, saveSetting, type TaskForm } from "@/lib/settings";
 import { useTaskList, useStoreMeta } from "@/stores/tasks/task-state";
-import { useCaptureTask } from "@/stores/tasks/mutations/use-capture-task";
 import { usePatchTask } from "@/stores/tasks/mutations/use-patch-task";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useRefreshTasks } from "@/stores/tasks/use-vault-read";
@@ -61,7 +61,7 @@ function useValid(tasks: TaskItem[]): TaskItem[] {
  * the gestures in hooks/usePlannerGestures and the month state in
  * hooks/usePlannerMonth.
  */
-export default function PlannerScreen() {
+export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   // The mode and the day live in the URL: a link, a tap on another
   // screen, or a remount all read the same route state back.
   const { mode, day, setMode, setDay, openDay } = usePlannerRoute();
@@ -69,7 +69,6 @@ export default function PlannerScreen() {
   const { status } = useStoreMeta();
   const toggleTask = useToggleTask();
   const patchTask = usePatchTask();
-  const capture = useCaptureTask();
   const refresh = useRefreshTasks();
   const insets = useSafeAreaInsets();
 
@@ -395,11 +394,11 @@ export default function PlannerScreen() {
       {/* One bottom bar: nav left, capture button right. The planner
           preselects the viewed day as the default due date. */}
       <BottomBar
-        targets={TARGETS}
-        defaultTargetIndex={1}
-        onSend={(parsed, target) =>
-          capture(parsed, target, isoOf(day))
-        }
+        action={dock({
+          targets: TARGETS,
+          defaultTargetIndex: 1,
+          dueDay: isoOf(day),
+        })}
       />
     </View>
   );

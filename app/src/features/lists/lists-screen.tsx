@@ -1,0 +1,1422 @@
+import * as React from "react";
+import {
+  Animated,
+  Platform,
+  Pressable,
+  ScrollView,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { CaptureTarget, TaskItem } from "@/types/task";
+import { TaskRow } from "@/components/task-row";
+import { taskRowFace } from "@/components/task-row-face";
+import { ReorderGrip, ReorderRow } from "@/features/lists/reorder-row";
+import {
+  layoutOrder,
+  moveItem,
+  reorderItems,
+} from "@/features/lists/reorder";
+import { swipeProps, type SwipeController } from "@/lib/swipe";
+import { useSwipePager } from "@/components/swipe-pager";
+import { ListPagePreview } from "@/features/lists/list-page-preview";
+import { loadSettings, saveSetting, type SortMode } from "@/lib/settings";
+import { BottomBar } from "@/components/bottom-bar/bottom-bar";
+import type { DockSlot } from "@/components/bottom-bar/dock-slot";
+import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
+import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
+import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
+import { useGrantFolder, useRefreshTasks } from "@/stores/tasks/use-vault-read";
+import { FailureBanner } from "@/features/lists/failure-banner";
+import {
+  useListTabs,
+  useTabTasks,
+  useTaskSections,
+  type ListTab,
+  type SectionTone,
+} from "@/stores/tasks/selectors";
+import { IconButton } from "@/components/ui/icon-button";
+import { colors, drag, fonts, spacing, radius, radiusFloating, radii, measure, pageGutter, shadows } from "@/theme/tokens";
+
+/**
+ * Lists tab: Main first, then one tab per list note, with capture
+ * docked above the bottom bar. Main shows every task.
+ */
+type ListsSection = {
+  title: string;
+  tone: SectionTone | "faint";
+  data: TaskItem[];
+};
+
+/** How long a ticked row keeps its place before it regroups. */
+const tickHoldMs = 250;
+
+export function ListsScreen({ dock }: { dock: DockSlot }) {
+  const { rootUri, status, readError, brokenLists } = useStoreMeta();
+  const allTasks = useTaskList();
+  const toggleTask = useToggleTask();
+  const reorderSection = useReorderSection();
+  const refresh = useRefreshTasks();
+  const grant = useGrantFolder();
+  const insets = useSafeAreaInsets();
+  const tabs = useListTabs();
+  const [tab, setTab] = React.useState<ListTab>("Main");
+  const [sortMode, setSortMode] = React.useState<SortMode>(
+    () => loadSettings().sortMode,
+  );
+  const [menu, setMenu] = React.useState<{
+    open: boolean;
+    top: number;
+    left: number;
+  } | null>(null);
+  const [sortMenu, setSortMenu] = React.useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const dotsRef = React.useRef<React.ComponentRef<typeof View>>(null);
+  const sortRef = React.useRef<React.ComponentRef<typeof View>>(null);
+  // The tab strip scrolls the active chip into view after a swipe or a
+  // tap. Chip offsets are measured once and kept for the session.
+  const stripRef = React.useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const chipX = React.useRef<Record<string, number>>({});
+
+  // The capture targets follow the tab order: Main, then one list
+  // target per list note. Main stores nothing; a list target writes
+  // its name into the captured task's lists property.
+  const targets = React.useMemo<CaptureTarget[]>(
+    () =>
+      tabs.map((name) =>
+        name === "Main"
+          ? { kind: "main" as const }
+          : { kind: "list" as const, name },
+      ),
+    [tabs],
+  );
+
+  // The names can grow after a read. The swipe controller is created
+  // once, so it walks the current names through a ref instead of the
+  // pair it saw on the first render.
+  const tabsRef = React.useRef(tabs);
+  React.useEffect(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
+
+  // The tab pager: horizontal travel on the list body walks the tab
+  // bar's order. Touch events, not a gesture handler, because a
+  // handler on the parent of a scrolling list never sees the moves on
+  // Android. The pager is created below the reorder callbacks, since
+  // its page wraps the list; those callbacks reach its controller
+  // through this ref when a gesture runs.
+  const tabSwipeRef = React.useRef<SwipeController | null>(null);
+
+  // A tab that is off screen would hide the current view's name, so
+  // the strip follows the selection. The user can still scroll it.
+  React.useEffect(() => {
+    const x = chipX.current[tab];
+    if (x == null) {
+      return;
+    }
+    stripRef.current?.scrollTo({ x: Math.max(0, x - spacing.m), animated: true });
+  }, [tab]);
+
+  // The pill preselects the active tab's target; Main is the fallback
+  // when the tab has no target of its own.
+  const defaultTargetIndex = React.useMemo(() => {
+    const index = targets.findIndex((target) =>
+      tab === "Main"
+        ? target.kind === "main"
+        : target.kind === "list" && target.name === tab,
+    );
+    return index === -1 ? 1 : index;
+  }, [targets, tab]);
+
+  // A row body press opens the task editor. The id is a SAF uri, so
+  // it rides one encoded path segment.
+  const openTask = React.useCallback((task: TaskItem) => {
+    router.push(`/task/${encodeURIComponent(task.id)}`);
+  }, []);
+
+  // A real reload: the loader can fail when it talks to the vault,
+  // so the error state keeps its retry affordance (also wired to
+  // the list's pull-to-refresh).
+  const [refreshing, setRefreshing] = React.useState(false);
+  const reload = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refresh]);
+
+  // A note that fails validation never renders as a task row. It is
+  // shown, with its errors, in the repair block above the list.
+  const brokenTasks = React.useMemo(
+    () =>
+      allTasks
+        .filter((task) => (task.errors?.length ?? 0) > 0)
+        .map((task) => ({
+          name: task.name,
+          uri: task.uri,
+          errors: task.errors ?? [],
+        })),
+    [allTasks],
+  );
+  const repairs = React.useMemo(
+    () => [...brokenLists, ...brokenTasks],
+    [brokenLists, brokenTasks],
+  );
+  const shown = useTabTasks(tab);
+  const visible = React.useMemo(
+    () => shown.filter((task) => (task.errors?.length ?? 0) === 0),
+    [shown],
+  );
+  const openSections = useTaskSections(visible, sortMode);
+  const completed = React.useMemo(
+    () =>
+      visible
+        .filter((task) => task.data?.completed)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [visible],
+  );
+
+  // A tick regroups the row into Completed in the same frame, which
+  // would cut off the circle's own animation. The row keeps its place
+  // for a beat, then it moves.
+  const [tickHold, setTickHold] = React.useState<{
+    uri: string;
+    section: string;
+    tone: SectionTone | "faint";
+    index: number;
+  } | null>(null);
+  const tickHoldTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const clearTickHold = React.useCallback(() => {
+    if (tickHoldTimer.current != null) {
+      clearTimeout(tickHoldTimer.current);
+      tickHoldTimer.current = null;
+    }
+  }, []);
+  React.useEffect(() => () => clearTickHold(), [clearTickHold]);
+
+  const sections = React.useMemo<ListsSection[]>(() => {
+    if (status !== "ready") {
+      return [];
+    }
+    const next: ListsSection[] = openSections.map((section) => ({
+      title: section.title,
+      tone: section.tone,
+      data: section.items,
+    }));
+    if (completed.length > 0) {
+      next.push({ title: "Completed", tone: "faint", data: completed });
+    }
+    const hold = tickHold;
+    const heldT = hold == null ? null : shown.find((t) => t.uri === hold.uri);
+    if (hold == null || heldT == null || heldT.data?.completed == null) {
+      return next;
+    }
+    // The tick already pushed the row into Completed. Lift it out and
+    // splice it back where it was, so it stays mounted and its circle
+    // keeps animating in place.
+    const source = next.find((section) =>
+      section.data.some((task) => task.uri === hold.uri),
+    );
+    const restored: ListsSection[] =
+      source == null
+        ? next
+        : next.map((section) =>
+            section === source
+              ? {
+                  ...section,
+                  data: section.data.filter((task) => task.uri !== hold.uri),
+                }
+              : section,
+          );
+    const at = restored.findIndex(
+      (section) => section.title === hold.section,
+    );
+    if (at === -1) {
+      // The row was its group's only task, so the group is gone. It
+      // comes back ahead of Completed, where the group sat.
+      const slot = restored.findIndex((section) => section.tone === "faint");
+      restored.splice(slot === -1 ? restored.length : slot, 0, {
+        title: hold.section,
+        tone: hold.tone,
+        data: [heldT],
+      });
+      return restored;
+    }
+    return restored.map((section, index) => {
+      if (index !== at) {
+        return section;
+      }
+      const cut = Math.min(hold.index, section.data.length);
+      return {
+        ...section,
+        data: [
+          ...section.data.slice(0, cut),
+          heldT,
+          ...section.data.slice(cut),
+        ],
+      };
+    });
+  }, [status, openSections, completed, tickHold, shown]);
+
+  // The manual reorder: a hold (or the grip) lifts a row, the rows
+  // reflow live under it, and the drop writes `order` for the rows
+  // whose position changed. The floating row moves through an
+  // Animated value, so a pointer move costs no render.
+  const [reorder, setReorder] = React.useState<{
+    task: TaskItem;
+    section: string;
+    from: number;
+    to: number;
+    /** The row's left edge and width, in root coordinates. */
+    left: number;
+    width: number;
+  } | null>(null);
+  const [ghostY] = React.useState(() => new Animated.Value(0));
+  // One translateY per row: the slide from the old place to the new.
+  const [rowShift] = React.useState(
+    () => new Map<string, Animated.Value>(),
+  );
+  // Where each row is heading, so a crossing only animates the rows
+  // whose slot actually changed.
+  const rowTarget = React.useRef(new Map<string, number>());
+  // The sequence the last drop wrote, held on screen until every note
+  // is saved: the rows must not snap back while the writes land.
+  const [settling, setSettling] = React.useState<{
+    section: string;
+    data: TaskItem[];
+  } | null>(null);
+  const rootY = React.useRef(0);
+  const grabOffset = React.useRef(0);
+  const rootRef = React.useRef<React.ComponentRef<typeof View>>(null);
+  const rowRefs = React.useRef(
+    new Map<
+      string,
+      {
+        measureInWindow?: (
+          cb: (x: number, y: number, w: number, h: number) => void,
+        ) => void;
+      } | null
+    >(),
+  );
+  const reorderRects = React.useRef<{ uri: string; y: number; h: number }[]>(
+    [],
+  );
+  const holdTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingReorder = React.useRef<{
+    task: TaskItem;
+    section: string;
+    index: number;
+    x: number;
+    y: number;
+  } | null>(null);
+  const suppressClick = React.useRef(false);
+
+  const clearHold = React.useCallback(() => {
+    if (holdTimer.current != null) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+  }, []);
+
+  const armReorder = React.useCallback(() => {
+    const pending = pendingReorder.current;
+    if (pending == null) {
+      return;
+    }
+    pendingReorder.current = null;
+    clearHold();
+    setSettling(null);
+    rowTarget.current.clear();
+    for (const value of rowShift.values()) {
+      value.stopAnimation();
+      value.setValue(0);
+    }
+    // The reorder owns the gesture now, not the tab swipe.
+    tabSwipeRef.current?.claim();
+    const items =
+      sections.find((s) => s.title === pending.section)?.data ?? [];
+    reorderRects.current = [];
+    const measure = (rootX: number, rootY: number) => {
+      for (const item of items) {
+        rowRefs.current.get(item.uri)?.measureInWindow?.((x, y, w, h) => {
+          reorderRects.current.push({ uri: item.uri, y, h });
+          if (item.uri === pending.task.uri) {
+            grabOffset.current = pending.y - y;
+            ghostY.setValue(y - rootY);
+            setReorder({
+              task: pending.task,
+              section: pending.section,
+              from: pending.index,
+              to: pending.index,
+              left: x - rootX,
+              width: w,
+            });
+          }
+        });
+      }
+    };
+    const root = rootRef.current as unknown as {
+      measureInWindow?: (
+        cb: (x: number, y: number, w: number, h: number) => void,
+      ) => void;
+    } | null;
+    if (root?.measureInWindow) {
+      root.measureInWindow((x, y) => measure(x, y));
+    } else {
+      measure(0, 0);
+    }
+  }, [clearHold, ghostY, rowShift, sections]);
+
+  const holdRow = React.useCallback(
+    (
+      task: TaskItem,
+      index: number,
+      section: string,
+      e: { pageX: number; pageY: number },
+    ) => {
+      pendingReorder.current = {
+        task,
+        section,
+        index,
+        x: e.pageX,
+        y: e.pageY,
+      };
+      clearHold();
+      holdTimer.current = setTimeout(armReorder, drag.pickMs);
+    },
+    [armReorder, clearHold],
+  );
+
+  const armReorderNow = React.useCallback(
+    (task: TaskItem, index: number, section: string, x: number, y: number) => {
+      pendingReorder.current = { task, section, index, x, y };
+      armReorder();
+    },
+    [armReorder],
+  );
+
+  const moveReorder = React.useCallback(
+    (x: number, y: number) => {
+      if (reorder == null) {
+        const pending = pendingReorder.current;
+        if (
+          pending != null &&
+          Math.abs(x - pending.x) + Math.abs(y - pending.y) > drag.threshold
+        ) {
+          pendingReorder.current = null;
+          clearHold();
+        }
+        return;
+      }
+      // A live drag owns the gesture: the tab swipe must not arm.
+      tabSwipeRef.current?.claim();
+      ghostY.setValue(y - rootY.current - grabOffset.current);
+      const rects = [...reorderRects.current].sort((a, b) => a.y - b.y);
+      if (rects.length === 0) {
+        return;
+      }
+      let to = rects.length;
+      for (let i = 0; i < rects.length; i += 1) {
+        if (y < rects[i].y + rects[i].h / 2) {
+          to = i;
+          break;
+        }
+      }
+      if (to !== reorder.to) {
+        // The list keeps its order; every row slides to where it would
+        // be. Nothing is reordered while a finger is down, so nothing
+        // can blink.
+        const items =
+          sections.find((s) => s.title === reorder.section)?.data ?? [];
+        const rects = reorderRects.current;
+        const gap = StyleSheet.hairlineWidth;
+        const base = layoutOrder(items, rects, gap);
+        const preview = layoutOrder(
+          moveItem(items, reorder.from, to),
+          rects,
+          gap,
+        );
+        for (const [uri, y] of base) {
+          const target = (preview.get(uri) ?? y) - y;
+          if (rowTarget.current.get(uri) === target) {
+            continue;
+          }
+          rowTarget.current.set(uri, target);
+          let value = rowShift.get(uri);
+          if (value == null) {
+            value = new Animated.Value(0);
+            rowShift.set(uri, value);
+          }
+          Animated.timing(value, {
+            toValue: target,
+            duration: 220,
+            // Only a transform moves now, so the slide can run on the
+            // native thread and keep its frames while JS is busy.
+            useNativeDriver: Platform.OS !== "web",
+          }).start();
+        }
+        setReorder({ ...reorder, to });
+      }
+    },
+    [clearHold, ghostY, reorder, rowShift, sections],
+  );
+
+  const endReorder = React.useCallback(() => {
+    clearHold();
+    pendingReorder.current = null;
+    const current = reorder;
+    if (current == null) {
+      return;
+    }
+    setReorder(null);
+    // The drop's click must not also open the row.
+    suppressClick.current = true;
+    setTimeout(() => {
+      suppressClick.current = false;
+    }, 350);
+    const items =
+      sections.find((s) => s.title === current.section)?.data ?? [];
+    const next = moveItem(items, current.from, current.to);
+    if (next !== items) {
+      setSettling({ section: current.section, data: next });
+    }
+    // One drop is one write: it lands whole or rolls back whole.
+    void reorderSection(reorderItems(items, current.from, current.to)).finally(
+      () => setSettling(null),
+    );
+  }, [clearHold, reorder, reorderSection, sections]);
+
+  // The list keeps its own order while a drag is live; only transforms
+  // move the rows. After a drop the written order takes over.
+  const displaySections = React.useMemo(() => {
+    if (settling == null) {
+      return sections;
+    }
+    return sections.map((section) =>
+      section.title === settling.section
+        ? { ...section, data: settling.data }
+        : section,
+    );
+  }, [sections, settling]);
+
+  // A tick holds its row in place for a beat: the store regroups the
+  // row into Completed at once, so the row's own check animation would
+  // be cut off. The hold keeps it where it was until the animation
+  // lands, then the sections memo lets it move.
+  const toggle = React.useCallback(
+    (task: TaskItem) => {
+      const section = displaySections.find(
+        (entry) =>
+          entry.tone !== "faint" &&
+          entry.data.some((item) => item.uri === task.uri),
+      );
+      if (task.data?.completed != null || section == null) {
+        // An untick needs no hold, and a row on its way out keeps none.
+        clearTickHold();
+        setTickHold(null);
+      } else if (tickHold?.uri === task.uri) {
+        // A second tap in the same beat calls the tick off.
+        clearTickHold();
+        setTickHold(null);
+      } else {
+        clearTickHold();
+        setTickHold({
+          uri: task.uri,
+          section: section.title,
+          tone: section.tone,
+          index: section.data.findIndex((item) => item.uri === task.uri),
+        });
+        tickHoldTimer.current = setTimeout(() => {
+          tickHoldTimer.current = null;
+          setTickHold((current) =>
+            current != null && current.uri === task.uri ? null : current,
+          );
+        }, tickHoldMs);
+      }
+      void toggleTask(task);
+    },
+    [clearTickHold, displaySections, tickHold, toggleTask],
+  );
+
+  // Where each row sits while the finger is down: the sequence the
+  // drop would write. It drives the corner radii and the divider, not
+  // the data order.
+  const previewIndex = React.useMemo(() => {
+    if (reorder == null) {
+      return null;
+    }
+    const section = sections.find((s) => s.title === reorder.section);
+    if (section == null) {
+      return null;
+    }
+    const order = moveItem(section.data, reorder.from, reorder.to);
+    return new Map(order.map((item, index) => [item.uri, index]));
+  }, [sections, reorder]);
+
+  // The transforms go back to zero in the same commit that reorders
+  // the data, so the drop has no frame of its own.
+  React.useLayoutEffect(() => {
+    if (settling == null) {
+      return;
+    }
+    rowTarget.current.clear();
+    for (const value of rowShift.values()) {
+      value.stopAnimation();
+      value.setValue(0);
+    }
+  }, [settling, rowShift]);
+
+  const renderSectionHeader = React.useCallback(
+    ({ section }: { section: ListsSection }) => {
+      if (section.tone === "faint") {
+        return (
+          <View style={[styles.group, styles.completedGroup]}>
+            <Text style={styles.completedLabel}>
+              {section.title}
+              {"  "}
+              {section.data.length}
+            </Text>
+          </View>
+        );
+      }
+      return (
+        <View style={styles.group}>
+          <Text style={[styles.groupLabel, toneLabel(section.tone)]}>
+            {section.title}
+            {"  "}
+            {section.data.length}
+          </Text>
+        </View>
+      );
+    },
+    [],
+  );
+
+  const renderItem = React.useCallback(
+    ({
+      item,
+      index,
+      section,
+    }: {
+      item: TaskItem;
+      index: number;
+      section: ListsSection;
+    }) => {
+      const canDrag = sortMode === "manual" && section.tone !== "faint";
+      const lifted = reorder?.task.uri === item.uri;
+      // While a drag is live the row's slot decides its corners and
+      // its divider; the list order itself does not change.
+      const slot = previewIndex?.get(item.uri) ?? index;
+      const lastSlot = section.data.length - 1;
+      return (
+        <Animated.View
+          ref={(node) => {
+            if (node != null) {
+              rowRefs.current.set(item.uri, node as never);
+            }
+          }}
+          style={[
+            styles.cardRow,
+            slot === 0 && styles.cardFirst,
+            slot === lastSlot && styles.cardLast,
+            section.tone === "faint" ? styles.completedRow : undefined,
+            lifted && styles.rowSlot,
+            rowShift.has(item.uri)
+              ? { transform: [{ translateY: rowShift.get(item.uri)! }] }
+              : undefined,
+          ]}
+        >
+          {slot > 0 ? <View style={styles.cardDivider} /> : null}
+          <ReorderRow
+            enabled={canDrag}
+            onHold={(e) =>
+              holdRow(item, index, section.title, {
+                pageX: e.nativeEvent.pageX,
+                pageY: e.nativeEvent.pageY,
+              })
+            }
+            onPickup={(x, y) =>
+              armReorderNow(item, index, section.title, x, y)
+            }
+            onMove={moveReorder}
+            onEnd={endReorder}
+          >
+            <View style={[styles.rowMain, lifted && styles.rowHidden]}>
+              <TaskRow
+                task={item}
+                onToggle={(task) => {
+                  if (suppressClick.current) {
+                    suppressClick.current = false;
+                    return;
+                  }
+                  toggle(task);
+                }}
+                onOpen={(task) => {
+                  if (suppressClick.current) {
+                    suppressClick.current = false;
+                    return;
+                  }
+                  openTask(task);
+                }}
+              />
+            </View>
+          </ReorderRow>
+          {canDrag ? (
+            <ReorderGrip
+              taskName={item.name}
+              hidden={lifted}
+              onPickup={(x, y) =>
+                armReorderNow(item, index, section.title, x, y)
+              }
+              onMove={moveReorder}
+              onEnd={endReorder}
+            />
+          ) : null}
+        </Animated.View>
+      );
+    },
+    [
+      toggle,
+      openTask,
+      sortMode,
+      reorder,
+      rowShift,
+      previewIndex,
+      holdRow,
+      armReorderNow,
+      moveReorder,
+      endReorder,
+    ],
+  );
+
+  // The pager's page: the current list, plus the neighbour the finger
+  // travels toward. The pager owns the horizontal offset; the current
+  // list keeps its identity, so its scroll position survives a swipe.
+  const { page, controller } = useSwipePager({
+    pageKey: tab,
+    canGo: (dir) => {
+      const names = tabsRef.current;
+      const index = names.indexOf(tab);
+      if (index === -1) {
+        return false;
+      }
+      return dir === "left" ? index + 1 < names.length : index > 0;
+    },
+    onPage: (dir) => {
+      setTab((current) => {
+        const names = tabsRef.current;
+        const index = names.indexOf(current);
+        if (index === -1) {
+          return current;
+        }
+        const next = dir === "left" ? index + 1 : index - 1;
+        return names[next] ?? current;
+      });
+    },
+    renderNeighbor: (dir) => {
+      const index = tabs.indexOf(tab);
+      const neighbor =
+        index === -1 ? undefined : tabs[dir === "left" ? index + 1 : index - 1];
+      return neighbor == null ? null : (
+        <ListPagePreview tab={neighbor} sortMode={sortMode} />
+      );
+    },
+    children: (
+      <SectionList<TaskItem, ListsSection>
+        contentContainerStyle={styles.content}
+        onRefresh={reload}
+        refreshing={refreshing}
+        sections={displaySections}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
+        ListHeaderComponent={
+          status === "ready" &&
+          openSections.length === 0 &&
+          completed.length > 0 ? (
+            <EmptyState label="Nothing on this list yet." />
+          ) : undefined
+        }
+        ListEmptyComponent={
+          status === "loading" ? (
+            <LoadingState />
+          ) : status === "error" ? (
+            <EmptyState
+              label={readError ?? "Something went wrong. Pull to retry."}
+            />
+          ) : (
+            <EmptyState label="Nothing on this list yet." />
+          )
+        }
+        scrollEnabled={reorder == null}
+        stickySectionHeadersEnabled={false}
+        removeClippedSubviews={false}
+      />
+    ),
+  });
+
+  // The reorder callbacks above claim the gesture through this ref;
+  // the controller exists from here on.
+  React.useLayoutEffect(() => {
+    tabSwipeRef.current = controller;
+  }, [controller]);
+
+  const openSortMenu = () => {
+    // One menu at a time: opening this one closes the other.
+    setMenu(null);
+    sortRef.current?.measureInWindow((x, y, width, height) => {
+      setSortMenu({
+        top: y + height + 4,
+        left: Math.max(x + width - 216, spacing.m),
+      });
+    });
+  };
+
+  const openMenu = () => {
+    setSortMenu(null);
+    dotsRef.current?.measureInWindow((x, y, width, height) => {
+      setMenu({
+        open: true,
+        top: y + height + 4,
+        left: Math.max(x + width - 216, spacing.m),
+      });
+    });
+  };
+
+  const closeMenu = () => setMenu(null);
+
+  return (
+    <View
+      ref={(node) => {
+        rootRef.current = node;
+      }}
+      style={styles.screen}
+    >
+      {/* The status bar strip takes the header's surface, so the top
+          chrome reads as one band instead of a paper gap. */}
+      <View style={[styles.statusStrip, { height: insets.top }]} />
+      {menu?.open || sortMenu != null ? (
+        // The backdrop sits under the menu card and swallows taps
+        // anywhere else, closing the menu.
+        <Pressable
+          style={styles.menuBackdrop}
+          onPress={() => {
+            closeMenu();
+            setSortMenu(null);
+          }}
+          accessibilityLabel="close menu"
+          accessibilityRole="button"
+        />
+      ) : null}
+      <View
+        testID="list-pager"
+        style={styles.body}
+        // The handlers read refs when the gesture runs, not in render.
+        // eslint-disable-next-line react-hooks/refs
+        {...swipeProps(controller, { move: moveReorder, up: endReorder })}
+      >
+        {/* The list tab bar sits ABOVE the scroller: the page's fixed
+            chrome. Sections scroll beneath it, the bar never moves.
+            A horizontal swipe on the body walks the tabs. Above it, the
+            folder picker shows once the store knows it has no folder,
+            or when the folder stopped reading. */}
+        {(rootUri == null && status === "ready") || status === "error" ? (
+          <Pressable
+            style={({ pressed }) => [
+              styles.grantRow,
+              pressed && styles.grantRowPressed,
+            ]}
+            onPress={() => void grant()}
+            accessibilityRole="button"
+            accessibilityLabel="connect vault folder"
+          >
+            <Text style={styles.grantTitle}>Connect your vault folder</Text>
+            <Text style={styles.grantHint}>
+              Pick the Obsidian vault to use this app with real tasks.
+            </Text>
+          </Pressable>
+        ) : null}
+        <View style={styles.tabBar}>
+          {/* A vault can hold more lists than the bar fits, so the
+              chips scroll and the sort and menu buttons stay put. */}
+          <ScrollView
+            ref={stripRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tabStrip}
+            contentContainerStyle={styles.tabStripContent}
+          >
+            {tabs.map((name) => (
+              <Pressable
+                key={name}
+                style={({ pressed }) => [
+                  styles.tabChip,
+                  pressed && styles.chipPressed,
+                ]}
+                onPress={() => setTab(name)}
+                onLayout={(event) => {
+                  chipX.current[name] = event.nativeEvent.layout.x;
+                }}
+                accessibilityRole="tab"
+                aria-selected={tab === name}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    tab === name && styles.tabTextActive,
+                  ]}
+                >
+                  {name}
+                </Text>
+                <View
+                  style={[
+                    styles.tabRule,
+                    tab === name && styles.tabRuleActive,
+                  ]}
+                />
+              </Pressable>
+            ))}
+          </ScrollView>
+          <View style={styles.tabSpacer} />
+          <View ref={sortRef}>
+            <IconButton
+              label="sort list"
+              active={sortMenu != null || sortMode !== "due"}
+              onPress={() =>
+                sortMenu == null ? openSortMenu() : setSortMenu(null)
+              }
+            >
+              <View style={styles.glyphSort}>
+                <View style={[styles.glyphSortBar, { width: 16 }]} />
+                <View style={[styles.glyphSortBar, { width: 11 }]} />
+                <View style={[styles.glyphSortBar, { width: 6 }]} />
+              </View>
+            </IconButton>
+          </View>
+          <View ref={dotsRef}>
+            <IconButton
+              label="list menu"
+              active={menu?.open ?? false}
+              onPress={() => (menu?.open ? closeMenu() : openMenu())}
+            >
+              <View style={styles.glyphDots}>
+                <View style={styles.glyphDot} />
+                <View style={styles.glyphDot} />
+                <View style={styles.glyphDot} />
+              </View>
+            </IconButton>
+          </View>
+        </View>
+        {/* A list note that fails validation stays visible here, with
+            its errors, so it can be fixed in Obsidian. It never hides
+            the tabs or the tasks. */}
+        {repairs.length > 0 ? (
+          <View style={styles.repairSlot}>
+            <View style={styles.repairBox}>
+              <Text style={styles.repairTitle}>Needs repair</Text>
+              {repairs.map((item) => (
+                <View key={item.uri} style={styles.repairItem}>
+                  <Text style={styles.repairName}>{item.name}.md</Text>
+                  {item.errors.map((error, index) => (
+                    <Text key={index} style={styles.repairError}>
+                      {`\u2022 ${error}`}
+                    </Text>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+        {/* A failed tick or field write leaves the list usable, so each
+            one is a quiet banner over it, not the error state. */}
+        {status !== "error" ? <FailureBanner /> : null}
+        {page}
+      </View>
+      {/* The dragged row rides the pointer while the list reflows
+          under it. Its slot stays empty, so the gap is the drop. */}
+      {reorder != null ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.dragRow,
+            reorder.width > 0
+              ? { left: reorder.left, width: reorder.width }
+              : { left: pageGutter, right: pageGutter },
+            // A transform, not a layout prop: the ghost follows the
+            // finger without a layout pass per frame.
+            { top: 0, transform: [{ translateY: ghostY }] },
+          ]}
+        >
+          <TaskRow task={reorder.task} copy />
+        </Animated.View>
+      ) : null}
+
+      {/* The sort sheet: two orders, the active one checked. My order
+          is what the row drag writes. */}
+      {sortMenu != null ? (
+        <View style={[styles.menu, { top: sortMenu.top, left: sortMenu.left }]}>
+          {(
+            [
+              { key: "due", label: "Due date", hint: "Soonest first" },
+              { key: "manual", label: "My order", hint: "Drag rows to sort" },
+            ] as const
+          ).map((option) => (
+            <Pressable
+              key={option.key}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && styles.menuItemPressed,
+              ]}
+              onPress={() => {
+                setSortMode(option.key);
+                saveSetting("sortMode", option.key);
+                setSortMenu(null);
+              }}
+              accessibilityRole="button"
+              aria-selected={sortMode === option.key}
+              accessibilityLabel={option.label}
+            >
+              <Text
+                style={[
+                  styles.menuItemText,
+                  sortMode === option.key && styles.menuItemActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+              <Text style={styles.menuItemHint}>{option.hint}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {/* The overflow menu, anchored to the dots button. */}
+      {menu?.open ? (
+        <View style={[styles.menu, { top: menu.top, left: menu.left }]}>
+          {(
+            [
+              { key: "rename", label: "Rename list", danger: false },
+              { key: "delete-list", label: "Delete list", danger: true },
+              {
+                key: "clear-done",
+                label: "Delete all completed tasks",
+                danger: true,
+              },
+              { key: "diagnostics", label: "Diagnostics", danger: false },
+            ] as const
+          ).map((action) => (
+            <Pressable
+              key={action.key}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && styles.menuItemPressed,
+              ]}
+              // The list actions are visual only this round: a tap
+              // just closes. Diagnostics opens the dev screen.
+              onPress={() => {
+                closeMenu();
+                if (action.key === "diagnostics") {
+                  router.push("/dev");
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={action.label}
+            >
+              <Text
+                style={[
+                  styles.menuItemText,
+                  action.danger && styles.menuItemDanger,
+                ]}
+              >
+                {action.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {/* One bottom bar: nav left, capture button right. The target
+          pill follows the active list tab: the bar re-reads the
+          default target when the tab changes, so the bar itself never
+          remounts and never jumps. Main captures write no lists
+          property; every other tab preselects its own list. */}
+      <BottomBar action={dock({ targets, defaultTargetIndex })} />
+    </View>
+  );
+}
+
+const keyExtractor = (item: TaskItem) => item.id;
+
+const toneLabel = (() => {
+  const map = StyleSheet.create({
+    danger: { color: colors.danger },
+    muted: { color: colors.inkMuted },
+    ink: { color: colors.accent },
+  });
+  return (tone: "danger" | "muted" | "ink") => map[tone];
+})();
+
+function LoadingState() {
+  return (
+    <View style={styles.holder}>
+      <View style={styles.skeletons}>
+        <View style={[styles.skeleton, { width: "40%" as const }]} />
+        <View style={[styles.skeleton, { width: "70%" as const }]} />
+        <View style={[styles.skeleton, { width: "55%" as const }]} />
+      </View>
+    </View>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <View style={styles.holder}>
+      <Text style={styles.empty}>{label}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.paper,
+    // The lists screen shares the planner's no-selection rule: a
+    // row drag or tab swipe must not start text selection.
+    userSelect: "none" as const,
+  },
+  statusStrip: {
+    backgroundColor: colors.surface,
+  },
+  // The body holds the pager under the fixed chrome.
+  body: {
+    flex: 1,
+  },
+  content: {
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    width: "100%" as const,
+    // F's centered feel: real page margins, rows never touch the edge.
+    paddingHorizontal: pageGutter,
+    paddingTop: spacing.m,
+    paddingBottom: spacing.xl,
+  },
+  tabBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.s,
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    width: "100%" as const,
+    // Fixed chrome above the scroller: a surface step above the paper,
+    // closed by a hairline, so the list body reads as a separate sheet.
+    backgroundColor: colors.surface,
+    paddingHorizontal: pageGutter,
+    paddingTop: spacing.s,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.hairline,
+  },
+  tabStrip: {
+    flexShrink: 1,
+  },
+  tabStripContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingRight: spacing.m,
+  },
+  tabChip: {
+    minHeight: 44,
+    paddingHorizontal: spacing.m,
+    justifyContent: "center",
+  },
+  chipPressed: {
+    backgroundColor: colors.pressed,
+    borderRadius: radius,
+  },
+  tabText: {
+    fontSize: 17,
+    lineHeight: 24,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    fontWeight: "500",
+  },
+  tabTextActive: {
+    color: colors.accent,
+    fontWeight: "700",
+  },
+  tabRule: {
+    position: "absolute" as const,
+    left: spacing.m,
+    right: spacing.m,
+    bottom: 0,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: "transparent",
+  },
+  tabRuleActive: {
+    backgroundColor: colors.accent,
+  },
+  tabSpacer: {
+    flex: 1,
+  },
+  grantRow: {
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    width: "100%" as const,
+    gap: 2,
+    paddingHorizontal: pageGutter,
+    paddingTop: spacing.m,
+  },
+  grantRowPressed: {
+    opacity: 0.7,
+  },
+  grantTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    color: colors.accent,
+    fontWeight: "600",
+  },
+  grantHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+  },
+
+  // Notes that fail validation: a block on the page grid, above the
+  // list, naming the file and each error so it can be fixed in the
+  // vault.
+  repairSlot: {
+    maxWidth: measure,
+    alignSelf: "center" as const,
+    width: "100%" as const,
+    paddingHorizontal: pageGutter,
+    paddingTop: spacing.m,
+  },
+  repairBox: {
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius,
+    paddingVertical: spacing.m,
+    paddingHorizontal: spacing.m,
+    gap: spacing.s,
+  },
+  repairTitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.danger,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase" as const,
+  },
+  repairItem: {
+    gap: 2,
+  },
+  repairName: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: fonts.body,
+    color: colors.ink,
+    fontWeight: "600",
+  },
+  repairError: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.danger,
+  },
+
+  // Quiet top-right controls: sort glyph and the three-dot overflow.
+  glyphSort: {
+    alignItems: "flex-end" as const,
+    gap: 3,
+  },
+  glyphSortBar: {
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.inkMuted,
+  },
+  glyphDots: {
+    alignItems: "center" as const,
+    gap: 2.5,
+  },
+  glyphDot: {
+    width: 3.5,
+    height: 3.5,
+    borderRadius: 1.75,
+    backgroundColor: colors.inkMuted,
+  },
+
+  // The overflow menu: a small floating card on a full-screen
+  // invisible backdrop.
+  menuBackdrop: {
+    position: "absolute" as const,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  menu: {
+    position: "absolute" as const,
+    width: 216,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radiusFloating,
+    paddingVertical: spacing.xs,
+    ...shadows.floating,
+  },
+  // A label and its hint sit one point apart.
+  menuItem: {
+    minHeight: 40,
+    justifyContent: "center",
+    gap: 1,
+    paddingHorizontal: spacing.m,
+  },
+  menuItemPressed: {
+    backgroundColor: colors.pressed,
+  },
+  menuItemText: {
+    fontSize: 14,
+    lineHeight: 19,
+    fontFamily: fonts.body,
+    color: colors.ink,
+  },
+  menuItemDanger: {
+    color: colors.danger,
+  },
+  menuItemActive: {
+    color: colors.accent,
+    fontWeight: "600",
+  },
+  // The grip sits beside the row, so the row keeps its own width.
+  rowMain: {
+    flex: 1,
+  },
+  // The row that follows the pointer during a reorder.
+  dragRow: {
+    position: "absolute" as const,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    borderRadius: radius,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  // The reorder: the dragged row dims and the gap it will take draws
+  // as a line, without moving any row.
+  rowHidden: {
+    opacity: 0,
+  },
+  // The slot the lifted row leaves: tinted, so it reads as a place
+  // to land rather than an empty task.
+  rowSlot: {
+    backgroundColor: colors.accentSoft,
+  },
+
+  menuItemHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+  },
+
+  // Plain groups: a header on the paper, flush rows beneath. A
+  // SectionList has no gap between its sections, so the list sets the
+  // space above each group on the header slot it renders (ADR 0012).
+  group: {
+    paddingTop: spacing.xl,
+  },
+  groupLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    paddingBottom: spacing.s,
+  },
+  // One card per group, built from its rows: the sides on every row,
+  // the top and its radii on the first, the bottom on the last.
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+  },
+  cardFirst: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopLeftRadius: radius,
+    borderTopRightRadius: radius,
+  },
+  cardLast: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomLeftRadius: radius,
+    borderBottomRightRadius: radius,
+  },
+  // The hairline between two rows of a card. It lives inside the row,
+  // so a dragged row carries its divider with it. Inset to the text.
+  cardDivider: {
+    position: "absolute" as const,
+    left: taskRowFace.textInset,
+    right: 0,
+    top: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.hairline,
+  },
+  completedGroup: {
+    opacity: 0.55,
+  },
+  completedRow: {
+    opacity: 0.55,
+  },
+  completedLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.body,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    color: colors.inkFaint,
+    paddingBottom: spacing.xs,
+  },
+
+  // States
+  holder: {
+    minHeight: 160,
+    justifyContent: "center",
+    paddingVertical: spacing.xl,
+  },
+  // The lines own their spacing as a group: a step between them and
+  // half that above and below.
+  skeletons: {
+    gap: spacing.xl,
+    paddingVertical: spacing.m,
+  },
+  skeleton: {
+    height: 14,
+    borderRadius: radii.pill,
+    backgroundColor: colors.hairline,
+  },
+  empty: {
+    fontSize: 15,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    textAlign: "center",
+  },
+});
