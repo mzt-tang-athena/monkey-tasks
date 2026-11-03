@@ -415,7 +415,7 @@ describe("store races (ticket 0052)", () => {
     expect(hasRow("Obsidian")).toBe(true);
   });
 
-  // Finding 7. tasks.tsx lastError: one string, cleared by any success.
+  // Finding 7. tasks.tsx kept one error string, cleared by any success.
   it("keeps a failure on screen after an unrelated success", async () => {
     disk.set(`${TASKS}/Bread.md`, CALL_TEXT);
     await mount();
