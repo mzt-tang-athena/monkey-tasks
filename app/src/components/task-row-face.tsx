@@ -4,6 +4,9 @@ import type { TaskItem } from "@/types/task";
 import { formatTime, parseStoredDate, startOfToday } from "@/utils/dates";
 import { colors, fonts, radii, spacing } from "@/theme/tokens";
 
+/** The toggle circle's size. */
+const circle = 24;
+
 /**
  * The task row's layout. The live row, the still preview row and the
  * card around them all read these numbers, so a change here moves
@@ -17,12 +20,12 @@ export const taskRowFace = {
   /** Space between the gutter time, the circle and the text. */
   gap: spacing.m,
   /** The toggle circle, and the first text line it sits on. */
-  circle: 24,
+  circle,
   /** The planner's time gutter, left of the circle. */
   gutter: 64,
   /** From the row's left edge to its text when the time sits under
       the name. A card divider starts here. */
-  textInset: spacing.l + 24 + spacing.m,
+  textInset: spacing.l + circle + spacing.m,
 } as const;
 
 /**

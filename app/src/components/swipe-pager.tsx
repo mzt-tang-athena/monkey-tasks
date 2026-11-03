@@ -34,6 +34,11 @@ export type SwipePagerOptions = {
   renderNeighbor: (dir: PagerSide) => React.ReactNode;
   /** The current page. */
   children: React.ReactNode;
+  /** The finger passed the swipe's slop. A screen arms its press
+      guard here, so the click that ends the swipe presses no row. */
+  onSwipeStart?: () => void;
+  /** The swipe gesture ended, whether it turned the page or not. */
+  onSwipeEnd?: () => void;
   /** True when the page fills its parent (a list body, a day body).
       False when the page sets its own height (the month calendar),
       where the pager must grow with its content. */
@@ -62,6 +67,8 @@ export function useSwipePager({
   renderNeighbor,
   children,
   fill = true,
+  onSwipeStart,
+  onSwipeEnd,
 }: SwipePagerOptions): SwipePager {
   const reduced = useReduceMotion();
   const [offset] = React.useState(() => new Animated.Value(0));
@@ -76,7 +83,11 @@ export function useSwipePager({
   const canGoRef = React.useRef(canGo);
   const onPageRef = React.useRef(onPage);
   const reducedRef = React.useRef(reduced);
+  const startRef = React.useRef(onSwipeStart);
+  const endRef = React.useRef(onSwipeEnd);
   React.useEffect(() => {
+    startRef.current = onSwipeStart;
+    endRef.current = onSwipeEnd;
     pageKeyRef.current = pageKey;
     neighborRef.current = neighbor;
     widthRef.current = width;
@@ -102,6 +113,8 @@ export function useSwipePager({
 
   const [controller] = React.useState(() =>
     makeSwipeController(() => undefined, {
+      start: () => startRef.current?.(),
+      end: () => endRef.current?.(),
       drag: (dx, dir) => {
         if (reducedRef.current) {
           return;

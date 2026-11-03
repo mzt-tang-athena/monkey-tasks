@@ -239,3 +239,37 @@ describe("swipeProps", () => {
     expect(swipeProps(controller)).toBe(swipeProps(controller));
   });
 });
+
+describe("the swipe start and end", () => {
+  function watched() {
+    const log: string[] = [];
+    const controller = makeSwipeController(() => undefined, {
+      start: () => log.push("start"),
+      end: () => log.push("end"),
+    });
+    return { log, controller };
+  }
+
+  it("starts once when the travel passes its slop, and ends at up", () => {
+    const { log, controller } = watched();
+    controller.down(300, 400);
+
+    controller.move(295, 400);
+    expect(log).toEqual([]);
+    controller.move(280, 400);
+    controller.move(200, 400);
+    expect(log).toEqual(["start"]);
+
+    controller.up();
+    expect(log).toEqual(["start", "end"]);
+  });
+
+  it("stays quiet for a press and for a vertical move", () => {
+    const { log, controller } = watched();
+    controller.down(300, 400);
+    controller.move(302, 500);
+    controller.up();
+
+    expect(log).toEqual([]);
+  });
+});
