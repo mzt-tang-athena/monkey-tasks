@@ -8,5 +8,8 @@
     "test": "npm test --prefix contracts/packages/schemas",
     "typecheck": "npm run typecheck --prefix contracts/packages/schemas",
     "vault:check": "npm run vault:check --prefix app --"
+  },
+  "devDependencies": {
+    "@mzt-tang-athena/vale-rules": "^0.1.0"
   }
 }
