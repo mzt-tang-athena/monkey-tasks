@@ -9,6 +9,7 @@ import {
 } from "@/utils/dates";
 import type { TaskItem } from "@/types/task";
 import { occursOn } from "@/lib/recurrence";
+import { MONTHS, MONTHS_SHORT, WEEKDAYS } from "@/features/planner/lib/labels";
 
 /*
  * The planner's pure domain layer: the source vocabulary, the period
@@ -27,25 +28,79 @@ export type { Mode, Source };
 export { SOURCES };
 
 /** The source cycle: due period, then each named list, then back. */
-export function cycleSource(
-  source: Source,
-  setSource: (next: Source) => void,
-): () => void {
-  return () => {
-    const index = SOURCES.indexOf(source);
-    setSource(SOURCES[(index + 1) % SOURCES.length]);
-  };
+export function nextSource(source: Source): Source {
+  return SOURCES[(SOURCES.indexOf(source) + 1) % SOURCES.length];
 }
 
-export function sourceLabel(source: Source, mode: Mode): string {
-  if (source === "due-period") {
-    return mode === "day"
-      ? "Due today"
-      : mode === "week"
-        ? "Due this week"
-        : "Due this month";
+/**
+ * The source toggle's text. A due period names the period on screen:
+ * "Due today", "Due tomorrow", "Due Wed, 28 Oct", "Due this week",
+ * "Due 8 to 14 Nov", "Due this month" or "Due November". A year shows
+ * only when it differs from today's. A named list shows its own name.
+ */
+export function sourceLabel(
+  source: Source,
+  mode: Mode,
+  day: Date,
+  today: Date,
+): string {
+  if (source !== "due-period") {
+    return source;
   }
-  return source;
+  if (mode === "day") {
+    return `Due ${dayName(day, today)}`;
+  }
+  if (mode === "week") {
+    return `Due ${weekName(day, today)}`;
+  }
+  return `Due ${monthName(day, today)}`;
+}
+
+/** The year, spaced for a label, when it differs from today's. */
+function yearSuffix(day: Date, today: Date): string {
+  return day.getFullYear() === today.getFullYear() ? "" : ` ${day.getFullYear()}`;
+}
+
+function dayName(day: Date, today: Date): string {
+  const apart = dayIndexBetween(
+    startOfDay(today).getTime(),
+    startOfDay(day).getTime(),
+  );
+  if (apart === 0) {
+    return "today";
+  }
+  if (apart === 1) {
+    return "tomorrow";
+  }
+  if (apart === -1) {
+    return "yesterday";
+  }
+  return `${WEEKDAYS[day.getDay()]}, ${day.getDate()} ${MONTHS_SHORT[day.getMonth()]}${yearSuffix(day, today)}`;
+}
+
+function weekName(day: Date, today: Date): string {
+  const first = startOfWeek(day);
+  if (first.getTime() === startOfDay(startOfWeek(today)).getTime()) {
+    return "this week";
+  }
+  const last = addDays(first, 6);
+  const from = `${first.getDate()} ${MONTHS_SHORT[first.getMonth()]}`;
+  const to = `${last.getDate()} ${MONTHS_SHORT[last.getMonth()]}`;
+  const range =
+    first.getMonth() === last.getMonth()
+      ? `${first.getDate()} to ${to}`
+      : `${from} to ${to}`;
+  return `${range}${yearSuffix(last, today)}`;
+}
+
+function monthName(day: Date, today: Date): string {
+  if (
+    day.getFullYear() === today.getFullYear() &&
+    day.getMonth() === today.getMonth()
+  ) {
+    return "this month";
+  }
+  return `${MONTHS[day.getMonth()]}${yearSuffix(day, today)}`;
 }
 
 /**

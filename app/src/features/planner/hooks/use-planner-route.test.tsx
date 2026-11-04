@@ -85,4 +85,22 @@ describe("usePlannerRoute", () => {
 
     expect(result.current.day.getTime()).toBe(startOfDay(new Date()).getTime());
   });
+
+  it("moves its default day on at midnight, as the strip's today does", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 9, 26, 23, 59));
+      const { result } = mount();
+      expect(result.current.day.getTime()).toBe(new Date(2026, 9, 26).getTime());
+
+      await act(async () => {
+        vi.setSystemTime(new Date(2026, 9, 27, 0, 1));
+        await vi.advanceTimersByTimeAsync(2 * 60_000);
+      });
+
+      expect(result.current.day.getTime()).toBe(new Date(2026, 9, 27).getTime());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

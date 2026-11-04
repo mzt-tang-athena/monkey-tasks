@@ -37,7 +37,6 @@ function mount(tasks: TaskItem[]) {
       onPick={() => undefined}
       onShiftMonth={() => undefined}
       dropZones={new DropZoneMap()}
-      dragActive={false}
       hoveredDay={null}
     />,
   );

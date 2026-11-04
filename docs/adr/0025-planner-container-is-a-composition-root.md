@@ -41,3 +41,36 @@ that writes it.
 **Split the drag and the swipe into separate hooks.** The suppression
 ref and the drop zone registry are shared, so the boundary would need a
 third module to hold them, which is more indirection for less clarity.
+
+## Amendment 2026-11-04: one home for drag in all three modes
+
+Ticket 0056 moved the day's drag code out of `DaySpread` and into the
+gesture layer. Day mode had its own copy of the hold, the lift, the
+ghost, the touch gate and the drop. The two copies had already drifted.
+The day's drop armed the click guard on web only, and its pointer path
+armed it on every platform.
+
+`hooks/use-drag-session` is now the one home for drag in day, week and
+month mode. It owns the pending press, the hold and the lift, the ghost
+values, the touch gate, the click guard and the drop. A mode gives it a
+zone map, and `resolve(hit, task)`, which turns the zone under the finger
+into a patch or null. `usePlannerGestures` keeps the day and month
+shifts, says what each zone means, and wraps the click guard.
+
+Three choices follow from this move.
+
+- **The ghost has no origin.** The ghost draws through the `OverlayHost`
+  at the `dragGhost` layer. That layer fills the window, so the ghost
+  uses the pointer's page coordinates. The day root no longer needs to
+  measure its own position.
+- **The hover lives outside React state.** The session keeps the zone
+  under the finger in a small store. Only the panes that draw the hover
+  subscribe to it. A move over a new zone renders the timeline, the
+  week columns or the month cells, and not the list pane.
+- **The guard is part of the session.** Ticket 0055 plans a shared
+  `use-press-guard`. The session keeps its own guard until that lands,
+  and one drop path arms it on web only.
+
+The hook order and effect order stay as this ADR asks. The session keeps
+the motion on `Animated` values behind its own boundary, so tickets 0059
+and 0061 can swap the internals.

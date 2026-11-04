@@ -1,72 +1,17 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { SegmentedControl, type Segment } from "@/components/ui/segmented-control";
 import type { Mode } from "@/features/planner/model";
-import { colors, fonts, pageGutter, radius, spacing } from "@/theme/tokens";
+import { pageGutter, spacing } from "@/theme/tokens";
 import { PeriodStrip } from "./period-strip";
 
-const styles = StyleSheet.create({
-  // The strip and the mode pills, one step apart. The screen spaces
-  // the header from what follows.
-  header: {
-    gap: spacing.s,
-  },
-  gutter: {
-    paddingHorizontal: pageGutter,
-  },
-  pressedFill: {
-    backgroundColor: colors.pressed,
-  },
-  // segmented toggle, E's tighter spacing
-  segmented: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
-    borderRadius: radius,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    padding: 3,
-  },
-  segment: {
-    flex: 1,
-    minHeight: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius,
-  },
-  segmentActive: {
-    backgroundColor: colors.accent,
-  },
-  // Square corners on a selected segment's open sides; the closed
-  // sides keep the shared radius.
-  segmentFirst: {
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  segmentMiddle: {
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  segmentLast: {
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-  },
-  segmentText: {
-    fontSize: 12,
-    lineHeight: 15,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    fontWeight: "500",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  segmentTextActive: {
-    color: colors.onAccent,
-    fontWeight: "600",
-  },
-});
+const segments: Segment<Mode>[] = [
+  { key: "day", label: "Day" },
+  { key: "week", label: "Week" },
+  { key: "month", label: "Month" },
+];
 
 /**
- * The shared top block: period strip and the mode pills. With `inset`
+ * The shared top block: period strip and the mode switch. With `inset`
  * the header takes the page gutter itself, so the week and month
  * rails can run to the screen's edges. The day view's frame holds the
  * gutter for it instead.
@@ -88,7 +33,7 @@ export function PlannerHeader({
 }) {
   return (
     <View style={styles.header}>
-      {/* Period strip above the pills: days, weeks, or months to
+      {/* Period strip above the switch: days, weeks, or months to
           match the mode. Tapping a period jumps to it. */}
       <PeriodStrip
         mode={mode}
@@ -97,40 +42,26 @@ export function PlannerHeader({
         onSelect={onSelect}
       />
 
-      {/* E's economy: the toggle pills lead the header block. */}
       <View style={inset && styles.gutter}>
-        <View style={styles.segmented}>
-          {(["day", "week", "month"] as Mode[]).map((option, index) => (
-            <Pressable
-              key={option}
-              style={({ pressed }) => [
-                styles.segment,
-                mode === option && styles.segmentActive,
-                pressed && styles.pressedFill,
-                // Square corners on the selected segment's open sides.
-                mode === option &&
-                  (index === 0
-                    ? styles.segmentFirst
-                    : index === 2
-                      ? styles.segmentLast
-                      : styles.segmentMiddle),
-              ]}
-              onPress={() => onMode(option)}
-              accessibilityRole="tab"
-              aria-selected={mode === option}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  mode === option && styles.segmentTextActive,
-                ]}
-              >
-                {option === "day" ? "Day" : option === "week" ? "Week" : "Month"}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <SegmentedControl
+          segments={segments}
+          selected={mode}
+          onSelect={onMode}
+          label="planner mode"
+          stretch
+        />
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // The strip and the mode switch, one step apart. The screen spaces
+  // the header from what follows.
+  header: {
+    gap: spacing.s,
+  },
+  gutter: {
+    paddingHorizontal: pageGutter,
+  },
+});

@@ -2,6 +2,7 @@ import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskItem } from "@/types/task";
+import { TestPlannerList } from "@/features/planner/testing/test-planner-list";
 import { TaskListSection } from "./task-list-section";
 
 function task(name: string): TaskItem {
@@ -17,23 +18,20 @@ function task(name: string): TaskItem {
   };
 }
 
-const baseProps = {
-  source: "due-period",
-  mode: "day",
-  sourceMenuOpen: false,
-  onCycleSource: () => undefined,
-  onOpenSourceMenu: () => undefined,
-  taskForm: "rows",
-  onFormChange: () => undefined,
-  onDragStart: () => undefined,
-  emptyLabel: "Nothing due today",
-} as const;
-
 function mount(
   tasks: TaskItem[],
-  onToggle: (task: TaskItem) => void = () => undefined,
+  toggle: (task: TaskItem) => void = () => undefined,
 ) {
-  render(<TaskListSection {...baseProps} tasks={tasks} onToggle={onToggle} />);
+  render(
+    <TestPlannerList value={{ toggle }}>
+      <TaskListSection
+        mode="day"
+        day={new Date(2026, 9, 26)}
+        tasks={tasks}
+        emptyLabel="Nothing due today"
+      />
+    </TestPlannerList>,
+  );
 }
 
 describe("TaskListSection", () => {

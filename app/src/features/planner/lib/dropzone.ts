@@ -1,3 +1,19 @@
+import { parseStoredDate } from "@/utils/dates";
+
+/** The day a zone key names, such as "day:2026-10-27", or null. Week
+    columns and month cells register under these keys. */
+export function dayOfZone(key: string | null): Date | null {
+  return key != null && key.startsWith("day:")
+    ? (parseStoredDate(key.slice(4))?.date ?? null)
+    : null;
+}
+
+/** The hour a zone key names, such as "hour:10", or null. The day's
+    ruler rows register under these keys. */
+export function hourOfZone(key: string | null): number | null {
+  return key != null && key.startsWith("hour:") ? Number(key.slice(5)) : null;
+}
+
 /**
  * A registry of drop targets for the hand-rolled drag system.
  *
