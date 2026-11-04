@@ -4,7 +4,7 @@ title: Keep the package token out of the repo
 created: 2026-11-04
 priority: high
 assignee: opencode
-pr:
+pr: 85
 depends: []
 ---
 
@@ -29,4 +29,4 @@ npm config.
 
 ## Outcome
 
-Pending the pull request.
+Pull request [#85](https://github.com/mzt-tang-athena/monkey-tasks/pull/85) carries the change.
