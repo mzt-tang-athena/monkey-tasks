@@ -1,12 +1,11 @@
 import * as React from "react";
-import { Pressable, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { swipeProps } from "@/lib/swipe";
 import { useSwipePager } from "@/components/swipe-pager";
+import { pageGutter, spacing } from "@/theme/tokens";
 import { MonthGrid, type PickedDay } from "./month-grid";
-import { WEEKDAYS_FULL } from "@/features/planner/lib/labels";
-import { styles } from "./planner-styles";
 
 /** The fixed half of the month: the title and the grid card. The
     container passes the picked-day list pane as children, so both
@@ -18,9 +17,7 @@ export function MonthView({
   picked,
   onPick,
   onShiftMonth,
-  pressGuard,
   dropZones,
-  dragActive,
   hoveredDay,
   children,
 }: {
@@ -32,11 +29,8 @@ export function MonthView({
   onPick: (day: Date) => void;
   /** Swipe left/right on the fixed calendar shifts a whole month. */
   onShiftMonth: (delta: 1 | -1) => void;
-  /** Drag drops that land on a cell suppress that cell's pick. */
-  pressGuard?: { current: boolean };
   /** Cells register here for move-based hit testing. */
   dropZones: DropZoneMap;
-  dragActive: boolean;
   hoveredDay: Date | null;
   /** The picked-day list pane; both halves share one column. */
   children?: React.ReactNode;
@@ -70,21 +64,15 @@ export function MonthView({
         picked={picked}
         interactive
         onPick={onPick}
-        pressGuard={pressGuard}
         dropZones={dropZones}
-        dragActive={dragActive}
         hoveredDay={hoveredDay}
       />
     ),
   });
 
   return (
-    <View style={styles.monthColumn}>
-      <View
-        testID="month-pager"
-        style={styles.monthFixed}
-        {...swipeProps(controller)}
-      >
+    <View style={styles.column}>
+      <View testID="month-pager" style={styles.fixed} {...swipeProps(controller)}>
         {page}
       </View>
       {children}
@@ -92,38 +80,16 @@ export function MonthView({
   );
 }
 
-/** The tapped day's group header above the month list: its name, its
-    date, and how many tasks it holds. The rows follow from the
-    shared section, which spaces them, so this stays a label. */
-export function MonthDayHeader({
-  day,
-  tasks,
-}: {
-  day: Date;
-  tasks: TaskItem[];
-}) {
-  return (
-    <Text style={styles.sectionLabel}>
-      {WEEKDAYS_FULL[day.getDay()]} {day.getDate()}
-      {"  "}
-      {tasks.length}
-    </Text>
-  );
-}
-
-/** The month list's footer: the link into the day view. */
-export function MonthOpenDayButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.monthDayOpen,
-        pressed && styles.detailsPressed,
-      ]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="open this day"
-    >
-      <Text style={styles.monthDayOpenText}>Open in day view</Text>
-    </Pressable>
-  );
-}
+const styles = StyleSheet.create({
+  // The month sits in the week and month frame, which has no gutter.
+  column: {
+    flex: 1,
+    gap: spacing.m,
+    paddingHorizontal: pageGutter,
+  },
+  // The fixed half: title and grid card. Its own swipe zone shifts
+  // months without touching the row drags beneath.
+  fixed: {
+    flexShrink: 0,
+  },
+});

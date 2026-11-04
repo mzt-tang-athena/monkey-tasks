@@ -1,22 +1,23 @@
 import * as React from "react";
 import {
   FlatList,
+  StyleSheet,
   Text,
   View,
-  type PointerEvent as RNPointerEvent,
+  type ListRenderItem,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
 import type { TaskItem } from "@/types/task";
-import type { TaskForm } from "@/lib/settings";
 import { TaskRow } from "@/components/task-row";
-import type { Mode, Source } from "@/features/planner/model";
+import type { Mode } from "@/features/planner/model";
+import { colors, fonts, spacing } from "@/theme/tokens";
 import { FormToggle } from "./form-toggle";
-import { Pickup, type DragApi, type LiftState } from "./drag";
+import { Pickup } from "./drag";
+import { usePlannerList } from "./planner-list-context";
+import { RowSeparator } from "./row-separator";
 import { SourceToggle } from "./source-toggle";
 import { TaskPills } from "./task-pills";
-import { spacing } from "@/theme/tokens";
-import { styles } from "./planner-styles";
 
 /** Pills mode has no rows, so the list renders header and footer only. */
 const noTasks: TaskItem[] = [];
@@ -31,90 +32,71 @@ const noTasks: TaskItem[] = [];
  * ride a FlatList so long sources stay windowed; the section head,
  * header, pills and footer are its header and footer slots. A caller
  * may pass a style to size the list, e.g. inside a pane.
+ *
+ * The source, the form, the lift and the row actions come from
+ * `PlannerListContext`. The section takes the period it names and its
+ * rows.
  */
-export function TaskListSection({
-  source,
+export const TaskListSection = React.memo(function TaskListSection({
   mode,
-  sourceMenuOpen,
-  onCycleSource,
-  onOpenSourceMenu,
-  taskForm,
-  onFormChange,
-  onToggle,
-  onOpen,
-  onDragStart,
+  day,
   tasks,
   emptyLabel,
   header,
   footer,
-  lifted,
-  api,
   style,
   copy = false,
 }: {
-  source: Source;
+  /** The mode and the day the source toggle names its period from. */
   mode: Mode;
-  sourceMenuOpen: boolean;
-  onCycleSource: () => void;
-  onOpenSourceMenu: (anchor: { top: number; left: number }) => void;
-  taskForm: TaskForm;
-  onFormChange: (form: TaskForm) => void;
-  onToggle: (task: TaskItem) => void;
-  /** A row body press opens the task; absent leaves the body inert. */
-  onOpen?: (task: TaskItem) => void;
-  onDragStart: (task: TaskItem, e: RNPointerEvent) => void;
+  day: Date;
   tasks: TaskItem[];
   emptyLabel: string;
   header?: React.ReactNode;
   footer?: React.ReactNode;
-  lifted?: LiftState;
-  api?: DragApi;
   /** The rows are a still copy (the day swipe preview), so they carry
       no test ids. */
   copy?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { taskForm, lifted, api, toggle, open, dragStart } = usePlannerList();
   const pills = taskForm === "pills" && tasks.length > 0;
+
+  const renderItem = React.useCallback<ListRenderItem<TaskItem>>(
+    ({ item }) => (
+      <Pickup
+        task={item}
+        api={api}
+        lifted={lifted}
+        onPointerDown={(e) => dragStart(item, e)}
+      >
+        <TaskRow task={item} onToggle={toggle} onOpen={open} copy={copy} />
+      </Pickup>
+    ),
+    [api, lifted, dragStart, toggle, open, copy],
+  );
+
   // A FlatList has no gap between its header slot and its first row,
   // so the list sets that gap on the slot itself (ADR 0012). Rows and
   // the empty label sit one step under the section head and two steps
   // under a group header. Pills end the slot, and the footer spaces
   // itself.
-  const headGap = pills ? 0 : header != null ? spacing.l : spacing.s;
+  const headStyle = pills ? styles.headFlush : header != null ? styles.headGrouped : styles.headRows;
+
   return (
     <FlatList
       style={style}
       data={taskForm === "rows" ? tasks : noTasks}
-      keyExtractor={(task) => task.id}
-      renderItem={({ item }) => (
-        <Pickup
-          task={item}
-          api={api}
-          lifted={lifted ?? null}
-          onPointerDown={(e) => onDragStart(item, e)}
-        >
-          <TaskRow
-            task={item}
-            onToggle={onToggle}
-            onOpen={onOpen}
-            copy={copy}
-          />
-        </Pickup>
-      )}
+      keyExtractor={taskKey}
+      renderItem={renderItem}
       ItemSeparatorComponent={RowSeparator}
-      ListHeaderComponentStyle={{ paddingBottom: headGap }}
+      ListHeaderComponentStyle={headStyle}
       ListHeaderComponent={
         <View style={styles.listHead}>
           <View style={styles.sectionHead}>
-            <SourceToggle
-              source={source}
-              mode={mode}
-              menuOpen={sourceMenuOpen}
-              onCycle={onCycleSource}
-              onOpenMenu={onOpenSourceMenu}
-            />
-            <View style={styles.sectionSpacer} />
-            <FormToggle form={taskForm} onChange={onFormChange} />
+            <SourceToggle mode={mode} day={day} />
+            <View style={styles.spacer} />
+            <FormToggle />
           </View>
           {header != null || pills ? (
             <View style={styles.listHeadBody}>
@@ -123,14 +105,7 @@ export function TaskListSection({
                   items: each pill sizes itself to its label and the
                   grid reflows per row, which a vertical list cannot
                   do. */}
-              {pills ? (
-                <TaskPills
-                  tasks={tasks}
-                  onDragStart={onDragStart}
-                  lifted={lifted ?? null}
-                  api={api}
-                />
-              ) : null}
+              {pills ? <TaskPills tasks={tasks} /> : null}
             </View>
           ) : null}
         </View>
@@ -140,20 +115,52 @@ export function TaskListSection({
       }
       // The footer sits one step under the rows. Like the header slot,
       // the list sets that gap on the slot (ADR 0012).
-      ListFooterComponentStyle={{ paddingTop: spacing.s }}
-      ListFooterComponent={
-        footer == null ? undefined : <View>{footer}</View>
-      }
+      ListFooterComponentStyle={styles.footer}
+      ListFooterComponent={footer == null ? undefined : <View>{footer}</View>}
       initialNumToRender={12}
       windowSize={7}
       maxToRenderPerBatch={12}
       removeClippedSubviews={false}
     />
   );
+});
+
+function taskKey(task: TaskItem): string {
+  return task.id;
 }
 
-/** The hairline between rows: the same group rule the rows used to
-    carry as a top border, now owned by the list's separator slot. */
-function RowSeparator() {
-  return <View style={styles.groupRow} />;
-}
+const styles = StyleSheet.create({
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  spacer: {
+    flex: 1,
+  },
+  // The list's header slot: the section head, then a group header and
+  // the pills one step further apart.
+  listHead: {
+    gap: spacing.s,
+  },
+  listHeadBody: {
+    gap: spacing.l,
+  },
+  headRows: {
+    paddingBottom: spacing.s,
+  },
+  headGrouped: {
+    paddingBottom: spacing.l,
+  },
+  headFlush: {
+    paddingBottom: 0,
+  },
+  footer: {
+    paddingTop: spacing.s,
+  },
+  empty: {
+    fontSize: 15,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    textAlign: "center",
+  },
+});

@@ -1,42 +1,32 @@
 import * as React from "react";
-import { Pressable, Text, View } from "react-native";
-import { drag, spacing } from "@/theme/tokens";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Icon } from "@/components/ui/icon";
+import { colors, drag, fonts, radius, spacing } from "@/theme/tokens";
 import {
-  SOURCES,
+  nextSource,
   sourceLabel,
   type Mode,
-  type Source,
 } from "@/features/planner/model";
-import { styles } from "./planner-styles";
+import { usePlannerList } from "./planner-list-context";
 
 /**
  * The small source toggle above a mode's bottom list. Quiet at rest:
  * a muted label and a chevron. Pressed, it previews the next source
  * in the cycle. Held past drag.holdMs, it opens the direct chooser
- * menu (rendered by the screen) instead of cycling.
+ * menu (rendered by the screen) instead of cycling. The label names the
+ * period on screen: "Due today", "Due 8 to 14 Nov", "Due November".
  */
-export function SourceToggle({
-  source,
-  mode,
-  menuOpen,
-  onCycle,
-  onOpenMenu,
-}: {
-  source: Source;
-  mode: Mode;
-  menuOpen: boolean;
-  onCycle: () => void;
-  onOpenMenu: (anchor: { top: number; left: number }) => void;
-}) {
+export function SourceToggle({ mode, day }: { mode: Mode; day: Date }) {
+  const { today, source, menuOpen, cycleSource, openSourceMenu } =
+    usePlannerList();
   const wrapRef = React.useRef<React.ComponentRef<typeof View>>(null);
   const holdTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hover, setHover] = React.useState(false);
   const [pressed, setPressed] = React.useState(false);
   const [held, setHeld] = React.useState(false);
 
-  const index = SOURCES.indexOf(source);
-  const label = sourceLabel(source, mode);
-  const nextLabel = sourceLabel(SOURCES[(index + 1) % SOURCES.length], mode);
+  const label = sourceLabel(source, mode, day, today);
+  const nextLabel = sourceLabel(nextSource(source), mode, day, today);
 
   React.useEffect(
     () => () => {
@@ -51,8 +41,8 @@ export function SourceToggle({
     <View ref={wrapRef}>
       <Pressable
         style={({ pressed }) => [
-          styles.sourceToggle,
-          (hover || pressed) && styles.sourceToggleHot,
+          styles.toggle,
+          (hover || pressed) && styles.hot,
         ]}
         onHoverIn={() => setHover(true)}
         onHoverOut={() => setHover(false)}
@@ -61,12 +51,7 @@ export function SourceToggle({
           setHeld(false);
           holdTimer.current = setTimeout(() => {
             setHeld(true);
-            wrapRef.current?.measureInWindow((x, y, width, height) => {
-              onOpenMenu({
-                top: y + height + 4,
-                left: Math.max(x, spacing.m),
-              });
-            });
+            openSourceMenu(wrapRef);
           }, drag.holdMs);
         }}
         onPressOut={() => {
@@ -87,21 +72,46 @@ export function SourceToggle({
           if (held || menuOpen) {
             return;
           }
-          onCycle();
+          cycleSource();
         }}
         accessibilityRole="button"
         accessibilityLabel={`task source: ${label}`}
       >
-        <Text
-          style={[
-            styles.sourceToggleText,
-            pressed && !held && styles.sourceToggleTextHot,
-          ]}
-        >
+        <Text style={[styles.text, pressed && !held && styles.textHot]}>
           {pressed && !held ? nextLabel : label}
         </Text>
-        <Text style={styles.sourceToggleChevron}>{"▾"}</Text>
+        <Icon name="chevron-down" color="inkFaint" />
       </Pressable>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  toggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: spacing.xs,
+    minHeight: 32,
+    paddingLeft: spacing.s,
+    paddingRight: spacing.s,
+    borderRadius: radius,
+  },
+  hot: {
+    backgroundColor: colors.pressed,
+  },
+  // The label slot reserves the widest source's width, so the control
+  // never resizes mid-press: the pressed preview must not move the box
+  // out from under the pointer.
+  text: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: fonts.body,
+    color: colors.inkMuted,
+    fontWeight: "600",
+    minWidth: 96,
+  },
+  textHot: {
+    color: colors.accent,
+  },
+});
