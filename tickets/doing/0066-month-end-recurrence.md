@@ -3,7 +3,7 @@ id: 0066
 title: Monthly tasks on the 29th to 31st skip the short months
 created: 2026-10-27
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: [0050, 0052]
 ---
