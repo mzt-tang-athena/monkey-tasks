@@ -20,7 +20,7 @@ import {
   focusManager,
   type QueryClient,
 } from "@tanstack/react-query";
-import { act, create } from "react-test-renderer";
+import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { VaultAdapter } from "@/lib/vault/adapter";
 import {
@@ -231,7 +231,7 @@ async function mount(): Promise<void> {
   const owned = client;
   const adapter = instrumented(vault);
   await act(async () => {
-    create(
+    render(
       <QueryClientProvider client={owned}>
         <VaultProvider adapter={adapter}>
           <TasksProvider>
