@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { nextAfter } from "@/lib/recurrence";
+import { monthEndRule, nextAfter } from "@/lib/recurrence";
 import { createNote } from "@/lib/vault/notes";
 import { useVault } from "@/lib/vault/vault-provider";
 import { nowStamp, todayIso } from "@/utils/dates";
@@ -87,7 +87,12 @@ function spawnInput(task: TaskItem, due: string): SpawnInput {
     title: data?.title ?? task.name,
     previous: task.fileName.replace(/\.md$/, ""),
     due,
-    recurrence: data?.recurrence ?? "",
+    // A bare rule on a late due day becomes the month-end rule, so the
+    // next note keeps the day (ADR 0042).
+    recurrence:
+      data?.recurrence == null || data.due == null
+        ? (data?.recurrence ?? "")
+        : monthEndRule(data.recurrence, data.due),
     lists: data?.lists ?? [],
     // A date-only due carries no time of day, so no alarm.
     reminders: due.includes("T") ? [due] : [],

@@ -3,6 +3,7 @@ import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import { formatLocal } from "@/utils/dates";
 import type { TaskItem } from "@/types/task";
 import {
+  monthEndRule,
   nextAfter,
   occurrencesBetween,
   occursOn,
@@ -173,5 +174,187 @@ describe("nextAfter", () => {
   it("returns null once a counted rule is exhausted", () => {
     expect(nextAfter("FREQ=DAILY;COUNT=1", "2026-10-20")).toBeNull();
     expect(nextAfter("FREQ=DAILY;COUNT=2", "2026-10-20")).toBe("2026-10-21");
+  });
+});
+
+/** The due dates after `due`, from a rule that keeps its text. */
+function ticks(rule: string, due: string, count: number): string[] {
+  const dates: string[] = [];
+  let current: string | null = due;
+  for (let n = 0; n < count && current != null; n += 1) {
+    current = nextAfter(rule, current);
+    if (current != null) {
+      dates.push(current);
+    }
+  }
+  return dates;
+}
+
+describe("monthEndRule (ticket 0066)", () => {
+  it("keeps a bare monthly rule for day 1 to 28", () => {
+    expect(monthEndRule("FREQ=MONTHLY", "2027-01-15")).toBe("FREQ=MONTHLY");
+    expect(monthEndRule("FREQ=MONTHLY", "2027-01-28")).toBe("FREQ=MONTHLY");
+    expect(monthEndRule("FREQ=MONTHLY;INTERVAL=2", "2027-01-28T09:00")).toBe(
+      "FREQ=MONTHLY;INTERVAL=2",
+    );
+  });
+
+  it("writes the month-end rule for a due day after the 28th", () => {
+    expect(monthEndRule("FREQ=MONTHLY", "2027-01-29")).toBe(
+      "FREQ=MONTHLY;BYMONTHDAY=28,29;BYSETPOS=-1",
+    );
+    expect(monthEndRule("FREQ=MONTHLY", "2027-01-30")).toBe(
+      "FREQ=MONTHLY;BYMONTHDAY=28,29,30;BYSETPOS=-1",
+    );
+    expect(monthEndRule("FREQ=MONTHLY", "2027-01-31T08:30")).toBe(
+      "FREQ=MONTHLY;BYMONTHDAY=-1",
+    );
+  });
+
+  it("keeps the interval", () => {
+    expect(monthEndRule("FREQ=MONTHLY;INTERVAL=2", "2026-12-30")).toBe(
+      "FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=28,29,30;BYSETPOS=-1",
+    );
+    expect(monthEndRule("FREQ=MONTHLY;INTERVAL=2", "2026-12-31")).toBe(
+      "FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=-1",
+    );
+  });
+
+  it("writes the rule for a yearly task due on 29 February", () => {
+    expect(monthEndRule("FREQ=YEARLY", "2028-02-29")).toBe(
+      "FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1",
+    );
+    expect(monthEndRule("FREQ=YEARLY", "2028-03-29")).toBe("FREQ=YEARLY");
+    expect(monthEndRule("FREQ=YEARLY", "2028-01-31")).toBe("FREQ=YEARLY");
+  });
+
+  it("leaves any other rule alone", () => {
+    for (const rule of [
+      "FREQ=DAILY",
+      "FREQ=WEEKLY;BYDAY=MO",
+      "FREQ=MONTHLY;BYMONTHDAY=15",
+      "FREQ=MONTHLY;COUNT=3",
+      "every month",
+    ]) {
+      expect(monthEndRule(rule, "2027-01-31")).toBe(rule);
+    }
+  });
+
+  it("leaves a rule it wrote alone while the due day follows the rule", () => {
+    const rule = "FREQ=MONTHLY;BYMONTHDAY=-1";
+    expect(monthEndRule(rule, "2027-02-28")).toBe(rule);
+  });
+
+  it("writes the rule again for a new due day when asked", () => {
+    const rule = "FREQ=MONTHLY;BYMONTHDAY=-1";
+    expect(monthEndRule(rule, "2027-02-15", true)).toBe("FREQ=MONTHLY");
+    expect(monthEndRule(rule, "2027-02-28", true)).toBe("FREQ=MONTHLY");
+    expect(monthEndRule("FREQ=MONTHLY", "2027-02-28", true)).toBe(
+      "FREQ=MONTHLY",
+    );
+    expect(
+      monthEndRule("FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=-1", "2027-03-30", true),
+    ).toBe("FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=28,29,30;BYSETPOS=-1");
+    expect(
+      monthEndRule(
+        "FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1",
+        "2029-03-05",
+        true,
+      ),
+    ).toBe("FREQ=YEARLY");
+  });
+});
+
+describe("month-end ticks (ticket 0066)", () => {
+  function series(due: string, bare: string, count: number): string[] {
+    return ticks(monthEndRule(bare, due), due, count);
+  }
+
+  it("lands a 31st task on the last day of each month", () => {
+    expect(series("2027-01-31", "FREQ=MONTHLY", 3)).toEqual([
+      "2027-02-28",
+      "2027-03-31",
+      "2027-04-30",
+    ]);
+  });
+
+  it("lands a 30th task on 28 February, then on the 30th", () => {
+    expect(series("2027-01-30", "FREQ=MONTHLY", 3)).toEqual([
+      "2027-02-28",
+      "2027-03-30",
+      "2027-04-30",
+    ]);
+  });
+
+  it("lands a 30th task on 29 February in a leap year", () => {
+    expect(series("2028-01-30", "FREQ=MONTHLY", 2)).toEqual([
+      "2028-02-29",
+      "2028-03-30",
+    ]);
+  });
+
+  it("lands a 29th task on 28 February, then on the 29th", () => {
+    expect(series("2027-01-29", "FREQ=MONTHLY", 3)).toEqual([
+      "2027-02-28",
+      "2027-03-29",
+      "2027-04-29",
+    ]);
+  });
+
+  it("lands a 29th task on 29 February in a leap year", () => {
+    expect(series("2028-01-29", "FREQ=MONTHLY", 2)).toEqual([
+      "2028-02-29",
+      "2028-03-29",
+    ]);
+  });
+
+  it("keeps the time of day", () => {
+    expect(series("2027-01-31T09:00", "FREQ=MONTHLY", 2)).toEqual([
+      "2027-02-28T09:00",
+      "2027-03-31T09:00",
+    ]);
+  });
+
+  it("gives every other month on the 31st 28 February next", () => {
+    expect(series("2026-12-31", "FREQ=MONTHLY;INTERVAL=2", 3)).toEqual([
+      "2027-02-28",
+      "2027-04-30",
+      "2027-06-30",
+    ]);
+    expect(series("2026-12-30", "FREQ=MONTHLY;INTERVAL=2", 2)).toEqual([
+      "2027-02-28",
+      "2027-04-30",
+    ]);
+  });
+
+  it("brings a 29 February task back on 28 February", () => {
+    expect(series("2028-02-29", "FREQ=YEARLY", 2)).toEqual([
+      "2029-02-28",
+      "2030-02-28",
+    ]);
+  });
+
+  it("keeps a 15th task monthly", () => {
+    expect(series("2027-01-15", "FREQ=MONTHLY", 3)).toEqual([
+      "2027-02-15",
+      "2027-03-15",
+      "2027-04-15",
+    ]);
+  });
+
+  it("reads a bare monthly rule on the 31st as the last day", () => {
+    expect(nextAfter("FREQ=MONTHLY", "2027-01-31")).toBe("2027-02-28");
+    expect(nextAfter("FREQ=MONTHLY;INTERVAL=2", "2026-12-31")).toBe(
+      "2027-02-28",
+    );
+  });
+
+  it("paints a bare 31st task in February on the month grid", () => {
+    const bare = recurring("2027-01-31", "FREQ=MONTHLY");
+    expect(
+      isos(
+        occurrencesBetween(bare, new Date(2027, 1, 1), new Date(2027, 3, 30)),
+      ),
+    ).toEqual(["2027-02-28", "2027-03-31", "2027-04-30"]);
   });
 });

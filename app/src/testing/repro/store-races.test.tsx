@@ -36,6 +36,7 @@ import type { TaskListData } from "@/stores/tasks/query";
 import { useStoreSnapshot, type StoreSnapshot } from "@/testing/store-snapshot";
 import type { TaskItem } from "@/types/task";
 import { reorderItems } from "@/features/lists/reorder";
+import { parseCapture } from "@/features/capture/parse";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
@@ -665,5 +666,110 @@ describe("preview and empty folder (ticket 0051)", () => {
     );
     expect(disk.get(`${TASKS}/Supplements.md`)).toContain("completed:");
     expect(store().failures).toEqual([]);
+  });
+});
+
+describe("month-end recurrence (ticket 0066)", () => {
+  /** Capture the line, tick it `ticks` times, and list each open due. */
+  async function dues(line: string, ticks: number): Promise<string[]> {
+    await mount();
+    const parsed = parseCapture(line, new Date(2026, 9, 27));
+    if (parsed == null) {
+      throw new Error("the line did not parse");
+    }
+    await act(async () => {
+      await store().capture(parsed, { kind: "main" });
+    });
+    await flush();
+    const found: string[] = [];
+    for (let n = 0; n <= ticks; n += 1) {
+      const open = store().tasks.find(
+        (task) => task.name === parsed.name && task.data?.completed == null,
+      );
+      if (open == null) {
+        throw new Error("no open occurrence");
+      }
+      found.push(open.data?.due ?? "");
+      if (n < ticks) {
+        await act(async () => {
+          await store().toggle(open);
+        });
+        await flush();
+      }
+    }
+    expect(store().failures).toEqual([]);
+    return found;
+  }
+
+  it("ticks a 31 January rent task through the short months", async () => {
+    expect(await dues("pay rent every month 31 January 2027", 3)).toEqual([
+      "2027-01-31",
+      "2027-02-28",
+      "2027-03-31",
+      "2027-04-30",
+    ]);
+  });
+
+  it("ticks a 30 January task into a common February", async () => {
+    expect(await dues("pay rent every month 30 January 2027", 2)).toEqual([
+      "2027-01-30",
+      "2027-02-28",
+      "2027-03-30",
+    ]);
+  });
+
+  it("ticks a 29 January task into a common February", async () => {
+    expect(await dues("pay rent every month 29 January 2027", 2)).toEqual([
+      "2027-01-29",
+      "2027-02-28",
+      "2027-03-29",
+    ]);
+  });
+
+  it("ticks a 29 January task into a leap February", async () => {
+    expect(await dues("pay rent every month 29 January 2028", 2)).toEqual([
+      "2028-01-29",
+      "2028-02-29",
+      "2028-03-29",
+    ]);
+  });
+
+  it("gives every other month on 31 December 28 February next", async () => {
+    expect(
+      await dues("pay rent every other month 31 December 2026", 2),
+    ).toEqual(["2026-12-31", "2027-02-28", "2027-04-30"]);
+  });
+
+  it("brings a yearly task due on 29 February back on 28 February", async () => {
+    expect(await dues("renew every year 29 February 2028", 1)).toEqual([
+      "2028-02-29",
+      "2029-02-28",
+    ]);
+  });
+
+  it("keeps FREQ=MONTHLY on a task due on the 15th", async () => {
+    expect(await dues("pay rent every month 15 January 2027", 2)).toEqual([
+      "2027-01-15",
+      "2027-02-15",
+      "2027-03-15",
+    ]);
+    expect(disk.get(`${TASKS}/pay rent.md`)).toContain("FREQ=MONTHLY");
+    expect(disk.get(`${TASKS}/pay rent.md`)).not.toContain("BYMONTHDAY");
+  });
+
+  it("ticks a bare monthly note due on the 31st through February", async () => {
+    disk.set(
+      `${TASKS}/Rent.md`,
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2027-01-31\nrecurrence: FREQ=MONTHLY\n---\n',
+    );
+    await mount();
+    await act(async () => {
+      await store().toggle(row("Rent"));
+    });
+    await flush();
+    const next = disk.keys().find((uri) => uri.includes("Rent 2027-02-28"));
+    expect(next).toBeDefined();
+    // The next note carries the rule, so its own ticks keep the anchor.
+    expect(disk.get(next ?? "")).toContain("BYMONTHDAY=-1");
   });
 });
