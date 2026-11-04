@@ -79,15 +79,47 @@ Each case gets a failing test before its fix:
 
 ## Acceptance
 
-- [ ] Each case above had a failing test before its fix, and all
+- [x] Each case above had a failing test before its fix, and all
       pass.
-- [ ] A monthly task due after the 28th has a due date in every month.
-- [ ] An ADR records the rule format and how the app treats a bare
+- [x] A monthly task due after the 28th has a due date in every month.
+- [x] An ADR records the rule format and how the app treats a bare
       `FREQ=MONTHLY` note due after the 28th.
-- [ ] `npm run vault:check` reports nothing new for the new rules.
-- [ ] In the browser, three ticks of a month-end sample task show the
-      dates in the table under "The fix".
+- [x] `npm run vault:check` reports nothing new for the new rules.
+- [x] In the browser, three ticks of a month-end sample task show the
+      dates in the table under "The fix". (A Playwright spec ticks a
+      31 January 2026 task three times: 28 February, 31 March and
+      30 April. The table's 2027 rows are covered by the unit and
+      store tests, because a future next date has no row to tick.)
 
 ## Outcome
 
-(filled in before moving to done/)
+Month-end rules landed (ADR 0042).
+
+- `monthEndRule` in `app/src/lib/recurrence.ts` makes the rule from the
+  bare rule and the due day. Capture, the editor save, the tick and the
+  reader call it. A bare `FREQ=MONTHLY` note due after the 28th reads
+  as the month-end rule, and the app writes the explicit rule at the
+  next tick or editor save. It never rewrites a note on load.
+- Tests came first and failed before the fix: unit tests for the rule
+  and the tick chain, capture and editor tests, store tests that
+  capture a line and tick it through the short months, and a
+  Playwright spec. The 29 January 2028 case passed before the fix,
+  because 2028 is a leap year. It stays as a guard.
+- `npm run vault:check` reports 0 findings for the four new rule forms.
+
+Findings from earlier reviews, assigned to this ticket:
+
+1. The "keeps the recurring sample valid after a no-op edit" test now
+   asserts `FREQ=DAILY` on the sample and on the row. It fails when
+   the sample goes back to `RRULE:FREQ=DAILY`.
+2. A `SuccessorKeptError` now schedules the kept note's alarm. The
+   mutation spec has an `errorAlarms` hook for it.
+3. A Retry that runs behind a tap that fails left the row open while
+   the note was done. `settle` now gets a `last` flag. When no other
+   vault write is pending, the toggle lands the note's state on the
+   row. A store test covers it.
+4. The 0052 sentence now says the Playwright test covers only the
+   stale tick.
+
+Left over: nothing. The planner still paints only what `rrule` returns
+for the rule, so a month grid shows the month-end dates.
