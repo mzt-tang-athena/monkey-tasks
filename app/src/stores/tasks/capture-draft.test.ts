@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { load } from "js-yaml";
-import { captureContent } from "./capture-draft";
+import { captureContent, captureDraft } from "./capture-draft";
 
 import type { ParsedCapture } from "@/types/task";
 
@@ -83,5 +83,34 @@ describe("captureContent", () => {
       "2026-10-21T07:30",
       "2026-10-21T19:00",
     ]);
+  });
+});
+
+describe("month-end rules (ticket 0066)", () => {
+  const rent: ParsedCapture = {
+    name: "pay rent",
+    due: "2027-01-31",
+    recurrence: "FREQ=MONTHLY",
+  };
+
+  it("writes the month-end rule for a 31st due date", () => {
+    const text = captureContent(rent, undefined, CREATED);
+    expect(parsed(text).recurrence).toBe("FREQ=MONTHLY;BYMONTHDAY=-1");
+  });
+
+  it("keeps a bare rule for a due day up to the 28th", () => {
+    const text = captureContent({ ...rent, due: "2027-01-15" }, undefined);
+    expect(parsed(text).recurrence).toBe("FREQ=MONTHLY");
+  });
+
+  it("writes the rule the row holds, with a due day from the preselected date", () => {
+    const draft = captureDraft(
+      { name: "pay rent", recurrence: "FREQ=MONTHLY;INTERVAL=2" },
+      { kind: "main" },
+      "2026-12-31",
+    );
+    const rule = "FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=-1";
+    expect(draft.data.recurrence).toBe(rule);
+    expect(parsed(draft.content).recurrence).toBe(rule);
   });
 });

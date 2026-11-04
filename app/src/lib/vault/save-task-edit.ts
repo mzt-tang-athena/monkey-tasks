@@ -6,9 +6,27 @@ import {
   setBlockList,
   updateProperty,
 } from "@/lib/vault/frontmatter";
+import { monthEndRule } from "@/lib/recurrence";
 import { renameNote } from "@/lib/vault/rename";
 import { safeFileName } from "@/lib/vault/file-name";
 import type { TaskEdit, TaskItem } from "@/types/task";
+
+/** The day part of a stored due, or null with no due. */
+function dayOf(due: string | null | undefined): string | null {
+  return due == null || due === "" ? null : due.slice(0, 10);
+}
+
+/**
+ * The rule the editor writes. A month-end task keeps a rule that fits
+ * its due day (ADR 0042), so a new due day writes the rule again.
+ */
+function recurrenceToWrite(item: TaskItem, edit: TaskEdit): string | null {
+  if (edit.recurrence == null || edit.due == null) {
+    return edit.recurrence;
+  }
+  const moved = dayOf(edit.due) !== dayOf(item.data?.due);
+  return monthEndRule(edit.recurrence, edit.due, moved);
+}
 
 /**
  * Write one editor submission to the note and return the row it
@@ -25,7 +43,7 @@ export async function saveTaskEdit(
   // that text, not to whatever the store last read.
   let text = expected;
   text = updateProperty(text, "due", edit.due);
-  text = updateProperty(text, "recurrence", edit.recurrence);
+  text = updateProperty(text, "recurrence", recurrenceToWrite(item, edit));
   text = setBlockList(text, "reminders", edit.reminders);
   text = setBlockList(
     text,

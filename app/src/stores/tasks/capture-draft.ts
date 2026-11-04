@@ -3,6 +3,14 @@ import { serializeValue } from "@/utils/yaml";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { CaptureTarget, ParsedCapture } from "@/types/task";
 import { safeFileName } from "@/lib/vault/file-name";
+import { monthEndRule } from "@/lib/recurrence";
+
+/** The rule capture writes: month-end tasks get the rule for their due day. */
+function ruleFor(parsed: ParsedCapture): string | undefined {
+  return parsed.recurrence && parsed.due
+    ? monthEndRule(parsed.recurrence, parsed.due)
+    : parsed.recurrence;
+}
 
 /** The frontmatter-only content of a captured task note. */
 export function captureContent(
@@ -20,8 +28,9 @@ export function captureContent(
   if (parsed.reminders?.length) {
     lines.push("reminders:", serializeValue(parsed.reminders));
   }
-  if (parsed.recurrence) {
-    lines.push(`recurrence: "${parsed.recurrence}"`);
+  const recurrence = ruleFor(parsed);
+  if (recurrence) {
+    lines.push(`recurrence: "${recurrence}"`);
   }
   lines.push("---", "");
   return `${lines.join("\n")}\n`;
@@ -45,6 +54,7 @@ export function captureDraft(
   const due = preselectedDue && !parsed.due ? preselectedDue : parsed.due;
   const listName = target.kind === "list" ? target.name : undefined;
   const created = nowStamp();
+  const recurrence = ruleFor({ ...parsed, due });
   const content = captureContent({ ...parsed, due }, listName, created);
   return {
     name: parsed.name,
@@ -56,7 +66,7 @@ export function captureDraft(
       ...(due ? { due } : {}),
       ...(listName ? { lists: [`[[${listName}]]`] } : {}),
       ...(parsed.reminders?.length ? { reminders: parsed.reminders } : {}),
-      ...(parsed.recurrence ? { recurrence: parsed.recurrence } : {}),
+      ...(recurrence ? { recurrence } : {}),
     },
   };
 }
