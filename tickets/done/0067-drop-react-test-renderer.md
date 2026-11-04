@@ -4,7 +4,7 @@ title: Drop react-test-renderer
 created: 2026-10-27
 priority: normal
 assignee: claude-code
-pr: PR
+pr: 83
 depends: [0052]
 ---
 
