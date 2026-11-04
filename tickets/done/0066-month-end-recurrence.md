@@ -4,7 +4,7 @@ title: Monthly tasks on the 29th to 31st skip the short months
 created: 2026-10-27
 priority: high
 assignee: claude-code
-pr:
+pr: 84
 depends: [0050, 0052]
 ---
 
