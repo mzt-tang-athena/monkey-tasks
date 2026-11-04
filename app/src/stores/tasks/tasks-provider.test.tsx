@@ -4,8 +4,7 @@
 import * as React from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
-import { act, create } from "react-test-renderer";
-import type { ReactTestRenderer } from "react-test-renderer";
+import { act, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The store's contract after ADR 0017 and ADR 0037: a tap changes the
@@ -160,7 +159,7 @@ async function flush(): Promise<void> {
 }
 
 /** Mount the store on `vault`, or on a new vault with `seed`. */
-async function mount(seed?: VaultSeed): Promise<ReactTestRenderer> {
+async function mount(seed?: VaultSeed): Promise<void> {
   if (seed != null) {
     vault = createMemoryVault(seed);
   }
@@ -175,9 +174,8 @@ async function mount(seed?: VaultSeed): Promise<ReactTestRenderer> {
   });
   queryClient = client;
 
-  let renderer: ReactTestRenderer | null = null;
   await act(async () => {
-    renderer = create(
+    render(
       <QueryClientProvider client={client}>
         <VaultProvider adapter={adapter}>
           <TasksProvider>
@@ -189,7 +187,6 @@ async function mount(seed?: VaultSeed): Promise<ReactTestRenderer> {
   });
   // Boot: the saved root, then the vault read behind it.
   await flush();
-  return renderer as unknown as ReactTestRenderer;
 }
 
 function store(): StoreSnapshot {
