@@ -76,6 +76,8 @@ let failAfter: number | null = null;
 let deleteFails = false;
 let createCalls = 0;
 let fullSyncs = 0;
+/** The alarm times the store asked the OS for. */
+const scheduledAt: number[] = [];
 /** A phone with no folder granted: the vault has no saved root. */
 let noFolder = false;
 
@@ -111,7 +113,10 @@ vi.mock("@/stores/tasks/load-vault", async (importOriginal) => {
 // starts by cancelling every alarm, so that call counts the rebuilds.
 vi.mock("@/lib/notifications", () => ({
   ensureNotificationPermission: async () => true,
-  scheduleAt: async () => "alarm",
+  scheduleAt: async (when: Date) => {
+    scheduledAt.push(when.getTime());
+    return "alarm";
+  },
   cancelAllScheduled: async () => {
     fullSyncs += 1;
   },
@@ -268,6 +273,7 @@ beforeEach(() => {
   deleteFails = false;
   createCalls = 0;
   fullSyncs = 0;
+  scheduledAt.length = 0;
   noFolder = false;
   onRender = null;
   latest = null;
@@ -523,6 +529,53 @@ describe("store races (ticket 0052)", () => {
     const successor = [...disk.keys()].find((uri) => uri.includes("2026-10-27"));
     expect(successor).toBeDefined();
     expect(store().tasks.some((task) => task.uri === successor)).toBe(true);
+  });
+
+  // The tick failed after it made the next note, and the delete of that
+  // note failed too. The note stays, so its alarm must ring.
+  it("schedules the alarm of a successor kept after a failed tick", async () => {
+    disk.set(
+      WATER,
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2099-01-01T09:00\nrecurrence: FREQ=DAILY\n---\n',
+    );
+    await mount();
+    failAfter = 0;
+    deleteFails = true;
+    await act(async () => {
+      await store().toggle(row("Water"));
+    });
+    await flush();
+    const successor = [...disk.keys()].find((uri) => uri.includes("2099-01-02"));
+    expect(successor).toBeDefined();
+    expect(scheduledAt).toEqual([new Date(2099, 0, 2, 9, 0).getTime()]);
+  });
+
+  // A Retry runs while another tap on the same row is still pending.
+  // That tap fails and rolls the row back, and the Retry then writes the
+  // note. The row must show what the note holds.
+  it("shows a retried tick as done after the tap before it failed", async () => {
+    await mount();
+    failAfter = 0;
+    await act(async () => {
+      await store().toggle(row());
+    });
+    await flush();
+    expect(store().failures).toHaveLength(1);
+    expect(row().data?.completed).toBeUndefined();
+
+    // The next tap fails too, while the Retry waits behind it.
+    failAfter = 0;
+    await act(async () => {
+      void store().toggle(row());
+      const [failure] = store().failures;
+      if (failure.kind === "failure") {
+        failure.retry();
+      }
+    });
+    await flush();
+
+    expect(disk.get(CALL)).toContain("completed:");
+    expect(row().data?.completed).toBeDefined();
   });
 
   // Finding 2, store side. tasks.tsx runs the full alarm rebuild on every

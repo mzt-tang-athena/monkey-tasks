@@ -286,7 +286,9 @@ SAF with `expo-file-system/legacy` (ADR 0002), through one vault adapter
 port (ADR 0037). No backend (ADR 0003).
 Notifications fire on the device with `expo-notifications` (ADR 0004).
 Capture parses natural-language dates with chrono-node. The app stores recurrence
-as a bare RRULE value and expands it with `rrule`.
+as a bare RRULE value and expands it with `rrule`. A monthly task due after
+the 28th gets a month-end rule, so it has a due date in every month (ADR
+0042).
 
 ## Next
 

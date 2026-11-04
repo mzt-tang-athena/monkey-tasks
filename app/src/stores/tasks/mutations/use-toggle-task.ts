@@ -240,11 +240,21 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
     }
     return { before, after, successor };
   },
-  settle(rows, { id, successorId }, r, c) {
+  settle(rows, { id, successorId }, r, c, last) {
     if (c == null) {
       return rows;
     }
     let next = settleRow(rows, id, c.text, r.after);
+    if (last) {
+      // A Retry can run while another tap on the row is pending. That
+      // tap fails and rolls the row back, so the row no longer holds
+      // this write's text. With no write left, the note is the truth.
+      next = patchRow(next, id, (row) =>
+        row.text === r.after.text
+          ? row
+          : { ...r.after, id, uri: row.uri, fileName: row.fileName },
+      );
+    }
     if (successorId != null) {
       next = placeSuccessor(next, successorId, c.successorText, r.successor);
     }
@@ -277,6 +287,13 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
       moves.push([r.removed, null]);
     }
     return moves;
+  },
+  errorAlarms(error): AlarmMove[] {
+    // The kept note is on disk and open, so it needs its alarm now, not
+    // after the next read.
+    return error instanceof SuccessorKeptError
+      ? [[null, error.successor]]
+      : [];
   },
 };
 
