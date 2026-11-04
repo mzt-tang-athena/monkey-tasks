@@ -596,7 +596,8 @@ describe("preview and empty folder (ticket 0051)", () => {
       });
     });
     await flush();
-    expect(row("Supplements").data).not.toBeNull();
+    expect(sample.data?.recurrence).toBe("FREQ=DAILY");
+    expect(row("Supplements").data?.recurrence).toBe("FREQ=DAILY");
   });
 
   // The read made Tasks/ when its listing missed it, so a slow listing
