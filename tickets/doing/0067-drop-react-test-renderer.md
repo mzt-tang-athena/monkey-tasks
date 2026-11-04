@@ -3,7 +3,7 @@ id: 0067
 title: Drop react-test-renderer
 created: 2026-10-27
 priority: normal
-assignee:
+assignee: claude-code
 pr:
 depends: [0052]
 ---
