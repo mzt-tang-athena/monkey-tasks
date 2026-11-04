@@ -12,9 +12,11 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       # The docs job needs the shared Vale rules package from GitHub Packages.
-      - name: Install root dependencies
+      - name: Authenticate to GitHub Packages
+        run: npm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.VALE_RULES_TOKEN }}
+      - name: Install root dependencies
         run: npm ci
       - name: Install vale
         run: |
@@ -69,9 +71,11 @@ jobs:
             package-lock.json
             app/package-lock.json
       # Root install brings in the file: schemas dependency (and its vitest) used by the schemas tests.
-      - name: Install root dependencies
+      - name: Authenticate to GitHub Packages
+        run: npm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.VALE_RULES_TOKEN }}
+      - name: Install root dependencies
         run: npm ci
       - name: Install app dependencies
         run: npm ci

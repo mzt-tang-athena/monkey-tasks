@@ -43,6 +43,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Authenticate to GitHub Packages
+        run: npm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.VALE_RULES_TOKEN }}
       - name: Install dependencies
         run: |
           npm ci
