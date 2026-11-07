@@ -38,13 +38,15 @@ export function useDismiss(active: boolean, onDismiss: () => void): void {
         return;
       }
       escapeStack.push(latest);
+      // The capture phase: a focused text input on the web stops
+      // keydown from bubbling, and Escape must still reach the stack.
       if (escapeStack.length === 1) {
-        document.addEventListener("keydown", onEscape);
+        document.addEventListener("keydown", onEscape, true);
       }
       return () => {
         escapeStack.splice(escapeStack.indexOf(latest), 1);
         if (escapeStack.length === 0) {
-          document.removeEventListener("keydown", onEscape);
+          document.removeEventListener("keydown", onEscape, true);
         }
       };
     }
