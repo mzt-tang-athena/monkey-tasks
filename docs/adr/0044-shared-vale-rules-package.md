@@ -1,4 +1,4 @@
-# 0035. Shared Vale rules package
+# 0044. Shared Vale rules package
 
 - **Status:** accepted
 - **Date:** 2026-11-03
@@ -27,3 +27,8 @@ One source feeds the prose rules for every repo. A rule change reaches
 this repo through a package update and a sync. The CI docs job now
 needs a `GITHUB_TOKEN` with `read:packages` to install the package. A
 fresh clone must run `npm ci` and `npx vale-rules sync` before Vale.
+
+## Amendment, 2026-11-07
+
+This ADR was 0035 on main. The epic branch already had an ADR 0035, so
+this one took 0044 when main merged into the epic (ticket 0071).

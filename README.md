@@ -87,7 +87,7 @@ typecheck, the tests and the bundle stay in CI.
 The prose rules come from the shared `@mzt-tang-athena/vale-rules`
 package. `make lint` runs `npx vale-rules sync` before Vale, which copies
 the current rules into `.vale/styles/`. The pack holds the rule files.
-The repo-specific suppressions stay in `.vale.ini` (ADR 0035).
+The repo-specific suppressions stay in `.vale.ini` (ADR 0044).
 
 ## Install it on a phone
 
