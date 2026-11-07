@@ -1,5 +1,8 @@
 # Continue epic 0047 on another machine
 
+Read the amendment of 2026-11-07 at the end of this guide before you
+act. It changes the plan below.
+
 This guide moves the epic 0047 work to a new machine or a new Claude Code
 account. It also lists the steps that finish the epic. The state below is
 from 2026-11-07.
@@ -209,3 +212,7 @@ Do not launch them.
   comparison of two or three options before the build.
 - The owner checks each motion ticket on the phone after it merges, not
   only once at the end.
+- Step 3 of "Start here" is still open. The non-blocking notes on PRs
+  #82, #83 and #84 are not yet in their tickets.
+- The Models row in "Rules the runs follow" no longer holds. The
+  owner's pstack model config picks the model for each agent.

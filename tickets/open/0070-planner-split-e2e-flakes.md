@@ -11,7 +11,7 @@ depends: []
 ## Spec
 
 On 2026-11-07, `planner-split.spec.ts --repeat-each=10` ran on the
-app code at `7c079a2` while the machine was busy (load 9 on 4 cores).
+app code at `7c079a2`, with the spec from PR #86 while the machine was busy (load 9 on 4 cores).
 367 tests passed and 3 failed. All three failures were in the `motion`
 project:
 
