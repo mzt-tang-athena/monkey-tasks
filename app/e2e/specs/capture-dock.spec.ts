@@ -15,6 +15,16 @@ async function failCapture(page: Page) {
   }, `${capture.name}.md`);
 }
 
+/** The bar is back in full: its tabs show, and Add opens the sheet. */
+async function expectBarBack(page: Page) {
+  await expect(page.getByRole("tab", { name: "Lists" })).toBeInViewport();
+  await expect(page.getByRole("tab", { name: "Planner" })).toBeInViewport();
+  const add = page.getByRole("button", { name: "add task" });
+  await expect(add).toBeInViewport();
+  await add.click({ timeout: 2000 });
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+}
+
 async function expectInColumn(target: Locator, what: string) {
   const box = await target.boundingBox();
   expect(box, `${what} is on screen`).not.toBeNull();
@@ -137,7 +147,7 @@ test.describe("the sheet belongs to its tab", () => {
     await page.getByRole("tab", { name: "Lists" }).click();
     await expect(row(page, undated.second)).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "add task" })).toBeVisible();
+    await expectBarBack(page);
   });
 
   test("a row opened by keyboard shows the editor with no sheet over it", async ({
@@ -152,8 +162,26 @@ test.describe("the sheet belongs to its tab", () => {
     await page.getByRole("button", { name: "cancel editing" }).click();
     await expect(row(page, undated.second)).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "add task" })).toBeVisible();
+    await expectBarBack(page);
   });
+});
+
+test("the planner's sheet belongs to its tab too", async ({ page }) => {
+  await page.goto("/planner");
+  await expect(page.getByTestId("day-heading")).toBeVisible();
+  await page.getByRole("button", { name: "add task" }).click();
+  await page.getByPlaceholder("Add a task").fill(capture.typed);
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+
+  await page.locator('[role="tab"][aria-label="Lists"]').focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  await page.getByRole("tab", { name: "Planner" }).click();
+  await expect(page.getByTestId("day-heading")).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expectBarBack(page);
 });
 
 test("Escape closes the sheet while the capture input has focus", async ({
