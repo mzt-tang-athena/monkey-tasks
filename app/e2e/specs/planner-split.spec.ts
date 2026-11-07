@@ -54,13 +54,19 @@ test.describe("on a small phone", () => {
   test.use({ viewport: { width: 360, height: 640 } });
 
   test("the day list keeps its source toggle above the bottom bar", async ({ page }) => {
-    const toggle = await sourceToggle(page).boundingBox();
-    const bar = await page.getByRole("tab", { name: "Planner" }).boundingBox();
-    if (toggle == null || bar == null) {
-      throw new Error("the toggle or the bottom bar has no box");
-    }
-
-    expect(toggle.y + toggle.height).toBeLessThanOrEqual(bar.y);
+    // The split draws the timeline at its usual height until the day
+    // root reports its own, so the first frames on the web can still
+    // hold the toggle under the bar. The settled layout is the claim.
+    await expect
+      .poll(async () => {
+        const toggle = await sourceToggle(page).boundingBox();
+        const bar = await page.getByRole("tab", { name: "Planner" }).boundingBox();
+        if (toggle == null || bar == null) {
+          throw new Error("the toggle or the bottom bar has no box");
+        }
+        return bar.y - (toggle.y + toggle.height);
+      })
+      .toBeGreaterThanOrEqual(0);
   });
 });
 
