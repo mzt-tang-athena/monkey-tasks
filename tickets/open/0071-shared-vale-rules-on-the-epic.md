@@ -37,10 +37,17 @@ Two ADRs share the number 0035. Main has
 `0035-large-refactors-land-on-an-integration-branch.md`, which the
 epic's tickets and the handover guide cite. At the merge, keep the
 epic's 0035. Give main's ADR the next free number, and fix each
-reference to it on main's side. Main cites it in `README.md` (the
+reference to it on main's side, and its `# 0035.` heading. Main cites it in `README.md` (the
 `.vale.ini` suppressions) and in `tickets/done/0047-shared-vale-rules.md`.
 
-Out of scope: the ADRs and tickets. Under the pack they hold about 390
+Two tickets also share the id 0047. Main has
+`tickets/done/0047-shared-vale-rules.md`. The epic has
+`tickets/doing/0047-bulletproof-refactor-and-motion-rebuild.md`. The
+file names differ, so git does not conflict. Keep the epic's 0047,
+because its PRs and branch name cite it. Give main's done ticket the
+next free id, and fix its references, such as the one in main's ADR.
+
+Out of scope: the Vale alerts in the ADRs and tickets. Under the pack they hold about 390
 `SentenceLength` alerts, but no CI job lints them, and done tickets are
 history. Whether the docs job should lint nested files is a separate
 call.
@@ -51,8 +58,8 @@ call.
 - [ ] The CI docs job on the epic runs `npx vale-rules sync` and passes.
 - [ ] Vale with the pack prints nothing on `README.md` and `AGENTS.md`.
 - [ ] The pre-commit hook passes on a commit that touches `README.md`.
-- [ ] No two ADRs share a number, and each ADR reference names the
-      right ADR.
+- [ ] No two ADRs and no two tickets share a number, and each
+      reference names the right one.
 
 ## Outcome
 
