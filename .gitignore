@@ -24,8 +24,10 @@ __pycache__/
 .venv/
 *.pyc
 
-# Vale (write-good is cloned, not committed)
+# Vale (write-good is cloned, and the shared pack is synced, not committed)
 .vale/styles/write-good/
+.vale/styles/MyRules/
+.vale/styles/Readability/
 .openchamber/
 
 # Claude Code: only the shared workflow scripts and project skills are tracked

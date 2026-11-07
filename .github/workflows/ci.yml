@@ -10,8 +10,23 @@ on:
 jobs:
   docs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      # The docs job needs the shared Vale rules package from GitHub Packages.
+      - name: Authenticate to GitHub Packages
+        run: npm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install root dependencies
+        run: npm ci
       - name: Install vale
         run: |
           curl -fsSL https://github.com/errata-ai/vale/releases/download/v3.24.0/vale_3.24.0_Linux_64-bit.tar.gz -o vale.tgz
@@ -24,6 +39,8 @@ jobs:
           cd .vale/styles/write-good
           if [ -d write-good ]; then mv write-good/* .; rmdir write-good; fi
           find . -maxdepth 1 -name '*.yml' | while read f; do grep -q extends "$f" || rm "$f"; done
+      - name: Sync shared Vale rules
+        run: npx vale-rules sync
       - name: Docs prose lint
         run: |
           # Vale exits zero on warnings, so the step fails on any output.
@@ -43,6 +60,9 @@ jobs:
 
   code:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,6 +90,10 @@ jobs:
             package-lock.json
             app/package-lock.json
       # Root install brings in the file: schemas dependency (and its vitest) used by the schemas tests.
+      - name: Authenticate to GitHub Packages
+        run: npm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install root dependencies
         run: npm ci
       - name: Install app dependencies
@@ -98,6 +122,9 @@ jobs:
   e2e-web:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -120,6 +147,10 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             app/package-lock.json
+      - name: Authenticate to GitHub Packages
+        run: npm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install root dependencies
         run: npm ci
       - name: Install app dependencies
