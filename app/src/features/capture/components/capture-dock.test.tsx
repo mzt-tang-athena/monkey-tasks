@@ -237,6 +237,26 @@ describe("CaptureDock", () => {
     );
   });
 
+  it("closes the sheet when its tab loses focus", () => {
+    const view = render(<Screen />);
+    openSheet();
+    type("Buy milk");
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    state.focused = false;
+    view.rerender(<Screen />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      screen.getByText("screen content").closest('[aria-hidden="true"]'),
+    ).toBeNull();
+
+    // Back on the tab, the sheet stays closed.
+    state.focused = true;
+    view.rerender(<Screen />);
+    finishMotion();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("dismisses the toast", async () => {
     state.capture.mockRejectedValueOnce(new Error("create failed: Buy milk.md"));
     render(<Screen />);

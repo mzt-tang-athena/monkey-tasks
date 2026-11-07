@@ -107,3 +107,44 @@ test("a failed capture toast belongs to its tab and shows over no other screen",
   await page.getByRole("tab", { name: "Planner" }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
+
+test.describe("the sheet belongs to its tab", () => {
+  // The bar slides away under the open sheet, and the scrim covers the
+  // screen, so the keyboard is the only way past the sheet. The screen
+  // is hidden from roles while the sheet shows, so the specs find its
+  // controls by label.
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+    await page.getByRole("button", { name: "add task" }).click();
+    await page.getByPlaceholder("Add a task").fill(capture.typed);
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+  });
+
+  test("a nav tab reached by keyboard closes the sheet", async ({ page }) => {
+    await page.locator('[role="tab"][aria-label="Planner"]').focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page).toHaveURL(/\/planner$/);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByPlaceholder("Add a task")).toHaveCount(0);
+
+    await page.getByRole("tab", { name: "Lists" }).click();
+    await expect(row(page, undated.second)).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("a row opened by keyboard shows the editor with no sheet over it", async ({
+    page,
+  }) => {
+    await row(page, undated.second).locator('[aria-label="open task"]').focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByRole("button", { name: "save task" })).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "cancel editing" }).click();
+    await expect(row(page, undated.second)).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+});
