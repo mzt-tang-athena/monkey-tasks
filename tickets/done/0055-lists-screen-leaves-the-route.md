@@ -133,7 +133,7 @@ Landed in PR 81.
 - Bug 7: the repair notice is the list header. Its fixed part is zero tall, so no card edge clips under it. A Playwright test checks that it scrolls with the list.
 - The four open findings are fixed: the tab strip fades an edge (the "Fo" cut), the repair notice, `textInset` reuses `circle`, and `tasks.spec.ts` uses one `locator.evaluate`.
 - A tick on the only row of a group put the group after later groups during the hold, with an empty Completed header. The splice now restores the group at its own place.
-- ADR 0041 records the choices.
+- ADR 0043 records the choices.
 - A list note can vanish while its tab is open, so the screen falls back to Main. The pager now steps from that derived tab. A test removes the open list note and then swipes.
 
 Left open:

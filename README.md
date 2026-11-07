@@ -240,7 +240,7 @@ documents its props, and each primitive has a component test.
 `PreviewRow` share. `hooks/use-dismiss` closes a surface on Android
 back and on Escape in the browser. `hooks/use-press-guard` blocks the
 click that ends a swipe or a drop, and `hooks/use-stable-callback`
-gives a handler one identity for a memoized row (ADR 0041).
+gives a handler one identity for a memoized row (ADR 0043).
 `theme/tokens.ts` holds the type
 scale, the layer order and the shadows (ADR 0040).
 

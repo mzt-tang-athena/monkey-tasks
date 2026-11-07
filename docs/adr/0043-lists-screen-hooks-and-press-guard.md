@@ -1,4 +1,4 @@
-# 0041. The Lists screen is hooks, and a press guard blocks a swipe's click
+# 0043. The Lists screen is hooks, and a press guard blocks a swipe's click
 
 - **Status:** accepted
 - **Date:** 2026-11-04
