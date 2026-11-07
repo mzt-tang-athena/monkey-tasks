@@ -1,5 +1,5 @@
 import { CaptureDock } from "@/features/capture/components/capture-dock";
-import { ListsScreen } from "@/features/lists/lists-screen";
+import ListsScreen from "@/features/lists/lists-screen";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 
 const dock: DockSlot = (slot) => <CaptureDock {...slot} />;

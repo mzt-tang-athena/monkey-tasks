@@ -66,7 +66,8 @@ describe("TabStrip", () => {
 
     rerender(<TabStrip label="Lists" tabs={tabs} selected="Focus" onSelect={vi.fn()} />);
 
-    expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ left: 188 }));
+    // Focus lands just past the 30 px start fade.
+    expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ left: 170 }));
   });
 });
 

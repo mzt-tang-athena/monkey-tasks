@@ -41,19 +41,22 @@ test("a single-line row has equal space above and below its name", async ({ page
   // ADR 0012: a row pads its text the same on both sides. The row once
   // drew an empty meta row under the name, which added 2 px below it.
   const target = row(page, undated.second);
-  const name = await target
-    .getByText(undated.second, { exact: true })
-    .elementHandle();
 
   // Every sample task is new, so each row lands on load and moves for
   // 220 ms. Two separate reads can catch the row in two places. One
   // read takes both boxes from the same frame, and the landing moves
   // them together.
   const { above, below } = await target.evaluate((outer, text) => {
+    const label = [...outer.querySelectorAll("*")].find(
+      (node) => node.children.length === 0 && node.textContent === text,
+    );
+    if (label == null) {
+      throw new Error(`no label reads "${text}"`);
+    }
     const box = outer.getBoundingClientRect();
-    const label = text.getBoundingClientRect();
-    return { above: label.top - box.top, below: box.bottom - label.bottom };
-  }, name);
+    const name = label.getBoundingClientRect();
+    return { above: name.top - box.top, below: box.bottom - name.bottom };
+  }, undated.second);
 
   expect(below).toBeCloseTo(above, 0);
 });

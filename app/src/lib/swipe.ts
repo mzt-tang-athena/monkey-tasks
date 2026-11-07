@@ -17,6 +17,11 @@ export const swipeThreshold = 80;
 
 /** What the page does with the travel: follow, settle, spring back. */
 export type SwipeMotion = {
+  /** The travel first passed its slop, once per gesture. From here on
+      the gesture is a swipe, not a press. */
+  start?: () => void;
+  /** A gesture that called `start` is over: it ended or was taken. */
+  end?: () => void;
   /** The travel so far, in px, once the move is clearly horizontal.
       The page follows from here, below the commit threshold, so the
       finger owns the page from the first few pixels. */
@@ -53,6 +58,7 @@ export function makeSwipeController(
   let start: { x: number; y: number } | null = null;
   let claimed = false;
   let last = 0;
+  let swiping = false;
 
   return {
     down(x, y, claimed_ = false) {
@@ -72,6 +78,10 @@ export function makeSwipeController(
       if (!horizontal(dx, dy)) {
         return;
       }
+      if (!swiping) {
+        swiping = true;
+        motion.start?.();
+      }
       last = dx;
       motion.drag?.(dx, dx < 0 ? "left" : "right");
     },
@@ -88,6 +98,10 @@ export function makeSwipeController(
       start = null;
       claimed = false;
       last = 0;
+      if (swiping) {
+        swiping = false;
+        motion.end?.();
+      }
     },
     claim() {
       if (last !== 0) {
