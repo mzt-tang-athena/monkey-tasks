@@ -113,8 +113,8 @@ What landed:
   `hooks/use-capture-sheet.ts`. The motion is today's code, so ticket
   0062 can change it without a change to the shell.
 - The tab routes pass the dock into their screens. The Lists screen
-  moved to `features/lists/lists-screen.tsx` for this, because the route
-  held it. ADR 0039 has an amendment with the design and the rejected
+  takes the dock in `features/lists/lists-screen.tsx`, where ticket 0055
+  moved it. ADR 0039 has an amendment with the design and the rejected
   alternative.
 - The editor split into the six files of the spec. The form scrolls in
   `KeyboardAwareScrollView`.
@@ -132,8 +132,19 @@ What landed:
 - Sheet scope: for the same reason, the sheet stayed open over the
   Planner or the editor when a nav tab or a row took focus by keyboard.
   The sheet now closes when its tab loses focus. A component test and
-  two e2e tests cover it. ADR 0040 has an amendment, with `inert` on
-  the hidden screen as the alternative left to ticket 0063.
+  three e2e tests cover it, one from the Planner. ADR 0040 has an
+  amendment, with `inert` on the hidden screen as the alternative left
+  to ticket 0063.
+- The row path drops the draft. On the base, a row reached by keyboard
+  opened the editor, and the sheet stayed open under it with the draft.
+  Now the sheet closes with its tab, and the next open starts empty.
+- The bar comes back. The first focus close played the sheet's exit
+  while the sheet left the tree. Animated stopped the sheet's clock when
+  its last view went, and the shared parallel stopped the bar's lift at
+  0. The bar stayed collapsed, so the user could not reach Add or the
+  nav. Now a tab that loses focus plays no exit: the clock and the lift
+  take their closed values at once. The three e2e tests check that both
+  tabs show and Add opens the sheet after the return.
 - Escape: the listener runs in the capture phase, so Escape closes the
   sheet while the text input has focus. An e2e test covers it.
 - Menu fix from the 0054 review: `Menu` resets its box and height when
@@ -150,5 +161,5 @@ Left:
 - On a wide window the sheet and toast edges sit 20 px outside the card
   edges, because the sheet gutter is `spacing.m` and the page gutter is
   `pageGutter`. Ticket 0063 can unify them.
-- Ticket 0055 moves the same Lists code. Whichever PR merges second
-  resolves the move.
+- On the Planner, the picked day resets to today after any tab round
+  trip. The base does the same. It is outside this ticket.

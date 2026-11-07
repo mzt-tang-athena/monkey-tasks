@@ -99,6 +99,12 @@ draws the toast only while its tab is focused. Escape now listens in
 the capture phase, so it closes the sheet while the text input has
 focus.
 
+A close on focus loss plays no exit. The sheet leaves the tree at once,
+so the clock it shares with the bar has no view to drive. The dock sets
+the sheet's clock to closed and the bar's lift to shown, and the user
+finds the bar whole on return. An exit run there would stop when the
+sheet's view went, and it would leave the bar collapsed.
+
 Alternative: mark the hidden screen `inert` on the web while a modal
 overlay shows, so focus cannot leave the sheet. We did not take it
 here. The focus close fixes both reported paths, and the base let the
