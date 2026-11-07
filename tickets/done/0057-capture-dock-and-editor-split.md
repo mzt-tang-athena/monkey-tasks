@@ -129,6 +129,13 @@ What landed:
   and the toast state stay, so the toast returns with the tab. A
   component test and an e2e test cover it: fail a capture, open a task,
   and find no alert.
+- Sheet scope: for the same reason, the sheet stayed open over the
+  Planner or the editor when a nav tab or a row took focus by keyboard.
+  The sheet now closes when its tab loses focus. A component test and
+  two e2e tests cover it. ADR 0040 has an amendment, with `inert` on
+  the hidden screen as the alternative left to ticket 0063.
+- Escape: the listener runs in the capture phase, so Escape closes the
+  sheet while the text input has focus. An e2e test covers it.
 - Menu fix from the 0054 review: `Menu` resets its box and height when
   it closes.
 - Tests: `capture-dock.test.tsx`, `draft.test.ts`, the keyboard test, the
