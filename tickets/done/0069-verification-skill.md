@@ -4,7 +4,7 @@ title: Add a verification skill that drives the web preview
 created: 2026-11-07
 priority: normal
 assignee: claude-code
-pr:
+pr: 87
 depends: []
 ---
 
