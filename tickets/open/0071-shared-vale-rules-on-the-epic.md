@@ -32,6 +32,14 @@ Merge `main` into `epic/0047-rebuild` and resolve the conflicts. Split
 each flagged sentence in `README.md`. Do it before phase 4, so each
 later PR runs the same rules as main.
 
+Two ADRs share the number 0035. Main has
+`0035-shared-vale-rules-package.md`. The epic has
+`0035-large-refactors-land-on-an-integration-branch.md`, which the
+epic's tickets and the handover guide cite. At the merge, keep the
+epic's 0035. Give main's ADR the next free number, and fix each
+reference to it on main's side. Main cites it in `README.md` (the
+`.vale.ini` suppressions) and in `tickets/done/0047-shared-vale-rules.md`.
+
 Out of scope: the ADRs and tickets. Under the pack they hold about 390
 `SentenceLength` alerts, but no CI job lints them, and done tickets are
 history. Whether the docs job should lint nested files is a separate
@@ -43,6 +51,8 @@ call.
 - [ ] The CI docs job on the epic runs `npx vale-rules sync` and passes.
 - [ ] Vale with the pack prints nothing on `README.md` and `AGENTS.md`.
 - [ ] The pre-commit hook passes on a commit that touches `README.md`.
+- [ ] No two ADRs share a number, and each ADR reference names the
+      right ADR.
 
 ## Outcome
 
