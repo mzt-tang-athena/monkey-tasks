@@ -31,3 +31,4 @@ __pycache__/
 # Claude Code: only the shared workflow scripts are tracked
 .claude/*
 !.claude/workflows/
+!.claude/skills/
