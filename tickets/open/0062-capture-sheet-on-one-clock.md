@@ -87,6 +87,17 @@ renders the screen behind it no times.
 The browser has no soft keyboard, so the keyboard drift in J4 shows
 only on the phone.
 
+### Review note from 0054
+
+The review of 0054 (#77) found a second clock in the shared Sheet. Line
+numbers cite commit `897373a`. When a caller passes an outside
+`progress`, `components/ui/sheet.tsx:65-70` still runs its own 220 ms
+clock through `useSheetMotion`. That clock does nothing useful. Remove it
+when the sheet moves to one clock. An outside-progress Sheet also keeps
+its modal scrim in the overlay host while it is mounted, so the screen
+stays hidden from assistive tech. Check that the scrim leaves the host
+when the sheet closes.
+
 ## Acceptance
 
 - [ ] Each scenario above has a failing test before its fix, and all

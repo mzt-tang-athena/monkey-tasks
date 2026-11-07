@@ -120,8 +120,28 @@ Today only the phone shows V11 and J3, because the browser takes the
 pointer path. After this ticket, both platforms run one path, so the
 browser test above covers V11.
 
+### The first frame of the split
+
+Found on 2026-11-07, while a CI run failed on PR #86. Line numbers cite
+commit `7c079a2`. `useSplitPane` (`features/planner/hooks/use-split-pane.ts:47-53`)
+gives the timeline its usual 320 px until the root, body and pane
+layouts report. On a 360 by 640 screen the settled height is 200 px. So
+every load paints at least one frame with the list pane 120 px too low,
+and the source toggle sits 6 px over the bottom bar. Then the pane jumps
+up.
+
+Repro: record the toggle's bottom edge on each animation frame from an
+init script, with the CPU throttled 6 times through CDP. Every load
+records 591, then 471, against a bar top of 585.
+
+When the split height moves to a shared value, paint the first frame at
+the settled height. Add a test that records the frames from the first
+paint and finds no frame with the toggle over the bar.
+
 ## Acceptance
 
+- [ ] On a 360 by 640 screen, no frame from the first paint draws the
+      day list pane over the bottom bar.
 - [ ] Each scenario above has a failing test before its fix, and all
       pass after, with the mouse and with touch.
 - [ ] `useTouchDragGate`, the planner's pointer handlers, the
