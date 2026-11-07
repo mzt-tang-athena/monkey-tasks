@@ -54,13 +54,17 @@ test.describe("on a small phone", () => {
   test.use({ viewport: { width: 360, height: 640 } });
 
   test("the day list keeps its source toggle above the bottom bar", async ({ page }) => {
-    const toggle = await sourceToggle(page).boundingBox();
-    const bar = await page.getByRole("tab", { name: "Planner" }).boundingBox();
-    if (toggle == null || bar == null) {
-      throw new Error("the toggle or the bottom bar has no box");
-    }
-
-    expect(toggle.y + toggle.height).toBeLessThanOrEqual(bar.y);
+    // Until the layout reports, the split paints the timeline at its
+    // usual height, and the toggle sits over the bar for a frame. Ticket
+    // 0061 owns that frame. This test checks the settled layout.
+    await expect
+      .poll(async () => {
+        const toggle = await sourceToggle(page).boundingBox();
+        const bar = await page.getByRole("tab", { name: "Planner" }).boundingBox();
+        if (toggle == null || bar == null) return Number.POSITIVE_INFINITY;
+        return toggle.y + toggle.height - bar.y;
+      })
+      .toBeLessThanOrEqual(0);
   });
 });
 

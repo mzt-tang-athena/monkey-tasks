@@ -71,6 +71,17 @@ Paths and line numbers cite commit `b2c0b10`. Tickets 0050 and 0055 to
    holds tasks. The sort and list menu buttons (`index.tsx:889-915`)
    report no expanded state. The list tabs, the mode switch, the form
    toggle and the bottom nav have no `tablist` around them.
+6. **Overlays leave focus behind.** The review of 0054 (#77) found two
+   gaps in the shared primitives. Line numbers cite commit `897373a`.
+   - `components/ui/menu.tsx:188` sets `aria-checked` on role
+     `menuitem`, which ARIA does not allow. A selected item takes
+     `menuitemradio` or `menuitemcheckbox`.
+   - On the web, `components/ui/overlay-host.tsx:24-28` and `:64` set
+     `aria-hidden` on the screen while focus stays on the control that
+     opened the overlay. Chrome then ignores `aria-hidden` and logs a
+     warning. Menu and Sheet do not move focus into the overlay. Move
+     focus in on open and back to the opener on close, and make the
+     screen behind a modal inert.
 
 Add `@axe-core/playwright` as a dev dependency for the screen scans.
 
