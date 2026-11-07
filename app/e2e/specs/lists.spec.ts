@@ -143,6 +143,31 @@ test.describe("the tab strip", () => {
     await expect(page.getByTestId("tab-fade-end")).toHaveCount(0);
     await expect(page.getByTestId("tab-fade-start")).toBeVisible();
   });
+
+  test("the start fade leaves the selected tab's name clear", async ({ page }) => {
+    await listTab(page, tabs.next).click();
+    await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("tab-fade-start")).toBeVisible();
+
+    const name = listTab(page, tabs.next).getByText(tabs.next, { exact: true });
+    const left = async () => (await name.boundingBox())?.x ?? Number.NaN;
+    // The strip scrolls the tab in with an animation. Wait until it rests.
+    let last = Number.NaN;
+    await expect
+      .poll(async () => {
+        const now = await left();
+        const still = now === last;
+        last = now;
+        return still;
+      })
+      .toBe(true);
+
+    const fade = await page.getByTestId("tab-fade-start").boundingBox();
+    if (fade == null) {
+      throw new Error("the start fade has no box");
+    }
+    expect(fade.x + fade.width).toBeLessThanOrEqual(await left());
+  });
 });
 
 test.describe("list menu", () => {
