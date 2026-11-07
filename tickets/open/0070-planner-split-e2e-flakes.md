@@ -20,16 +20,15 @@ project:
 | the source menu, on a small phone, opens fully above the bottom bar in Week mode (`planner-split.spec.ts:131`) | 2 of 10 | `boundingBox` on `getByText("Main")` waited 30 s. The source menu never opened. |
 | a list row dropped on a month cell takes that day (`planner-split.spec.ts:268`) | 1 of 10 | After the drop and the press on Wednesday 28, the row `Groceries: milk, eggs, oats` never showed. |
 
-Two fix agents measured more the same day, each under load from the
-other runs:
+Two fix agents measured more the same day. Each ran under load from
+the other runs.
 
 - On the bare epic tip `fd6f7a0`, `--repeat-each=10` gave 357 passed
   and 13 failed.
-- On the same base, "the day list keeps its source toggle above the
-  bottom bar" failed 9 of 20 runs before PR #86 made it wait for the
-  settled layout.
+- Before PR #86, "the day list keeps its source toggle above the bottom
+  bar" failed 9 of 20 runs. PR #86 made it wait for the settled layout.
 
-Every verifier and fix agent runs this spec, so each flake costs a
+Every verifier and fix agent runs this spec. Each flake costs them a
 rerun and a check that the failure is not theirs.
 
 The traces were in `app/e2e/test-results/` of that run and are gone.

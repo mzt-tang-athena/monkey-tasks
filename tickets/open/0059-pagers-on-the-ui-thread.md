@@ -150,8 +150,8 @@ those.
 
 - From the review of PR #81 (0055), 2026-11-07: `src/lib/swipe.ts`
   `down()` does not reset `swiping`. A mouse swipe released outside the
-  list pager leaves the press guard armed, and the next row tap is
-  swallowed. The page also stays at its drag offset, as on the epic
+  list pager leaves the press guard armed, and the guard swallows the
+  next row tap. The page also stays at its drag offset, as on the epic
   before #81. Ending the stale gesture in `down()` calls
   `guard.release()`, which opens the 350 ms window, so one click is
   still swallowed. The fix needs an abort that clears the guard with no
