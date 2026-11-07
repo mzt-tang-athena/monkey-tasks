@@ -20,7 +20,7 @@ import { CaptureForm } from "./capture-form";
 export function CaptureDock(slot: CaptureSlot) {
   const bar = useBar();
   const focused = useIsFocused();
-  const sheet = useCaptureSheet({ ...slot, bar });
+  const sheet = useCaptureSheet({ ...slot, bar, focused });
 
   return (
     <>

@@ -45,11 +45,14 @@ export function useCaptureSheet({
   defaultTargetIndex,
   dueDay,
   bar,
+  focused,
 }: {
   targets: CaptureTarget[];
   defaultTargetIndex: number;
   dueDay?: string;
   bar: BarState;
+  /** The tab shows. The sheet belongs to its tab. */
+  focused: boolean;
 }): CaptureSheetState {
   const capture = useCaptureTask();
   const insets = useSafeAreaInsets();
@@ -137,6 +140,15 @@ export function useCaptureSheet({
     });
     return () => animation.stop();
   }, [expand, lift, open]);
+
+  // The sheet draws above every screen, so it must not outlive its tab.
+  // When another screen takes focus, from a nav tab or a row, the sheet
+  // leaves at once with no exit to play. It closes during the render
+  // that sees the focus go, so no frame draws it over the next screen.
+  if (!focused && mounted) {
+    setOpen(false);
+    setMounted(false);
+  }
 
   const close = React.useCallback(() => setOpen(false), []);
 
