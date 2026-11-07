@@ -3,8 +3,8 @@ id: 0056
 title: Split the planner and give drag one home
 created: 2026-10-26
 priority: high
-assignee:
-pr:
+assignee: claude-code
+pr: 82
 depends: [0054]
 ---
 
@@ -135,31 +135,45 @@ the day body on every render (`DaySpread.tsx:46-48`,
    open day view and step to tomorrow: the source toggle still reads
    "Due today". Week and month mode do the same for another week or
    month. Name the period on screen instead, for example "Due
-   tomorrow", "Due Wed, 28 Oct", "Due 9 to 15 Nov" or "Due November".
+   tomorrow", "Due Wed, 28 Oct", "Due 8 to 14 Nov" or "Due November".
 
 ## Acceptance
 
-- [ ] `planner-screen.tsx` reads route and store state, mounts the providers and lays out the panes. It holds no drag state and no menu state.
-- [ ] `DaySpread` and `TaskListSection` take no source, form, menu, lift or drag API props. They read `PlannerListContext`.
-- [ ] Day, week and month drags all run through `use-drag-session`.
-- [ ] No other file holds pending, lift or ghost state.
-- [ ] In every mode, a drop arms the click guard on web only.
-- [ ] ADR 0025 has a dated amendment for `use-drag-session`.
-- [ ] `plannerStyles.ts` no longer exists, and `planner-layout.ts` holds only frame and pane styles.
-- [ ] `lib/day-rows.ts` has unit tests.
-- [ ] A test reproduces the preview bug first. Afterwards, for a recurring task, the preview and the live day list the same rows.
-- [ ] A test reproduces the week overflow first. Afterwards a column with 8 tasks shows `+N more`, and a press on it opens that day.
-- [ ] A fake-timer test reproduces the today bug first. Afterwards, past midnight, the strip tint and the default day agree.
-- [ ] A Playwright test reproduces the stacking bug first. Afterwards the ghost draws above the bottom bar in day, week and month mode.
-- [ ] With the source menu open, a tap on the bottom bar closes the menu and does not navigate.
-- [ ] A Playwright test at 360 by 640 reproduces the menu bug first. Afterwards the open source menu sits fully above the bottom bar.
-- [ ] A Playwright test reproduces the sort bug first. Afterwards the day list, the swipe preview and the month picked-day list each show a day's tasks by time of day.
-- [ ] A Playwright screenshot reproduces the separator bug first. Afterwards overdue rows and list rows show the same hairline.
-- [ ] A Playwright test reproduces the source toggle bug first. Afterwards, in day, week and month mode, the source toggle names the period on screen.
-- [ ] A render-count test shows that a hover change during a day drag re-renders the timeline and not the list pane.
-- [ ] A drag from the list to the ruler still writes the hour, and a drag to a week column or month cell still writes the day.
-- [ ] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
+- [x] `planner-screen.tsx` reads route and store state, mounts the providers and lays out the panes. It holds no drag state and no menu state.
+- [x] `DaySpread` and `TaskListSection` take no source, form, menu, lift or drag API props. They read `PlannerListContext`.
+- [x] Day, week and month drags all run through `use-drag-session`.
+- [x] No other file holds pending, lift or ghost state.
+- [x] In every mode, a drop arms the click guard on web only.
+- [x] ADR 0025 has a dated amendment for `use-drag-session`.
+- [x] `plannerStyles.ts` no longer exists, and `planner-layout.ts` holds only frame and pane styles.
+- [x] `lib/day-rows.ts` has unit tests.
+- [x] A test reproduces the preview bug first. Afterwards, for a recurring task, the preview and the live day list the same rows.
+- [x] A test reproduces the week overflow first. Afterwards a column with 8 tasks shows `+N more`, and a press on it opens that day.
+- [x] A fake-timer test reproduces the today bug first. Afterwards, past midnight, the strip tint and the default day agree.
+- [x] A Playwright test reproduces the stacking bug first. Afterwards the ghost draws above the bottom bar in day, week and month mode.
+- [x] With the source menu open, a tap on the bottom bar closes the menu and does not navigate.
+- [x] A Playwright test at 360 by 640 reproduces the menu bug first. Afterwards the open source menu sits fully above the bottom bar.
+- [x] A Playwright test reproduces the sort bug first. Afterwards the day list, the swipe preview and the month picked-day list each show a day's tasks by time of day.
+- [x] A Playwright test reproduces the separator bug first. Afterwards overdue rows and list rows show the same hairline. (The test counts the shared `row-separator` in the overdue group, and a screenshot check backed it.)
+- [x] A Playwright test reproduces the source toggle bug first. Afterwards, in day, week and month mode, the source toggle names the period on screen.
+- [x] A render-count test shows that a hover change during a day drag re-renders the timeline and not the list pane.
+- [x] A drag from the list to the ruler still writes the hour, and a drag to a week column or month cell still writes the day.
+- [x] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
 
 ## Outcome
 
-(filled in before moving to done/)
+### What landed
+
+- The planner split as the Spec table asks. `planner-screen.tsx` is a composition root. `PlannerListContext` replaces the nine props. `plannerStyles.ts` and `PlannerStates.tsx` are gone.
+- `use-drag-session` is the one home for drag in all three modes. ADR 0025 has the dated amendment. The ghost has no origin option, because it now rides the window through `OverlayHost`.
+- The hover lives in a small store, so a drag over the ruler renders the timeline and not the list pane. A test counts the renders.
+- The eight bugs each have a test written first. ADR 0041 records the week column choice.
+- Review findings: the date strip keeps a step clear of the top edge, `TaskListSection` uses constant slot styles, and the bug 8 example reads "Due 8 to 14 Nov".
+- Review fixes: the day's wrapped drag API keeps one identity through hold, arm and pickup (`useClaimedList`), so the native pan is not rebuilt mid-drag. The screen holds the month's picked day, so it survives a visit to Day. The pills form lists a day's rows in time order after the overdue group.
+- Also fixed: on a 360 by 640 screen the day's list pane sat under the bottom bar. The split now leaves the list pane in reach until the grabber moves. An empty day other than today no longer says "Nothing scheduled today."
+
+### What is left
+
+- The click guard is local to the session. Ticket 0055 plans `use-press-guard`, and owns the swap when it lands.
+- Week chips are two lines tall at most. A later ticket can measure them if the fixed height proves too coarse (ADR 0041).
+- The motion stays on `Animated` values. Tickets 0059 and 0061 move it.

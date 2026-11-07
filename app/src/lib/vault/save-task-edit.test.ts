@@ -110,6 +110,46 @@ describe("saveTaskEdit", () => {
     expect(result.body).toBe("\nOld body.\n");
   });
 
+  it("writes the month-end rule for a due day after the 28th (ticket 0066)", async () => {
+    const result = await saveTaskEdit(
+      safAdapter,
+      task(),
+      edit({ due: "2027-01-31", recurrence: "FREQ=MONTHLY" }),
+    );
+    expect(result.data?.recurrence).toBe("FREQ=MONTHLY;BYMONTHDAY=-1");
+    expect(state.writes[0].text).toContain(
+      "recurrence: FREQ=MONTHLY;BYMONTHDAY=-1",
+    );
+  });
+
+  it("writes the rule again when the due day changes (ticket 0066)", async () => {
+    const item: TaskItem = {
+      ...task(),
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        due: "2027-01-31",
+        recurrence: "FREQ=MONTHLY;BYMONTHDAY=-1",
+      },
+    };
+    const moved = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ due: "2027-02-15", recurrence: "FREQ=MONTHLY;BYMONTHDAY=-1" }),
+    );
+    expect(moved.data?.recurrence).toBe("FREQ=MONTHLY");
+    // A new time on the same day keeps the rule.
+    const retimed = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({
+        due: "2027-01-31T09:00",
+        recurrence: "FREQ=MONTHLY;BYMONTHDAY=-1",
+      }),
+    );
+    expect(retimed.data?.recurrence).toBe("FREQ=MONTHLY;BYMONTHDAY=-1");
+  });
+
   it("clears a property when the edit has no value for it", async () => {
     const result = await saveTaskEdit(
       safAdapter,

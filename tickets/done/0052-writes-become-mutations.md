@@ -340,7 +340,8 @@ ADR 0037 has a 2026-11-03 amendment for the first five.
   and puts up no row. So a Retry on a tick that a later tap landed
   makes no second next occurrence. A retry after a
   failed take-back keeps the next note the first try made, and makes
-  no other. Store tests and a Playwright test show both.
+  no other. Store tests show both. A Playwright test covers only the
+  stale tick.
 - `shareRows` carries ids first and then runs `replaceEqualDeep`, so a
   read that changes nothing keeps each row object.
 - An untick reads the successor's file before it deletes it, and does

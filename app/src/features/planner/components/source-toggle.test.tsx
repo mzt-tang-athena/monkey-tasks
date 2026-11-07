@@ -1,7 +1,8 @@
 import * as React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cycleSource, type Source } from "@/features/planner/model";
+import { nextSource, type Source } from "@/features/planner/model";
+import { TestPlannerList } from "@/features/planner/testing/test-planner-list";
 import { SourceToggle } from "./source-toggle";
 
 // The harness owns the source state and cycles it through the same
@@ -9,13 +10,11 @@ import { SourceToggle } from "./source-toggle";
 function Harness() {
   const [source, setSource] = React.useState<Source>("due-period");
   return (
-    <SourceToggle
-      source={source}
-      mode="day"
-      menuOpen={false}
-      onCycle={cycleSource(source, setSource)}
-      onOpenMenu={() => undefined}
-    />
+    <TestPlannerList
+      value={{ source, cycleSource: () => setSource(nextSource) }}
+    >
+      <SourceToggle mode="day" day={new Date(2026, 9, 26)} />
+    </TestPlannerList>
   );
 }
 
@@ -75,5 +74,32 @@ describe("SourceToggle", () => {
     pressOut();
     expect(chip().textContent).toContain("Focus");
     expect(chip().textContent).not.toContain("Main");
+  });
+
+  it("names the period on screen, not the mode", () => {
+    render(
+      <TestPlannerList>
+        <SourceToggle mode="week" day={new Date(2026, 10, 11)} />
+      </TestPlannerList>,
+    );
+
+    expect(chip().textContent).toContain("Due 8 to 14 Nov");
+  });
+
+  it("opens the chooser from its own view when held", () => {
+    const openSourceMenu = vi.fn();
+    render(
+      <TestPlannerList value={{ openSourceMenu }}>
+        <SourceToggle mode="day" day={new Date(2026, 9, 26)} />
+      </TestPlannerList>,
+    );
+
+    pressIn();
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(openSourceMenu).toHaveBeenCalledTimes(1);
+    expect(openSourceMenu.mock.calls[0][0]).toHaveProperty("current");
   });
 });

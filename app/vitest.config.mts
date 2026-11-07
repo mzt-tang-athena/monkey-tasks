@@ -1,4 +1,4 @@
-import { configDefaults, defineConfig } from "vitest/config";
+import { defineConfig } from "vitest/config";
 import path from "node:path";
 
 const src = path.resolve(import.meta.dirname, "src");
@@ -26,10 +26,6 @@ export default defineConfig({
           include: [
             "src/**/*.test.ts",
             "scripts/**/*.test.ts",
-            // Store tests drive the provider in node, with their own
-            // react-native mock. Tickets 0051 and 0052 rewrite them.
-            "src/stores/**/*.test.tsx",
-            "src/testing/repro/**/*.test.tsx",
           ],
         },
       },
@@ -57,11 +53,6 @@ export default defineConfig({
           name: "component",
           environment: "jsdom",
           include: ["src/**/*.test.tsx"],
-          exclude: [
-            ...configDefaults.exclude,
-            "src/stores/**",
-            "src/testing/repro/**",
-          ],
           setupFiles: ["src/testing/dom-setup.ts"],
         },
       },

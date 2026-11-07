@@ -40,8 +40,18 @@ export type VaultMutationSpec<V, R, C> = {
   optimistic?(rows: TaskItem[], v: V): { rows: TaskItem[]; context: C };
   /** The file work. It runs when the writes before it have settled. */
   run(v: V, io: VaultIo): Promise<R>;
-  /** Land the result on the rows that still hold this write's text. */
-  settle?(rows: TaskItem[], v: V, r: R, c: C | undefined): TaskItem[];
+  /**
+   * Land the result on the rows that still hold this write's text.
+   * `last` is true when no other vault write is pending, so no later
+   * tap holds a newer text and the file is the truth.
+   */
+  settle?(
+    rows: TaskItem[],
+    v: V,
+    r: R,
+    c: C | undefined,
+    last: boolean,
+  ): TaskItem[];
   /** Undo the optimistic step on the rows that still hold its text. */
   rollback?(
     rows: TaskItem[],
@@ -51,6 +61,11 @@ export type VaultMutationSpec<V, R, C> = {
   ): TaskItem[];
   /** The tasks whose alarms the write moved. */
   alarms?(r: R): AlarmMove[];
+  /**
+   * The tasks whose alarms a failed write moved anyway, because it left
+   * a note on disk.
+   */
+  errorAlarms?(error: unknown, v: V): AlarmMove[];
 };
 
 /** Write the rows of one cache entry through an updater. */
@@ -116,7 +131,9 @@ export function useVaultMutation<V, R, C = undefined>(
     onSuccess: (r, v, c) => {
       const { settle } = spec;
       if (settle != null) {
-        updateRows(client, root, (rows) => settle(rows, v, r, c));
+        // This write still counts as pending here.
+        const last = client.isMutating({ mutationKey: [VAULT_SCOPE] }) <= 1;
+        updateRows(client, root, (rows) => settle(rows, v, r, c, last));
       }
       for (const [before, after] of spec.alarms?.(r) ?? []) {
         void syncTaskReminders(before, after);
@@ -126,6 +143,9 @@ export function useVaultMutation<V, R, C = undefined>(
       const { rollback } = spec;
       if (rollback != null) {
         updateRows(client, root, (rows) => rollback(rows, v, c, error));
+      }
+      for (const [before, after] of spec.errorAlarms?.(error, v) ?? []) {
+        void syncTaskReminders(before, after);
       }
     },
     onSettled: () => {

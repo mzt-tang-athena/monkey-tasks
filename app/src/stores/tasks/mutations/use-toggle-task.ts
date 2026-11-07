@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { nextAfter } from "@/lib/recurrence";
+import { monthEndRule, nextAfter } from "@/lib/recurrence";
 import { createNote } from "@/lib/vault/notes";
 import { useVault } from "@/lib/vault/vault-provider";
 import { nowStamp, todayIso } from "@/utils/dates";
@@ -87,7 +87,12 @@ function spawnInput(task: TaskItem, due: string): SpawnInput {
     title: data?.title ?? task.name,
     previous: task.fileName.replace(/\.md$/, ""),
     due,
-    recurrence: data?.recurrence ?? "",
+    // A bare rule on a late due day becomes the month-end rule, so the
+    // next note keeps the day (ADR 0042).
+    recurrence:
+      data?.recurrence == null || data.due == null
+        ? (data?.recurrence ?? "")
+        : monthEndRule(data.recurrence, data.due),
     lists: data?.lists ?? [],
     // A date-only due carries no time of day, so no alarm.
     reminders: due.includes("T") ? [due] : [],
@@ -235,11 +240,21 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
     }
     return { before, after, successor };
   },
-  settle(rows, { id, successorId }, r, c) {
+  settle(rows, { id, successorId }, r, c, last) {
     if (c == null) {
       return rows;
     }
     let next = settleRow(rows, id, c.text, r.after);
+    if (last) {
+      // A Retry can run while another tap on the row is pending. That
+      // tap fails and rolls the row back, so the row no longer holds
+      // this write's text. With no write left, the note is the truth.
+      next = patchRow(next, id, (row) =>
+        row.text === r.after.text
+          ? row
+          : { ...r.after, id, uri: row.uri, fileName: row.fileName },
+      );
+    }
     if (successorId != null) {
       next = placeSuccessor(next, successorId, c.successorText, r.successor);
     }
@@ -272,6 +287,13 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
       moves.push([r.removed, null]);
     }
     return moves;
+  },
+  errorAlarms(error): AlarmMove[] {
+    // The kept note is on disk and open, so it needs its alarm now, not
+    // after the next read.
+    return error instanceof SuccessorKeptError
+      ? [[null, error.successor]]
+      : [];
   },
 };
 
