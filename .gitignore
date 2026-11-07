@@ -27,3 +27,8 @@ __pycache__/
 # Vale (write-good is cloned, not committed)
 .vale/styles/write-good/
 .openchamber/
+
+# Claude Code: only the shared workflow scripts and project skills are tracked
+.claude/*
+!.claude/workflows/
+!.claude/skills/

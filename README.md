@@ -61,6 +61,11 @@ at once. The run fails if the port is busy. To test a running
 `npm run web` instead, use `npm run e2e:dev`. A failed test keeps a
 trace in `e2e/test-results`.
 
+To prove one change by hand, agents use the project skill in
+`.claude/skills/verify-monkey-tasks/`. It serves the preview on its own
+port and runs journey files on the same helpers. It keeps screenshots,
+traces and note text in `app/build/verify/evidence/`.
+
 Run the schema tests from `contracts/packages/schemas`:
 
 ```bash
