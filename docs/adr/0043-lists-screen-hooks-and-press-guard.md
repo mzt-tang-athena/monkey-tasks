@@ -50,4 +50,5 @@ and finds it again at the top of the list.
 
 The tab strip fades an edge where more tabs wait. The fade is a stepped
 set of views, because the app has no gradient library. It paints the
-surface color, so the strip belongs on a surface.
+surface color, so the strip belongs on a surface. The strip scrolls the selected tab
+past the start fade, so the fade never pales its name.

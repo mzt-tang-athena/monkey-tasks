@@ -17,6 +17,7 @@ import { colors, radius, spacing, touchTarget, type } from "@/theme/tokens";
 const fadeSteps = [0.12, 0.3, 0.52, 0.74, 0.9, 1];
 /** Each step's width. */
 const fadeStepWidth = 5;
+const fadeWidth = fadeSteps.length * fadeStepWidth;
 /** The scroll distance, in px, that counts as past an edge. */
 const fadeEdge = 2;
 
@@ -70,7 +71,8 @@ export function TabStrip({
     if (x == null) {
       return;
     }
-    strip.current?.scrollTo({ x: Math.max(0, x - spacing.m), animated: true });
+    // Past the start fade, so the fade never pales the selected name.
+    strip.current?.scrollTo({ x: Math.max(0, x - fadeWidth), animated: true });
   }, [selected]);
 
   return (
