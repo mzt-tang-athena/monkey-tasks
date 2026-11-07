@@ -108,6 +108,18 @@ export function Menu({
   // item count gives it.
   const [height, setHeight] = React.useState<number | null>(null);
 
+  // A shut menu forgets where it was. On a reopen the anchor may have
+  // moved, and the new measure is async on a phone, so a kept box
+  // would draw one frame at the old place.
+  const [wasOpen, setWasOpen] = React.useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (!open) {
+      setBox(null);
+      setHeight(null);
+    }
+  }
+
   React.useEffect(() => {
     if (!open) {
       return;

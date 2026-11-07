@@ -3,7 +3,8 @@ import { SectionList, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "@/types/task";
-import { BottomBar } from "@/components/bottom-bar";
+import { BottomBar } from "@/components/bottom-bar/bottom-bar";
+import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { useSwipePager } from "@/components/swipe-pager";
 import { cardPosition } from "@/components/ui/card-group-row";
 import {
@@ -15,7 +16,6 @@ import { useStableCallback } from "@/hooks/use-stable-callback";
 import { usePressGuard } from "@/hooks/use-press-guard";
 import { swipeProps, type SwipeController } from "@/lib/swipe";
 import { useStoreMeta } from "@/stores/tasks/task-state";
-import { useCaptureTask } from "@/stores/tasks/mutations/use-capture-task";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useGrantFolder, useRefreshTasks } from "@/stores/tasks/use-vault-read";
@@ -44,10 +44,9 @@ import { applyTickHold } from "./lib/tick-hold";
  * composes the hooks and the components. It holds no state of its own
  * beyond the pull to refresh.
  */
-export default function ListsScreen() {
+export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const { rootUri, status, readError } = useStoreMeta();
   const toggleTask = useToggleTask();
-  const capture = useCaptureTask();
   const reorderSection = useReorderSection();
   const refresh = useRefreshTasks();
   const grant = useGrantFolder();
@@ -273,9 +272,10 @@ export default function ListsScreen() {
           remounts and never jumps. Main captures write no lists
           property; every other tab preselects its own list. */}
       <BottomBar
-        targets={tabState.targets}
-        defaultTargetIndex={tabState.defaultTargetIndex}
-        onSend={(parsed, target) => capture(parsed, target)}
+        action={dock({
+          targets: tabState.targets,
+          defaultTargetIndex: tabState.defaultTargetIndex,
+        })}
       />
     </View>
   );

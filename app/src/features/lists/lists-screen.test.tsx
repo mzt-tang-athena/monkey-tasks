@@ -29,7 +29,7 @@ vi.mock("@/lib/settings", () => ({
   saveSetting: () => undefined,
 }));
 
-vi.mock("@/components/bottom-bar", () => ({ BottomBar: () => null }));
+vi.mock("@/components/bottom-bar/bottom-bar", () => ({ BottomBar: () => null }));
 
 vi.mock("@/stores/tasks/task-state", async () => {
   const React = await import("react");
@@ -60,9 +60,6 @@ vi.mock("@/stores/tasks/mutations/use-toggle-task", () => ({
     );
     spy.listeners.forEach((listener) => listener());
   },
-}));
-vi.mock("@/stores/tasks/mutations/use-capture-task", () => ({
-  useCaptureTask: () => async () => undefined,
 }));
 vi.mock("@/stores/tasks/mutations/use-reorder-section", () => ({
   useReorderSection: () => async () => undefined,
@@ -100,6 +97,8 @@ vi.mock("@/components/task-row", async () => {
   return { TaskRow: Row };
 });
 
+const dock = () => null;
+
 function task(name: string, due?: string): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;
   return {
@@ -132,7 +131,7 @@ describe("ListsScreen", () => {
     // Bug 4: each row got new callbacks on every render, so one tick
     // rendered every row twice, once at the hold and once after it.
     spy.tasks = [task("Apple"), task("Banana"), task("Cherry")];
-    render(<ListsScreen />);
+    render(<ListsScreen dock={dock} />);
     const before = { ...spy.renders };
 
     tick("Banana");
@@ -146,7 +145,7 @@ describe("ListsScreen", () => {
     // Bug 5: a section with no key made SectionList key each row by the
     // section's index, so every row below a vanished group remounted.
     spy.tasks = [task("Pay rent", todayIso()), task("Apple"), task("Banana")];
-    render(<ListsScreen />);
+    render(<ListsScreen dock={dock} />);
     expect(spy.mounts.Apple).toBe(1);
 
     tick("Pay rent");
@@ -158,7 +157,7 @@ describe("ListsScreen", () => {
 
   it("still opens the editor from a row", () => {
     spy.tasks = [task("Apple")];
-    render(<ListsScreen />);
+    render(<ListsScreen dock={dock} />);
 
     fireEvent.click(screen.getByLabelText("open Apple"));
 
@@ -169,7 +168,7 @@ describe("ListsScreen", () => {
 
   it("holds a ticked row in its place for one beat", () => {
     spy.tasks = [task("Apple", todayIso()), task("Banana")];
-    render(<ListsScreen />);
+    render(<ListsScreen dock={dock} />);
 
     tick("Apple");
 

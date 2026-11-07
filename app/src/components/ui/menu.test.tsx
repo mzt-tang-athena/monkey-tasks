@@ -125,6 +125,25 @@ describe("Menu", () => {
     expect(menuBox(screen.getByRole("menu")).left).toBe(676 + 44 - menuWidth);
   });
 
+  it("does not draw at the old place when it reopens after its anchor moved", async () => {
+    render(<Harness items={items} />);
+    placeAnchor({ x: 20, y: 20, width: 44, height: 44 });
+    const first = await openMenu();
+    const old = menuBox(first);
+    fireEvent.click(screen.getByRole("button", { name: "close menu" }));
+
+    // The anchor moves while the menu is shut. On a phone the new
+    // measure arrives a frame later, and no frame may show the menu
+    // at the old place in between.
+    placeAnchor({ x: 326, y: 300, width: 44, height: 44 });
+    fireEvent.click(screen.getByText("open"));
+
+    expect(screen.queryByRole("menu")).toBeNull();
+    const second = await waitFor(() => screen.getByRole("menu"));
+    expect(menuBox(second)).not.toEqual(old);
+    expect(menuBox(second).top).toBe(300 + 44 + 4);
+  });
+
   it("closes on a press on the backdrop", async () => {
     render(<Harness items={items} />);
     placeAnchor({ x: 326, y: 20, width: 44, height: 44 });

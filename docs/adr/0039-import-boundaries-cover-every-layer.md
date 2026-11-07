@@ -179,3 +179,23 @@ Ticket 0052 removed the two store imports that broke the zones. The
 store imports no feature now: `captureDraft` moved to
 `stores/tasks/capture-draft.ts` and `saveTaskEdit` to
 `lib/vault/save-task-edit.ts`.
+
+## Amendment, 2026-11-04: the route passes the capture dock
+
+Ticket 0057 removed the last two imports that broke the zones. The
+bottom bar in `components/bottom-bar/` imports no feature now. It
+draws the nav tabs and an `action` slot, and it hands the slot its
+height and its lift through `useBar`.
+
+The route composes the dock. Each tab route passes a `dock` function
+into its screen. The screen calls it with its targets, its default
+target and its default due day, and puts the result in the bar. The
+dock is `CaptureDock` in `features/capture`. A route may import a
+feature, so no screen imports one.
+
+Alternative: the screen registers its capture targets in a context,
+and a layout above both tabs renders one dock. That layout would hold
+one dock for both tabs, and it removes the prop. We rejected it. The
+registration runs in an effect, so the dock would show a wrong default
+target for one frame after a tab change. The prop passes the values in
+the same render.

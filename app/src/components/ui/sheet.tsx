@@ -10,6 +10,7 @@ import { useDismiss } from "@/hooks/use-dismiss";
 import { useSheetMotion } from "@/lib/motion";
 import {
   colors,
+  measure,
   radiusFloating,
   shadows,
   sheetGap,
@@ -195,12 +196,18 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  // The dock spans the window and centers the panel, which holds to
+  // the reading measure (ADR 0010).
   dock: {
     position: "absolute",
-    left: spacing.m,
-    right: spacing.m,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.m,
+    alignItems: "center",
   },
   panel: {
+    width: "100%",
+    maxWidth: measure,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,

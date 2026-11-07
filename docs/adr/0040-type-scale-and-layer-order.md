@@ -84,3 +84,30 @@ such values as props.
 While a modal overlay shows, the host hides the screen from assistive
 tech: `aria-hidden` on the web, `no-hide-descendants` on Android. The
 overlay itself stays readable.
+
+## Amendment, 2026-11-07: an overlay closes with its screen
+
+The host draws every overlay above the whole stack, so an overlay can
+outlive the screen that opened it. In ticket 0057 the capture sheet
+stayed open over the Planner and over the editor. A nav tab or a task
+row took focus by keyboard, because `aria-hidden` does not stop focus
+on the web.
+
+An overlay belongs to its screen. The capture dock reads
+`useIsFocused`. It closes the sheet when its tab loses focus, and it
+draws the toast only while its tab is focused. Escape now listens in
+the capture phase, so it closes the sheet while the text input has
+focus.
+
+A close on focus loss plays no exit. The sheet leaves the tree at once,
+so the clock it shares with the bar has no view to drive. The dock sets
+the sheet's clock to closed and the bar's lift to shown, and the user
+finds the bar whole on return. An exit run there would stop when the
+sheet's view went, and it would leave the bar collapsed.
+
+Alternative: mark the hidden screen `inert` on the web while a modal
+overlay shows, so focus cannot leave the sheet. We did not take it
+here. The focus close fixes both reported paths, and the base let the
+same keys through. `inert` changes what the keyboard can reach on every
+modal overlay, so ticket 0063 can weigh it with the rest of the focus
+handling.

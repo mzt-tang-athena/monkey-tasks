@@ -2,6 +2,7 @@ import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
   colors,
+  measure,
   radiusFloating,
   shadows,
   spacing,
@@ -28,30 +29,40 @@ export function Toast({
 }) {
   return (
     <Overlay layer="toast">
-      <View role="alert" aria-live="polite" style={[styles.toast, { bottom }]}>
-        <Text style={styles.message} numberOfLines={3}>
-          {message}
-        </Text>
-        {actions.map((action, index) => (
-          <Button
-            key={action.label}
-            variant="text"
-            tone={index === 0 ? "accent" : "muted"}
-            label={action.label}
-            accessibilityLabel={action.accessibilityLabel}
-            onPress={action.onPress}
-          />
-        ))}
+      <View pointerEvents="box-none" style={[styles.dock, { bottom }]}>
+        <View role="alert" aria-live="polite" style={styles.toast}>
+          <Text style={styles.message} numberOfLines={3}>
+            {message}
+          </Text>
+          {actions.map((action, index) => (
+            <Button
+              key={action.label}
+              variant="text"
+              tone={index === 0 ? "accent" : "muted"}
+              label={action.label}
+              accessibilityLabel={action.accessibilityLabel}
+              onPress={action.onPress}
+            />
+          ))}
+        </View>
       </View>
     </Overlay>
   );
 }
 
 const styles = StyleSheet.create({
-  toast: {
+  // The dock spans the window and centers the toast, which holds to
+  // the reading measure (ADR 0010).
+  dock: {
     position: "absolute",
-    left: spacing.m,
-    right: spacing.m,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.m,
+    alignItems: "center",
+  },
+  toast: {
+    width: "100%",
+    maxWidth: measure,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.s,
