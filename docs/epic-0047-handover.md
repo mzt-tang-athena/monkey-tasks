@@ -23,6 +23,29 @@ PR #68.
 
 The tip of `epic/0047-rebuild` was `7c079a2` before this guide merged.
 
+## Start here
+
+This guide and the phase scripts are on the branch
+`docs/epic-0047-handover` (PR #86). PR #86 is not merged yet. Do these
+steps first, from that branch:
+
+1. Verify the last commit on the branch. Nobody ran it.
+   - It changes the e2e test "the day list keeps its source toggle above
+     the bottom bar" (`app/e2e/specs/planner-split.spec.ts:56`) to wait
+     for the settled layout. The old test failed PR #86's e2e-web check
+     about once in 20 runs, under load.
+   - The cause is a real one-frame jump, filed in ticket 0061 under "The
+     first frame of the split". Until the layout reports, the split
+     paints the timeline at 320 px. On a 360 by 640 screen it settles at
+     200 px.
+   - Run the gates and `npx playwright test -c e2e/playwright.config.ts
+     e2e/specs/planner-split.spec.ts --repeat-each=10` from `app/`.
+2. Get PR #86's checks green and merge it into `epic/0047-rebuild`.
+3. File the non-blocking review notes that the phase 3 reviewers left.
+   They are comments on PRs #82 (0056), #83 (0067) and #84 (0066). Put
+   each note in the ticket that owns that code.
+4. Go on with "Run the next phases".
+
 ## Set up the machine
 
 1. Install Git, Node 22, Python 3, the GitHub CLI (`gh`), Vale and
