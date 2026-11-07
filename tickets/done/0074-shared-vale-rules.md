@@ -1,5 +1,5 @@
 ---
-id: 0047
+id: 0074
 title: Use the shared Vale rules package
 created: 2026-11-03
 priority: normal
