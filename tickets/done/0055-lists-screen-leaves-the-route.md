@@ -3,8 +3,8 @@ id: 0055
 title: The Lists screen leaves the route
 created: 2026-10-26
 priority: high
-assignee:
-pr:
+assignee: claude-code
+pr: 81
 depends: [0054]
 ---
 
@@ -106,24 +106,39 @@ direct vault write.
 
 ## Acceptance
 
-- [ ] `src/app/(tabs)/index.tsx` re-exports the screen and holds no other code.
-- [ ] The files in the table exist.
-- [ ] `lists-screen.tsx` holds no styles for menus, notices, states or cards.
-- [ ] `lib/tick-hold.ts` has unit tests for a held row in its own group, in a group that left, and with no hold.
-- [ ] A test reproduces the backdrop bug first. Afterwards, with a menu open, a tap on a row closes the menu and opens no editor.
-- [ ] The overflow menu shows no Rename list, Delete list or Delete all completed tasks item.
-- [ ] A Playwright test at 1280 by 800 reproduces the chrome bug first. Afterwards the top surface band has one width from edge to edge.
-- [ ] A render-count test reproduces the memo bug first. Afterwards a tick re-renders the ticked row only.
+- [x] `src/app/(tabs)/index.tsx` re-exports the screen and holds no other code.
+- [x] The files in the table exist.
+- [x] `lists-screen.tsx` holds no styles for menus, notices, states or cards.
+- [x] `lib/tick-hold.ts` has unit tests for a held row in its own group, in a group that left, and with no hold.
+- [x] A test reproduces the backdrop bug first. Afterwards, with a menu open, a tap on a row closes the menu and opens no editor.
+- [x] The overflow menu shows no Rename list, Delete list or Delete all completed tasks item.
+- [x] A Playwright test at 1280 by 800 reproduces the chrome bug first. Afterwards the top surface band has one width from edge to edge.
+- [x] A render-count test reproduces the memo bug first. Afterwards a tick re-renders the ticked row only.
 - [ ] During a reorder, a slot crossing re-renders only the rows whose first, last or divider state changes.
-- [ ] A test reproduces the remount bug first. Afterwards a group that leaves remounts no row in a later group.
-- [ ] A Playwright test reproduces the swipe bug first. Afterwards a sideways swipe that starts on a row changes the tab and opens no editor.
-- [ ] A Playwright screenshot reproduces the repair notice bug first. Afterwards, at 412 by 915, the notice's fixed part is no taller than one row, and no clipped card edge shows under the notice.
-- [ ] A tap on a row still opens the editor.
-- [ ] A tick still holds its row in place for one beat before it moves to Completed.
-- [ ] A drag in My order still writes the new order.
-- [ ] `ListPagePreview` renders through `SectionHeader`, `CardGroupRow` and `TaskRowFace`.
-- [ ] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
+- [x] A test reproduces the remount bug first. Afterwards a group that leaves remounts no row in a later group.
+- [x] A Playwright test reproduces the swipe bug first. Afterwards a sideways swipe that starts on a row changes the tab and opens no editor.
+- [x] A Playwright screenshot reproduces the repair notice bug first. Afterwards, at 412 by 915, the notice's fixed part is no taller than one row, and no clipped card edge shows under the notice.
+- [x] A tap on a row still opens the editor.
+- [x] A tick still holds its row in place for one beat before it moves to Completed.
+- [x] A drag in My order still writes the new order.
+- [x] `ListPagePreview` renders through `SectionHeader`, `CardGroupRow` and `TaskRowFace`.
+- [x] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
 
 ## Outcome
 
-(filled in before moving to done/)
+Landed in PR 81.
+
+- The route is one line. The screen lives in `src/features/lists/` as a screen, five hooks, `lib/tick-hold.ts`, and the toolbar, notices, row, ghost and header components.
+- All seven bugs are fixed, each with a test that failed first. Bug 6 uses `src/hooks/use-press-guard.ts`. The swipe controller reports its slop to the pager, and B1 is now a plain test.
+- Bug 7: the repair notice is the list header. Its fixed part is zero tall, so no card edge clips under it. A Playwright test checks that it scrolls with the list.
+- The four open findings are fixed: the tab strip fades an edge (the "Fo" cut), the repair notice, `textInset` reuses `circle`, and `tasks.spec.ts` uses one `locator.evaluate`.
+- A tick on the only row of a group put the group after later groups during the hold, with an empty Completed header. The splice now restores the group at its own place.
+- ADR 0043 records the choices.
+- A list note can vanish while its tab is open, so the screen falls back to Main. The pager now steps from that derived tab. A test removes the open list note and then swipes.
+
+Left open:
+
+- The slot crossing acceptance line has a row-level test (`task-card-row.test.tsx`) and stable callbacks, but no screen-level render count during a live drag. jsdom has no layout, so a drag test needs a layout stub. Ticket 0060 owns `use-row-reorder` and plans the J2 test that replaces the looser crossing test.
+- B2 (touch swipe) stays `test.fail` until 0059.
+- Ticket 0057 owns the bottom bar, the sheet and the toast on wide screens.
+

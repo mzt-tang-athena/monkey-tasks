@@ -35,7 +35,7 @@ import { TasksProvider } from "@/stores/tasks/tasks-provider";
 import type { TaskListData } from "@/stores/tasks/query";
 import { useStoreSnapshot, type StoreSnapshot } from "@/testing/store-snapshot";
 import type { TaskItem } from "@/types/task";
-import { reorderItems } from "@/features/lists/reorder";
+import { reorderItems } from "@/features/lists/lib/reorder";
 import { parseCapture } from "@/features/capture/parse";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
