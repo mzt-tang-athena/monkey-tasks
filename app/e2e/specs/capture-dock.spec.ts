@@ -132,6 +132,7 @@ test.describe("the sheet belongs to its tab", () => {
     await page.getByRole("tab", { name: "Lists" }).click();
     await expect(row(page, undated.second)).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "add task" })).toBeVisible();
   });
 
   test("a row opened by keyboard shows the editor with no sheet over it", async ({
@@ -146,5 +147,21 @@ test.describe("the sheet belongs to its tab", () => {
     await page.getByRole("button", { name: "cancel editing" }).click();
     await expect(row(page, undated.second)).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "add task" })).toBeVisible();
   });
+});
+
+test("Escape closes the sheet while the capture input has focus", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(row(page, undated.second)).toBeVisible();
+  await page.getByRole("button", { name: "add task" }).click();
+  const input = page.getByPlaceholder("Add a task");
+  await input.fill(capture.typed);
+  await expect(input).toBeFocused();
+
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
