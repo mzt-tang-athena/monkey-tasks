@@ -115,6 +115,15 @@ export function useCaptureSheet({
   );
 
   React.useEffect(() => {
+    // A tab that lost focus has no exit to play: its sheet left the
+    // tree with the focus. An exit run here would stop at once, because
+    // Animated stops a value whose last view goes, and the parallel
+    // stops the bar's lift with it. The bar would wait collapsed.
+    if (!focused) {
+      expand.setValue(0);
+      lift.setValue(1);
+      return;
+    }
     // One clock for the sheet's travel and the bar's collapse: both
     // start and finish on the same frame, so the close reads as a
     // single motion.
@@ -139,7 +148,7 @@ export function useCaptureSheet({
       }
     });
     return () => animation.stop();
-  }, [expand, lift, open]);
+  }, [expand, lift, open, focused]);
 
   // The sheet draws above every screen, so it must not outlive its tab.
   // When another screen takes focus, from a nav tab or a row, the sheet
