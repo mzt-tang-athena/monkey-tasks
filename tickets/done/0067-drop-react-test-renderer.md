@@ -3,8 +3,8 @@ id: 0067
 title: Drop react-test-renderer
 created: 2026-10-27
 priority: normal
-assignee:
-pr:
+assignee: claude-code
+pr: 83
 depends: [0052]
 ---
 
@@ -34,9 +34,24 @@ with `react-test-renderer`:
 
 ## Acceptance
 
-- [ ] No test imports `react-test-renderer`.
-- [ ] `react-test-renderer` is gone from `app/package.json`.
-- [ ] The three hook tests use `renderHook` and pass in the `component` project.
+- [x] No test imports `react-test-renderer`.
+- [x] `react-test-renderer` is gone from `app/package.json`.
+- [x] The three hook tests use `renderHook` and pass in the `component` project.
 
 ## Outcome
-(filled in before moving to done/)
+Four changes landed.
+
+- The three hook tests use `renderHook` and moved to `.test.tsx`. The
+  `Probe` components and their `react-hooks/globals` disables are gone.
+- Ticket 0052 had left `react-test-renderer` in the two store tests. They
+  now render with Testing Library's `render`. The Probe pattern stays
+  there, with its lint disable, because the store tests read several hooks
+  through one probe.
+- The store tests moved from the `unit` project to the `component`
+  project. The include and exclude lists in `vitest.config.mts` lost
+  their store entries.
+- `react-test-renderer` is out of `app/package.json`. ADR 0038 has a
+  dated amendment.
+
+Nothing is left over. `@types/react-test-renderer` stays in the lockfile,
+because `react-native-gesture-handler` depends on it.

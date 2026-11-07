@@ -33,6 +33,75 @@ function fromFloating(date: Date): Date {
   );
 }
 
+/** The rule text of a monthly rule that lands on the month's end. */
+function monthlyForm(interval: number, day: number): string {
+  const head =
+    interval === 1 ? "FREQ=MONTHLY" : `FREQ=MONTHLY;INTERVAL=${interval}`;
+  if (day <= 28) {
+    return head;
+  }
+  if (day === 31) {
+    return `${head};BYMONTHDAY=-1`;
+  }
+  const days = day === 30 ? "28,29,30" : "28,29";
+  return `${head};BYMONTHDAY=${days};BYSETPOS=-1`;
+}
+
+/** The same for a yearly rule. Only 29 February needs the change. */
+function yearlyForm(interval: number, leapDay: boolean): string {
+  const head =
+    interval === 1 ? "FREQ=YEARLY" : `FREQ=YEARLY;INTERVAL=${interval}`;
+  return leapDay ? `${head};BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1` : head;
+}
+
+/**
+ * The rule that gives a month-end task a due date in every month
+ * (ADR 0042, ticket 0066). A bare monthly rule on a due day after the
+ * 28th, and a bare yearly rule on 29 February, become a rule that
+ * lands on the last day of a short month and goes back to its own day
+ * after it. The rule carries the day, so it does not depend on the
+ * start date. Any other rule comes back unchanged.
+ *
+ * A rule this function made stays as it is while the due day follows
+ * the rule: the occurrence after 31 January is 28 February, and its
+ * rule must still say "last day". `reanchor` is for a due day the user
+ * changed. It also replaces a rule this function made, so the rule
+ * follows the new day.
+ */
+export function monthEndRule(
+  recurrence: string,
+  due: string,
+  reanchor = false,
+): string {
+  const stored = parseStoredDate(due);
+  if (stored == null) {
+    return recurrence;
+  }
+  const day = stored.date.getDate();
+  const text = recurrence.trim().replace(/;INTERVAL=1(?=;|$)/, "");
+  const monthly = /^FREQ=MONTHLY(?:;INTERVAL=(\d+))?/.exec(text);
+  if (monthly != null) {
+    const interval = Number(monthly[1] ?? 1);
+    const forms = [28, 29, 30, 31].map((d) => monthlyForm(interval, d));
+    if (interval >= 1 && forms.includes(text)) {
+      const bare = text === forms[0];
+      return bare || reanchor ? monthlyForm(interval, day) : recurrence;
+    }
+    return recurrence;
+  }
+  const yearly = /^FREQ=YEARLY(?:;INTERVAL=(\d+))?/.exec(text);
+  if (yearly != null) {
+    const interval = Number(yearly[1] ?? 1);
+    const leapDay = stored.date.getMonth() === 1 && day === 29;
+    const bare = yearlyForm(interval, false);
+    const made = yearlyForm(interval, true);
+    if (interval >= 1 && (text === bare || (reanchor && text === made))) {
+      return yearlyForm(interval, leapDay);
+    }
+  }
+  return recurrence;
+}
+
 /** A rule anchored at start, or null when the rule is unusable.
     Unknown keywords, bad frequencies and impossible BYDAY values all
     surface as throws; an unusable rule is simply not recurring. */
@@ -64,7 +133,12 @@ function ruleFor(recurrence: string, due: string): RRule | null {
     return cached;
   }
   const stored = parseStoredDate(due);
-  const rule = stored == null ? null : buildRule(recurrence, stored.date);
+  // A bare monthly rule on a late due day reads as a month-end rule, so
+  // an old note gets every month (ADR 0042).
+  const rule =
+    stored == null
+      ? null
+      : buildRule(monthEndRule(recurrence, due), stored.date);
   if (ruleCache.size >= RULE_CACHE_LIMIT) {
     const oldest = ruleCache.keys().next();
     if (!oldest.done) {

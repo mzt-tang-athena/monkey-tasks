@@ -20,7 +20,7 @@ import {
   focusManager,
   type QueryClient,
 } from "@tanstack/react-query";
-import { act, create } from "react-test-renderer";
+import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { VaultAdapter } from "@/lib/vault/adapter";
 import {
@@ -36,6 +36,7 @@ import type { TaskListData } from "@/stores/tasks/query";
 import { useStoreSnapshot, type StoreSnapshot } from "@/testing/store-snapshot";
 import type { TaskItem } from "@/types/task";
 import { reorderItems } from "@/features/lists/lib/reorder";
+import { parseCapture } from "@/features/capture/parse";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
@@ -75,6 +76,8 @@ let failAfter: number | null = null;
 let deleteFails = false;
 let createCalls = 0;
 let fullSyncs = 0;
+/** The alarm times the store asked the OS for. */
+const scheduledAt: number[] = [];
 /** A phone with no folder granted: the vault has no saved root. */
 let noFolder = false;
 
@@ -110,7 +113,10 @@ vi.mock("@/stores/tasks/load-vault", async (importOriginal) => {
 // starts by cancelling every alarm, so that call counts the rebuilds.
 vi.mock("@/lib/notifications", () => ({
   ensureNotificationPermission: async () => true,
-  scheduleAt: async () => "alarm",
+  scheduleAt: async (when: Date) => {
+    scheduledAt.push(when.getTime());
+    return "alarm";
+  },
   cancelAllScheduled: async () => {
     fullSyncs += 1;
   },
@@ -231,7 +237,7 @@ async function mount(): Promise<void> {
   const owned = client;
   const adapter = instrumented(vault);
   await act(async () => {
-    create(
+    render(
       <QueryClientProvider client={owned}>
         <VaultProvider adapter={adapter}>
           <TasksProvider>
@@ -267,6 +273,7 @@ beforeEach(() => {
   deleteFails = false;
   createCalls = 0;
   fullSyncs = 0;
+  scheduledAt.length = 0;
   noFolder = false;
   onRender = null;
   latest = null;
@@ -524,6 +531,53 @@ describe("store races (ticket 0052)", () => {
     expect(store().tasks.some((task) => task.uri === successor)).toBe(true);
   });
 
+  // The tick failed after it made the next note, and the delete of that
+  // note failed too. The note stays, so its alarm must ring.
+  it("schedules the alarm of a successor kept after a failed tick", async () => {
+    disk.set(
+      WATER,
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2099-01-01T09:00\nrecurrence: FREQ=DAILY\n---\n',
+    );
+    await mount();
+    failAfter = 0;
+    deleteFails = true;
+    await act(async () => {
+      await store().toggle(row("Water"));
+    });
+    await flush();
+    const successor = [...disk.keys()].find((uri) => uri.includes("2099-01-02"));
+    expect(successor).toBeDefined();
+    expect(scheduledAt).toEqual([new Date(2099, 0, 2, 9, 0).getTime()]);
+  });
+
+  // A Retry runs while another tap on the same row is still pending.
+  // That tap fails and rolls the row back, and the Retry then writes the
+  // note. The row must show what the note holds.
+  it("shows a retried tick as done after the tap before it failed", async () => {
+    await mount();
+    failAfter = 0;
+    await act(async () => {
+      await store().toggle(row());
+    });
+    await flush();
+    expect(store().failures).toHaveLength(1);
+    expect(row().data?.completed).toBeUndefined();
+
+    // The next tap fails too, while the Retry waits behind it.
+    failAfter = 0;
+    await act(async () => {
+      void store().toggle(row());
+      const [failure] = store().failures;
+      if (failure.kind === "failure") {
+        failure.retry();
+      }
+    });
+    await flush();
+
+    expect(disk.get(CALL)).toContain("completed:");
+    expect(row().data?.completed).toBeDefined();
+  });
+
   // Finding 2, store side. tasks.tsx runs the full alarm rebuild on every
   // cache change, so each tap reschedules every alarm in the vault.
   it("rebuilds alarms only after a vault read", async () => {
@@ -596,7 +650,8 @@ describe("preview and empty folder (ticket 0051)", () => {
       });
     });
     await flush();
-    expect(row("Supplements").data).not.toBeNull();
+    expect(sample.data?.recurrence).toBe("FREQ=DAILY");
+    expect(row("Supplements").data?.recurrence).toBe("FREQ=DAILY");
   });
 
   // The read made Tasks/ when its listing missed it, so a slow listing
@@ -664,5 +719,110 @@ describe("preview and empty folder (ticket 0051)", () => {
     );
     expect(disk.get(`${TASKS}/Supplements.md`)).toContain("completed:");
     expect(store().failures).toEqual([]);
+  });
+});
+
+describe("month-end recurrence (ticket 0066)", () => {
+  /** Capture the line, tick it `ticks` times, and list each open due. */
+  async function dues(line: string, ticks: number): Promise<string[]> {
+    await mount();
+    const parsed = parseCapture(line, new Date(2026, 9, 27));
+    if (parsed == null) {
+      throw new Error("the line did not parse");
+    }
+    await act(async () => {
+      await store().capture(parsed, { kind: "main" });
+    });
+    await flush();
+    const found: string[] = [];
+    for (let n = 0; n <= ticks; n += 1) {
+      const open = store().tasks.find(
+        (task) => task.name === parsed.name && task.data?.completed == null,
+      );
+      if (open == null) {
+        throw new Error("no open occurrence");
+      }
+      found.push(open.data?.due ?? "");
+      if (n < ticks) {
+        await act(async () => {
+          await store().toggle(open);
+        });
+        await flush();
+      }
+    }
+    expect(store().failures).toEqual([]);
+    return found;
+  }
+
+  it("ticks a 31 January rent task through the short months", async () => {
+    expect(await dues("pay rent every month 31 January 2027", 3)).toEqual([
+      "2027-01-31",
+      "2027-02-28",
+      "2027-03-31",
+      "2027-04-30",
+    ]);
+  });
+
+  it("ticks a 30 January task into a common February", async () => {
+    expect(await dues("pay rent every month 30 January 2027", 2)).toEqual([
+      "2027-01-30",
+      "2027-02-28",
+      "2027-03-30",
+    ]);
+  });
+
+  it("ticks a 29 January task into a common February", async () => {
+    expect(await dues("pay rent every month 29 January 2027", 2)).toEqual([
+      "2027-01-29",
+      "2027-02-28",
+      "2027-03-29",
+    ]);
+  });
+
+  it("ticks a 29 January task into a leap February", async () => {
+    expect(await dues("pay rent every month 29 January 2028", 2)).toEqual([
+      "2028-01-29",
+      "2028-02-29",
+      "2028-03-29",
+    ]);
+  });
+
+  it("gives every other month on 31 December 28 February next", async () => {
+    expect(
+      await dues("pay rent every other month 31 December 2026", 2),
+    ).toEqual(["2026-12-31", "2027-02-28", "2027-04-30"]);
+  });
+
+  it("brings a yearly task due on 29 February back on 28 February", async () => {
+    expect(await dues("renew every year 29 February 2028", 1)).toEqual([
+      "2028-02-29",
+      "2029-02-28",
+    ]);
+  });
+
+  it("keeps FREQ=MONTHLY on a task due on the 15th", async () => {
+    expect(await dues("pay rent every month 15 January 2027", 2)).toEqual([
+      "2027-01-15",
+      "2027-02-15",
+      "2027-03-15",
+    ]);
+    expect(disk.get(`${TASKS}/pay rent.md`)).toContain("FREQ=MONTHLY");
+    expect(disk.get(`${TASKS}/pay rent.md`)).not.toContain("BYMONTHDAY");
+  });
+
+  it("ticks a bare monthly note due on the 31st through February", async () => {
+    disk.set(
+      `${TASKS}/Rent.md`,
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2027-01-31\nrecurrence: FREQ=MONTHLY\n---\n',
+    );
+    await mount();
+    await act(async () => {
+      await store().toggle(row("Rent"));
+    });
+    await flush();
+    const next = disk.keys().find((uri) => uri.includes("Rent 2027-02-28"));
+    expect(next).toBeDefined();
+    // The next note carries the rule, so its own ticks keep the anchor.
+    expect(disk.get(next ?? "")).toContain("BYMONTHDAY=-1");
   });
 });

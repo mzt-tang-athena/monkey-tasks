@@ -1,12 +1,11 @@
 import * as React from "react";
 import type { TaskItem } from "@/types/task";
 import { occurrencesBetween } from "@/lib/recurrence";
+import { sortDay } from "@/features/planner/lib/day-rows";
 import {
   inSourceList,
-  pillsForSource,
   sortOpenFirst,
   startOfMonth,
-  startOfWeek,
   tasksForDay,
   type Source,
 } from "@/features/planner/model";
@@ -20,12 +19,10 @@ type PlannerMonthOptions = {
 };
 
 /**
- * The planner's month state: the week's placement pool, the month
+ * The planner's month state: the month
  * the strip shows, the picked day, and the rows the pane lists.
  */
 export function usePlannerMonth({ tasks, source, day }: PlannerMonthOptions) {
-  const weekPool = pillsForSource(tasks, source, startOfWeek(day));
-
   // The month card's picked day carries the month key it belongs to,
   // so a new month from the strip invalidates the pick without an
   // effect.
@@ -33,7 +30,7 @@ export function usePlannerMonth({ tasks, source, day }: PlannerMonthOptions) {
     key: string;
     day: Date;
   } | null>(null);
-  const viewMonth = startOfMonth(day);
+  const viewMonth = React.useMemo(() => startOfMonth(day), [day]);
   const monthKey = `${viewMonth.getFullYear()}-${viewMonth.getMonth()}`;
   const pickedDay =
     picked != null && picked.key === monthKey ? picked.day : null;
@@ -57,12 +54,11 @@ export function usePlannerMonth({ tasks, source, day }: PlannerMonthOptions) {
     );
   }, [tasks, source, monthYear, monthIndex]);
   const pickedTasks = React.useMemo(
-    () => (pickedDay == null ? [] : tasksForDay(tasks, pickedDay)),
+    () => (pickedDay == null ? [] : sortDay(tasksForDay(tasks, pickedDay))),
     [tasks, pickedDay],
   );
 
   return {
-    weekPool,
     picked,
     setPicked,
     viewMonth,
@@ -72,3 +68,6 @@ export function usePlannerMonth({ tasks, source, day }: PlannerMonthOptions) {
     pickedTasks,
   };
 }
+
+/** What `usePlannerMonth` returns: the month pane's state. */
+export type PlannerMonth = ReturnType<typeof usePlannerMonth>;

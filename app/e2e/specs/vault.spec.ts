@@ -152,3 +152,40 @@ test.describe("a slow vault and a failed write", () => {
     });
   }
 });
+
+test("three ticks of a month-end task land on the last day of each month", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(row(page, undated.second)).toBeVisible();
+
+  // A bare monthly rule on the 31st, as another app writes it. The note
+  // is overdue, so each next occurrence shows at once (ticket 0066).
+  await putNote(
+    page,
+    "Tasks/Pay rent 2026-01-31.md",
+    [
+      "---",
+      'kind: "[[tasks]]"',
+      "created: 2025-12-01",
+      'title: "Pay rent"',
+      "due: 2026-01-31",
+      "recurrence: FREQ=MONTHLY",
+      "---",
+      "",
+    ].join("\n"),
+  );
+  await returnToTab(page);
+
+  for (const due of ["2026-02-28", "2026-03-31", "2026-04-30"]) {
+    await row(page, "Pay rent")
+      .getByRole("button", { name: "mark done" })
+      .click();
+    await expect
+      .poll(() => noteText(page, `Tasks/Pay rent ${due}.md`))
+      .not.toBeNull();
+    const text = await noteText(page, `Tasks/Pay rent ${due}.md`);
+    expect(text).toContain(`due: ${due}`);
+    expect(text).toContain("recurrence: FREQ=MONTHLY;BYMONTHDAY=-1");
+  }
+});

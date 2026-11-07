@@ -103,3 +103,15 @@ We rejected two other ways. `aria-hidden` on the copies hides them from
 role queries but not from `getByTestId`. A spec that scopes each query
 to the live page would have to know how each pager is built, and
 ticket 0059 rebuilds every pager.
+
+## Amendment, 2026-11-04: no test uses react-test-renderer
+
+Ticket 0067 removed the last users of `react-test-renderer`. The three
+hook tests now call `renderHook` from Testing Library. The two store
+tests render with `render`. All five run in the `component` project, so
+the `unit` project holds `.test.ts` files only.
+
+The store tests no longer run in node. They still replace `react-native`
+with a small mock, and the mock wins over the web alias. We kept that
+mock because the tests assert on `Platform` and `AppState`, not on
+rendered output.

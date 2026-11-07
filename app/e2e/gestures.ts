@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 /**
  * The pointer gestures the specs send. Every pixel value in the suite
@@ -27,12 +27,16 @@ const swipeSteps = 15;
 
 /** The box of an element that is in view. */
 async function boxOf(target: Locator) {
-  await target.scrollIntoViewIfNeeded();
-  const box = await target.boundingBox();
-  if (box == null) {
-    throw new Error(`${target} has no box`);
-  }
-  return box;
+  // A render can replace the node while the scroll waits for it to hold
+  // still, and the scroll then fails with "not attached" at once. The
+  // block looks the node up again until it holds a box.
+  let box: { x: number; y: number; width: number; height: number } | null = null;
+  await expect(async () => {
+    await target.scrollIntoViewIfNeeded();
+    box = await target.boundingBox();
+    expect(box, `${target} has no box`).not.toBeNull();
+  }).toPass({ timeout: 10_000 });
+  return box as unknown as { x: number; y: number; width: number; height: number };
 }
 
 /** Where a swipe on `from` starts and how far it moves, in viewport
@@ -86,6 +90,24 @@ export async function holdDrag(
   await page.waitForTimeout(holdMs);
   await page.mouse.move(toX, toY, { steps: 12 });
   await page.mouse.up();
+}
+
+/**
+ * Press `from`, hold past the pick delay, then move to a page point and
+ * stay there with the button down. The caller ends the gesture with
+ * `page.mouse.up()`. A test that reads the drag ghost needs this.
+ */
+export async function holdDragTo(
+  page: Page,
+  from: Locator,
+  point: { x: number; y: number },
+  { holdMs = 400 }: { holdMs?: number } = {},
+) {
+  const start = await boxOf(from);
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(holdMs);
+  await page.mouse.move(point.x, point.y, { steps: 12 });
 }
 
 /**

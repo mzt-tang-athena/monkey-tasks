@@ -244,6 +244,27 @@ gives a handler one identity for a memoized row (ADR 0041).
 `theme/tokens.ts` holds the type
 scale, the layer order and the shadows (ADR 0040).
 
+### Planner
+
+`features/planner` is a composition root (ADR 0025). The pieces:
+
+| Piece | Holds |
+|---|---|
+| `planner-screen.tsx` | Route and store reads, the list context, the overlays, the layout. |
+| `planner-layout.ts` | The shared frame and pane styles. Every other style sits next to its component. |
+| `components/planner-list-context.tsx` | What every task list shares: the source, the form, the lift and the row actions. |
+| `components/day/` | The day: the spread, the page, the timeline pane, the list pane, the split handle, the overdue group and the swipe preview. |
+| `components/week-pane.tsx`, `month-pane.tsx` | The week and month bodies. |
+| `hooks/use-drag-session.ts` | Drag for all three modes: hold, lift, ghost, touch gate, click guard and drop (ADR 0025). |
+| `hooks/use-planner-gestures.ts` | What each drop zone means, the guarded presses, and the day and month shifts. |
+| `hooks/use-split-pane.ts`, `use-planner-source.ts` | The day's split sizes, and the source and its chooser. |
+| `lib/day-rows.ts` | The rows of a day, as pure functions. The live day, the swipe preview and the month's picked day read them. |
+
+`hooks/use-today` gives one start-of-day date that moves on at midnight
+and when the app returns to the foreground. The planner route and every
+period label read it. A week column shows the chips that fit and a
+"+N more" line (ADR 0041).
+
 Imports follow four zones:
 
 1. A feature imports no other feature.
@@ -268,7 +289,9 @@ SAF with `expo-file-system/legacy` (ADR 0002), through one vault adapter
 port (ADR 0037). No backend (ADR 0003).
 Notifications fire on the device with `expo-notifications` (ADR 0004).
 Capture parses natural-language dates with chrono-node. The app stores recurrence
-as a bare RRULE value and expands it with `rrule`.
+as a bare RRULE value and expands it with `rrule`. A monthly task due after
+the 28th gets a month-end rule, so it has a due date in every month (ADR
+0042).
 
 ## Next
 

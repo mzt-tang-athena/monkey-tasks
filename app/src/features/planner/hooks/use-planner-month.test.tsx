@@ -1,8 +1,4 @@
-/* eslint-disable react-hooks/globals */
-// The Probe pattern: the test reads the hook result through a module
-// binding, which is the shape the rule forbids in app code.
-import * as React from "react";
-import { act, create } from "react-test-renderer";
+import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { Source } from "@/features/planner/model";
@@ -22,32 +18,15 @@ function task(name: string, data: TaskFrontmatter | null): TaskItem {
   };
 }
 
-let latest: { monthRows: TaskItem[] } | null = null;
-
-function Probe(props: {
-  tasks: TaskItem[];
-  source: Source;
-  day: Date;
-}): null {
-  latest = usePlannerMonth(props);
-  return null;
-}
-
-async function mount(
-  tasks: TaskItem[],
-  source: Source,
-  day: Date,
-): Promise<void> {
-  await act(async () => {
-    create(React.createElement(Probe, { tasks, source, day }));
-  });
+function mount(tasks: TaskItem[], source: Source, day: Date) {
+  return renderHook(() => usePlannerMonth({ tasks, source, day })).result;
 }
 
 const VIEWED = new Date(2026, 9, 22);
 
 describe("usePlannerMonth monthRows", () => {
-  it("lists a weekly task stored in the previous month", async () => {
-    await mount(
+  it("lists a weekly task stored in the previous month", () => {
+    const result = mount(
       [
         task("water plants", {
           kind: "[[tasks]]",
@@ -59,11 +38,11 @@ describe("usePlannerMonth monthRows", () => {
       "due-period",
       VIEWED,
     );
-    expect(latest?.monthRows.map((row) => row.name)).toEqual(["water plants"]);
+    expect(result.current.monthRows.map((row) => row.name)).toEqual(["water plants"]);
   });
 
-  it("leaves out a task with no occurrence in the viewed month", async () => {
-    await mount(
+  it("leaves out a task with no occurrence in the viewed month", () => {
+    const result = mount(
       [
         task("pay rent", {
           kind: "[[tasks]]",
@@ -74,11 +53,11 @@ describe("usePlannerMonth monthRows", () => {
       "due-period",
       VIEWED,
     );
-    expect(latest?.monthRows).toEqual([]);
+    expect(result.current.monthRows).toEqual([]);
   });
 
-  it("keeps the named-list filter on the occurrence test", async () => {
-    await mount(
+  it("keeps the named-list filter on the occurrence test", () => {
+    const result = mount(
       [
         task("water plants", {
           kind: "[[tasks]]",
@@ -97,6 +76,6 @@ describe("usePlannerMonth monthRows", () => {
       "Focus",
       VIEWED,
     );
-    expect(latest?.monthRows.map((row) => row.name)).toEqual(["water plants"]);
+    expect(result.current.monthRows.map((row) => row.name)).toEqual(["water plants"]);
   });
 });
