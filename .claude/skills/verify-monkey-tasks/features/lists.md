@@ -23,7 +23,7 @@ swipes between lists, picks a sort and reorders rows by hand.
 
 Preconditions: a fresh page on `/`, and `row(page, undated.second)` is visible.
 
-- **Switch list.** `listTab(page, tabs.next).click()`, or `swipe(page, <page body>, "left", "page")`. The `Errands` tab is selected and the page reads "Nothing on this list yet."
+- **Switch list.** `listTab(page, tabs.next).click()`, or `swipe(page, sectionHeader(page, sections.today), "left", "page")`. The `Errands` tab is selected and the page reads "Nothing on this list yet."
 - **Tick.** `row(page, <name>).getByRole("button", { name: "mark done" }).click()`. The row moves under the `Completed` header (`expectInSection`), and its note gains `completed:`.
 - **Sort.** Open the sort button in the header, pick an order in the sheet. The sheet marks the order in use, and the rows reorder.
 - **Reorder.** In My order, `holdDrag(page, row(page, undated.second), row(page, undated.first))`, or drag `reorder-grip:<name>`. The moved row stays in place after `returnToTab`.
@@ -33,5 +33,5 @@ Preconditions: a fresh page on `/`, and `row(page, undated.second)` is visible.
 
 - The sample set has two broken notes (`Garden.md`, `Broken note.md`). The `Needs repair` banner at the top of Main is expected and sticks over the list while it scrolls.
 - Rows wash in on mount. A screenshot right after `goto` can catch them mid-fade. Wait for a row to be visible first.
-- A mouse swipe that starts on a row must not open the editor (bug B1). Assert the URL stays `/`.
+- Start a mouse swipe on a section header, never on a row. A swipe that starts on a row also opens the editor in the `motion` project today. That is bug B1, marked `test.fail` in `app/e2e/specs/lists.spec.ts` until ticket 0059. It is a known bug, not a regression.
 - A touch swipe (`touchSwipe`) does not turn the page in Chromium today. That is bug B2, marked `test.fail` in the suite until ticket 0059.

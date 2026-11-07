@@ -32,8 +32,8 @@ review agents use 8200 to 8221. This skill defaults to 8300.
 VERIFY_PORT=8310 .claude/skills/verify-monkey-tasks/scripts/launch.sh
 ```
 
-It runs `npm run web:export` in `app/` (about 45 s; the export sets
-`EXPO_PUBLIC_VAULT_TEST_HOOKS=1`), stamps `app/dist` with `HEAD`, starts
+It runs `npm run web:export` in `app/` (20 to 45 s, longer on a busy
+machine; the export sets `EXPO_PUBLIC_VAULT_TEST_HOOKS=1`), stamps `app/dist` with `HEAD`, starts
 `app/serve.py` in the background and runs Doctor. Ready means Doctor
 prints four `ok` lines. `SKIP_EXPORT=1` reuses the current `dist`.
 
@@ -47,8 +47,9 @@ Setup a fresh checkout needs first: `git -c url."https://github.com/".insteadOf=
 ```
 
 Read-only. It checks that the server pid is alive, that the port is
-owned by that pid, that `dist` was built from `HEAD` with no uncommitted
-app changes (a `WARN` line means you are testing old code), and that a
+owned by that pid, that `dist` was built from the current tree, including
+edits made after the launch (a `WARN` line means you are testing old
+code), and that a
 headless page renders sample rows and exposes `globalThis.__vault`.
 Run it first whenever anything looks off. Exit code 0 means drivable.
 
@@ -74,7 +75,7 @@ file or a whole directory:
 
 Each journey runs twice, as `motion` and `reduced-motion`, at 412 by
 915. Extra arguments go to `playwright test`. For a quick look without a
-journey, `cd app && npx playwright codegen http://localhost:8300` also
+journey, `cd app && npx playwright codegen http://localhost:$VERIFY_PORT` also
 works, but it leaves no evidence.
 
 Prefer roles and accessible names (`add task`, `send task`, `open task`,
@@ -104,7 +105,8 @@ Proof standards:
 .claude/skills/verify-monkey-tasks/scripts/cleanup.sh   # honors VERIFY_PORT
 ```
 
-It kills only the pid that `launch.sh` recorded, never by name. Evidence
+It kills only the pid that `launch.sh` recorded, and only while that
+pid is still this port's `serve.py`. It never kills by name. Evidence
 under `app/build/verify/evidence/` stays. Delete old runs by hand when
 you no longer need them.
 

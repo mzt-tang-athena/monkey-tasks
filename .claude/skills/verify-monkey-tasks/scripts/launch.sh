@@ -15,8 +15,11 @@ fi
 if [[ "${SKIP_EXPORT:-0}" != 1 ]]; then
   (cd "$APP" && npm run --silent web:export >"$STATE/export.log" 2>&1) || {
     echo "web export failed, see $STATE/export.log"; tail -20 "$STATE/export.log"; exit 1; }
-  git -C "$REPO" rev-parse HEAD >"$STAMP"
+  { git -C "$REPO" rev-parse HEAD; fingerprint; } >"$STAMP"
   git -C "$REPO" status --porcelain -- app contracts | grep -q . && echo dirty >>"$STAMP" || true
+elif [[ ! -f "$APP/dist/index.html" ]]; then
+  echo "SKIP_EXPORT=1 but $APP/dist has no build. Run without SKIP_EXPORT."
+  exit 1
 fi
 
 cd "$APP"

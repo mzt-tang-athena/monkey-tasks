@@ -4,7 +4,11 @@ set -uo pipefail
 source "$(dirname "$0")/env.sh"
 if [[ -f "$PIDFILE" ]]; then
   pid=$(cat "$PIDFILE")
-  kill "$pid" 2>/dev/null && echo "stopped pid $pid on port $PORT" || echo "pid $pid already gone"
+  if tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -q "serve.py dist $PORT"; then
+    kill "$pid" && echo "stopped pid $pid on port $PORT"
+  else
+    echo "pid $pid is gone or is no longer our serve.py, so nothing was killed"
+  fi
   rm -f "$PIDFILE"
 else
   echo "no server of ours on port $PORT"

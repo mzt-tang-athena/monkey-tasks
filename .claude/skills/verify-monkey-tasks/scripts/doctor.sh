@@ -21,6 +21,8 @@ if [[ ! -f "$STAMP" ]]; then
   say FAIL "dist has no build stamp (run launch.sh without SKIP_EXPORT)"
 elif [[ "$(head -1 "$STAMP")" != "$head_now" ]]; then
   say WARN "dist built from $(head -1 "$STAMP" | cut -c1-8), HEAD is ${head_now:0:8}. Relaunch to test HEAD."
+elif [[ "$(sed -n 2p "$STAMP")" != "$(fingerprint)" ]]; then
+  say WARN "app or contracts changed since the build. Relaunch to test the current tree."
 elif grep -q dirty "$STAMP"; then
   say WARN "dist built from HEAD plus uncommitted app changes"
 else
