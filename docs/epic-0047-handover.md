@@ -191,3 +191,21 @@ These decisions came from the owner in chat. They are not in an ADR.
   Nobody works on them.
 - Tickets 0064 (Maestro on Android) and 0065 (the list menu actions) come
   after this epic.
+
+## Amendment, 2026-11-07: how the rest of the epic runs
+
+The owner picked up the epic on the new machine and changed the plan.
+The phase scripts in `.claude/workflows/` stay in the repo as a record.
+Do not launch them.
+
+- This guide merged as PR #86. Its e2e change passed 20 of 20 runs. The
+  same run found two other flaky tests, filed as ticket 0070.
+- Agents prove a change with the project skill in
+  `.claude/skills/verify-monkey-tasks/` (ticket 0069, PR #87).
+- Each open PR gets one fix agent, then one independent verifier, then
+  a merge. Fix agents merge `epic/0047-rebuild` into their branch and
+  never force-push.
+- Ticket 0058 sets the motion API for 0059 to 0062. It gets a design
+  comparison of two or three options before the build.
+- The owner checks each motion ticket on the phone after it merges, not
+  only once at the end.
