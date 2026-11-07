@@ -3,7 +3,7 @@ id: 0071
 title: Bring main's shared Vale rules into the epic branch
 created: 2026-11-07
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: []
 ---
