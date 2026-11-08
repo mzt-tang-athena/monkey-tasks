@@ -89,11 +89,11 @@ export function useProgress(
     const id = runs.current;
     run.current = { id, at: to };
     if (reduced) {
-      value.value = to;
+      value.set(to);
       settle(id);
       return;
     }
-    value.value = timing(to, ms, () => settle(id));
+    value.set(timing(to, ms, () => settle(id)));
   }, [to, ms, reduced, value, settle]);
 
   React.useEffect(
