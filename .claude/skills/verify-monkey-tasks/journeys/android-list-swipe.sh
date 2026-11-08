@@ -40,12 +40,19 @@ read -r x y _ < <("$drive" bounds "task-row:$task>>mark done")
 completed ticked || { echo "the note did not gain completed:" >&2; exit 1; }
 
 "$drive" tap "task-row:$task>>mark not done" >/dev/null
-"$drive" wait "task-row:$task>>mark done" 10 >/dev/null
+"$drive" scroll-to "task-row:$task>>mark done" up >/dev/null
+"$drive" shot untick-after >/dev/null
 "$drive" note "Tasks/$task.md" unticked >/dev/null
 if completed unticked; then
   echo "the note kept completed: after the untick" >&2
   exit 1
 fi
 "$drive" log >/dev/null
+if ! cmp -s "$run/note-before.md" "$run/note-unticked.md"; then
+  echo "the untick left the note different from before (ticket 0076, a shorter write keeps the old tail):" >&2
+  diff "$run/note-before.md" "$run/note-unticked.md" >&2 || true
+  echo "evidence: $run" >&2
+  exit 1
+fi
 echo "pass: swiped to Errands with motion on and off, ticked and unticked $task"
 echo "evidence: $run"
