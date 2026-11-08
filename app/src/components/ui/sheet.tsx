@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { useKeyboardAnimation } from "react-native-keyboard-controller";
 import { useDismiss } from "@/hooks/use-dismiss";
-import { useSheetMotion } from "@/lib/motion";
+import { useSheetMotion } from "@/lib/motion/legacy";
 import {
   colors,
   measure,

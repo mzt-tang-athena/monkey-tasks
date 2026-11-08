@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
   type LayoutChangeEvent,
 } from "react-native";
-import { easeOut, useReduceMotion } from "@/lib/motion";
+import { easeOut, useReduceMotion } from "@/lib/motion/legacy";
 import { makeSwipeController, type SwipeController } from "@/lib/swipe";
 
 /** How far a page follows when there is no neighbour, in px. */

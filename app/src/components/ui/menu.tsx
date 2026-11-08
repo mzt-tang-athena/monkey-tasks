@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDismiss } from "@/hooks/use-dismiss";
-import { useMenuEntrance } from "@/lib/motion";
+import { useMenuEntrance } from "@/lib/motion/legacy";
 import {
   bottomBar,
   colors,

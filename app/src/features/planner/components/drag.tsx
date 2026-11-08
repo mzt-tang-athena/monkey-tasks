@@ -10,7 +10,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { useRise, useShake } from "@/lib/motion";
+import { useRise, useShake } from "@/lib/motion/legacy";
 import { colors, drag } from "@/theme/tokens";
 import type { TaskItem } from "@/types/task";
 
