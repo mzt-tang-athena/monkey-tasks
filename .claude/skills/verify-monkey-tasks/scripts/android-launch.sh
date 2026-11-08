@@ -104,7 +104,8 @@ lap "seeded $VAULT_DIR"
 
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 # A kept grant shows a task row. A missing one shows the connect notice.
-deadline=$((SECONDS + 90))
+# A first start on a loaded host took over 90 s.
+deadline=$((SECONDS + 240))
 until "$drive" has "~task-row:" || "$drive" has "connect vault folder"; do
   ((SECONDS < deadline)) || { "$drive" dump start-stuck >/dev/null; echo "the app showed neither a task row nor the connect notice. See $run/start-stuck.txt" >&2; exit 1; }
   sleep 1

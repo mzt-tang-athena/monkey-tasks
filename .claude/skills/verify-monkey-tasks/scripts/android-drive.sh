@@ -274,7 +274,8 @@ case "$cmd" in
       sleep 0.5
     done
     start_app
-    wait_first_row 60
+    # A cold start on a loaded host took over 60 s.
+    wait_first_row 180
     echo "app restarted"
     ;;
   list)

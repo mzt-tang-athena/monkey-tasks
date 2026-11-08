@@ -160,19 +160,27 @@ hooks and slower JavaScript.
 It runs the host checks, creates the AVD when it is missing, and boots
 it cold (`-no-snapshot`, 2 cores, 2 GB). It then sets the zone to
 Pacific/Auckland and hides ANR dialogs. It installs the APK when its
-hash changed, and clears the app data. It writes the sample vault for
-the device's today with `android-seed.ts` and pushes it to
-`/sdcard/Documents/obsidian-vault`. Last, it taps `connect vault folder`
-and walks the system picker by its header (`Files in Documents`, then
-`Files in obsidian-vault`) to `USE THIS FOLDER` and `ALLOW`. Ready means
-it printed `ready: a task row shows`. It saves `launch.png` and
-`launch.xml` in a new run folder and prints that folder.
+hash changed. It writes the sample vault for the device's today with
+`android-seed.ts`, and replaces `/sdcard/Documents/obsidian-vault` with
+it. Then it starts the app. Ready means it printed `ready: a task row
+shows`. It saves `launch.png` and `launch.xml` in a new run folder and
+prints that folder.
 
-On this host (4 cores) a cold launch took 231 s. Boot took 99 s, the
-install 19 s and the picker 76 s. A rerun on a running emulator skips
-the boot and an unchanged APK. Each launch reseeds the vault and grants
-it again, so every run starts from the same notes. `MOTION=off` starts
-with the three animation scales at 0.
+The folder grant lives in the AVD's data. It survives a cold boot, a
+reinstall and a reseed, because the folder keeps its path. So launch
+walks the system picker only when the app shows `connect vault folder`:
+on a new AVD, or with `FRESH=1`, which clears the app data first. The
+walk reads the picker's header (`Files on ...`, `Files in Documents`,
+`Files in obsidian-vault`), takes one step, and waits for the header to
+change. It ends on `USE THIS FOLDER` and `ALLOW`. App settings such as
+the sort order also persist between launches. Use `FRESH=1` when a
+check needs them at their defaults.
+
+Timings on this host (4 cores): a cold boot took 99 to 150 s and the
+install 19 to 45 s, slower when other work loads the host. The picker
+walk took 37 to 76 s. A rerun on a running emulator skips the boot and
+an unchanged APK. `MOTION=off` starts with the three animation scales
+at 0.
 
 ### Doctor
 
@@ -272,6 +280,7 @@ doze behavior. Leave those to the phone pass, and say so in the report.
 
 - Run one driver per emulator. Two `uiautomator dump` calls at once crash the second one.
 - A cold boot on a busy host makes System UI miss ANR deadlines. Launch hides the dialogs. The log still records each ANR.
+- A starved emulator stops drawing (screenshots come back black) and drops taps. The picker walk then fails with `picker-stuck.txt`. Wait for the host to calm down, or stop the other load, and launch again. Once the grant exists, launch no longer needs the picker.
 - Heavy screen capture can spoil a gesture. A `screencap` loop during a swipe left the page unturned. `frames` uses `screenrecord`, and the same swipe turned the page.
 - A swipe that ends off screen reads as a system gesture. Drive clamps the end to the screen.
 - After `force-stop` the old window lingers in the screen tree for a moment. `$D restart` waits for it to go.
