@@ -4,7 +4,7 @@ title: Verify on an Android emulator
 created: 2026-11-07
 priority: high
 assignee: claude-code
-pr:
+pr: 93
 depends: [0069]
 ---
 
