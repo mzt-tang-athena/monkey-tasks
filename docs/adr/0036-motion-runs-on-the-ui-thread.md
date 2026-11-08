@@ -138,3 +138,18 @@ this date.
 
 The libraries still show patterns we copy. Tickets 0058, 0060, 0061
 and 0062 name each one with its source.
+
+## Amendment, 2026-11-08: the shared pieces are surfaces
+
+ADR 0045 decides the shape of the shared pieces. The four rules above
+stand. The line "The shared pieces live in `src/lib/motion`" changes.
+Five surfaces live in `src/components/motion`, and `src/lib/motion`
+keeps the tokens, the pure math and the clocks. Features and routes
+write no worklet, and lint bans Reanimated, worklets and every gesture
+handler export but `Pressable` there.
+
+Two facts from the 0045 prototype change how the rules above apply in
+the browser. Gesture handler 3.3.0 drops the `touchAction` prop of
+`GestureDetector` on the web, so the surfaces pass `touchAction` in the
+gesture config. `overflow: hidden` on a scroller cancels an active
+drag, so the scroll freeze uses a non-passive `touchmove` listener.
