@@ -200,3 +200,40 @@ per row that a zone surface lacks.
 
 **Surfaces in `src/lib/motion`.** The layer rule forbids it, because
 the ghost needs `Overlay` and the reorder row needs the card shape.
+
+## Amendment, 2026-11-08: what ticket 0058 found
+
+Ticket 0058 built the engine, `createDragSurface`, `Pager`, `Landing`
+and `MotionScrollView`, and ran the native checks on the Android
+emulator. APK run 42496388537 built commit `6538d60`. The evidence is in
+`app/build/verify/evidence/android-20261108-161103/`.
+
+- The zone registry shipped as written. Zones keep their animated refs
+  in one shared value per session, and `measure()` reads them in the
+  source's `onActivate`. On the emulator a held chip dropped on the box
+  under the finger, at scroll offset 0 and after a scroll of 176 px.
+  The fallback, zones that measure themselves at pickup, was not needed.
+- `scrollEnabled={false}` holds the scroller during a drag, and the drag
+  goes on. The boxes kept their bounds through a 377 px vertical drag. A
+  quick swipe that starts on a row source still scrolls and lifts
+  nothing.
+- Worklets run on the UI thread with no native module error. `measure()`
+  returns nothing on the JS thread, so each drop proves its pickup ran on
+  the UI thread. The menu opens on a Reanimated keyframe.
+- On the web, the `touchmove` freeze keeps a touch drag alive. With the
+  listener removed, the same Playwright drag lost its drop in both
+  projects.
+
+Two facts change how the surfaces apply:
+
+- Gesture handler 3.3.0's web `Pressable` presses only a view whose role
+  is `button` (`web/handlers/NativeViewGestureHandler.ts`, lines 87 to
+  92). A tab, a segment or a menu item keeps its own role, so it presses
+  with `RolePressable` in `components/ui`. That is gesture handler's
+  `Pressable` on native and React Native's on the web. None of these
+  targets sits under a pan.
+- Under jsdom, gesture handler's web `Pressable` never fires, by pointer
+  or by key. Component tests swap in React Native Web's `Pressable` in
+  `src/testing/dom-setup.ts`. The Playwright suite presses the real one.
+  The pan surfaces do run under jsdom, so their component tests drive
+  gesture handler with pointer events.
