@@ -10,153 +10,219 @@ depends: [0058]
 
 ## Spec
 
-Epic 0047, phase 4. ADR 0036 and its amendments to ADR 0032 and ADR
-0034 decide this. This ticket moves the row reorder onto
-`useLongPressDrag`, ends the tick hold from its animation, and replaces
-the 90 second freshness window with a landed mark. The work lands in
-the phase 3 homes from 0055: `hooks/use-row-reorder.ts`,
-`hooks/use-tick-hold.ts`, `lib/tick-hold.ts` and
-`components/task-card-row.tsx` in `src/features/lists`, and `TaskRow`
-and `PreviewRow` in `src/components`.
+Epic 0047, phase 4. ADR 0036, its amendments to ADR 0032 and ADR 0034,
+and ADR 0045 decide this. This ticket builds `createReorderSurface` on
+0058's engine and moves the row reorder onto it. It ends the tick hold
+from the tick's animation, and replaces the 90 second freshness window
+with the landed mark. Paths are on `epic/0047-rebuild` at commit
+`1d85cc3`, under `app/src`. Line numbers in `lib/motion.ts` refer to
+the file before 0058 moved it to `lib/motion/legacy.ts`.
+
+### Design, 2026-11-08
+
+This spec follows the 2026-11-08 design package for phase 4. ADR 0045
+records it. What matters here:
+
+- The lists screen writes no gesture code. It renders
+  `ListReorder.Root`, `ListReorder.Item` and `ListReorder.Grip`, and
+  gets one `onReorder({ payload, group, from, to })` only when the row
+  moved.
+- The old step 1 offered three ways to make the drop land with no
+  blink. The design picks the index stamp inside `Item`. A row's shift
+  counts only while its `index` prop equals the index it had at pickup.
+  The commit that reorders the data changes the moved rows' indexes, so
+  the commit itself carries zero shift. Nothing resets in the commit's
+  frame. A new key per moved row stays the fallback, inside `Item`
+  only.
+- The tick runs on `useProgress`, the one clock that React drives. Its
+  `onSettled` ends the hold. No timer remains.
+- The owner chose one shared hold tint and shake look. The reorder's
+  lifted look is the surface's own, the same as the Planner's.
 
 ### What breaks today
 
-Line numbers point at today's files.
-
 | Bug | Today | What the user sees |
 |---|---|---|
-| V6 | `app/(tabs)/index.tsx:200-210`. Sections carry no `key`, so a cell key reads `<sectionIndex>:<id>` (`@react-native/virtualized-lists/Lists/VirtualizedSectionList.js:281`). Ticket 0055 adds stable keys in `hooks/use-list-sections.ts` and a remount test. This ticket keeps that test green through the port. | A group that empties remounts every row below it. |
-| V7 | `lib/motion.ts:54-66` and `components/TaskRow.tsx:50-93` test freshness on every mount. Remounts come from the move to Completed, from V6, from the id change on refetch (`store/tasks.tsx:804-810` gives `pending://N`, `features/tasks/query.ts:61` gives the file uri, refetch on focus in `store/query-client.ts:20-41`), from the reorder ghost (`index.tsx:976`) and from planner pills on a day change (`features/planner/components/drag.tsx:155`). | A task captured in the last 90 seconds fades and washes in again. |
-| V8 | `index.tsx:401-496`. Native callbacks read `cb.current`, which a passive effect refreshes (`features/lists/ReorderRow.tsx:156-159`), and `moveReorder` and `endReorder` close over `reorder` state. A drop with a stale no-op `to` skips `setSettling` (`483-485`), so the reset (`568-577`) never runs. | A fast flick lands a slot off, or the rows stay overlapped. |
-| V9 | `index.tsx:516-545`. A second tick replaces the first hold, and its index counts the first row. | The row below jumps above the second ticked row. |
-| V10 | `index.tsx:476-479`. After a native drop, a 350 ms guard swallows the next tap. Gesture handler already cancels the press. The planner gets this right (`features/planner/hooks/usePlannerGestures.ts:138-143`). | A tick right after a drop does nothing. |
-| J2 | `index.tsx:416,461,657-670,687-698`. Each move calls `setValue` on the JS thread, and each crossing calls `setReorder`. Ticket 0055 fixes the memo half: stable callbacks and a memoized `task-card-row`. The per-move and per-crossing work stays for this ticket. | The ghost lags, and rows render on each crossing. |
-| J3 | `lib/motion.ts:18-45`. Each `TaskRow` (twice), `Pickup` and `NativeDragHandle` subscribes to `AccessibilityInfo` and calls the async `isReduceMotionEnabled()`. Native starts at `false`. | Slower mounts, and the first frames animate with reduce motion on. |
-| L1 | `index.tsx:453-459`. The row slides ignore reduce motion. | Rows slide with reduce motion on. |
-| L3 | `index.tsx:307` keeps `holdTimer` after unmount. `index.tsx:623-627` never deletes a row ref. `index.tsx:343-358` sums heights from the first measured rect. | A long section can pick the wrong slot. |
+| V6 | Fixed by 0055: sections key on their title (`features/lists/lib/list-sections.ts:31`), and `features/lists/lists-screen.test.tsx:144-156` checks the remount. This ticket keeps that test green through the port. | A group that empties remounts every row below it. |
+| V7 | `lib/motion.ts:51-83` and `components/task-row.tsx:52-60,91-103,197` test freshness on every mount. Remounts come from the move to Completed, from the id change on refetch, from the reorder ghost (`features/lists/components/reorder-ghost.tsx:39`) and from planner pills on a day change (`features/planner/components/drag.tsx:155`). | A task captured in the last 90 seconds fades and washes in again. |
+| V8 | `features/lists/hooks/use-row-reorder.ts:173-247`, `241-243` and `279-283`, with `features/lists/components/reorder-row.tsx:124-127,167-170`. A drop with a stale `to` skips the reset. | A fast flick lands a slot off, or the rows stay overlapped. |
+| V9 | `features/lists/hooks/use-tick-hold.ts:13,31-39` and `lists-screen.tsx:114`. One hold in state and a 250 ms timer. A second tick replaces the first. | The row below jumps above the second ticked row. |
+| V10 | `lists-screen.tsx:89-92,111,119` and `src/hooks/use-press-guard.ts`. After a drop, the guard swallows the next tap. | A tick right after a drop does nothing. |
+| J2 | `use-row-reorder.ts:187-188,213-227` and `lists-screen.tsx:169-181`. Each move sets the ghost on the JS thread, and each crossing calls `setLifted`. 0055 fixed the memo half. | The ghost lags, and rows render on each crossing. |
+| J3 | `lib/motion.ts:11-46`. Each caller of `useReduceMotion` subscribes to `AccessibilityInfo`. Native starts at `false` and resolves later. | Slower mounts, and the first frames animate with reduce motion on. |
+| L1 | `use-row-reorder.ts:92-98,213-226`. The row slides ignore reduce motion. | Rows slide with reduce motion on. |
+| L3 | `use-row-reorder.ts:188-209` and `features/lists/lib/reorder.ts:48-61`: `to` indexes the sorted rects but is used as an items index. `use-row-reorder.ts:136-153` measures every row async and lifts only in the grabbed row's callback. 0055 fixed the timer and ref leaks. | A long section can pick the wrong slot, and a quick tap can leave a row lifted. |
 
-### Step 1: settle the drop on a phone
+### What the surfaces make impossible, and what stays here
 
-The drop still hands work from the UI thread to a React commit: the
-data reorders, and the row offsets must reach zero in the same frame.
-Build the options behind a flag and run them on the phone at 60 Hz
-and at 120 Hz:
+By construction, once the lists render `ListReorder` and `Landing`:
 
-- **A.** Offsets live in shared values. The drop commits the new order
-  and zeroes the offsets in a `useLayoutEffect` keyed on that order.
-- **B.** The list renders as one `Animated.FlatList`, with headers as
-  items and `itemLayoutAnimation={LinearTransition}`. Each crossing
-  reorders a preview copy of the data, and the layout transition moves
-  the rows. The dragged row's cell stays empty under the ghost.
-- **C.** Each moved row gets a new React key at the drop, for example
-  `${id}#${dropCount}`. The moved rows mount again at their new places
-  with zero offset, so no reset races the commit.
-  react-native-reorderable-list does this (`createCellKey` and
-  `markCells` in
-  [ReorderableListCore.tsx](https://github.com/omahili/react-native-reorderable-list/blob/291621a050e5fb176984a2270460d5caaf099085/src/components/ReorderableListCore.tsx)).
-  The landed mark from 0058 stops the entrance on a remount.
+- V8. `from` and `to` come from the UI thread in the crossing. Shifts
+  carry the index stamp, so a commit carries zero. A drop in place
+  returns on the UI thread. The drop compares indexes, never positions.
+- V10. No guard exists. The row's press targets are gesture handler's
+  `Pressable`, and the drag's activation cancels them.
+- J2. The ghost, the shifts, the radii and the divider are shared
+  values. A crossing renders nothing.
+- J3. Lint bans `AccessibilityInfo` motion reads. Every animation passes
+  `ReduceMotion.System`.
+- L1, the slides. The surface's slides pass `ReduceMotion.System`.
+- L3. No hold timer. Only mounted rows are measured, at pickup, on the
+  UI thread. The bridge's generation guard drops a stale measure.
+- V7, the surface half. `Landing` takes the mark once, in a state
+  initializer, so a remount never finds it.
 
-Keep the option that shows no blink in a screen recording at both
-rates. Add a dated note with the result to ADR 0032 and delete the
-other options.
+This ticket still owns:
 
-### Step 2: the reorder
+- V6. Keep the remount test green.
+- V7, the feature half. The capture mutation calls `markLanded`. The
+  ghost renders `PreviewRow`, which has no `Landing`.
+- V9. The placement of several holds in `features/lists/lib/tick-hold.ts`.
 
-- A row uses `useLongPressDrag({ holdMs: 300 })`, and the grip uses
-  `holdMs: 0`. Each row's press targets use gesture handler's
-  `Pressable`, so an active drag cancels them on every platform. The
-  350 ms guard and the drop arm of `use-press-guard` go away. If the
-  hook has no caller left after 0059 and 0061, delete it.
-- At pickup, measure the section's mounted rows once. Slot math uses
-  each row's own measured top and height. A row the list has not
-  mounted cannot become a target. A ref callback that gets `null`
-  deletes its entry.
-- The slot, the row offsets, the corner radii and the divider all run
-  in shared values and animated styles. ADR 0032's rule stays: the
-  radii follow the slot a row heads to. A crossing writes no React
-  state.
-- The drop passes `from` and `to` from the UI thread to
-  `scheduleOnRN`, so no callback reads stale state. Every drop resets
-  the offsets, a drop in place included.
-- The drop compares the `from` and `to` indexes to decide if the row
-  moved. It never compares positions. A release exactly on the new
-  slot must still reorder and reset. react-native-reorderable-list
-  has this bug open
-  ([#75](https://github.com/omahili/react-native-reorderable-list/issues/75)).
-- The ghost renders a `PreviewRow`, not a `TaskRow`.
-- Every slide passes `ReduceMotion.System`.
+### Step 1: build `createReorderSurface`
 
-### Step 3: the tick hold
+Build `src/components/motion/reorder.tsx` with the signature from 0058.
+
+- `Item` holds rows with `hold: "row"` (300 ms, `touchAction: 'pan-y'`).
+  `Grip` holds with `hold: "grip"` (0 ms, `touchAction: 'none'`). Both
+  come from the 0058 hold table.
+- At pickup, the owning row measures its group's mounted rows once with
+  `measure()`, in page coordinates, and takes a snapshot of each row's
+  index, top and height. Slot math uses `slotForY` and `slotTops` from
+  `lib/motion/drag-math` over that snapshot.
+- A row's shift is `snapshot[id]?.index === props.index ? shift : 0`.
+- `Item` owns the card corners and the divider in a reorderable list.
+  It replaces `CardGroupRow` in `task-card-row.tsx`. The radii follow
+  the slot a row heads to (ADR 0032), from `cardPosition` in
+  `lib/motion/drag-math`.
+- The ghost renders through `renderGhost` in the `dragGhost` layer.
+- `onReorder` runs once per drop, and only when `from !== to`.
+
+### Step 2: check the drop for a blink
+
+Run the reorder on the Android emulator with the `verify-monkey-tasks`
+skill's Android path. Record a fast flick, a drop one slot away and a
+drop in place with the frames helper (`android-frames.mjs`). No frame
+may show a moved row at a stale offset.
+
+If a frame blinks, replace the index stamp inside `Item` with a new key
+for each moved row at the drop (`${id}#${dropCount}`), as
+react-native-reorderable-list does (`createCellKey` and `markCells` in
+[ReorderableListCore.tsx](https://github.com/omahili/react-native-reorderable-list/blob/291621a050e5fb176984a2270460d5caaf099085/src/components/ReorderableListCore.tsx)).
+`Landing` stops the entrance on that remount. No call site changes.
+
+The skill says the emulator does not prove frame rate on real
+hardware. So repeat the check on the phone at 60 Hz and at 120 Hz.
+Add a dated note to ADR 0032 with the result, the build, and the rates
+it ran on.
+
+### Step 3: the reorder on the lists screen
+
+- Add `features/lists/lib/list-reorder.ts`:
+  `export const ListReorder = createReorderSurface<TaskItem>();`.
+- `features/lists/lists-screen.tsx` wraps the `SectionList` in
+  `ListReorder.Root` with `onReorder={moveTask}` and
+  `renderGhost={(task) => <PreviewRow task={task} />}`.
+- `features/lists/components/task-card-row.tsx` renders
+  `ListReorder.Item` with `payload={task}`, `id={task.uri}`, `group`,
+  `index`, `count` and `disabled={!canDrag}`. Inside it, `Landing` wraps
+  `TaskRow`, and `TaskRow` gets
+  `grip={canDrag ? <ListReorder.Grip testID={`reorder-grip:${task.name}`} /> : null}`.
+- `moveTask` writes through `use-reorder-section`
+  (`src/stores/tasks/mutations/use-reorder-section.ts`). The rendered
+  order must change in the same tick, which the optimistic list does
+  (ADR 0017). A late write still ends right, but its rows slide back
+  and then jump.
+- Delete `use-row-reorder.ts`, `reorder-row.tsx` and `reorder-ghost.tsx`,
+  and the web reorder handlers that 0059 moved off the pager host.
+  Keep `reorderItems` and `moveItem` in `features/lists/lib/reorder.ts`.
+  Delete `layoutOrder`, which `slotTops` replaced.
+- Remove the drop arm of `use-press-guard`. 0059 removed the swipe arm,
+  so delete `src/hooks/use-press-guard.ts` and its test.
+
+### Step 4: the tick hold
 
 - Each tick holds its own row, and several holds can run at once. A
-  held row keeps its place among the rows that stood around it at
-  tick time. Extend the pure placement in `lib/tick-hold.ts` (0055)
-  and its tests to cover two and three holds. A second tick never
-  moves another row.
-- The tick plays on shared values in `TaskRow`: the circle fills, the
-  check scales in, and the wash crosses the row in 320 ms. The wash's
-  completion callback releases the hold through `scheduleOnRN`.
-  Unmount also releases it. No timer remains.
-- An untick during the hold drops that hold at once.
+  held row keeps its place among the rows that stood around it at tick
+  time. Extend the pure placement in `features/lists/lib/tick-hold.ts`
+  and its tests to cover two and three holds. A second tick never moves
+  another row.
+- `TaskRow` (`src/components/task-row.tsx`) plays the tick on
+  `useProgress(done, { ms: motion.ms.tickWash, onSettled })`. The circle
+  fills, the check scales in, and the wash crosses the row in 320 ms.
+  `onSettled(1)` calls `onTickSettled(task)`, which ends that row's
+  hold. Unmount runs `onSettled` too, so the hold ends.
+- An untick during the hold drops that hold at once. The reversal
+  supersedes the run, so its `onSettled(1)` never runs.
+- `use-tick-hold.ts` keeps a map of holds and no timer. Delete
+  `tickHoldMs`.
 
-### Step 4: the capture entrance
+### Step 5: the capture entrance
 
-- The capture mutation (0052) calls `markLanded(id)` from
-  `src/lib/motion/entrances.ts` when it inserts the row. `TaskRow` and
-  a planner pill call `takeLanded(task.id)` once, in a state
-  initializer. Only a row that finds the mark runs the `landing`
-  entering animation and the wash. A remount never finds it again.
-- Delete `useRise`, both copies of `freshMs`, and `useReduceMotion`
-  from `lib/motion.ts`. No component calls `AccessibilityInfo` for
-  motion. Animations pass `ReduceMotion.System`, and a component that
-  must branch reads Reanimated's `useReducedMotion`.
-- Remove this ticket's files from the 0058 lint allowlist.
+- `src/stores/tasks/mutations/use-capture-task.ts` calls
+  `markLanded(id)` from `@/lib/motion/entrances` when it inserts the
+  row, with the id the row first mounts under.
+- `Landing` runs the `landing` entering animation (220 ms) and the wash
+  (600 ms) only for a row that finds the mark. The row that remounts
+  under its file uri after a refetch finds nothing.
+- Delete both copies of `freshMs` and the entrance code in `TaskRow`.
+  Delete `useRise` from `lib/motion/legacy.ts` if 0061 already removed
+  the planner pill's use. Otherwise 0061 deletes it.
+- `TaskRow` drops `useReduceMotion`. Remove this ticket's files from the
+  0058 lint allowlist.
 
 ### Tests first
 
 Each bug gets a failing test before its fix. The Playwright suite in
-`app/e2e` (0049) runs each scenario with the mouse and with CDP touch.
-Rows and grips use the 0049 test ids `task-row:<name>` and
-`reorder-grip:<name>`. Pin time with `page.clock.install`, never
-`setFixedTime`, because a frozen clock never ends an entrance (0049).
+`app/e2e` runs each scenario with the mouse and with CDP touch. Rows
+and grips use the test ids `task-row:<name>` and `reorder-grip:<name>`.
+A hold uses `holdDrag` from `app/e2e/gestures.ts`, which pauses the
+clock and calls `page.clock.runFor` past the hold (0058). Pin time with
+`page.clock.install`, never `setFixedTime`. Reduce motion scenarios run
+in the `reduced-motion` project.
 
 | Scenario | Proves |
 |---|---|
+| `expectTouchAction` reads `pan-y` on a row and `none` on `reorder-grip:<name>`. | the hold table |
 | Tick the last task of a group. The DOM nodes of the rows below stay connected. | V6 |
 | Capture a task, then within 90 seconds tick it, drag it in My order, and switch tabs and back. Each mounted copy shows opacity 1 on its first frame. | V7 |
-| In My order, drag a row one slot and release at once after the crossing. It lands in the slot the gap showed, and every other row rests at offset 0. Drag away and back, then drop in place: all offsets read 0. | V8 |
+| In My order, drag a row one slot and release at once after the crossing. It lands in the slot the gap showed, and every other row rests at offset 0. Drag away and back, then drop in place. All offsets read 0. | V8 |
 | In My order, drag a row onto the next slot and release with no further move once its offset equals that slot. It reorders, and every offset reads 0. | the index rule |
 | Tick two adjacent rows 100 ms apart, top first. Sampled each frame for 400 ms, the third row never rises above the second. | V9 |
-| Drop a row, then tick another row 100 ms later. The tick lands. Drop a row on its own place: nothing toggles and no editor opens. | V10 |
+| Drop a row, then tick another row 100 ms later. The tick lands. Drop a row on its own place. Nothing toggles and no editor opens. | V10 |
 | Tick a row. At 200 ms it sits in its group, and at 600 ms it sits in Completed. | hold |
 | Navigate away 100 ms after a press on a row, then come back. The console shows no error and no row hangs lifted. | L3 |
-| With reduce motion emulated, a drag moves rows straight to their slots, a tick regroups at once, and a capture lands at rest. | L1, J3 |
+| In the `reduced-motion` project, a drag moves rows straight to their slots, a tick regroups at once, and a capture lands at rest. | L1, J3 |
 
 A jsdom component test covers J2. A drag that crosses three slots
 renders the lists screen no times between pickup and drop, and no
-`TaskRow` renders. This replaces the looser crossing test from 0055. A second component test covers the refetch id
-change with the 0051 vault adapter fake: the row that remounts under
-its file uri runs no entrance.
+`TaskRow` renders. This adds to the 0055 tests. A second component test
+covers the refetch id change with the 0051 vault adapter fake. The row
+that remounts under its file uri runs no entrance.
 
-Only the phone shows V8's stale window, J3's async start, and today's
-form of V10, because the browser path reads pointer events in render.
+Only the emulator and the phone show V8's stale window and J3's late
+start on native.
 
 ## Acceptance
 
 - [ ] Each scenario above has a failing test before its fix, and all
       pass after, with the mouse and with touch.
-- [ ] ADR 0032 carries a dated note naming the drop option that won
-      and the phone and refresh rates it ran on.
+- [ ] `src/components/motion/reorder.tsx` exists with the 0058
+      signature, and the lists screen reorders only through
+      `ListReorder`.
+- [ ] ADR 0032 carries a dated note naming the drop that shipped (the
+      index stamp, or a new key per moved row), with the emulator
+      evidence folder and the phone rates it ran on.
 - [ ] The reorder, the tick hold and the entrance use only
-      `src/lib/motion` and Reanimated. Lint passes with this ticket's
-      files out of the allowlist.
-- [ ] `useRise`, `freshMs` and the 350 ms guard are gone from the
-      lists screen.
-- [ ] Phone, reduce motion off: a long press lift, a grip drag, a
-      fast flick, a drop in place and a scroll that starts on a row
-      all behave. No row blinks at the drop, and no tap after a drop
-      goes missing.
-- [ ] Phone: tick three rows in quick order; each fills, washes and
+      `src/components/motion` and `useProgress`. Lint passes with this
+      ticket's files out of the allowlist.
+- [ ] `use-row-reorder.ts`, `reorder-row.tsx`, `reorder-ghost.tsx`,
+      `use-press-guard.ts`, `freshMs` and the tick hold timer are gone.
+- [ ] Emulator, reduce motion off: a long press lift, a grip drag, a
+      fast flick, a drop in place and a scroll that starts on a row all
+      behave. No recorded frame blinks at the drop, and no tap after a
+      drop goes missing.
+- [ ] Phone: tick three rows in quick order. Each fills, washes and
       then moves to Completed, and no other row jumps.
 - [ ] Phone: capture a task, then pull to refresh, send the app to the
       background and back, and tick it. It lands once.
