@@ -6,8 +6,15 @@ export default defineConfig({
     environment: "node",
   },
   resolve: {
-    alias: {
-      "expo-file-system/legacy": path.resolve(__dirname, "vitest.stub.ts"),
-    },
+    alias: [
+      {
+        find: /^expo-file-system\/legacy$/,
+        replacement: path.resolve(__dirname, "vitest.stub.ts"),
+      },
+      {
+        find: /^expo-file-system$/,
+        replacement: path.resolve(__dirname, "vitest.file-stub.ts"),
+      },
+    ],
   },
 });
