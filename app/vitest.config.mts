@@ -1,7 +1,33 @@
-import { defineConfig } from "vitest/config";
+import { transformAsync } from "@babel/core";
 import path from "node:path";
+import type { Plugin } from "vite";
+import { defineConfig } from "vitest/config";
 
 const src = path.resolve(import.meta.dirname, "src");
+
+// Metro runs the worklets Babel plugin through babel-preset-expo.
+// Component tests run the same plugin on the app's own files, so a
+// surface renders here as it does in the bundle.
+const worklets: Plugin = {
+  name: "worklets",
+  enforce: "pre",
+  async transform(code, id) {
+    if (!id.startsWith(src) || !/\.tsx?$/.test(id) || !/worklet|Animated|Gesture/.test(code)) {
+      return null;
+    }
+    const out = await transformAsync(code, {
+      filename: id,
+      babelrc: false,
+      configFile: false,
+      sourceMaps: true,
+      plugins: [
+        ["@babel/plugin-syntax-typescript", { isTSX: id.endsWith(".tsx") }],
+        "react-native-worklets/plugin",
+      ],
+    });
+    return out?.code == null ? null : { code: out.code, map: out.map };
+  },
+};
 
 // Two projects (ADR 0038). Logic tests run in node. Component tests
 // render through React Native Web in jsdom. The include lists name
@@ -48,6 +74,7 @@ export default defineConfig({
       },
       {
         extends: true,
+        plugins: [worklets],
         resolve: {
           alias: [{ find: /^react-native$/, replacement: "react-native-web" }],
           // Metro's web build picks a `.web` file over its sibling.

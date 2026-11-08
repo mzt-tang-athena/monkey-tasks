@@ -17,6 +17,11 @@ globalThis.ResizeObserver ??= class {
   disconnect() {}
 };
 
+// Gesture handler's web build captures the pointer on each press.
+Element.prototype.setPointerCapture ??= () => {};
+Element.prototype.releasePointerCapture ??= () => {};
+Element.prototype.hasPointerCapture ??= () => false;
+
 window.matchMedia ??= (query: string) =>
   ({
     matches: false,

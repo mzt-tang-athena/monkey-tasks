@@ -15,11 +15,13 @@ export function setWindowSize(width: number, height: number): void {
   });
 }
 
-/** The box `measureInWindow` reports for an element. */
+/** The box `measureInWindow` and `onLayout` report for an element. */
 export function placeBox(
   element: HTMLElement,
   box: { x: number; y: number; width: number; height: number },
 ): void {
+  Object.defineProperty(element, "offsetWidth", { configurable: true, value: box.width });
+  Object.defineProperty(element, "offsetHeight", { configurable: true, value: box.height });
   element.getBoundingClientRect = () =>
     ({
       left: box.x,
