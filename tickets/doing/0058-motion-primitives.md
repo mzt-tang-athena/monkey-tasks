@@ -3,7 +3,7 @@ id: 0058
 title: Motion surfaces on Reanimated and gesture handler hooks
 created: 2026-10-26
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: [0055, 0056, 0057]
 ---
