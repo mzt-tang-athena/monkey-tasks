@@ -354,6 +354,10 @@ Everywhere in `src/**`:
   match `/^onPointer(Down|Move|Up|Cancel)$/`. A JSX rule alone misses a
   spread handler object. The key rule catches the object where it is
   built, as in `use-drag-session.ts`.
+  Use the selectors `JSXAttribute[name.name=/^onPointer(Down|Move|Up|Cancel)$/]`
+  and `ObjectExpression > Property[key.name=/^onPointer(Down|Move|Up|Cancel)$/]`.
+  A bare `Property[...]` selector, as in the margin rule, also matches
+  destructuring and flags tests that only read a handler.
 - `no-restricted-syntax`: `addEventListener` calls for touch events,
   except in `src/components/motion/scroll-view.tsx`.
 - `no-restricted-syntax`: `AccessibilityInfo.isReduceMotionEnabled`.

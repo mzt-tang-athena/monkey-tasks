@@ -148,7 +148,7 @@ keeps the tokens, the pure math and the clocks. Features and routes
 write no worklet, and lint bans Reanimated, worklets and every gesture
 handler export but `Pressable` there.
 
-Two facts from the 0046 prototype change how the rules above apply in
+Two facts from the ADR 0046 prototype change how the rules above apply in
 the browser. Gesture handler 3.3.0 drops the `touchAction` prop of
 `GestureDetector` on the web, so the surfaces pass `touchAction` in the
 gesture config. `overflow: hidden` on a scroller cancels an active
