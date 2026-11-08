@@ -1,4 +1,4 @@
-# 0045. Motion lives in surfaces; features write no worklet
+# 0046. Motion lives in surfaces; features write no worklet
 
 - **Status:** accepted
 - **Date:** 2026-11-08
@@ -76,8 +76,10 @@ lint makes that a build error.
   tick, the landing and the capture sheet use it.
 
 This replaces one line of ADR 0036. The shared pieces live in
-`src/components/motion` and `src/lib/motion`, and only the surfaces call
-`scheduleOnRN`.
+`src/components/motion` and `src/lib/motion`. Only
+`src/components/motion/internal/` and the clocks in
+`src/lib/motion/progress.ts` call `scheduleOnRN`. Every surface reaches
+JS through the internal bridge.
 
 We chose surfaces on two criteria: how much a caller must learn, and
 how safe a copied call site is. Four port tickets and later agents copy
@@ -93,8 +95,10 @@ cell ran 10 times.
 - Gesture handler's web `Pressable` does not fire when a parent pan
   activates, with the mouse and with CDP touch (10 of 10 in each
   cell). React Native's `Pressable` still fires after a mouse swipe,
-  and after a held drag with either input (10 of 10). `onPressIn` and
-  `onPressOut` still fire before the cancel.
+  after a mouse hold then a drag, and after a touch hold with no move
+  (10 of 10). After a touch hold then a swipe, it does not fire. So
+  only gesture handler's `Pressable` cancels in every case. `onPressIn`
+  and `onPressOut` still fire before the cancel.
 - A paused Playwright clock drives Reanimated's web frame loop. The
   value stays put through 500 ms of real time and moves only when
   `page.clock.runFor` steps it. The paused clock also stalls gesture

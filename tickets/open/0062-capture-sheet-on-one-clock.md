@@ -10,20 +10,21 @@ depends: [0058]
 
 ## Spec
 
-Epic 0047, phase 4. ADR 0036, its amendment to ADR 0021, and ADR 0045
+Epic 0047, phase 4. ADR 0036, its amendment to ADR 0021, and ADR 0046
 decide this. ADR 0021 says the sheet and the keyboard share one clock.
 They do not. This ticket puts the sheet, the dock and the bar on one
 `useProgress` from 0058, and rides the keyboard on the UI thread. Paths
-are on `epic/0047-rebuild` at commit `1d85cc3`, under `app/src`.
+are on `epic/0047-rebuild` at commit `745976f`, under `app/src`.
 
 ### Design, 2026-11-08
 
-This spec follows the 2026-11-08 design package for phase 4. ADR 0045
+This spec follows the 2026-11-08 design package for phase 4. ADR 0046
 records it. What matters here:
 
 - `useProgress(target, { ms, onSettled })` is the one clock that React
-  drives. It returns a branded read-only `Progress`. Feature code passes
-  it along and cannot write it.
+  drives. It returns a branded `Progress`, which exposes a read-only
+  `.value` for animated styles. Feature code passes it along and cannot
+  write it.
 - `onSettled(at)` runs once per run, or at unmount. A reversal before
   the end supersedes the run, and its `onSettled` never runs. So a
   reopen during the exit cancels the unmount with no extra code.
@@ -32,7 +33,7 @@ records it. What matters here:
   `finished: true` under reduced motion, 10 runs in 10.
 - The capture hook is feature code, so it imports only `useProgress`
   and `Progress`. The `Sheet` and the bar are shared components, so
-  they may read the value in animated styles.
+  they may read `.value` in animated styles.
 
 ### What breaks today
 

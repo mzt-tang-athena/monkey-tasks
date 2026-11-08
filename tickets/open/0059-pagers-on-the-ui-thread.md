@@ -10,16 +10,16 @@ depends: [0058]
 
 ## Spec
 
-Epic 0047, phase 4. ADR 0036, its amendment to ADR 0033, and ADR 0045
+Epic 0047, phase 4. ADR 0036, its amendment to ADR 0033, and ADR 0046
 decide this. Ticket 0058 built `Pager` in
 `src/components/motion/pager.tsx`. This ticket moves the list tabs, the
 planner day body and the month calendar onto it, and deletes the old
-pager. Paths are on `epic/0047-rebuild` at commit `1d85cc3`, under
+pager. Paths are on `epic/0047-rebuild` at commit `745976f`, under
 `app/src`.
 
 ### Design, 2026-11-08
 
-This spec follows the 2026-11-08 design package for phase 4. ADR 0045
+This spec follows the 2026-11-08 design package for phase 4. ADR 0046
 records it. What matters here:
 
 - The screen writes no gesture code. It renders `Pager` with an
@@ -40,12 +40,12 @@ records it. What matters here:
 
 | Bug | Today | What the user sees |
 |---|---|---|
-| V1 | `components/swipe-pager.tsx:99-112`. `back()` drops the neighbour before the 180 ms return starts. | A short drag returns over a blank strip. |
-| V2 | `swipe-pager.tsx:100,134,156-159,179` and `lib/swipe.ts:64-68`. A new drag calls `setValue`, which stops the running settle with `finished: false`, so `onPage` never runs. | Two fast flicks move one page, and the first snaps back. |
-| V3 | `swipe-pager.tsx:160-170,177-181,190-216`, with `features/planner/hooks/use-planner-route.ts:45-48`. The kept cell renders from the new page, so it shows page N+2. The layout effect resets the offset apart from the commit, and day and month commit through an async `router.setParams`. | A frame of the wrong page can flash at the commit. The day and month flicker from the 0046 phone pass. |
-| V4 | `features/lists/components/list-page-preview.tsx:28-54` and `features/planner/components/day/day-preview.tsx:36-47` draw from the top. The live cell has no key (`swipe-pager.tsx:202`), so it keeps its old scroll offset. | The landed page jumps. This is the list's vertical shift from the 0046 phone pass. |
+| V1 | `components/swipe-pager.tsx:100-113`. `back()` drops the neighbour before the 180 ms return starts. | A short drag returns over a blank strip. |
+| V2 | `swipe-pager.tsx:101,135,157-160,180` and `lib/swipe.ts:64-68`. A new drag calls `setValue`, which stops the running settle with `finished: false`, so `onPage` never runs. | Two fast flicks move one page, and the first snaps back. |
+| V3 | `swipe-pager.tsx:161-171,178-182,188-208`, with `features/planner/hooks/use-planner-route.ts:45-48`. The kept cell renders from the new page, so it shows page N+2. The layout effect resets the offset apart from the commit, and day and month commit through an async `router.setParams`. | A frame of the wrong page can flash at the commit. The day and month flicker from the phone pass of ticket 0046. |
+| V4 | `features/lists/components/list-page-preview.tsx:28-54` and `features/planner/components/day/day-preview.tsx:36-47` draw from the top. The live cell has no key (`swipe-pager.tsx:200`), so it keeps its old scroll offset. | The landed page jumps. This is the list's vertical shift from the phone pass of ticket 0046. |
 | V5 | 0056 fixed the rows: the preview and the live day both call `dayRows`. One part is left: each page reads its own `now` (`day/day-page.tsx:37-38`). | Rows pop in when a swipe lands on a day with a recurring task, or on today. The rows are fixed. The now line can still jump. |
-| J1 | `swipe-pager.tsx:88-97,122-130` sets screen state at swipe start. `list-page-preview.tsx:26-54` renders every row. The day preview mounts live rows with hooks (`task-list-section.tsx:73`, `day/overdue-group.tsx:38`). | The first frames of a swipe stall on a long list. |
+| J1 | `swipe-pager.tsx:90-98,123-131` sets screen state at swipe start. `list-page-preview.tsx:26-54` renders every row. The day preview mounts live rows with hooks (`task-list-section.tsx:73`, `day/overdue-group.tsx:38`). | The first frames of a swipe stall on a long list. |
 | V12 | `lib/swipe.ts:141,157-174` and `day/day-spread.tsx:133-155`. No pointer capture. `pointercancel` and native `terminate` count as a release and can commit. | In the browser, a release outside the body leaves the page offset. A cancelled touch can change the page. |
 | L1 | `components/ui/tab-strip.tsx:75` scrolls the strip with `animated: true` always. | The strip slides with reduce motion on. |
 | B1 | 0055's press guard fixed the lists, with two gaps. A mouse swipe released outside `list-pager` leaves the guard armed (review note below). Month cells have no guard (`month-grid.tsx:139`). | A mouse swipe that starts on a row also opens the task editor. |
@@ -106,6 +106,16 @@ This ticket still owns:
   `lists-screen.tsx`). Move those two handlers onto a plain `View`
   inside the page, and keep that file on the allowlist for 0060. If you
   drop them, web reorder breaks.
+- The day root also carries the split's web resize. `split-handle.tsx`
+  starts it with `split.begin`, and the root's `onPointerMove`,
+  `onPointerUp` and `onPointerCancel` call `split.move(pageY)` and
+  `split.end()` (`day/day-spread.tsx:143-154`, the web path of
+  `hooks/use-split-pane.ts`). The root's `useTouchDragGate` call holds
+  the touch for the grabber. When the pager host moves to the body,
+  keep those calls and the gate on the day root, a plain `View`. Drop
+  only the swipe calls, and keep `day-spread.tsx` on the allowlist for
+  0061, whose `Split` replaces them. If you drop them, the web grabber
+  stops resizing.
 
 ### The previews
 
@@ -123,7 +133,9 @@ This ticket still owns:
 
 Delete `src/components/swipe-pager.tsx`, `src/lib/swipe.ts` and
 `src/lib/swipe.test.ts`. The `pager-math` tests from 0058 replace the
-swipe tests. Remove this ticket's files from the 0058 lint allowlist.
+swipe tests. Remove this ticket's files from the 0058 lint allowlist,
+except `lists-screen.tsx` and `day/day-spread.tsx`, which stay for 0060
+and 0061.
 Update the comment in `e2e/specs/motion.spec.ts` that points at
 `swipe-pager.tsx`.
 
@@ -156,7 +168,7 @@ in a context with `hasTouch: true`. The scenarios target the test ids
 | A 40 px drag on `list-pager`, then release. The preview cell stays in the DOM until the track rests. | V1 |
 | Two 120 px drags 100 ms apart. The tab moves two places. | V2 |
 | After a commit, no cell holds the page two places away. | V3 content |
-| Scroll Main to its middle, drag 95 percent of the width and hold, take a screenshot, release, take another. The two match. | V4, 0046 shift |
+| Scroll Main to its middle, drag 95 percent of the width and hold, take a screenshot, release, take another. The two match. | V4, the ticket 0046 shift |
 | The same screenshot pair for a day with a recurring task, and for a swipe onto today. | V5 |
 | A touch drag of 120 px that ends in `touchCancel`. The tab stays. | V12 |
 | A vertical touch drag of 300 px with 30 px sideways drift. The list scrolls, the tab stays, and no preview mounts. | `pan-y` |
@@ -168,7 +180,7 @@ A jsdom component test covers J1. It counts renders and asserts that a
 swipe start renders the lists screen no times. For a list of 300 tasks,
 the preview renders no more rows than fit the viewport.
 
-The browser cannot show the frame flash in V3 or the 0046 flicker,
+The browser cannot show the frame flash in V3 or the ticket 0046 flicker,
 because Reanimated runs on the main thread there. The emulator and the
 phone show those.
 
@@ -186,7 +198,10 @@ phone show those.
       `lib/swipe.ts` and `lib/swipe.test.ts` are gone.
 - [ ] Web reorder still works in My order, through the handlers that
       moved off the pager host.
-- [ ] Lint passes with this ticket's files out of the allowlist.
+- [ ] The web grabber still resizes the day split, through the calls
+      kept on the day root.
+- [ ] Lint passes with this ticket's files out of the allowlist, except
+      `lists-screen.tsx` and `day/day-spread.tsx`.
 - [ ] Emulator, with the `verify-monkey-tasks` Android path: on the
       list, the day and the month, a slow drag, a flick, a short drag,
       a double flick and a swipe at each end show no blank strip, no

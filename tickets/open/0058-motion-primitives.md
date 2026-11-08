@@ -11,15 +11,15 @@ depends: [0055, 0056, 0057]
 ## Spec
 
 Epic 0047, phase 4. ADR 0036 decides that motion runs on the UI thread.
-ADR 0045 decides its shape: five surfaces in `src/components/motion`,
+ADR 0046 decides its shape: five surfaces in `src/components/motion`,
 pure math and clocks in `src/lib/motion`, and no worklet in feature
 code. This ticket adds the libraries, builds the engine, the drag
 surface, `Pager` and `Landing`, adds the lint rules, and swaps the
 `Menu` entrance. It ports no screen. Tickets 0059 to 0062 port the
 screens onto the surfaces.
 
-Read first: ADR 0036, ADR 0045, then ADR 0033 (pager) and ADR 0032
-(reorder). Paths are on `epic/0047-rebuild` at commit `1d85cc3`, under
+Read first: ADR 0036, ADR 0046, then ADR 0033 (pager) and ADR 0032
+(reorder). Paths are on `epic/0047-rebuild` at commit `745976f`, under
 `app/`.
 
 ### Design, 2026-11-08
@@ -27,7 +27,7 @@ Read first: ADR 0036, ADR 0045, then ADR 0033 (pager) and ADR 0032
 This spec comes from the design package of the 2026-11-08 architect
 run: two candidates (hooks and surfaces), a synthesis, two owner
 decisions and a web prototype. The package was a scratch folder and is
-gone. ADR 0045 keeps the decision and the prototype facts. This ticket
+gone. ADR 0046 keeps the decision and the prototype facts. This ticket
 keeps what a builder needs:
 
 - Surfaces won over hooks. A feature passes data and plain functions,
@@ -41,7 +41,7 @@ keeps what a builder needs:
   cancels a drag, and a `touchmove` listener does not. `measure()` in
   `onActivate` works, in page coordinates.
 - Gesture handler 3.3.0 drops the detector's `touchAction` prop on the
-  web. Pass `touchAction` in the gesture config. ADR 0045 gives the
+  web. Pass `touchAction` in the gesture config. ADR 0046 gives the
   source lines.
 
 ### What the surfaces make impossible
@@ -58,7 +58,7 @@ test.
 | V8 | `from` and `to` come from the UI thread. Shifts carry an index stamp. | 0060 |
 | V10, B1 | Every press target is gesture handler's `Pressable`, so a pan cancels it. Lint bans the other one. | 0059, 0060 |
 | V11 | The hold cue is a shared value that starts after 80 ms. | 0061 |
-| V12 | Gesture handler captures the pointer. Only an uncancelled end commits. | 0059 |
+| V12 | Gesture handler captures the pointer. Only an uncancelled end commits. | 0059, 0061 |
 | J2 | The ghost, hover, slots, radii and split height are shared values. | 0060, 0061 |
 | J3 | Lint bans `AccessibilityInfo` motion reads. A source shakes once. | 0060, 0061 |
 | L2 | Worklets pass ids. The root reads the newest payload and callback. | 0061 |
@@ -139,7 +139,7 @@ Vitest file beside it.
 | File | Contents |
 |---|---|
 | `tokens.ts` | `motion.ms`: tap 120, return 180, settle 220, landing 220, tickWash 320, landWash 600, sheet 220, menu 140, longPress 450. `motion.easeOut` is `Easing.bezier(0.16, 1, 0.3, 1)`. `motion.swipe`: slop 12, commit 80, flick 500 px/s, rubber 0.28, rubberMax 48. `motion.hold`: row 300, pill 120, grip 0, cue 80, slop 8. `motion.split.minPane` 150. `HoldKind` is `"row" \| "pill" \| "grip"`. One table maps each kind to its ms and its `touchAction`: `pan-y` for row and pill, `none` for grip. |
-| `progress.ts` | `timing(to, ms, done?)` and `spring(to, config, done?)`, worklets that always pass `ReduceMotion.System`. `done` is a plain JS function, called through `scheduleOnRN` only when the animation finishes. `useProgress(target, { ms, onSettled })` returns a branded read-only `Progress`. No `useReducedMotion` re-export. |
+| `progress.ts` | `timing(to, ms, done?)` and `spring(to, config, done?)`, worklets that always pass `ReduceMotion.System`. `done` is a plain JS function, called through `scheduleOnRN` only when the animation finishes. `useProgress(target, { ms, onSettled })` returns a branded `Progress`. `Progress` exposes a read-only `.value` that animated styles read, and no setter. No `useReducedMotion` re-export. |
 | `entrances.ts` | `markLanded(id)`, `takeLanded(id)`, and `menuEntering(corner)`, an entering animation. |
 | `pager-math.ts` | `follow(dx, bounds, page)` returns the finger travel, or the rubber band at a closed end. `releaseTarget({ dx, vx, width, bounds, page })` returns -1, 0 or 1. `visiblePages(pos, width)` returns the pages on screen. `canGo(bounds, page)` reads data, not a callback. |
 | `drag-math.ts` | `slotForY(y, rows)`, `slotTops(order, rows, gap)` (today `layoutOrder` in `features/lists/lib/reorder.ts`, lines 48 to 61), `hitZone(x, y, zones, grids, clips)`, and `cardPosition(index, count)` (moved from `components/ui/card-group-row.tsx`, which re-exports it). A grid zone is one rect with `columns`, `rows` and `cells`, and `hitZone` finds its cell with `Math.floor`. A `null` cell is no target. |
@@ -246,7 +246,7 @@ time, so the first source to activate claims `owner`.
 - The live cell keys on `index`, so a landed page mounts at its top.
 - The release reads `translationX` and `velocityX` through
   `releaseTarget`. The settle calls `onPage(next)` once per landing,
-  through `scheduleOnRN`.
+  through the internal bridge.
 - A touch during a settle commits the pending page at once and makes
   it the next gesture's base. Two fast flicks move two pages.
 - Only an `onDeactivate` with `canceled: false` can commit. A cancel
@@ -256,9 +256,9 @@ time, so the first source to activate claims `owner`.
   drawn until `pos` lands, so a late write shows the old picture, never
   a blank.
 - With reduced motion, the page does not follow the finger. A release
-  past the threshold commits through `scheduleOnRN`, a microtask on the
-  web, so the `reduced-motion` project sees the commit with no clock
-  time.
+  past the threshold commits through the internal bridge. Its
+  `scheduleOnRN` call is a microtask on the web, so the `reduced-motion`
+  project sees the commit with no clock time.
 
 #### How the drag surface behaves
 
@@ -294,7 +294,9 @@ time, so the first source to activate claims `owner`.
 - Put `touchAction` in the gesture config, never on `GestureDetector`.
   The public config types omit the field, so one typed helper adds it.
   No other file names it.
-- Call `scheduleOnRN` only here, in `progress.ts`, and in `Pager`.
+- Only `src/components/motion/internal/` and the clocks in
+  `src/lib/motion/progress.ts` call `scheduleOnRN`. Every surface
+  reaches JS through the internal bridge.
 
 #### `MotionScrollView`
 
@@ -313,7 +315,18 @@ time, so the first source to activate claims `owner`.
 ### 5. Ban the old paths
 
 Add these rules to `app/eslint.config.js`, next to the ADR 0039
-boundary rules. Each message names ADR 0045.
+boundary rules. Each message names ADR 0046.
+
+In flat config, a later block that sets a rule replaces an earlier
+block's options for every file that both blocks match. The config
+already sets `no-restricted-syntax` for every file, with the ADR 0012
+margin rule. It sets `no-restricted-imports` for `src/**`, with the
+ADR 0037 `expo-file-system/legacy` rule, which
+`src/lib/vault/adapters/saf.ts` skips. Merge the new entries into those
+options, so both old rules still fire on every file they cover today.
+The new blocks overlap too: a file in `src/features` needs the bans for
+`src/**` and the bans for features in one list. Build each list from
+shared constants.
 
 In `src/features/**` and `src/app/**`:
 
@@ -336,11 +349,11 @@ Everywhere in `src/**`:
 - `no-restricted-imports`, outside `src/lib/motion` and
   `src/components/motion`: `react-native-worklets`, the gesture hooks
   and `GestureDetector`.
-- `no-restricted-imports`: `swipeProps` from `@/lib/swipe`, and
-  `pointerHandlers` from `use-drag-session`. A JSX attribute rule misses
-  a spread handler object, so ban the import.
-- `no-restricted-syntax`: JSX attributes that match
-  `/^onPointer(Down|Move|Up|Cancel)$/`.
+- `no-restricted-imports`: `swipeProps` from `@/lib/swipe`.
+- `no-restricted-syntax`: JSX attributes and object literal keys that
+  match `/^onPointer(Down|Move|Up|Cancel)$/`. A JSX rule alone misses a
+  spread handler object. The key rule catches the object where it is
+  built, as in `use-drag-session.ts`.
 - `no-restricted-syntax`: `addEventListener` calls for touch events,
   except in `src/components/motion/scroll-view.tsx`.
 - `no-restricted-syntax`: `AccessibilityInfo.isReduceMotionEnabled`.
@@ -349,36 +362,59 @@ Everywhere in `src/**`:
 
 Add a lint fixture test: one file that uses each banned import and
 pattern, and a test that expects one error per line. The banned list
-and the surfaces then cannot drift apart.
+and the surfaces then cannot drift apart. The fixture also sets a
+margin in a style and imports `expo-file-system/legacy`, and the test
+expects both of those errors as well. The test lints the fixture text
+with `ESLint.lintText` and its `filePath` option, once as a feature
+file and once as a file on the allowlist below. On the allowlisted
+path the motion errors go away, and the two old errors stay. A merge
+that drops an old rule then fails the test.
 
-An `ignores` block lists today's users. Each port removes its own
-entries, and the port that empties the list deletes it. At commit
-`1d85cc3` the users are:
-
-| File | Owner |
-|---|---|
-| `src/lib/motion/legacy.ts` | the port that empties it |
-| `src/lib/swipe.ts`, `src/components/swipe-pager.tsx`, `src/features/lists/lists-screen.tsx`, `src/features/lists/components/list-notices.tsx`, `src/components/ui/tab-strip.tsx`, `src/features/planner/components/day/day-spread.tsx`, `src/features/planner/components/month-view.tsx`, `src/features/planner/components/month-pane.tsx`, `src/features/planner/components/month-grid.tsx`, `src/features/planner/components/period-strip.tsx` | 0059 |
-| `src/components/task-row.tsx`, `src/components/ui/card-group-row.tsx`, `src/features/lists/components/reorder-row.tsx`, `src/features/lists/components/reorder-ghost.tsx`, `src/features/lists/components/task-card-row.tsx`, `src/features/lists/hooks/use-row-reorder.ts` | 0060 |
-| `src/features/planner/planner-screen.tsx`, `src/features/planner/components/drag.tsx`, `drag-ghost.tsx`, `task-pills.tsx`, `task-list-section.tsx`, `timeline.tsx`, `week-view.tsx`, `source-toggle.tsx`, `day/split-handle.tsx`, `day/overdue-group.tsx`, `day/timeline-pane.tsx`, and `src/features/planner/hooks/use-drag-session.ts`, `use-drag-session.test.tsx`, `use-split-pane.ts`, `use-touch-drag-gate.ts` | 0061 |
-| `src/components/bottom-bar/bottom-bar.tsx`, `src/components/ui/sheet.tsx`, `src/features/capture/hooks/use-capture-sheet.ts`, `src/features/capture/components/capture-dock.tsx` | 0062 |
-
-Some files no port touches still import a banned `Pressable` or
-`ScrollView`. Swap them in this ticket, with no change in behavior:
-`src/components/bottom-bar/nav-tab.tsx`,
-`src/components/error-boundary.tsx`, `src/components/ui/button.tsx`,
-`icon-button.tsx`, `pill.tsx`, `segmented-control.tsx`, `menu.tsx`,
-`src/features/diagnostics/components/diagnostics-screen.tsx` and
-`src/features/task-editor/components/note-viewer.tsx`. A press target
-inside a page or a drag source must be gesture handler's `Pressable`,
-so the shared buttons swap first. A scroller in a feature becomes
-`MotionScrollView`.
-
-Rerun the search before you write the list, because files may move:
+An `ignores` list names today's users. Each port removes its own
+entries, and the port that empties the list deletes it. Rerun this
+search before you write the list, because files may move. It prints
+every file under `app/src` that a rule above flags:
 
 ```sh
-cd app/src && rg -l "\b(Animated|PanResponder)\b|Gesture\.|GestureDetector|onPointer(Down|Move|Up|Cancel)|AccessibilityInfo|swipeProps|pointerHandlers"
+cd app/src && {
+	rg -l -U --pcre2 \
+		-e 'import\s*(type\s*)?\{[^}]*\b(Animated|PanResponder|Pressable|Touchable\w*|ScrollView)\b[^}]*\}\s*from\s*"react-native"' \
+		-e 'from\s*"react-native-(reanimated|worklets)"' \
+		-e 'import\s*\{[^}]*\b(Gesture|GestureDetector|use\w*Gesture)\b[^}]*\}\s*from\s*"react-native-gesture-handler"' \
+		-e '"@/components/motion/internal' \
+		-e '\bswipeProps\b' \
+		-e '\bonPointer(Down|Move|Up|Cancel)\s*[=:]' \
+		-e 'addEventListener\(\s*"touch' \
+		-e '\bisReduceMotionEnabled\b' \
+		-e '<(SectionList|FlatList)\b'
+	rg -l --pcre2 'from\s*"@/lib/motion(?!/(tokens|entrances|progress)")' features app
+} | sort -u
 ```
+
+At commit `745976f` it prints 45 files, and the table lists exactly
+those, as the search prints them. The last row is not an allowlist
+entry, because this ticket swaps those files.
+
+| Path under `app/src` | Owner |
+|---|---|
+| `lib/motion.ts` (step 1 moves it to `lib/motion/legacy.ts`) | the port that empties it |
+| `components/swipe-pager.tsx`, `components/ui/tab-strip.tsx`, `features/lists/components/list-notices.tsx`, `features/planner/components/month-grid.tsx`, `features/planner/components/month-pane.tsx`, `features/planner/components/month-view.tsx`, `features/planner/components/period-strip.tsx`, `lib/swipe.test.ts`, `lib/swipe.ts` | 0059 |
+| `features/lists/lists-screen.tsx` | 0059, then 0060 |
+| `features/planner/components/day/day-spread.tsx` | 0059, then 0061 |
+| `components/task-row.tsx`, `components/ui/card-group-row.tsx`, `features/lists/components/reorder-ghost.tsx`, `features/lists/components/reorder-row.tsx`, `features/lists/components/task-card-row.test.tsx`, `features/lists/components/task-card-row.tsx`, `features/lists/hooks/use-row-reorder.ts` | 0060 |
+| `features/planner/components/day/overdue-group.tsx`, `features/planner/components/day/split-handle.tsx`, `features/planner/components/day/timeline-pane.tsx`, `features/planner/components/drag-ghost.tsx`, `features/planner/components/drag.tsx`, `features/planner/components/source-toggle.tsx`, `features/planner/components/task-list-section.tsx`, `features/planner/components/task-pills.tsx`, `features/planner/components/timeline.tsx`, `features/planner/components/week-view.tsx`, `features/planner/hooks/use-drag-session.ts`, `features/planner/hooks/use-split-pane.ts`, `features/planner/hooks/use-touch-drag-gate.ts` | 0061 |
+| `components/bottom-bar/bottom-bar.tsx`, `components/ui/sheet.tsx`, `features/capture/components/capture-dock.tsx`, `features/capture/hooks/use-capture-sheet.ts` | 0062 |
+| `components/bottom-bar/nav-tab.tsx`, `components/error-boundary.tsx`, `components/ui/button.tsx`, `components/ui/icon-button.tsx`, `components/ui/menu.tsx`, `components/ui/pill.tsx`, `components/ui/segmented-control.tsx`, `features/diagnostics/components/diagnostics-screen.tsx`, `features/task-editor/components/note-viewer.tsx` | 0058, swapped below |
+
+`lists-screen.tsx` and `day-spread.tsx` stay listed after 0059. 0059
+keeps the reorder's web handlers and the split's web resize on plain
+views there, and 0060 and 0061 remove them.
+
+No port touches the files in the last row, but each imports a banned
+`Pressable` or `ScrollView`. Swap them in this ticket, with no change
+in behavior. A press target inside a page or a drag source must be
+gesture handler's `Pressable`, so the shared buttons swap first. A
+scroller in a feature becomes `MotionScrollView`.
 
 ### 6. Swap the `Menu` entrance
 
@@ -461,7 +497,7 @@ Outcome. Do these before 0059 starts, because the ports build on them:
 - `measure()` on zone refs read from the shared-value registry returns
   the zone rects inside a source's `onActivate`. If the registry cannot
   hold animated refs on native, zones measure themselves in a reaction
-  at pickup. Record which one shipped in ADR 0045.
+  at pickup. Record which one shipped in ADR 0046.
 - `scrollEnabled={false}` on gesture handler's `ScrollView` stops the
   scroll and keeps an active drag.
 
@@ -491,7 +527,9 @@ Outcome. Do these before 0059 starts, because the ports build on them:
       coordinates (`pageX`, `pageY`), measured in `onActivate`.
 - [ ] Lint fails on each banned import and pattern in the fixture file,
       and passes on the branch. The `ignores` list names only files that
-      0059 to 0062 port.
+      0059 to 0062 port. The ADR 0012 margin rule and the ADR 0037
+      `expo-file-system/legacy` rule still fire on the feature path and
+      on the allowlisted path.
 - [ ] With reduced motion, `timing` lands at once and runs `done`, and
       `useProgress` runs `onSettled` with no clock time.
 - [ ] The `Menu` entrance runs on Reanimated. In the `reduced-motion`

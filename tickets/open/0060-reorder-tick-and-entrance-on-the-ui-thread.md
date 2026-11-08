@@ -5,22 +5,22 @@ created: 2026-10-26
 priority: high
 assignee:
 pr:
-depends: [0058]
+depends: [0058, 0059]
 ---
 
 ## Spec
 
 Epic 0047, phase 4. ADR 0036, its amendments to ADR 0032 and ADR 0034,
-and ADR 0045 decide this. This ticket builds `createReorderSurface` on
+and ADR 0046 decide this. This ticket builds `createReorderSurface` on
 0058's engine and moves the row reorder onto it. It ends the tick hold
 from the tick's animation, and replaces the 90 second freshness window
 with the landed mark. Paths are on `epic/0047-rebuild` at commit
-`1d85cc3`, under `app/src`. Line numbers in `lib/motion.ts` refer to
+`745976f`, under `app/src`. Line numbers in `lib/motion.ts` refer to
 the file before 0058 moved it to `lib/motion/legacy.ts`.
 
 ### Design, 2026-11-08
 
-This spec follows the 2026-11-08 design package for phase 4. ADR 0045
+This spec follows the 2026-11-08 design package for phase 4. ADR 0046
 records it. What matters here:
 
 - The lists screen writes no gesture code. It renders
@@ -134,11 +134,15 @@ it ran on.
   (ADR 0017). A late write still ends right, but its rows slide back
   and then jump.
 - Delete `use-row-reorder.ts`, `reorder-row.tsx` and `reorder-ghost.tsx`,
-  and the web reorder handlers that 0059 moved off the pager host.
+  and the web reorder handlers that 0059 moved off the pager host onto
+  a plain `View`.
   Keep `reorderItems` and `moveItem` in `features/lists/lib/reorder.ts`.
   Delete `layoutOrder`, which `slotTops` replaced.
-- Remove the drop arm of `use-press-guard`. 0059 removed the swipe arm,
-  so delete `src/hooks/use-press-guard.ts` and its test.
+- Remove the drop arm of `use-press-guard`. 0059 removed the swipe arm.
+  Then run `git grep -n -e usePressGuard -e makePressGuard -- app/src`.
+  If it finds no caller outside `src/hooks/use-press-guard.ts` and its
+  test, delete both. If a caller is left, keep the file and name the
+  caller in the Outcome.
 
 ### Step 4: the tick hold
 
@@ -169,7 +173,10 @@ it ran on.
   Delete `useRise` from `lib/motion/legacy.ts` if 0061 already removed
   the planner pill's use. Otherwise 0061 deletes it.
 - `TaskRow` drops `useReduceMotion`. Remove this ticket's files from the
-  0058 lint allowlist.
+  0058 lint allowlist. That includes `lists-screen.tsx`, which 0059
+  left there.
+  `task-card-row.test.tsx` builds an `Animated.Value` for the
+  `CardGroupRow` shift. Rewrite it onto `ListReorder.Item`.
 
 ### Tests first
 
@@ -217,7 +224,8 @@ start on native.
       `src/components/motion` and `useProgress`. Lint passes with this
       ticket's files out of the allowlist.
 - [ ] `use-row-reorder.ts`, `reorder-row.tsx`, `reorder-ghost.tsx`,
-      `use-press-guard.ts`, `freshMs` and the tick hold timer are gone.
+      `freshMs` and the tick hold timer are gone. `use-press-guard.ts`
+      is gone, or the Outcome names the caller that keeps it.
 - [ ] Emulator, reduce motion off: a long press lift, a grip drag, a
       fast flick, a drop in place and a scroll that starts on a row all
       behave. No recorded frame blinks at the drop, and no tap after a

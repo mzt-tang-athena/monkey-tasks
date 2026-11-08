@@ -59,7 +59,7 @@ rendered a page or wrote a note.
 
 ## Amendment, 2026-11-08: the surfaces make the call
 
-ADR 0045 moves the line above. The surfaces in `src/components/motion`
-and the clocks in `src/lib/motion` make every `scheduleOnRN` call.
-Features and routes write no worklet, and lint bans the imports that
-would let them.
+ADR 0046 moves the line above. Only `src/components/motion/internal/`
+and the clocks in `src/lib/motion/progress.ts` call `scheduleOnRN`.
+Every surface reaches JS through the internal bridge. Features and
+routes write no worklet, and lint bans the imports that would let them.

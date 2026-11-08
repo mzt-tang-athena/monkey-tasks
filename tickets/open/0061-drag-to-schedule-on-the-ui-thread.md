@@ -10,16 +10,16 @@ depends: [0058]
 
 ## Spec
 
-Epic 0047, phase 4. ADR 0036 and ADR 0045 decide this. This ticket
+Epic 0047, phase 4. ADR 0036 and ADR 0046 decide this. This ticket
 moves the planner's drag to schedule onto `createDragSurface` from
 0058. Rows, pills and hour tasks drop onto hour rows, week columns and
 month cells. It also builds `Split` on 0058's engine and moves the day
 split grabber onto it. Paths are on `epic/0047-rebuild` at commit
-`1d85cc3`, under `app/src`.
+`745976f`, under `app/src`.
 
 ### Design, 2026-11-08
 
-This spec follows the 2026-11-08 design package for phase 4. ADR 0045
+This spec follows the 2026-11-08 design package for phase 4. ADR 0046
 records it. What matters here:
 
 - The planner writes no gesture code. It makes one
@@ -122,10 +122,15 @@ export const PlanDrag = createDragSurface<TaskItem, PlanTarget>();
 export function patchForDrop(task: TaskItem, target: PlanTarget, routeDay: Date): DragPatch;
 ```
 
+`DragPatch` is `Partial<TaskFrontmatter>`. Today it lives in
+`hooks/use-drag-session.ts` (line 27), which this ticket deletes, so
+move it to `plan-drag.ts`.
+
 - `patchForDrop` is pure, with a Vitest file. An hour target writes that
   hour on the route day and keeps the task's minute. A day target
-  writes that date and keeps the task's time. It replaces `resolve` and
-  `dayOfZone` and `hourOfZone` in `lib/dropzone.ts`.
+  writes that date and keeps the task's time. It replaces `resolve` in
+  `hooks/use-planner-gestures.ts` (line 41), and `dayOfZone` and
+  `hourOfZone` in `lib/dropzone.ts`.
 - `planner-screen.tsx` renders one `PlanDrag.Root` around the body for
   day, week and month, with
   `onDrop={(task, target) => write(task, patchForDrop(task, target, routeDay))}`
@@ -150,7 +155,9 @@ export function patchForDrop(task: TaskItem, target: PlanTarget, routeDay: Date)
   8 px.
 - Delete `drag.tsx`, `use-drag-session.ts` and its test,
   `use-touch-drag-gate.ts`, `lib/dropzone.ts` and its test, and every
-  `onPointerDown` prop. Delete `use-planner-gestures.ts` once nothing
+  `onPointerDown` prop. `day/day-panes.test.tsx` imports
+  `useDragSession`, `DropZoneMap` and `DragPatch`, so rewrite it onto
+  `PlanDrag`. Delete `use-planner-gestures.ts` once nothing
   is left in it after 0059. A pill's `useRise` becomes `Landing`. Delete
   `useShake` from `lib/motion/legacy.ts`, and `useRise` too if 0060
   already removed its last other caller.
@@ -167,7 +174,10 @@ export function patchForDrop(task: TaskItem, target: PlanTarget, routeDay: Date)
   timeline starts near today's settled height. On a 360 by 640 screen
   the list pane must start fully above the bar.
 - `day/day-preview.tsx` draws `SplitStill` with the same `fraction`.
-- Delete `use-split-pane.ts` and `day/split-handle.tsx`.
+- Delete `use-split-pane.ts` and `day/split-handle.tsx`. In
+  `day/day-spread.tsx`, delete what 0059 left on the day root for the
+  web resize: the `split.move` and `split.end` pointer handlers and the
+  `useTouchDragGate` call.
 
 ### Step 4: tokens
 
@@ -175,7 +185,7 @@ export function patchForDrop(task: TaskItem, target: PlanTarget, routeDay: Date)
 press, in place of `drag.holdMs`. Move the remaining `drag` users onto
 `motion`, and delete `drag` from `src/theme/tokens.ts` once 0060 has
 also moved off it. Remove this ticket's files from the 0058 lint
-allowlist.
+allowlist. That includes `day/day-spread.tsx`, which 0059 left there.
 
 ### Tests first
 
@@ -227,7 +237,8 @@ cover V11 and J3 too.
       `day:` string ids remain.
 - [ ] `use-touch-drag-gate.ts`, `use-drag-session.ts`, `drag.tsx`,
       `lib/dropzone.ts`, `use-split-pane.ts`, `split-handle.tsx`, the
-      `onPointerDown` props and the click guard are gone. Lint passes
+      split's pointer handlers in `day-spread.tsx`, the `onPointerDown`
+      props and the click guard are gone. Lint passes
       with this ticket's files out of the allowlist.
 - [ ] Emulator, with the `verify-monkey-tasks` Android path: a scroll
       that starts on a row shows no tint, a held row shakes once and
