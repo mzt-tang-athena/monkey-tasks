@@ -1,9 +1,17 @@
-import { transformAsync } from "@babel/core";
+import { createRequire } from "node:module";
 import path from "node:path";
-import type { Plugin } from "vite";
+import type { Plugin, Rollup } from "vite";
 import { defineConfig } from "vitest/config";
 
 const src = path.resolve(import.meta.dirname, "src");
+
+// Expo brings Babel, which ships no types.
+const { transformAsync } = createRequire(import.meta.url)("@babel/core") as {
+  transformAsync: (
+    code: string,
+    options: object,
+  ) => Promise<{ code?: string | null; map?: Rollup.SourceMapInput } | null>;
+};
 
 // Metro runs the worklets Babel plugin through babel-preset-expo.
 // Component tests run the same plugin on the app's own files, so a

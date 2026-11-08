@@ -1,21 +1,7 @@
+import "@/testing/reduced-motion";
 import * as React from "react";
 import { act, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-
-// Reanimated reads the reduce motion flag once, when it loads, so the
-// flag goes in before the import.
-vi.hoisted(() => {
-  window.matchMedia = (query: string) =>
-    ({
-      matches: query.includes("prefers-reduced-motion"),
-      media: query,
-      addEventListener() {},
-      removeEventListener() {},
-      addListener() {},
-      removeListener() {},
-    }) as unknown as MediaQueryList;
-});
-
 import { useSharedValue } from "react-native-reanimated";
 import { timing, useProgress } from "./progress";
 

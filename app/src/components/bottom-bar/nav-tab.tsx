@@ -1,5 +1,7 @@
 import * as React from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
+import { Pressable } from "react-native-gesture-handler";
+import { TabRole, tabFill, tabRole } from "@/components/ui/tab-role";
 import {
   bottomBar,
   colors,
@@ -26,16 +28,16 @@ export function NavTab({
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
-      onPress={onPress}
-      accessibilityRole="tab"
-      accessibilityLabel={label}
-      aria-selected={active}
-    >
-      <Icon name={icon} color={active ? "accent" : "inkMuted"} />
-      <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
-    </Pressable>
+    <TabRole selected={active} label={label}>
+      <Pressable
+        style={({ pressed }) => [tabFill, styles.tab, pressed && styles.tabPressed]}
+        onPress={onPress}
+        {...tabRole(active, label)}
+      >
+        <Icon name={icon} color={active ? "accent" : "inkMuted"} />
+        <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
+      </Pressable>
+    </TabRole>
   );
 }
 

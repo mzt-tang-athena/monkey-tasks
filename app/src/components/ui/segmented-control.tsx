@@ -1,5 +1,7 @@
 import * as React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Pressable } from "react-native-gesture-handler";
+import { TabRole, tabFill, tabRole } from "./tab-role";
 import { colors, radius, touchTarget, type } from "@/theme/tokens";
 import { Icon, type IconName } from "./icon";
 
@@ -39,28 +41,32 @@ export function SegmentedControl<Key extends string>({
       {segments.map((segment, index) => {
         const active = segment.key === selected;
         return (
-          <Pressable
+          <TabRole
             key={segment.key}
-            style={({ pressed }) => [
-              styles.segment,
-              stretch && styles.stretch,
-              active && styles.active,
-              pressed && !active && styles.pressed,
-              active && corners(index, last),
-            ]}
-            onPress={() => onSelect(segment.key)}
-            role="tab"
-            aria-selected={active}
-            accessibilityLabel={segment.accessibilityLabel ?? segment.label}
+            selected={active}
+            label={segment.accessibilityLabel ?? segment.label}
+            style={stretch && styles.stretch}
           >
-            {segment.icon != null ? (
-              <Icon name={segment.icon} color={active ? "onAccent" : "inkMuted"} />
-            ) : (
-              <Text style={[styles.text, active && styles.textActive]}>
-                {segment.label}
-              </Text>
-            )}
-          </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                tabFill,
+                styles.segment,
+                active && styles.active,
+                pressed && !active && styles.pressed,
+                active && corners(index, last),
+              ]}
+              onPress={() => onSelect(segment.key)}
+              {...tabRole(active, segment.accessibilityLabel ?? segment.label)}
+            >
+              {segment.icon != null ? (
+                <Icon name={segment.icon} color={active ? "onAccent" : "inkMuted"} />
+              ) : (
+                <Text style={[styles.text, active && styles.textActive]}>
+                  {segment.label}
+                </Text>
+              )}
+            </Pressable>
+          </TabRole>
         );
       })}
     </View>

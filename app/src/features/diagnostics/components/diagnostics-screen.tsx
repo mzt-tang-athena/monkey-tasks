@@ -1,5 +1,7 @@
 import * as React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Pressable } from "react-native-gesture-handler";
+import { MotionScrollView } from "@/components/motion/scroll-view";
 import { useVault } from "@/lib/vault/vault-provider";
 import {
   alarmsSupported,
@@ -85,7 +87,7 @@ export default function DevScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <MotionScrollView contentContainerStyle={styles.content}>
       <View style={styles.section}>
         <Text style={styles.label}>layout</Text>
         {insightLines(insights).map((line) => (
@@ -127,7 +129,7 @@ export default function DevScreen() {
         <Text style={styles.line}>{message}</Text>
       </View>
       <ThemeSwitcher />
-    </ScrollView>
+    </MotionScrollView>
   );
 }
 

@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Pressable, StyleSheet, Text, type PressableProps } from "react-native";
+import { StyleSheet, Text } from "react-native";
+import { Pressable, type PressableProps } from "react-native-gesture-handler";
 import {
   colors,
   fonts,

@@ -1,5 +1,6 @@
 import * as React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { MotionScrollView } from "@/components/motion/scroll-view";
 import type { TaskItem } from "@/types/task";
 import { colors, fonts, measure, pageGutter, spacing } from "@/theme/tokens";
 import { frontmatterEntries } from "../lib/draft";
@@ -18,7 +19,7 @@ export function NoteViewer({ task }: { task: TaskItem }) {
   return (
     <>
       <EditorHeader showSave={false} />
-      <ScrollView
+      <MotionScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -40,7 +41,7 @@ export function NoteViewer({ task }: { task: TaskItem }) {
           </View>
         </View>
         <Text style={styles.body}>{task.body}</Text>
-      </ScrollView>
+      </MotionScrollView>
     </>
   );
 }

@@ -1,15 +1,12 @@
 import * as React from "react";
-import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable } from "react-native-gesture-handler";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDismiss } from "@/hooks/use-dismiss";
-import { useMenuEntrance } from "@/lib/motion/legacy";
+import { menuEntering, type MenuCorner } from "@/lib/motion/entrances";
+import { useProgress } from "@/lib/motion/progress";
+import { motion } from "@/lib/motion/tokens";
 import {
   bottomBar,
   colors,
@@ -131,7 +128,8 @@ export function Menu({
 
   useDismiss(open, onClose);
   const shown = open && box != null;
-  const progress = useMenuEntrance(shown);
+  const backdrop = useProgress(shown, { ms: motion.ms.menu });
+  const fade = useAnimatedStyle(() => ({ opacity: backdrop.value }));
 
   if (!shown) {
     return null;
@@ -142,42 +140,29 @@ export function Menu({
     height: height ?? items.length * itemHeight + spacing.xs * 2,
   };
   const place = placeMenu({ anchor: box, size, window, insets, align });
-  const origin = `${place.above ? "bottom" : "top"} ${align === "end" ? "right" : "left"}`;
+  // It grows out of the corner next to its anchor.
+  const corner: MenuCorner = `${place.above ? "bottom" : "top"} ${align === "end" ? "right" : "left"}`;
 
   return (
     <>
       <Overlay layer="menuBackdrop" modal>
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="close menu"
-        />
+        <Animated.View style={[StyleSheet.absoluteFill, fade]}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="close menu"
+          />
+        </Animated.View>
       </Overlay>
       <Overlay layer="menu">
         <Animated.View
+          entering={menuEntering(corner)}
           role="menu"
           aria-label={label}
           testID="menu"
           onLayout={(event) => setHeight(event.nativeEvent.layout.height)}
-          style={[
-            styles.menu,
-            {
-              top: place.top,
-              left: place.left,
-              opacity: progress,
-              // It grows out of the corner next to its anchor.
-              transformOrigin: origin,
-              transform: [
-                {
-                  scale: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.92, 1],
-                  }),
-                },
-              ],
-            },
-          ]}
+          style={[styles.menu, { top: place.top, left: place.left }]}
         >
           {items.map((item) => (
             <MenuRow key={item.key} item={item} />
