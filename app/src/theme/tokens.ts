@@ -1,4 +1,5 @@
 import { Platform, type TextStyle, type ViewStyle } from "react-native";
+import { motion } from "@/lib/motion/tokens";
 
 /**
  * Themes as config. Three named palettes from the round-2 verdicts;
@@ -214,17 +215,18 @@ export const radii = { pill: 999 } as const;
 
 /**
  * Day-spread drag physics: pointer travel that promotes a press into
- * a drag, and how small either pane of the split may go.
+ * a drag, and how small either pane of the split may go. Each value
+ * comes from the motion tokens. The port that removes the last user
+ * deletes this.
  */
 export const drag = {
-  threshold: 8,
-  minPane: 150,
-  holdMs: 450,
+  threshold: motion.hold.slop,
+  minPane: motion.split.minPane,
   /** Touch pickups wait out this hold; scrolling never gets hijacked. */
-  pickMs: 300,
+  pickMs: motion.hold.row,
   /** The pills row has free space to scroll from, so its pickup is
       quicker than a row inside a scrolling pane. */
-  pillPickMs: 120,
+  pillPickMs: motion.hold.pill,
 } as const;
 
 /** Reading measure: screens cap their content width on wide screens. */

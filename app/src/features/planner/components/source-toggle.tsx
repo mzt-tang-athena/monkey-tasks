@@ -1,7 +1,8 @@
 import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/ui/icon";
-import { colors, drag, fonts, radius, spacing } from "@/theme/tokens";
+import { motion } from "@/lib/motion/tokens";
+import { colors, fonts, radius, spacing } from "@/theme/tokens";
 import {
   nextSource,
   sourceLabel,
@@ -12,7 +13,7 @@ import { usePlannerList } from "./planner-list-context";
 /**
  * The small source toggle above a mode's bottom list. Quiet at rest:
  * a muted label and a chevron. Pressed, it previews the next source
- * in the cycle. Held past drag.holdMs, it opens the direct chooser
+ * in the cycle. Held past motion.ms.longPress, it opens the direct chooser
  * menu (rendered by the screen) instead of cycling. The label names the
  * period on screen: "Due today", "Due 8 to 14 Nov", "Due November".
  */
@@ -52,7 +53,7 @@ export function SourceToggle({ mode, day }: { mode: Mode; day: Date }) {
           holdTimer.current = setTimeout(() => {
             setHeld(true);
             openSourceMenu(wrapRef);
-          }, drag.holdMs);
+          }, motion.ms.longPress);
         }}
         onPressOut={() => {
           setPressed(false);

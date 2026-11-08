@@ -20,6 +20,23 @@ export default defineConfig({
     projects: [
       {
         extends: true,
+        resolve: {
+          // Node cannot load either package. The motion tokens need only
+          // Reanimated's easing module, which imports nothing else.
+          alias: [
+            {
+              find: /^react-native-reanimated$/,
+              replacement: path.resolve(
+                import.meta.dirname,
+                "node_modules/react-native-reanimated/lib/module/Easing.js",
+              ),
+            },
+            {
+              find: /^react-native-worklets$/,
+              replacement: `${src}/testing/worklets-stub.ts`,
+            },
+          ],
+        },
         test: {
           name: "unit",
           environment: "node",
@@ -54,6 +71,11 @@ export default defineConfig({
           environment: "jsdom",
           include: ["src/**/*.test.tsx"],
           setupFiles: ["src/testing/dom-setup.ts"],
+          // Reanimated and worklets ship extensionless ESM imports and
+          // `.web` files, which only Vite's resolver follows.
+          server: {
+            deps: { inline: ["react-native-reanimated", "react-native-worklets"] },
+          },
         },
       },
     ],
