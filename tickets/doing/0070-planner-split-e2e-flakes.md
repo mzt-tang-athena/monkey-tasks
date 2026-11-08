@@ -3,7 +3,7 @@ id: 0070
 title: Fix two planner split e2e tests that fail under load
 created: 2026-11-07
 priority: high
-assignee:
+assignee: claude-code
 pr:
 depends: []
 ---
