@@ -76,10 +76,12 @@ export function useSwipePager({
     dir: PagerSide;
     key: string;
   } | null>(null);
-  const [width, setWidth] = React.useState(useWindowDimensions().width);
+  // The page width, for the commit's slide. The layout never reads it:
+  // the window width is only a guess until the first layout, and a page
+  // drawn at the guess jumps when the real width lands.
+  const widthRef = React.useRef(useWindowDimensions().width);
   const pageKeyRef = React.useRef(pageKey);
   const neighborRef = React.useRef(neighbor);
-  const widthRef = React.useRef(width);
   const canGoRef = React.useRef(canGo);
   const onPageRef = React.useRef(onPage);
   const reducedRef = React.useRef(reduced);
@@ -90,7 +92,6 @@ export function useSwipePager({
     endRef.current = onSwipeEnd;
     pageKeyRef.current = pageKey;
     neighborRef.current = neighbor;
-    widthRef.current = width;
     canGoRef.current = canGo;
     onPageRef.current = onPage;
     reducedRef.current = reduced;
@@ -178,13 +179,10 @@ export function useSwipePager({
   React.useLayoutEffect(() => {
     offset.stopAnimation();
     offset.setValue(0);
-  }, [pageKey, width, offset]);
+  }, [pageKey, offset]);
 
   const onLayout = (event: LayoutChangeEvent) => {
-    const next = event.nativeEvent.layout.width;
-    if (next !== width) {
-      setWidth(next);
-    }
+    widthRef.current = event.nativeEvent.layout.width;
   };
 
   const side = neighbor == null ? null : neighbor.dir;
@@ -196,20 +194,14 @@ export function useSwipePager({
       <Animated.View
         style={[
           fill ? styles.trackFill : styles.trackContent,
-          { width, transform: [{ translateX: offset }] },
+          { transform: [{ translateX: offset }] },
         ]}
       >
-        <View style={[styles.cell, { width }]}>{children}</View>
+        <View style={styles.cell}>{children}</View>
         {side != null ? (
           <View
             pointerEvents="none"
-            style={[
-              styles.beside,
-              {
-                width,
-                left: side === "right" ? -width : width,
-              },
-            ]}
+            style={[styles.beside, side === "right" ? styles.left : styles.right]}
           >
             {renderNeighbor(side)}
           </View>
@@ -235,15 +227,18 @@ const styles = StyleSheet.create({
   trackFill: {
     flex: 1,
     flexDirection: "row",
+    width: "100%",
   },
   trackContent: {
     flexDirection: "row",
     flexGrow: 1,
     flexShrink: 1,
+    width: "100%",
   },
   cell: {
     flexGrow: 0,
     flexShrink: 0,
+    width: "100%",
   },
   // Out of the layout flow: the current page alone sets the height, so
   // a taller or shorter neighbour never moves the chrome.
@@ -251,5 +246,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     bottom: 0,
+    width: "100%",
+  },
+  left: {
+    right: "100%",
+  },
+  right: {
+    left: "100%",
   },
 });
