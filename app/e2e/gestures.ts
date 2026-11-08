@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { pauseClock } from "./fixtures";
 
 /**
  * The pointer gestures the specs send. Every pixel value in the suite
@@ -70,8 +71,23 @@ export async function swipe(
 export type DropAt = "center" | "upper";
 
 /**
- * Press `from`, hold past the pick delay (`drag.pickMs`, 300 ms, in
- * `src/theme/tokens.ts`), then move onto `to` and let go. `upper`
+ * Press `from` and hold. Gesture handler's web long press is a
+ * `setTimeout`, so the hold pauses the page clock and steps it past
+ * `holdMs`: real time would race a busy runner, and a paused clock
+ * would stall the press. The clock runs again once the gesture is
+ * done, so the rest of a spec runs on real time.
+ */
+async function pressAndHold(page: Page, from: Locator, holdMs: number) {
+  const start = await boxOf(from);
+  await pauseClock(page);
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.clock.runFor(holdMs + 50);
+}
+
+/**
+ * Press `from`, hold past the row hold (`motion.hold.row`, 300 ms, in
+ * `src/lib/motion/tokens.ts`), then move onto `to` and let go. `upper`
  * drops a quarter of the way down the target, so a row lands above
  * it. A `holdMs` of 0 suits a grip, which lifts at once.
  */
@@ -82,14 +98,12 @@ export async function holdDrag(
   { at = "center", holdMs = 400 }: { at?: DropAt; holdMs?: number } = {},
 ) {
   const target = await boxOf(to);
-  const start = await boxOf(from);
   const toX = target.x + target.width / 2;
   const toY = target.y + target.height * (at === "upper" ? 0.25 : 0.5);
-  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
-  await page.mouse.down();
-  await page.waitForTimeout(holdMs);
+  await pressAndHold(page, from, holdMs);
   await page.mouse.move(toX, toY, { steps: 12 });
   await page.mouse.up();
+  await page.clock.resume();
 }
 
 /**
@@ -103,11 +117,20 @@ export async function holdDragTo(
   point: { x: number; y: number },
   { holdMs = 400 }: { holdMs?: number } = {},
 ) {
-  const start = await boxOf(from);
-  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
-  await page.mouse.down();
-  await page.waitForTimeout(holdMs);
+  await pressAndHold(page, from, holdMs);
   await page.mouse.move(point.x, point.y, { steps: 12 });
+  await page.clock.resume();
+}
+
+/**
+ * The `touch-action` the browser computes on `target`. A surface sets
+ * it in its gesture config: `pan-y` on a pager and on a row or pill
+ * source, `none` on a grip (ADR 0046).
+ */
+export async function expectTouchAction(target: Locator, value: "pan-y" | "none") {
+  await expect
+    .poll(() => target.evaluate((element) => getComputedStyle(element).touchAction))
+    .toBe(value);
 }
 
 /**
