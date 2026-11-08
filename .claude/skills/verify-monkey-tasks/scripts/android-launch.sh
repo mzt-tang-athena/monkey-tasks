@@ -6,10 +6,13 @@
 #   android-launch.sh            reuse the APK already on the emulator
 #
 # Safe to rerun. It creates the AVD when it is missing, reuses a running
-# emulator of ours, reinstalls only a changed APK, and always clears the
-# app data and reseeds the vault, so each launch starts from the same
-# state. Env: ANDROID_VERIFY_PORT (5580), ANDROID_VERIFY_AVD
-# (monkey-tasks-verify), ANDROID_VERIFY_MEMORY (2048 MB), MOTION (on).
+# emulator of ours, reinstalls only a changed APK, and always reseeds the
+# vault, so each launch starts from the same notes. The folder grant
+# lives in the AVD's data, so it survives a cold boot and a reinstall.
+# Launch walks the system picker only when the app asks for a folder.
+# Env: ANDROID_VERIFY_PORT (5580), ANDROID_VERIFY_AVD
+# (monkey-tasks-verify), ANDROID_VERIFY_MEMORY (2048 MB), MOTION (on),
+# FRESH=1 to clear the app data and grant the folder again.
 set -euo pipefail
 source "$(dirname "$0")/android-env.sh"
 trap 'echo "android-launch: stopped at line $LINENO. See $UIXML for the last screen." >&2' ERR
@@ -87,7 +90,10 @@ adb shell pm path "$PKG" >/dev/null 2>&1 || { echo "$PKG is not installed. Pass 
 
 # A fresh vault for the device's today, in the device's zone.
 adb shell am force-stop "$PKG"
-adb shell pm clear "$PKG" >/dev/null
+if [[ "${FRESH:-0}" == 1 ]]; then
+  adb shell pm clear "$PKG" >/dev/null
+  lap "cleared the app data"
+fi
 today=$(adb shell date +%F | tr -d '\r')
 seed="$STATE/android-$EMU_PORT-seed"
 (cd "$APP" && npx --no-install tsx "$SKILL_DIR/scripts/android-seed.ts" "$seed" "$today")
@@ -97,36 +103,47 @@ adb push "$seed" "$VAULT_DIR" >/dev/null
 lap "seeded $VAULT_DIR"
 
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-"$drive" tap "connect vault folder" >/dev/null
-# The picker opens where it was last. Read which folder it shows, take
-# one step toward Documents/obsidian-vault, and wait for the header to
-# change before the next step, so a tap never lands on the next screen.
-on_screen() { node "$UI" "$UIXML" find "$1" >/dev/null; }
-tap_at() { local at; at=$(node "$UI" "$UIXML" find "$1") && set -- $at && adb shell input tap "$1" "$2"; }
-deadline=$((SECONDS + 120))
-"$drive" peek
-until on_screen ALLOW; do
-  ((SECONDS < deadline)) || { "$drive" dump picker-stuck >/dev/null; echo "the folder picker did not reach Allow. See $run/picker-stuck.txt" >&2; exit 1; }
-  header=$(node "$UI" "$UIXML" text "~Files " || true)
-  # A folder can list nothing while it loads. A missed tap is fine, the
-  # loop looks again.
-  case "$header" in
-    "Files in obsidian-vault") tap_at "USE THIS FOLDER" || true ;;
-    "Files in Documents") tap_at "dir_list>>obsidian-vault" || true ;;
-    "Files on "*) tap_at "dir_list>>Documents" || true ;;
-    "") tap_at "Show roots" || true ;;
-    *) tap_at "~sdk_gphone" || true ;;
-  esac
-  for _ in 1 2 3 4 5 6 7 8 9 10; do
-    sleep 1
-    "$drive" peek
-    on_screen ALLOW && break
-    [[ "$(node "$UI" "$UIXML" text "~Files " || true)" != "$header" ]] && break
-  done
-  if [[ -z "$header" ]] && on_screen "~sdk_gphone"; then tap_at "~sdk_gphone" || true; sleep 2; "$drive" peek; fi
+# A kept grant shows a task row. A missing one shows the connect notice.
+deadline=$((SECONDS + 90))
+until "$drive" has "~task-row:" || "$drive" has "connect vault folder"; do
+  ((SECONDS < deadline)) || { "$drive" dump start-stuck >/dev/null; echo "the app showed neither a task row nor the connect notice. See $run/start-stuck.txt" >&2; exit 1; }
+  sleep 1
 done
-tap_at ALLOW
-lap "granted $VAULT_DIR"
+if "$drive" has "connect vault folder"; then
+  "$drive" tap "connect vault folder" >/dev/null
+  # The picker opens where it was last. Read which folder it shows, take
+  # one step toward Documents/obsidian-vault, and wait for the header to
+  # change before the next step, so a tap never lands on the next screen.
+  on_screen() { node "$UI" "$UIXML" find "$1" >/dev/null; }
+  tap_at() { local at; at=$(node "$UI" "$UIXML" find "$1") && set -- $at && adb shell input tap "$1" "$2"; }
+  deadline=$((SECONDS + 180))
+  "$drive" peek
+  until on_screen ALLOW; do
+    ((SECONDS < deadline)) || { "$drive" dump picker-stuck >/dev/null; echo "the folder picker did not reach Allow. See $run/picker-stuck.txt" >&2; exit 1; }
+    header=$(node "$UI" "$UIXML" text "~Files " || true)
+    # A folder can list nothing while it loads. A missed tap is fine, the
+    # loop looks again.
+    case "$header" in
+      "Files in obsidian-vault") tap_at "USE THIS FOLDER" || true ;;
+      "Files in Documents") tap_at "dir_list>>obsidian-vault" || true ;;
+      "Files on "*) tap_at "dir_list>>Documents" || true ;;
+      # No picker yet: a slow host can drop the first tap on the notice.
+      "") tap_at "connect vault folder" || tap_at "Show roots" || true ;;
+      *) tap_at "~sdk_gphone" || true ;;
+    esac
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      sleep 1
+      "$drive" peek
+      on_screen ALLOW && break
+      [[ "$(node "$UI" "$UIXML" text "~Files " || true)" != "$header" ]] && break
+    done
+    if [[ -z "$header" ]] && on_screen "~sdk_gphone"; then tap_at "~sdk_gphone" || true; sleep 2; "$drive" peek; fi
+  done
+  tap_at ALLOW
+  lap "granted $VAULT_DIR"
+else
+  lap "kept the grant for $VAULT_DIR"
+fi
 
 "$drive" wait "~task-row:" 90 >/dev/null
 "$drive" shot launch >/dev/null
