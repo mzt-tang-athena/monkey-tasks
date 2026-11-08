@@ -4,7 +4,7 @@ title: Motion surfaces on Reanimated and gesture handler hooks
 created: 2026-10-26
 priority: high
 assignee: claude-code
-pr:
+pr: 97
 depends: [0055, 0056, 0057]
 ---
 
@@ -507,40 +507,103 @@ Outcome. Do these before 0059 starts, because the ports build on them:
 
 ## Acceptance
 
-- [ ] `src/lib/motion.ts` moved to `src/lib/motion/legacy.ts` in its own
+- [x] `src/lib/motion.ts` moved to `src/lib/motion/legacy.ts` in its own
       first commit, and its five importers build.
 - [ ] `package.json` lists `react-native-reanimated` 4.7.1 and
       `react-native-worklets` 0.13.0, and `npx expo install --check`
       passes. The repo has no `babel.config.js`.
-- [ ] `src/lib/motion` holds `tokens.ts`, `progress.ts`, `entrances.ts`,
+- [x] `src/lib/motion` holds `tokens.ts`, `progress.ts`, `entrances.ts`,
       `pager-math.ts`, `drag-math.ts` and `drag-machine.ts`, each pure
       file with a Vitest file.
-- [ ] `src/components/motion` holds `pager.tsx`, `drag-surface.tsx`,
+- [x] `src/components/motion` holds `pager.tsx`, `drag-surface.tsx`,
       `landing.tsx`, `scroll-view.tsx` and `internal/`, with the public
       signatures above.
-- [ ] The `drag-machine` and bridge Vitest cases above pass: a begin
+- [x] The `drag-machine` and bridge Vitest cases above pass: a begin
       during a settle, a cancel that never commits, two sources that
       claim once, a drop and unmount race, and a stale generation.
-- [ ] Each surface host computes the `touch-action` from its hold
+- [x] Each surface host computes the `touch-action` from its hold
       table. `touchAction` appears only in the internal config helper,
       never on a `GestureDetector`.
-- [ ] `MotionScrollView` freezes with a non-passive `touchmove`
+- [x] `MotionScrollView` freezes with a non-passive `touchmove`
       listener on the web and `scrollEnabled={false}` on native. No
       file sets `overflow: hidden` to freeze a scroller.
-- [ ] Zone rects live in a shared value per session, in page
+- [x] Zone rects live in a shared value per session, in page
       coordinates (`pageX`, `pageY`), measured in `onActivate`.
-- [ ] Lint fails on each banned import and pattern in the fixture file,
+- [x] Lint fails on each banned import and pattern in the fixture file,
       and passes on the branch. The `ignores` list names only files that
       0059 to 0062 port. The ADR 0012 margin rule and the ADR 0037
       `expo-file-system/legacy` rule still fire on the feature path and
       on the allowlisted path.
-- [ ] With reduced motion, `timing` lands at once and runs `done`, and
+- [x] With reduced motion, `timing` lands at once and runs `done`, and
       `useProgress` runs `onSettled` with no clock time.
-- [ ] The `Menu` entrance runs on Reanimated. In the `reduced-motion`
+- [x] The `Menu` entrance runs on Reanimated. In the `reduced-motion`
       project, a menu opens at full size with no scale frames.
-- [ ] The native checks above pass on the emulator, and the Outcome
+- [x] The native checks above pass on the emulator, and the Outcome
       names the APK run id and the evidence folder.
-- [ ] `README.md` lists `components/motion` in its Layout table.
+- [x] `README.md` lists `components/motion` in its Layout table.
 
 ## Outcome
-(filled in before moving to done/)
+
+Done on 2026-11-08 in the PR above. The surfaces, the clocks and the
+lint bans are in. No screen is ported.
+
+**What shipped.** `src/lib/motion` holds `tokens.ts`, `progress.ts`,
+`entrances.ts`, `pager-math.ts`, `drag-math.ts`, `drag-machine.ts` and
+`legacy.ts`. `src/components/motion` holds `pager.tsx`,
+`drag-surface.tsx`, `landing.tsx`, `scroll-view.tsx` and `internal/`
+(`session.ts`, `source.tsx`, `contexts.ts`, `bridge.ts` and the
+`touchAction` helper `gesture.ts`). The public signatures match the
+spec. Vitest runs 733 tests, 64 of them new. The full e2e suite is
+green on port 8560.
+
+**Native checks.** APK run 42496388537 built `6538d60`. Evidence is in
+`app/build/verify/evidence/android-20261108-161103/`. The registry of
+zone refs in a shared value works with `measure()` in `onActivate`, so
+the fallback did not ship. A held chip dropped on the box under the
+finger at scroll offset 0 and at 176 px. `scrollEnabled={false}` held
+the scroller through a 377 px drag, and the drop still landed. A quick
+swipe that starts on the chip scrolls and lifts nothing. The menu opens
+on a Reanimated keyframe, and the app log shows no error. ADR 0046
+records the details. Feel and frame rate stay for the phone pass.
+
+**Gesture handler under jsdom.** The pan surfaces attach under jsdom.
+The component tests read `touch-action` there: `pan-y` on a `Pager` and
+on a `row` or `pill` source, `none` on a `grip` source. Playwright
+checks the row source too (`e2e/specs/motion-surfaces.spec.ts`).
+
+**Deviations.**
+
+- `npx expo install --check` fails, so that box stays open. It names
+  three packages this ticket does not touch: `react-native` 0.88.0
+  (0.88.1 expected), `react-native-safe-area-context` and
+  `react-native-screens`. The two new packages pass. CI does not run
+  the check.
+- Gesture handler 3.3.0's web `Pressable` presses only a view with role
+  `button`. Tabs, segments and menu items use `RolePressable` in
+  `components/ui`: gesture handler's `Pressable` on native, React
+  Native's on the web. Its one import of React Native's `Pressable`
+  carries a lint suppression with the reason. 0059's `tab-strip.tsx`
+  needs the same.
+- `holdDrag` and `holdDragTo` pause the clock, step it past the hold,
+  then resume it before the move. Today's planner drag measures on
+  timers, and a clock paused through the move broke its drops.
+- `menuEntering(corner)` anchors the scale with a 4% translate in its
+  start frame, because a Reanimated keyframe cannot carry
+  `transformOrigin`.
+- A source that unmounts mid drag cancels the drag. Without this, the
+  session waits on a gesture that never finalizes.
+- The dev screen gains a motion check: a chip and two boxes in a
+  `MotionScrollView`. The web suite and the emulator drive it.
+- `drag.holdMs` is gone. The source toggle reads `motion.ms.longPress`.
+
+**Test harness.** The unit project aliases `react-native-reanimated` to
+its easing module and stubs `react-native-worklets`, because node loads
+neither. The component project runs the worklets Babel plugin, as Metro
+does, and swaps gesture handler's `Pressable` for React Native Web's,
+because the real one never fires under jsdom. `placeBox` sets the
+offset size that `onLayout` reads. `src/testing/reduced-motion.ts` sets
+the flag before Reanimated loads.
+
+**Left for the ports.** 0059 to 0062 empty the lint allowlist and
+delete `legacy.ts`. 0060 builds `createReorderSurface` and 0061 builds
+`Split` on the same engine.
