@@ -37,7 +37,7 @@ state_set() {
 
 # True when $1 is alive and is the emulator this skill started on our port.
 ours() {
-  [[ -n "${1:-}" ]] && tr '\0' ' ' <"/proc/$1/cmdline" 2>/dev/null \
+  [[ -n "${1:-}" && -r /proc/$1/cmdline ]] && tr '\0' ' ' <"/proc/$1/cmdline" 2>/dev/null \
     | grep -q -- "-avd $AVD -port $EMU_PORT "
 }
 
