@@ -56,3 +56,10 @@ app code directly, and the primitives exist to prevent it.
 The consequence above held for the logic and failed for the visuals.
 The ghost, the row slides and the pager lagged whenever the JS thread
 rendered a page or wrote a note.
+
+## Amendment, 2026-11-08: the surfaces make the call
+
+ADR 0046 moves the line above. Only `src/components/motion/internal/`
+and the clocks in `src/lib/motion/progress.ts` call `scheduleOnRN`.
+Every surface reaches JS through the internal bridge. Features and
+routes write no worklet, and lint bans the imports that would let them.
