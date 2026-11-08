@@ -278,6 +278,34 @@ test.describe("a drop writes the day", () => {
   });
 });
 
+test("the month grid first paints where it settles", async ({ page }) => {
+  // The observer runs before the browser paints, so it reads the box
+  // of the first frame a user sees.
+  await page.evaluate(() => {
+    const seen = window as unknown as { firstCell?: { x: number; y: number } };
+    new MutationObserver(() => {
+      const cell = document.querySelector(
+        '[data-testid="month-pager"] [aria-label="Wednesday 28"]',
+      );
+      if (seen.firstCell == null && cell != null) {
+        const box = cell.getBoundingClientRect();
+        seen.firstCell = { x: box.x, y: box.y };
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+  await page.getByRole("tab", { name: "Month" }).click();
+  const cell = page.getByRole("button", { name: "Wednesday 28", exact: true });
+  await expect(cell).toBeVisible();
+  // Give a late layout time to land before reading the settled box.
+  await page.waitForTimeout(500);
+
+  const first = await page.evaluate(
+    () => (window as unknown as { firstCell?: { x: number; y: number } }).firstCell,
+  );
+  const settled = await cell.boundingBox();
+  expect(first).toEqual({ x: settled?.x, y: settled?.y });
+});
+
 test("the month keeps its picked day after a visit to Day", async ({ page }) => {
   await page.getByRole("tab", { name: "Month" }).click();
   await page.getByRole("button", { name: "Wednesday 28", exact: true }).click();
