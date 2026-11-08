@@ -10,6 +10,9 @@ export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/c
 AVD="${ANDROID_VERIFY_AVD:-monkey-tasks-verify}"
 SYSTEM_IMAGE="system-images;android-35;google_apis;x86_64"
 DEVICE_PROFILE="pixel_7"
+# pixel_7 is 1080 by 2400 px at 420 dpi. Swipes and scrolls assume it.
+SCREEN_W=1080
+SCREEN_H=2400
 EMU_PORT="${ANDROID_VERIFY_PORT:-5580}"
 SERIAL="emulator-$EMU_PORT"
 export ANDROID_SERIAL="$SERIAL"

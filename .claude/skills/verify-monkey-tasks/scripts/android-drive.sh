@@ -17,6 +17,8 @@
 #   android-drive.sh shot <name>                  screenshot to <run>/<name>.png
 #   android-drive.sh dump <name>                  screen tree to <run>/<name>.xml and .txt
 #   android-drive.sh record <name> <secs> <step...>   record the screen while one step runs
+#   android-drive.sh frames <name> <secs> <step...>   every frame while one step runs and secs after, as PNGs and a grid
+#   android-drive.sh scroll-to <handle> [up|down]     scroll the page until a node shows
 #   android-drive.sh note <vault path> [name]     print a note, keep a copy in the run
 #   android-drive.sh log [name]                   app log to <run>/<name>.log
 #   android-drive.sh motion on|off                set the three animation scales, restart the app
@@ -26,7 +28,10 @@
 #   android-drive.sh new-run                      start a new run folder
 #
 # A handle is an accessibility label, a testID or visible text, matched
-# exactly. Prefix it with ~ for a substring match. See android-ui.mjs.
+# exactly. Prefix it with ~ for a substring match. `outer>>inner` finds
+# inner inside outer. `@x,y` is a raw point: use it after `bounds` so
+# that a burst or record spends no frames on the lookup. See
+# android-ui.mjs.
 set -euo pipefail
 source "$(dirname "$0")/android-env.sh"
 
@@ -70,6 +75,11 @@ clear_system_dialogs() {
 # Print the bounds of a handle, waiting up to $2 seconds.
 find_node() {
   local handle=$1 deadline=$((SECONDS + ${2:-20})) at
+  # @x,y is a point already known, so frames start on the gesture.
+  if [[ $handle =~ ^@([0-9]+),([0-9]+)$ ]]; then
+    echo "${BASH_REMATCH[1]} ${BASH_REMATCH[2]}"
+    return 0
+  fi
   while :; do
     dump_ui
     if at=$(node "$UI" "$UIXML" find "$handle"); then
@@ -83,6 +93,8 @@ find_node() {
 }
 
 center() { set -- $1; echo "$1 $2"; }
+
+clamp() { local v=$1 max=$2; ((v < 1)) && v=1; ((v > max - 1)) && v=$((max - 1)); echo "$v"; }
 
 wait_first_row() {
   find_node "$FIRST_ROW" "${1:-60}" >/dev/null || die "no task row after ${1:-60} s"
@@ -142,7 +154,8 @@ case "$cmd" in
   swipe | drag)
     at=$(find_node "${1:?handle}" 20) || die "no node '$1' on screen"
     set -- $(center "$at") "${2:?dx}" "${3:?dy}" "${4:-}"
-    x2=$(($1 + $3)) y2=$(($2 + $4))
+    # Keep the end on screen. An end off the edge reads as a system gesture.
+    x2=$(clamp $(($1 + $3)) "$SCREEN_W") y2=$(clamp $(($2 + $4)) "$SCREEN_H")
     if [[ $cmd == swipe ]]; then
       adb shell input swipe "$1" "$2" "$x2" "$y2" "${5:-300}"
     else
@@ -189,6 +202,47 @@ case "$cmd" in
     adb shell rm -f "$remote"
     echo "$out"
     ;;
+  frames)
+    name=${1:?name} secs=${2:?secs}
+    shift 2
+    [[ $# -gt 0 ]] || die "frames needs a step to run, for example: frames swipe 2 swipe @541,1374 -600 0"
+    remote="/data/local/tmp/verify-$name.raw"
+    adb shell "screenrecord --output-format=frames --size 270x600 $remote" &
+    recorder=$!
+    sleep 1
+    "$0" "$@"
+    sleep "$secs"
+    # Frames mode ignores --time-limit. SIGINT ends it cleanly.
+    adb shell pkill -INT screenrecord || true
+    wait "$recorder" || true
+    out="$(run_dir)/$name-frames"
+    rm -rf "$out"
+    mkdir -p "$out"
+    adb pull -q "$remote" "$out/frames.raw"
+    adb shell rm -f "$remote"
+    node "$SKILL_DIR/scripts/android-frames.mjs" "$out/frames.raw" "$out" >/dev/null
+    rm -f "$out/frames.raw"
+    echo "$out/sheet.png"
+    ;;
+  scroll-to)
+    handle=${1:?handle} way=${2:-down}
+    dump_ui
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      # Shown means clear of the tab strip and the bottom bar.
+      if at=$(node "$UI" "$UIXML" find "$handle") && set -- $at && (($4 >= 300 && $6 <= 2100)); then
+        echo "'$handle' shows at $1 $2"
+        exit 0
+      fi
+      if [[ $way == down ]]; then
+        adb shell input swipe 540 1700 540 1100 400
+      else
+        adb shell input swipe 540 1100 540 1700 400
+      fi
+      sleep 0.8
+      dump_ui
+    done
+    die "'$handle' did not show after ten scrolls $way"
+    ;;
   note)
     path=${1:?vault path, for example "Tasks/Call Mum.md"}
     name=${2:-$(basename "$path" .md)}
@@ -213,6 +267,12 @@ case "$cmd" in
     ;;
   restart)
     adb shell am force-stop "$PKG"
+    # The dying window lingers in the screen tree for a moment. Wait for
+    # it to go, so the next wait reads the new process.
+    deadline=$((SECONDS + 10))
+    while dump_ui && node "$UI" "$UIXML" find "$FIRST_ROW" >/dev/null && ((SECONDS < deadline)); do
+      sleep 0.5
+    done
     start_app
     wait_first_row 60
     echo "app restarted"
