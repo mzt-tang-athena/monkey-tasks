@@ -3,7 +3,7 @@ id: 0076
 title: A shorter note write keeps the old tail on Android
 created: 2026-11-08
 priority: high
-assignee:
+assignee: claude
 pr:
 depends: []
 ---

@@ -76,6 +76,16 @@ describe.each(subjects)("the $name adapter", (subject) => {
     expect(await adapter.read(uri)).toBe("second");
   });
 
+  it("leaves no old tail when a write is shorter", async () => {
+    const ticked = "---\ndue: 2026-11-08\ncompleted: 2026-11-08\n---\n";
+    const unticked = "---\ndue: 2026-11-08\n---\n";
+    const { uri } = await adapter.create(root, "Call.md", ticked);
+
+    await adapter.write(uri, unticked);
+
+    expect(await adapter.read(uri)).toBe(unticked);
+  });
+
   it("refuses to read or write a file that is gone", async () => {
     const { uri } = await adapter.create(root, "Call.md", "text");
     await adapter.remove(uri);
