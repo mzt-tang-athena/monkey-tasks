@@ -66,6 +66,11 @@ To prove one change by hand, agents use the project skill in
 port and runs journey files on the same helpers. It keeps screenshots,
 traces and note text in `app/build/verify/evidence/`.
 
+The same skill runs a release APK on an Android emulator. That covers
+motion, gestures and the vault grant, which the preview cannot show. It needs the
+Android SDK in `~/Android/Sdk` and KVM. Its Android section has the
+steps, and it says what still needs the phone.
+
 Run the schema tests from `contracts/packages/schemas`:
 
 ```bash

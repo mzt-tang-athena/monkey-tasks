@@ -3,7 +3,8 @@
 This directory is the maintained source for verifying what a user of
 monkey-tasks sees and does. Read this index, then use the matching
 feature file as the recipe. Each recipe drives the web preview through
-the journeys that `../SKILL.md` describes.
+the journeys that `../SKILL.md` describes. A recipe with a `Driving it
+on Android` section also runs on the emulator.
 
 ## Baseline preconditions
 
@@ -31,11 +32,12 @@ the journeys that `../SKILL.md` describes.
 Each feature file starts with an H1 and one paragraph on what the user
 sees. It then has four H2 sections in this order: `Sub-features`,
 `How to get to it (user POV)`, `Driving it with Playwright`, and
-`Gotchas`.
+`Gotchas`. A feature with a native check adds `Driving it on Android`
+before `Gotchas`.
 
 ## Features
 
-- [Lists](./lists.md) covers the list tabs, the sections, ticks, the sort sheet and reorder.
+- [Lists](./lists.md) covers the list tabs, the sections, ticks, the sort sheet and reorder. It has an Android recipe for the list swipe with motion on and off.
 - [Capture](./capture.md) covers the add sheet, the natural-language parse, the send and a failed write.
 - [Planner](./planner.md) covers day, week and month, the split, and drag to schedule.
 - [Task editor](./task-editor.md) covers opening a task, editing and saving.
