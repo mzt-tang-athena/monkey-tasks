@@ -9,7 +9,9 @@
 // testID as the resource id), or its text, in that order. Each is an
 // exact match. A handle that starts with `~` matches as a substring.
 // With several matches, `find` takes the first one on screen in
-// document order. Exit code 1 means no match.
+// document order. `outer>>inner` finds inner within the bounds of
+// outer, for example `task-row:Call Mum>>mark done`. Exit code 1 means
+// no match.
 import { readFileSync } from "node:fs";
 
 const [file, command, handle] = process.argv.slice(2);
@@ -65,22 +67,40 @@ if (!["find", "text"].includes(command) || handle == null) {
   process.exit(2);
 }
 
-const partial = handle.startsWith("~");
-const wanted = partial ? handle.slice(1) : handle;
-const matches = (value) =>
-  value !== "" && (partial ? value.includes(wanted) : value === wanted);
+const matcher = (one) => {
+  const partial = one.startsWith("~");
+  const wanted = partial ? one.slice(1) : one;
+  return (value) =>
+    value !== "" && (partial ? value.includes(wanted) : value === wanted);
+};
 
-for (const field of ["desc", "id", "text"]) {
-  const node = nodes.find((n) => visible(n) && matches(n[field]));
-  if (node && command === "text") {
-    console.log(node.text || node.desc);
-    process.exit(0);
+const inside = (outer) => (n) =>
+  n.left >= outer.left &&
+  n.right <= outer.right &&
+  n.top >= outer.top &&
+  n.bottom <= outer.bottom;
+
+const findOne = (one, pool) => {
+  const matches = matcher(one);
+  for (const field of ["desc", "id", "text"]) {
+    const node = pool.find((n) => visible(n) && matches(n[field]));
+    if (node) return node;
   }
-  if (node) {
-    const x = Math.round((node.left + node.right) / 2);
-    const y = Math.round((node.top + node.bottom) / 2);
-    console.log(`${x} ${y} ${node.left} ${node.top} ${node.right} ${node.bottom}`);
-    process.exit(0);
-  }
+  return null;
+};
+
+let pool = nodes;
+let node = null;
+for (const part of handle.split(">>")) {
+  node = findOne(part.trim(), pool);
+  if (node == null) process.exit(1);
+  pool = nodes.filter(inside(node));
 }
-process.exit(1);
+
+if (command === "text") {
+  console.log(node.text || node.desc);
+} else {
+  const x = Math.round((node.left + node.right) / 2);
+  const y = Math.round((node.top + node.bottom) / 2);
+  console.log(`${x} ${y} ${node.left} ${node.top} ${node.right} ${node.bottom}`);
+}

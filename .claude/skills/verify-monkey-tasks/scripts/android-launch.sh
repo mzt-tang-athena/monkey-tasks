@@ -35,7 +35,7 @@ else
   fi
   lap "booting $AVD on port $EMU_PORT"
   # -no-window runs the headless qemu, which needs no audio or Qt libs.
-  setsid emulator -avd "$AVD" -port "$EMU_PORT" -no-window -no-audio -no-boot-anim \
+  setsid emulator -avd "$AVD" -port "$EMU_PORT" -no-window -no-audio -no-boot-anim -no-snapshot \
     -gpu swiftshader_indirect -memory "${ANDROID_VERIFY_MEMORY:-2048}" -cores 2 \
     >"$LOGFILE" 2>&1 </dev/null &
   pid=$!
@@ -60,6 +60,10 @@ adb shell svc power stayon true
 adb shell settings put system screen_off_timeout 1800000
 adb shell input keyevent KEYCODE_WAKEUP
 adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
+# Software rendering on a busy host makes System UI miss its ANR
+# deadline, and the dialog then covers every screen. Hide the dialogs.
+# An ANR still logs, and android-drive.sh log keeps those lines.
+adb shell settings put global hide_error_dialogs 1
 scale=1
 [[ "${MOTION:-on}" == off ]] && scale=0
 for key in animator_duration_scale transition_animation_scale window_animation_scale; do

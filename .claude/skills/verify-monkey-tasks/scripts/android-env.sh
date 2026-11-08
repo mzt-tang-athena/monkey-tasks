@@ -24,7 +24,7 @@ UIXML="$STATE/android-$EMU_PORT.ui.xml"
 ASTATE="$STATE/android-$EMU_PORT.state"
 LOGFILE="$STATE/android-$EMU_PORT.emulator.log"
 
-state_get() { [[ -f "$ASTATE" ]] && sed -n "s/^$1=//p" "$ASTATE" | tail -1; }
+state_get() { if [[ -f "$ASTATE" ]]; then sed -n "s/^$1=//p" "$ASTATE" | tail -1; fi; }
 state_set() {
   touch "$ASTATE"
   grep -v "^$1=" "$ASTATE" >"$ASTATE.tmp" || true
