@@ -7,6 +7,10 @@ vi.mock("expo-file-system/legacy", async () => {
   const { sharedFakeSaf } = await import("@/testing/fake-saf");
   return sharedFakeSaf.module;
 });
+vi.mock("expo-file-system", async () => {
+  const { sharedFakeSaf } = await import("@/testing/fake-saf");
+  return sharedFakeSaf.fileModule;
+});
 
 import { sharedFakeSaf as saf } from "@/testing/fake-saf";
 import type { VaultAdapter } from "../adapter";

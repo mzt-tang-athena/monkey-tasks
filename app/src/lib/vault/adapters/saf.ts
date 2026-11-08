@@ -1,3 +1,4 @@
+import { File, FileMode } from "expo-file-system";
 import * as FileSystem from "expo-file-system/legacy";
 import type { VaultAdapter, VaultEntry } from "../adapter";
 
@@ -80,10 +81,19 @@ async function list(folderUri: string): Promise<VaultEntry[]> {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/**
+ * Replace the whole document. The legacy `writeAsStringAsync` opens a
+ * SAF document with mode "w", which does not truncate on Android 10 and
+ * later, so a shorter note kept the old tail (ADR 0045). Mode "wt"
+ * truncates.
+ */
 async function write(uri: string, text: string): Promise<void> {
-  await FileSystem.writeAsStringAsync(uri, text, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  const handle = new File(uri).open(FileMode.Truncate);
+  try {
+    await handle.writeBytes(new TextEncoder().encode(text));
+  } finally {
+    handle.close();
+  }
 }
 
 async function remove(uri: string): Promise<void> {
