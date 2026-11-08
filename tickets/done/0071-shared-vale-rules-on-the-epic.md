@@ -3,8 +3,8 @@ id: 0071
 title: Bring main's shared Vale rules into the epic branch
 created: 2026-11-07
 priority: high
-assignee:
-pr:
+assignee: claude-code
+pr: 91
 depends: []
 ---
 
@@ -54,13 +54,31 @@ call.
 
 ## Acceptance
 
-- [ ] `epic/0047-rebuild` contains main's commits from PRs #78 and #85.
-- [ ] The CI docs job on the epic runs `npx vale-rules sync` and passes.
-- [ ] Vale with the pack prints nothing on `README.md` and `AGENTS.md`.
-- [ ] The pre-commit hook passes on a commit that touches `README.md`.
-- [ ] No two ADRs and no two tickets share a number, and each
+- [x] `epic/0047-rebuild` contains main's commits from PRs #78 and #85.
+- [x] The CI docs job on the epic runs `npx vale-rules sync` and passes.
+- [x] Vale with the pack prints nothing on `README.md` and `AGENTS.md`.
+- [x] The pre-commit hook passes on a commit that touches `README.md`.
+- [x] No two ADRs and no two tickets share a number, and each
       reference names the right one.
 
 ## Outcome
 
-(filled in before moving to done/)
+PR 91 merges `main` into `epic/0047-rebuild` with a merge commit. Main's
+commits from PRs #78 and #85 are now ancestors of the epic.
+
+The merge had one text conflict, in the README's phone install
+paragraph. It keeps the epic's sentence on manual runs and takes main's
+split. The epic's `e2e-web` CI job also runs a root `npm ci`, so it now
+gets the same package auth as the code job.
+
+The epic's README gave 20 `SentenceLength` alerts before the merge.
+Main's side fixed 10. The merge commit splits the other 10, because the
+pre-commit hook blocks it otherwise. Vale with the pack now prints
+nothing on `README.md` and `AGENTS.md`.
+
+Main's ADR 0035 is now ADR 0044. Main's done ticket 0047 is now 0074.
+Main's done ticket 0048 clashed with the epic's 0048 too, so it is now
+0075. The README and ticket 0074 cite ADR 0044.
+
+`make lint` passes. In `app/`, the typecheck, ESLint and 669 Vitest
+tests pass. No app file changed.
