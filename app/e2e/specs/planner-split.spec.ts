@@ -36,12 +36,30 @@ function sourceToggle(page: Page) {
   return page.getByRole("button", { name: /^task source:/ });
 }
 
+/** Wait until the source toggle sits above the bottom bar. On a small
+    phone the day split paints the timeline at its usual height until
+    the layout reports, and the toggle sits over the bar until then.
+    Ticket 0061 owns that jump. A busy page can take a second to report,
+    so a press must wait for the settled layout, as a user does. */
+async function expectToggleAboveBar(page: Page) {
+  await expect
+    .poll(async () => {
+      const toggle = await sourceToggle(page).boundingBox();
+      const bar = await page.getByRole("tab", { name: "Planner" }).boundingBox();
+      if (toggle == null || bar == null) return Number.POSITIVE_INFINITY;
+      return toggle.y + toggle.height - bar.y;
+    })
+    .toBeLessThanOrEqual(0);
+}
+
 /** Hold the source toggle until the chooser opens. */
 async function openSourceMenu(page: Page) {
   // `hover` waits for the toggle to stop moving, then points at it.
   await sourceToggle(page).hover();
   await page.mouse.down();
-  await page.waitForTimeout(650);
+  // A user holds until the chooser shows. A fixed hold can end first
+  // on a busy page, and the press then cycles the source.
+  await expect(page.getByRole("menu", { name: "task source" })).toBeVisible();
   await page.mouse.up();
 }
 
@@ -54,17 +72,7 @@ test.describe("on a small phone", () => {
   test.use({ viewport: { width: 360, height: 640 } });
 
   test("the day list keeps its source toggle above the bottom bar", async ({ page }) => {
-    // Until the layout reports, the split paints the timeline at its
-    // usual height, and the toggle sits over the bar for a frame. Ticket
-    // 0061 owns that frame. This test checks the settled layout.
-    await expect
-      .poll(async () => {
-        const toggle = await sourceToggle(page).boundingBox();
-        const bar = await page.getByRole("tab", { name: "Planner" }).boundingBox();
-        if (toggle == null || bar == null) return Number.POSITIVE_INFINITY;
-        return toggle.y + toggle.height - bar.y;
-      })
-      .toBeLessThanOrEqual(0);
+    await expectToggleAboveBar(page);
   });
 });
 
@@ -133,6 +141,7 @@ test.describe("the source menu", () => {
           await page.getByRole("tab", { name: mode }).click();
         }
         const bar = await page.getByRole("tab", { name: "Planner" }).boundingBox();
+        await expectToggleAboveBar(page);
         await openSourceMenu(page);
         const last = await page.getByText("Main", { exact: true }).boundingBox();
         if (last == null || bar == null) {
