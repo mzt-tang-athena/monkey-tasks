@@ -4,7 +4,7 @@ title: A shorter note write keeps the old tail on Android
 created: 2026-11-08
 priority: high
 assignee: claude
-pr:
+pr: 96
 depends: []
 ---
 
@@ -39,9 +39,17 @@ Make it truncate.
 
 ## Acceptance
 
-- [ ] A test fails when a shorter write keeps the old tail.
-- [ ] On the emulator, an APK from `main` shows the tail after an untick.
-- [ ] On the emulator, an APK from this branch writes the same note clean.
+- [x] A test fails when a shorter write keeps the old tail.
+- [x] On the emulator, an APK from `main` shows the tail after an untick.
+- [x] On the emulator, an APK from this branch writes the same note clean.
 
 ## Outcome
-(filled in before moving to done/)
+
+Pull request [#96](https://github.com/mzt-tang-athena/monkey-tasks/pull/96) carries the hotfix.
+`writeNote` now opens a `File` handle with `FileMode.Truncate`, which
+asks the provider for mode "wt". The epic's ADR 0045 records why this
+beats a native patch or delete and create.
+
+On the emulator, an APK from 2d7178b left `leted: 2026-11-08` and a
+second `---` after an untick. An APK from this branch wrote the note
+back byte for byte.
