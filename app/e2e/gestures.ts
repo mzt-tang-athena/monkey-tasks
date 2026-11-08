@@ -74,8 +74,8 @@ export type DropAt = "center" | "upper";
  * Press `from` and hold. Gesture handler's web long press is a
  * `setTimeout`, so the hold pauses the page clock and steps it past
  * `holdMs`: real time would race a busy runner, and a paused clock
- * would stall the press. The clock runs again once the gesture is
- * done, so the rest of a spec runs on real time.
+ * would stall the press. The clock runs again before the move, so the
+ * drag and the rest of a spec run on real time.
  */
 async function pressAndHold(page: Page, from: Locator, holdMs: number) {
   const start = await boxOf(from);
@@ -83,6 +83,7 @@ async function pressAndHold(page: Page, from: Locator, holdMs: number) {
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
   await page.mouse.down();
   await page.clock.runFor(holdMs + 50);
+  await page.clock.resume();
 }
 
 /**
@@ -103,7 +104,6 @@ export async function holdDrag(
   await pressAndHold(page, from, holdMs);
   await page.mouse.move(toX, toY, { steps: 12 });
   await page.mouse.up();
-  await page.clock.resume();
 }
 
 /**
@@ -119,7 +119,6 @@ export async function holdDragTo(
 ) {
   await pressAndHold(page, from, holdMs);
   await page.mouse.move(point.x, point.y, { steps: 12 });
-  await page.clock.resume();
 }
 
 /**

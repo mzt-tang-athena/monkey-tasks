@@ -1,5 +1,5 @@
 import * as React from "react";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { touchTarget } from "@/theme/tokens";
 import { Button } from "./button";
@@ -14,12 +14,6 @@ function floor(element: HTMLElement) {
     height: Math.max(parseFloat(style.minHeight) || 0, parseFloat(style.height) || 0),
     width: Math.max(parseFloat(style.minWidth) || 0, parseFloat(style.width) || 0),
   };
-}
-
-/** The press target of a segment. On the web a segment's tab wraps a
-    button, because gesture handler presses only a button there. */
-function target(tab: HTMLElement) {
-  return within(tab).getByRole("button");
 }
 
 describe("TabStrip", () => {
@@ -122,7 +116,7 @@ describe("SegmentedControl", () => {
       />,
     );
 
-    fireEvent.click(target(screen.getByRole("tab", { name: "Month" })));
+    fireEvent.click(screen.getByRole("tab", { name: "Month" }));
 
     expect(onSelect).toHaveBeenCalledWith("month");
   });
@@ -142,7 +136,7 @@ describe("SegmentedControl", () => {
 
     expect(screen.getByRole("tab", { name: "pill form" })).toBeTruthy();
     for (const tab of screen.getAllByRole("tab")) {
-      const size = floor(target(tab));
+      const size = floor(tab);
       expect(size.height).toBeGreaterThanOrEqual(touchTarget);
       expect(size.width).toBeGreaterThanOrEqual(touchTarget);
     }
@@ -153,7 +147,7 @@ describe("SegmentedControl", () => {
       <SegmentedControl label="m" segments={[...segments]} selected="day" onSelect={vi.fn()} />,
     );
     const radius = (name: string) => {
-      const style = getComputedStyle(target(screen.getByRole("tab", { name })));
+      const style = getComputedStyle(screen.getByRole("tab", { name }));
       return [style.borderTopLeftRadius, style.borderTopRightRadius].map((v) => parseFloat(v));
     };
     expect(radius("Day")[0]).toBeGreaterThan(0);

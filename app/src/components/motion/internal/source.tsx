@@ -11,6 +11,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { scheduleOnUI } from "react-native-worklets";
 import { hitZone, type Hit } from "@/lib/motion/drag-math";
 import { holds, motion, type HoldKind } from "@/lib/motion/tokens";
 import { colors } from "@/theme/tokens";
@@ -43,16 +44,25 @@ function track(ui: SessionUI, x: number, y: number): void {
 function settle(ui: SessionUI): void {
   "worklet";
   ui.hover.set(null);
-  ui.lift.set(withTiming(
-    0,
-    { duration: motion.ms.return, easing: motion.easeOut, reduceMotion: reduce },
-    (finished) => {
+  const back = { duration: motion.ms.return, easing: motion.easeOut, reduceMotion: reduce };
+  ui.lift.set(
+    withTiming(0, back, (finished) => {
       "worklet";
       if (finished === true) {
         send(ui, { type: "settled" });
       }
-    },
-  ));
+    }),
+  );
+}
+
+/** A source that unmounts mid drag cancels it: its gesture may never
+    finalize, and the session would wait on it. */
+function abandon(ui: SessionUI, source: number, cancel: (generation: number) => void): void {
+  "worklet";
+  if (send(ui, { type: "finalize", source }) === "cancel") {
+    toJS(cancel, ui.generation.value);
+    settle(ui);
+  }
 }
 
 /**
@@ -81,7 +91,13 @@ export function Source({
   React.useLayoutEffect(() => {
     session.payloads.set(id, payload);
   });
-  React.useEffect(() => () => void session.payloads.delete(id), [session, id]);
+  React.useEffect(
+    () => () => {
+      session.payloads.delete(id);
+      scheduleOnUI(abandon, ui, id, handlers.cancel);
+    },
+    [session, ui, handlers, id],
+  );
 
   const self = useAnimatedRef<View>();
   const cue = useSharedValue(0);

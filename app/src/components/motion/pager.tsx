@@ -146,14 +146,17 @@ export function Pager({
         if (step !== 0) {
           pending.set(target);
         }
-        pos.set(withTiming(target, over(step === 0 ? motion.ms.return : motion.ms.settle), (finished) => {
-          "worklet";
-          if (finished === true && pending.value === target) {
-            pending.set(none);
-            landed.set(target);
-            toJS(commit, target);
-          }
-        }));
+        const ms = step === 0 ? motion.ms.return : motion.ms.settle;
+        pos.set(
+          withTiming(target, over(ms), (finished) => {
+            "worklet";
+            if (finished === true && pending.value === target) {
+              pending.set(none);
+              landed.set(target);
+              toJS(commit, target);
+            }
+          }),
+        );
       },
     }),
   );

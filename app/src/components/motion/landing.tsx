@@ -32,11 +32,12 @@ export function Landing({ id, children }: { id: string; children: React.ReactNod
   const wash = useSharedValue(landed ? 0.9 : 0);
   React.useEffect(() => {
     if (landed) {
-      wash.set(withTiming(0, {
+      const fade = {
         duration: motion.ms.landWash,
         easing: motion.easeOut,
         reduceMotion: ReduceMotion.System,
-      }));
+      };
+      wash.set(withTiming(0, fade));
     }
   }, [landed, wash]);
   const washStyle = useAnimatedStyle(() => ({ opacity: wash.value }));

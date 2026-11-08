@@ -21,7 +21,9 @@ function Harness({
   onDrop,
   renderGhost,
   onRender = () => {},
+  source = true,
 }: {
+  source?: boolean;
   task: Task;
   hold?: HoldKind;
   onDrop: (task: Task, target: string) => void;
@@ -32,9 +34,11 @@ function Harness({
     <GestureHandlerRootView>
       <Drag.Root onDrop={onDrop} renderGhost={renderGhost}>
         <Watch onRender={onRender} />
-        <Drag.Source testID="source" payload={task} hold={hold}>
-          <Text>{task.name}</Text>
-        </Drag.Source>
+        {source ? (
+          <Drag.Source testID="source" payload={task} hold={hold}>
+            <Text>{task.name}</Text>
+          </Drag.Source>
+        ) : null}
         <Drag.Zone testID="zone:a" target="a" />
         <Drag.Zone testID="zone:b" target="b" />
       </Drag.Root>
@@ -129,6 +133,39 @@ describe("createDragSurface", () => {
     });
     await wait(50);
     expect(onDrop).toHaveBeenCalledWith({ name: "new" }, "a");
+  });
+
+  it("cancels a drag whose source unmounts, and the next drag drops", async () => {
+    const onDrop = vi.fn();
+    const ghost = () => null;
+    const task = { name: "x" };
+    const renders: boolean[] = [];
+    const watch = (dragging: boolean) => renders.push(dragging);
+    const view = render(<Harness task={task} onDrop={onDrop} renderGhost={ghost} onRender={watch} />);
+    layOut();
+    const source = screen.getByTestId("source");
+    await act(async () => {
+      source.dispatchEvent(pointer("pointerdown", 20, 20));
+    });
+    for (const y of [40, 80, 120]) {
+      await act(async () => {
+        source.dispatchEvent(pointer("pointermove", 20, y));
+      });
+      await wait(16);
+    }
+    view.rerender(
+      <Harness task={task} onDrop={onDrop} renderGhost={ghost} onRender={watch} source={false} />,
+    );
+    await wait(300);
+    expect(renders.at(-1)).toBe(false);
+    view.rerender(<Harness task={task} onDrop={onDrop} renderGhost={ghost} onRender={watch} />);
+    layOut();
+    await drag([
+      [20, 40],
+      [20, 120],
+      [20, 220],
+    ]);
+    expect(onDrop.mock.calls).toEqual([[task, "b"]]);
   });
 
   it("drops on nothing outside every zone", async () => {
