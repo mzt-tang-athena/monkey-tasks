@@ -1,3 +1,4 @@
+import { File, FileMode } from "expo-file-system";
 import * as FileSystem from "expo-file-system/legacy";
 import { displayName } from "./scan";
 import { serializeValue } from "../../lib/yaml";
@@ -10,10 +11,18 @@ export async function readNote(uri: string): Promise<string> {
   });
 }
 
+/**
+ * Replace the whole note. The legacy `writeAsStringAsync` opens a SAF
+ * document with mode "w", which does not truncate on Android 10 and
+ * later, so a shorter note kept the old tail. Mode "wt" truncates.
+ */
 export async function writeNote(uri: string, content: string): Promise<void> {
-  await FileSystem.writeAsStringAsync(uri, content, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  const handle = new File(uri).open(FileMode.Truncate);
+  try {
+    await handle.writeBytes(new TextEncoder().encode(content));
+  } finally {
+    handle.close();
+  }
 }
 
 /** Another writer changed the file between the read and the write. */

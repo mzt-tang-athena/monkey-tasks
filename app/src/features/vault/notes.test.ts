@@ -2,12 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { load } from "js-yaml";
 import { serializeValue } from "../../lib/yaml";
 
-const fs = vi.hoisted(() => ({
-  read: "",
-  readError: null as Error | null,
-  write: vi.fn(),
-  created: "draw.md",
-}));
+// A stand-in for the phone's document provider. Mode "w" writes over
+// the old bytes and keeps any tail past the new end, the way Android 10
+// and later does. Only mode "wt" truncates first.
+const fs = vi.hoisted(() => {
+  const disk = new Map<string, string>();
+  function write(uri: string, text: string, truncate: boolean): void {
+    const old = truncate ? "" : (disk.get(uri) ?? "");
+    disk.set(uri, text + old.slice(text.length));
+  }
+  return {
+    disk,
+    write,
+    readError: null as Error | null,
+    created: "draw.md",
+  };
+});
 
 vi.mock("expo-file-system/legacy", () => ({
   EncodingType: { UTF8: "utf8" },
@@ -17,13 +27,28 @@ vi.mock("expo-file-system/legacy", () => ({
         fs.created === "" ? fileName : fs.created,
       )}`,
   },
-  readAsStringAsync: async () => {
+  readAsStringAsync: async (uri: string) => {
     if (fs.readError) {
       throw fs.readError;
     }
-    return fs.read;
+    return fs.disk.get(uri) ?? "";
   },
-  writeAsStringAsync: fs.write,
+  writeAsStringAsync: async (uri: string, text: string) =>
+    fs.write(uri, text, false),
+}));
+
+vi.mock("expo-file-system", () => ({
+  FileMode: { WriteOnly: "w", Truncate: "wt" },
+  File: class {
+    constructor(readonly uri: string) {}
+    open(mode: string) {
+      return {
+        writeBytes: async (bytes: Uint8Array) =>
+          fs.write(this.uri, new TextDecoder().decode(bytes), mode === "wt"),
+        close: () => undefined,
+      };
+    }
+  },
 }));
 
 import {
@@ -77,7 +102,7 @@ describe("serializeValue", () => {
 describe("createNote", () => {
   beforeEach(() => {
     fs.created = "";
-    fs.write.mockClear();
+    fs.disk.clear();
   });
 
   it("writes the note and returns the name it got", async () => {
@@ -102,10 +127,7 @@ describe("createNote", () => {
     expect(created.text).toContain("title: draw");
     expect(parsed(created.text).title).toBe("draw");
     // The text that was written is the text that is returned.
-    expect(fs.write.mock.calls[0]?.slice(0, 2)).toEqual([
-      created.uri,
-      created.text,
-    ]);
+    expect(fs.disk.get(created.uri)).toBe(created.text);
   });
 });
 
@@ -199,38 +221,46 @@ describe("updateProperty", () => {
 
 describe("writeNoteIfUnchanged", () => {
   beforeEach(() => {
-    fs.read = "";
+    fs.disk.clear();
     fs.readError = null;
-    fs.write.mockClear();
   });
 
   it("writes when the file still holds the text it read", async () => {
-    fs.read = "old";
+    fs.disk.set("content://x", "old");
 
     await writeNoteIfUnchanged("content://x", "old", "new");
 
-    expect(fs.write).toHaveBeenCalledWith("content://x", "new", {
-      encoding: "utf8",
-    });
+    expect(fs.disk.get("content://x")).toBe("new");
+  });
+
+  it("leaves no old tail when the note gets shorter", async () => {
+    const ticked = "---\ndue: 2026-11-08\ncompleted: 2026-11-08\n---\n";
+    const unticked = "---\ndue: 2026-11-08\n---\n";
+    fs.disk.set("content://x", ticked);
+
+    await writeNoteIfUnchanged("content://x", ticked, unticked);
+
+    expect(fs.disk.get("content://x")).toBe(unticked);
   });
 
   it("refuses when another writer changed the file", async () => {
-    fs.read = "theirs";
+    fs.disk.set("content://x", "theirs");
 
     await expect(
       writeNoteIfUnchanged("content://x", "ours", "new"),
     ).rejects.toBeInstanceOf(NoteChangedError);
 
-    expect(fs.write).not.toHaveBeenCalled();
+    expect(fs.disk.get("content://x")).toBe("theirs");
   });
 
   it("refuses when the file cannot be read", async () => {
+    fs.disk.set("content://x", "ours");
     fs.readError = new Error("gone");
 
     await expect(
       writeNoteIfUnchanged("content://x", "ours", "new"),
     ).rejects.toBeInstanceOf(NoteUnreadableError);
 
-    expect(fs.write).not.toHaveBeenCalled();
+    expect(fs.disk.get("content://x")).toBe("ours");
   });
 });
