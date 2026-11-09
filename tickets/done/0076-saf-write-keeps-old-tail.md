@@ -3,8 +3,8 @@ id: 0076
 title: A shorter note write keeps the old tail on Android
 created: 2026-11-08
 priority: high
-assignee:
-pr:
+assignee: claude
+pr: 95
 depends: []
 ---
 
@@ -39,9 +39,20 @@ one in an ADR, since each has a trade-off.
 
 ## Acceptance
 
-- [ ] `journeys/android-list-swipe.sh` in the verification skill passes on the emulator: the note after the untick matches the note before the tick, byte for byte.
-- [ ] A test pins the truncating write for the SAF adapter.
+- [x] `journeys/android-list-swipe.sh` in the verification skill passes on the emulator: the note after the untick matches the note before the tick, byte for byte.
+- [x] A test pins the truncating write for the SAF adapter.
 - [ ] The owner's phone shows the same round trip.
 
 ## Outcome
-(filled in before moving to done/)
+
+Pull request [#95](https://github.com/mzt-tang-athena/monkey-tasks/pull/95) carries the fix.
+The SAF adapter now writes through `File.open(FileMode.Truncate)`,
+which opens the document with mode "wt". ADR 0045 records why.
+
+The fake provider keeps the old tail on mode "w", as the phone does. A
+contract case failed on the old adapter and passes now.
+
+On the emulator, the journey failed on an APK from 4828d9c with the
+`leted:` tail, and passed on an APK from this branch. The phone check
+waits for the owner. The hotfix for `main` carries the same fix in
+`writeNote`.

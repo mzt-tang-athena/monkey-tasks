@@ -284,7 +284,7 @@ doze behavior. Leave those to the phone pass, and say so in the report.
 - Heavy screen capture can spoil a gesture. A `screencap` loop during a swipe left the page unturned. `frames` uses `screenrecord`, and the same swipe turned the page.
 - A swipe that ends off screen reads as a system gesture. Drive clamps the end to the screen.
 - After `force-stop` the old window lingers in the screen tree for a moment. `$D restart` waits for it to go.
-- On this APK a shorter write keeps the old tail of the note (ticket 0076). Compare notes byte for byte after an edit that removes text.
+- An APK built before ADR 0045 keeps the old tail of a note after a shorter write (ticket 0076). Compare notes byte for byte after an edit that removes text.
 
 ### Android helpers
 

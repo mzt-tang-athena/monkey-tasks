@@ -12,6 +12,10 @@
  * - A taken name gets " (1)", then " (2)", before the extension.
  * - A content uri always "exists" to `getInfoAsync`. Only the app's own
  *   files report a real answer.
+ * - A document opened with mode "w" is not truncated, as on Android 10
+ *   and later. A shorter write keeps the old bytes past its end. The
+ *   legacy `writeAsStringAsync` opens with "w". Only a `File` handle
+ *   opened with mode "wt" (`fileModule`) truncates first.
  */
 
 type Node = { kind: "file"; text: string } | { kind: "folder" };
@@ -85,6 +89,24 @@ export function createFakeSaf() {
     return `${folderId}/${candidate}`;
   }
 
+  function writeDocument(uri: string, text: string, truncate: boolean): void {
+    const id = idOf(uri);
+    const node = nodes.get(id);
+    if (node?.kind !== "file") {
+      throw new Error(`no such file: ${uri}`);
+    }
+    if (writeFailures > 0) {
+      writeFailures -= 1;
+      throw new Error("disk full");
+    }
+    const bytes = new TextEncoder().encode(text);
+    const old = truncate ? new Uint8Array() : new TextEncoder().encode(node.text);
+    const kept = new Uint8Array(Math.max(bytes.length, old.length));
+    kept.set(old);
+    kept.set(bytes);
+    nodes.set(id, { kind: "file", text: new TextDecoder().decode(kept) });
+  }
+
   const StorageAccessFramework = {
     async readDirectoryAsync(uri: string): Promise<string[]> {
       return children(folder(uri)).map(uriOf);
@@ -138,15 +160,7 @@ export function createFakeSaf() {
         appFiles.set(uri, text);
         return;
       }
-      const id = idOf(uri);
-      if (nodes.get(id)?.kind !== "file") {
-        throw new Error(`no such file: ${uri}`);
-      }
-      if (writeFailures > 0) {
-        writeFailures -= 1;
-        throw new Error("disk full");
-      }
-      nodes.set(id, { kind: "file", text });
+      writeDocument(uri, text, false);
     },
     async deleteAsync(
       uri: string,
@@ -171,9 +185,27 @@ export function createFakeSaf() {
     },
   };
 
+  const fileModule = {
+    FileMode: { WriteOnly: "w", Truncate: "wt" },
+    File: class {
+      constructor(private readonly uri: string) {}
+      open(mode: string) {
+        const uri = this.uri;
+        return {
+          async writeBytes(bytes: Uint8Array): Promise<void> {
+            writeDocument(uri, new TextDecoder().decode(bytes), mode === "wt");
+          },
+          close(): void {},
+        };
+      }
+    },
+  };
+
   return {
     /** The stand-in for `expo-file-system/legacy`. */
     module,
+    /** The stand-in for `expo-file-system`, the `File` API. */
+    fileModule,
     treeUri: FAKE_TREE_URI,
     /** The document uri of a path under the root, "Tasks/Call.md". */
     uriOf: (path: string) => uriOf(`${ROOT_ID}/${path}`),
