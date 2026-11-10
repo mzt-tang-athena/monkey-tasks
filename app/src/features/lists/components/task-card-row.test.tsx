@@ -1,18 +1,20 @@
 import * as React from "react";
-import { Animated } from "react-native";
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskItem } from "@/types/task";
+import { ListReorder } from "../lib/list-reorder";
 import { TaskCardRow, type TaskCardRowProps } from "./task-card-row";
 
 const spy = vi.hoisted(() => ({ renders: 0 }));
 
-vi.mock("@/components/task-row", () => ({
-  TaskRow: () => {
+vi.mock("@/components/task-row", async () => {
+  const React = await import("react");
+  const Row = React.memo(function Row() {
     spy.renders += 1;
     return null;
-  },
-}));
+  });
+  return { TaskRow: Row };
+});
 
 const uri = "content://vault/Tasks/Apple.md";
 const apple: TaskItem = {
@@ -25,43 +27,58 @@ const apple: TaskItem = {
   data: { kind: "[[tasks]]", created: "2026-10-20" },
 };
 
-const shift = new Animated.Value(0);
 const none = () => undefined;
 const props: TaskCardRowProps = {
   task: apple,
   section: "No date",
-  position: "middle",
+  index: 1,
+  count: 3,
   completed: false,
   canDrag: true,
-  lifted: false,
   onToggle: none,
   onOpen: none,
-  onHold: none,
-  onPickup: none,
-  onMove: none,
-  onEnd: none,
-  registerRow: none,
-  shiftOf: () => shift,
+  onTickSettled: none,
 };
 
+function Screen(values: TaskCardRowProps) {
+  return (
+    <ListReorder.Root onReorder={none} renderGhost={() => null}>
+      <TaskCardRow {...values} />
+    </ListReorder.Root>
+  );
+}
+
 describe("TaskCardRow", () => {
-  it("does not render again for the same values", () => {
-    // A slot crossing hands every row a fresh render pass. A row whose
-    // corners and divider stay as they are must not draw again.
-    const { rerender } = render(<TaskCardRow {...props} />);
+  it("does not render its task row again for the same values", () => {
+    // A slot crossing hands the list row a fresh render pass. The row
+    // below the reorder surface must not draw again (J2, 0055).
+    const { rerender } = render(<Screen {...props} />);
     const before = spy.renders;
 
-    rerender(<TaskCardRow {...props} />);
+    rerender(<Screen {...props} />);
 
     expect(spy.renders).toBe(before);
   });
 
-  it("renders again when its slot changes its corners", () => {
-    const { rerender } = render(<TaskCardRow {...props} />);
+  it("renders again when its task changes", () => {
+    const { rerender } = render(<Screen {...props} />);
     const before = spy.renders;
 
-    rerender(<TaskCardRow {...props} position="first" />);
+    rerender(
+      <Screen {...props} task={{ ...apple, name: "Banana", uri: "b" }} />,
+    );
 
     expect(spy.renders).toBeGreaterThan(before);
+  });
+
+  it("keeps the task row through a slot crossing", () => {
+    // The reorder's corners and shift live on the item, not here, so a
+    // new index must not reach the task row.
+    const { rerender } = render(<Screen {...props} />);
+    const before = spy.renders;
+
+    rerender(<Screen {...props} index={0} />);
+
+    expect(spy.renders).toBe(before);
   });
 });

@@ -41,7 +41,7 @@ function track(ui: SessionUI, x: number, y: number): void {
 
 /** The lift falls back to rest, and the session settles when it lands.
     A flush cuts it short. */
-function settle(ui: SessionUI): void {
+export function settleSession(ui: SessionUI): void {
   "worklet";
   ui.hover.set(null);
   const back = { duration: motion.ms.return, easing: motion.easeOut, reduceMotion: reduce };
@@ -57,11 +57,15 @@ function settle(ui: SessionUI): void {
 
 /** A source that unmounts mid drag cancels it: its gesture may never
     finalize, and the session would wait on it. */
-function abandon(ui: SessionUI, source: number, cancel: (generation: number) => void): void {
+export function abandonSource(
+  ui: SessionUI,
+  source: number,
+  cancel: (generation: number) => void,
+): void {
   "worklet";
   if (send(ui, { type: "finalize", source }) === "cancel") {
     toJS(cancel, ui.generation.value);
-    settle(ui);
+    settleSession(ui);
   }
 }
 
@@ -94,7 +98,7 @@ export function Source({
   React.useEffect(
     () => () => {
       session.payloads.delete(id);
-      scheduleOnUI(abandon, ui, id, handlers.cancel);
+      scheduleOnUI(abandonSource, ui, id, handlers.cancel);
     },
     [session, ui, handlers, id],
   );
@@ -165,17 +169,17 @@ export function Source({
         const effect = send(ui, { type: "release", source: id, canceled: e.canceled });
         if (effect === "drop") {
           toJS(handlers.drop, ui.generation.value, hit);
-          settle(ui);
+          settleSession(ui);
         } else if (effect === "cancel") {
           toJS(handlers.cancel, ui.generation.value);
-          settle(ui);
+          settleSession(ui);
         }
       },
       onFinalize: () => {
         "worklet";
         if (send(ui, { type: "finalize", source: id }) === "cancel") {
           toJS(handlers.cancel, ui.generation.value);
-          settle(ui);
+          settleSession(ui);
         }
         cue.set(withTiming(0, { duration: motion.ms.tap, reduceMotion: reduce }));
       },

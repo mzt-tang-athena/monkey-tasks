@@ -186,10 +186,14 @@ for (const input of inputs) {
       await page.goto("/");
       await expect(row(page, undated.second)).toBeVisible();
 
+      // Step the page clock, so a loaded runner cannot skip every
+      // intermediate frame of the 220 ms entrance.
+      await pauseClock(page);
       await startSampling(page, "not-a-row");
       await tap(page, input, page.getByRole("button", { name: "add task" }));
+      await page.clock.runFor(500);
+      await page.clock.resume();
       await expect(page.getByRole("dialog")).toBeVisible();
-      await page.waitForTimeout(500);
 
       const frames = await stopSampling(page);
       expectOneClock(frames, reducedMotion === "reduce");
@@ -211,17 +215,23 @@ for (const input of inputs) {
       // The note write takes longer than the sheet's exit. The sheet
       // must leave before the file lands (ADR 0021).
       await page.evaluate(() => globalThis.__vault?.setLatency(1500));
+      // Step the exit on the page clock, so a loaded runner cannot skip
+      // every frame between the sheet's open and closed states.
+      await pauseClock(page);
       await startSampling(page, capture.name);
+      await page.clock.runFor(16);
       await markTap(page);
       await tap(page, input, page.getByRole("button", { name: "send task" }));
+      await page.clock.runFor(400);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
       await expect(row(page, capture.name)).toBeVisible();
-      await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 900 });
       expect(
         await notePaths(page, "Tasks/"),
         "the sheet leaves before the write lands",
       ).not.toContain(`Tasks/${capture.name}.md`);
 
       const frames = await stopSampling(page);
+      await page.clock.resume();
       const pressedAt = await tapAt(page);
       expect(pressedAt, "the press was seen").toBeGreaterThan(0);
 

@@ -50,6 +50,30 @@ export async function expectInSection(
 }
 
 /**
+ * `first` comes before `second` in the document. A grouped row's place
+ * is its section's order, not the pixels it happens to carry while the
+ * list scrolls.
+ */
+export async function expectBefore(first: Locator, second: Locator) {
+  await expect
+    .poll(async () => {
+      const one = await first.elementHandle();
+      const two = await second.elementHandle();
+      if (one == null || two == null) {
+        return false;
+      }
+      return one.evaluate(
+        (element, other) =>
+          (element.compareDocumentPosition(other) &
+            Node.DOCUMENT_POSITION_FOLLOWING) !==
+          0,
+        two,
+      );
+    })
+    .toBe(true);
+}
+
+/**
  * Press an element a virtualized list may have just mounted. Playwright
  * scrolls after its stability check, so a row that enters the DOM with
  * that scroll has no layout yet. Gesture handler's press drops a press
