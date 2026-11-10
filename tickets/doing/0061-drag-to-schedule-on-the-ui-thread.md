@@ -3,7 +3,7 @@ id: 0061
 title: Drag to schedule and the split grabber run on the UI thread
 created: 2026-10-26
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [0058]
 ---
