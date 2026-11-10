@@ -8,7 +8,7 @@ import {
   press,
   type Input,
 } from "../gestures";
-import { expectAbove, listTab, row, sectionHeader } from "../locators";
+import { expectAbove, expectBefore, listTab, row, sectionHeader } from "../locators";
 
 /**
  * Ticket 0060: the row reorder, the tick hold and the capture landing
@@ -465,7 +465,7 @@ test("the capture entrance never replays within the freshness window", async ({
   // there must show at full opacity on its first frame.
   await watchRow(page, captured);
   await tickButton(page, captured).click();
-  await expectAbove(
+  await expectBefore(
     sectionHeader(page, sections.completed),
     row(page, captured),
   );
@@ -480,7 +480,7 @@ test("the capture entrance never replays within the freshness window", async ({
   await row(page, captured)
     .getByRole("button", { name: "mark not done" })
     .click();
-  await expectAbove(sectionHeader(page, sections.undated), row(page, captured));
+  await expectBefore(sectionHeader(page, sections.undated), row(page, captured));
   await page.waitForTimeout(80);
   const untickedFrames = await stopWatch(page);
   const untickedRest = await restingOpacity(page, captured);
