@@ -2,44 +2,63 @@ import * as React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BackHandler, Platform, Text, TextInput } from "react-native";
+import { useProgress } from "@/lib/motion/progress";
+import { motion } from "@/lib/motion/tokens";
 import { OverlayHost } from "./overlay-host";
 import { Sheet } from "./sheet";
 
-// The sheet rides the keyboard's height. The test has no keyboard.
+// The sheet rides the keyboard's shared values. The test has no keyboard.
 vi.mock("react-native-keyboard-controller", async () => {
-  const { Animated } = await import("react-native");
-  const height = new Animated.Value(0);
-  return { useKeyboardAnimation: () => ({ height, progress: height }) };
+  const { useSharedValue } = await import("react-native-reanimated");
+  return {
+    useReanimatedKeyboardAnimation: () => ({
+      height: useSharedValue(0),
+      progress: useSharedValue(0),
+    }),
+  };
 });
 
 function Harness({ initial = true }: { initial?: boolean }) {
   const [open, setOpen] = React.useState(initial);
+  const [mounted, setMounted] = React.useState(initial);
+  const progress = useProgress(open, {
+    ms: motion.ms.sheet,
+    onSettled: (at) => {
+      if (at === 0) {
+        setMounted(false);
+      }
+    },
+  });
+  const openSheet = () => {
+    setMounted(true);
+    setOpen(true);
+  };
   return (
     <OverlayHost>
       <Text>screen content</Text>
-      <Text onPress={() => setOpen(true)}>open</Text>
-      <Sheet open={open} onClose={() => setOpen(false)} label="Add a task" closeLabel="close capture">
-        <TextInput placeholder="Add a task" />
-      </Sheet>
+      <Text onPress={openSheet}>open</Text>
+      {mounted ? (
+        <Sheet
+          open={open}
+          progress={progress}
+          onDismiss={() => setOpen(false)}
+          label="Add a task"
+          closeLabel="close capture"
+          scrim
+        >
+          <TextInput placeholder="Add a task" />
+        </Sheet>
+      ) : null}
     </OverlayHost>
   );
 }
 
 /** The sheet's exit plays on the clock; run it out. */
-function finishMotion() {
-  act(() => {
-    vi.advanceTimersByTime(1000);
-  });
+async function finishMotion() {
+  await act(() => new Promise<void>((resolve) => setTimeout(resolve, 320)));
 }
 
 describe("Sheet", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it("reports a named modal dialog", () => {
     render(<Harness />);
 
@@ -55,31 +74,33 @@ describe("Sheet", () => {
     expect(screen.getByRole("dialog").closest('[aria-hidden="true"]')).toBeNull();
   });
 
-  it("closes on a press on the scrim, and leaves once its exit has played", () => {
+  it("closes on a press on the scrim, and leaves once its exit has played", async () => {
     render(<Harness />);
 
     fireEvent.click(screen.getByRole("button", { name: "close capture" }));
-    finishMotion();
+    await finishMotion();
 
     expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("button", { name: "close capture" })).toBeNull();
     expect(screen.getByText("screen content").closest('[aria-hidden="true"]')).toBeNull();
   });
 
-  it("closes on Escape in the browser", () => {
+  it("closes on Escape in the browser", async () => {
     render(<Harness />);
 
     fireEvent.keyDown(document, { key: "Escape" });
-    finishMotion();
+    await finishMotion();
 
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("is not drawn while closed", () => {
+  it("is not drawn while closed", async () => {
     render(<Harness initial={false} />);
 
     expect(screen.queryByRole("dialog")).toBeNull();
     fireEvent.click(screen.getByText("open"));
     expect(screen.getByRole("dialog")).toBeTruthy();
+    await finishMotion();
   });
 
   describe("on Android", () => {
@@ -92,21 +113,19 @@ describe("Sheet", () => {
         back = handler;
         return { remove: () => (back = null) };
       });
-      vi.spyOn(console, "warn").mockImplementation(() => undefined);
     });
     afterEach(() => {
       (Platform as { OS: string }).OS = os;
-      vi.restoreAllMocks();
     });
 
-    it("closes on the back button and takes the press", () => {
+    it("closes on the back button and takes the press", async () => {
       render(<Harness />);
 
       let handled: boolean | null | undefined;
       act(() => {
         handled = back?.(undefined as never);
       });
-      finishMotion();
+      await finishMotion();
 
       expect(handled).toBe(true);
       expect(screen.queryByRole("dialog")).toBeNull();

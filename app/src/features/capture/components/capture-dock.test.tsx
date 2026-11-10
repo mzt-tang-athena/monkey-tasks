@@ -27,9 +27,13 @@ vi.mock("expo-router", () => ({
 }));
 
 vi.mock("react-native-keyboard-controller", async () => {
-  const { Animated } = await import("react-native");
-  const height = new Animated.Value(0);
-  return { useKeyboardAnimation: () => ({ height, progress: height }) };
+  const { useSharedValue } = await import("react-native-reanimated");
+  return {
+    useReanimatedKeyboardAnimation: () => ({
+      height: useSharedValue(0),
+      progress: useSharedValue(0),
+    }),
+  };
 });
 
 vi.mock("@/stores/tasks/mutations/use-capture-task", () => ({
@@ -38,10 +42,19 @@ vi.mock("@/stores/tasks/mutations/use-capture-task", () => ({
 
 const targets: CaptureTarget[] = [{ kind: "main" }, { kind: "list", name: "Work" }];
 
+// Counts the screen's renders. The sheet's clock must not touch it.
+const screenRender = vi.hoisted(() => vi.fn());
+
+/** The screen the sheet draws over. */
+function Behind() {
+  screenRender();
+  return <Text>screen content</Text>;
+}
+
 function Screen() {
   return (
     <OverlayHost>
-      <Text>screen content</Text>
+      <Behind />
       <BottomBar
         action={
           <CaptureDock
@@ -56,10 +69,8 @@ function Screen() {
 }
 
 /** The sheet's exit plays on the clock; run it out. */
-function finishMotion() {
-  act(() => {
-    vi.advanceTimersByTime(1000);
-  });
+async function finishMotion() {
+  await act(() => new Promise<void>((resolve) => setTimeout(resolve, 320)));
 }
 
 async function flush() {
@@ -80,13 +91,10 @@ function type(text: string) {
 
 describe("CaptureDock", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     state.capture.mockReset();
     state.capture.mockResolvedValue(undefined);
     state.focused = true;
-  });
-  afterEach(() => {
-    vi.useRealTimers();
+    screenRender.mockClear();
   });
 
   it("opens a named dialog from the Add button", () => {
@@ -118,14 +126,60 @@ describe("CaptureDock", () => {
     expect(screen.getByRole("button", { name: "target list: Main" })).toBeTruthy();
   });
 
-  it("closes on a press on the scrim", () => {
+  it("closes on a press on the scrim", async () => {
     render(<Screen />);
     openSheet();
 
     fireEvent.click(screen.getByRole("button", { name: "close capture" }));
-    finishMotion();
+    await finishMotion();
 
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("a reopen during the exit keeps the sheet mounted and opens it", async () => {
+    render(<Screen />);
+    openSheet();
+    await finishMotion();
+
+    fireEvent.click(screen.getByRole("button", { name: "close capture" }));
+    await act(() => new Promise<void>((resolve) => setTimeout(resolve, 80)));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    // The reversed run supersedes the exit, so its settle never
+    // unmounts the sheet. The scrim still hides the bar from
+    // assistive tech, so the tap is found by its label.
+    fireEvent.click(document.querySelector('[aria-label="add task"]')!);
+    await finishMotion();
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Add a task")).toBeTruthy();
+    expect(screen.getByRole("dialog").closest('[aria-hidden="true"]')).toBeNull();
+  });
+
+  it("leaves the scrim out of the overlay host once the sheet closes", async () => {
+    render(<Screen />);
+    openSheet();
+    expect(screen.getByRole("button", { name: "close capture" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "close capture" }));
+    await finishMotion();
+
+    expect(screen.queryByRole("button", { name: "close capture" })).toBeNull();
+    expect(
+      screen.getByText("screen content").closest('[aria-hidden="true"]'),
+    ).toBeNull();
+  });
+
+  it("opening and closing the sheet renders the screen behind it no times", async () => {
+    render(<Screen />);
+    expect(screenRender).toHaveBeenCalledTimes(1);
+
+    openSheet();
+    await finishMotion();
+    fireEvent.click(screen.getByRole("button", { name: "close capture" }));
+    await finishMotion();
+
+    expect(screenRender).toHaveBeenCalledTimes(1);
   });
 
   describe("on Android", () => {
@@ -147,7 +201,7 @@ describe("CaptureDock", () => {
       vi.restoreAllMocks();
     });
 
-    it("closes on the back button, and the screen stays", () => {
+    it("closes on the back button, and the screen stays", async () => {
       render(<Screen />);
       openSheet();
 
@@ -155,7 +209,7 @@ describe("CaptureDock", () => {
       act(() => {
         handled = back?.(undefined as never);
       });
-      finishMotion();
+      await finishMotion();
 
       // The press is taken, so the router never sees it.
       expect(handled).toBe(true);
@@ -177,7 +231,7 @@ describe("CaptureDock", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "send task" }));
     await flush();
-    finishMotion();
+    await finishMotion();
 
     expect(state.capture).toHaveBeenCalledTimes(1);
     const [parsed, target, due] = state.capture.mock.calls[0] as [
@@ -200,7 +254,7 @@ describe("CaptureDock", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "send task" }));
     await flush();
-    finishMotion();
+    await finishMotion();
 
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByRole("alert").textContent).toContain(
@@ -222,7 +276,7 @@ describe("CaptureDock", () => {
     type("Buy milk");
     fireEvent.click(screen.getByRole("button", { name: "send task" }));
     await flush();
-    finishMotion();
+    await finishMotion();
     expect(screen.getByRole("alert")).toBeTruthy();
 
     // Another screen takes focus: the toast leaves, the draft stays.
@@ -237,7 +291,7 @@ describe("CaptureDock", () => {
     );
   });
 
-  it("closes the sheet when its tab loses focus", () => {
+  it("closes the sheet when its tab loses focus", async () => {
     const view = render(<Screen />);
     openSheet();
     type("Buy milk");
@@ -253,7 +307,7 @@ describe("CaptureDock", () => {
     // Back on the tab, the sheet stays closed.
     state.focused = true;
     view.rerender(<Screen />);
-    finishMotion();
+    await finishMotion();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -264,7 +318,7 @@ describe("CaptureDock", () => {
     type("Buy milk");
     fireEvent.click(screen.getByRole("button", { name: "send task" }));
     await flush();
-    finishMotion();
+    await finishMotion();
 
     fireEvent.click(
       screen.getByRole("button", { name: "dismiss capture failure" }),
