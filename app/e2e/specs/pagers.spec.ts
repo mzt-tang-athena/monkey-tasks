@@ -822,3 +822,22 @@ test.describe("with a touch screen", () => {
     await page.clock.resume();
   });
 });
+
+test("a page lays out at the pager's origin, so Android can read it", async ({ page }) => {
+  // Android's virtualized list clips a page's rows against its layout
+  // box. A page laid out one width over is offscreen for that check, so
+  // TalkBack and uiautomator lose every row, although the transform
+  // draws the page at 0. The painted box reads 0 either way, so read
+  // the layout offset.
+  await page.goto("/");
+  await expect(row(page, undated.second)).toBeVisible();
+  const layoutX = () =>
+    page
+      .getByTestId("pager-live")
+      .evaluate((element) => (element as HTMLElement).offsetLeft);
+  expect(await layoutX()).toBe(0);
+
+  await press(page, listTab(page, focus));
+  await expect(listTab(page, focus)).toHaveAttribute("aria-selected", "true");
+  expect(await layoutX()).toBe(0);
+});
