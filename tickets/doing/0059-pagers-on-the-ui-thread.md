@@ -3,7 +3,7 @@ id: 0059
 title: The three pagers run on the UI thread
 created: 2026-10-26
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [0058]
 ---
