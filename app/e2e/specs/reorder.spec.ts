@@ -30,7 +30,7 @@ async function openMain(page: Page) {
 async function openMyOrder(page: Page) {
   await openMain(page);
   await page.getByRole("button", { name: "sort list" }).click();
-  await page.getByRole("menuitem", { name: "My order" }).click();
+  await page.getByRole("radio", { name: "My order" }).click();
   await expectAbove(row(page, undated.first), row(page, undated.second));
 }
 
@@ -138,7 +138,7 @@ async function capture(page: Page, typed: string, name: string) {
 }
 
 const tickButton = (page: Page, name: string) =>
-  row(page, name).getByRole("button", { name: "mark done" });
+  row(page, name).getByRole("checkbox");
 
 test("a row's surface keeps pan-y and the grip takes none", async ({ page }) => {
   await openMyOrder(page);
@@ -233,9 +233,9 @@ test.describe("the drop", () => {
       await openMyOrder(page);
       const start = await pointOn(page, row(page, undated.second));
       const away = await pointOn(page, row(page, undated.first), "upper");
-      const before = await row(page, undated.first).getByRole("button", {
-        name: "mark done",
-      }).getAttribute("aria-checked");
+      const before = await row(page, undated.first)
+        .getByRole("checkbox")
+        .getAttribute("aria-checked");
 
       const pointer = await press(
         page,
@@ -255,7 +255,7 @@ test.describe("the drop", () => {
       await expectAbove(row(page, undated.first), row(page, undated.second));
       expect(
         await row(page, undated.first)
-          .getByRole("button", { name: "mark done" })
+          .getByRole("checkbox")
           .getAttribute("aria-checked"),
       ).toBe(before);
       await expectResting(page);
@@ -409,7 +409,7 @@ test.describe("a tick after a drop", () => {
       await tickButton(page, apples).click();
 
       await expect(
-        row(page, apples).getByRole("button", { name: "mark not done" }),
+        row(page, apples).getByRole("checkbox"),
       ).toHaveAttribute("aria-checked", "true");
     });
   }
@@ -478,7 +478,7 @@ test("the capture entrance never replays within the freshness window", async ({
 
   await watchRow(page, captured);
   await row(page, captured)
-    .getByRole("button", { name: "mark not done" })
+    .getByRole("checkbox")
     .click();
   await expectBefore(sectionHeader(page, sections.undated), row(page, captured));
   await page.waitForTimeout(80);
@@ -491,7 +491,7 @@ test("the capture entrance never replays within the freshness window", async ({
   // My order: the drag's own copy is a still preview, so no task row
   // mounts during it. The row then pages away and back.
   await page.getByRole("button", { name: "sort list" }).click();
-  await page.getByRole("menuitem", { name: "My order" }).click();
+  await page.getByRole("radio", { name: "My order" }).click();
   await expectAbove(row(page, undated.first), row(page, undated.second));
   await row(page, captured).scrollIntoViewIfNeeded();
   const previous = await page.evaluate((name) => {

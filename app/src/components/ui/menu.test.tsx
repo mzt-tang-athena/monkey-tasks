@@ -27,10 +27,12 @@ function placeAnchor(box: { x: number; y: number; width: number; height: number 
 function Harness({
   items,
   align,
+  kind,
   onClose = () => undefined,
 }: {
   items: MenuItem[];
   align?: "start" | "end";
+  kind?: "menu" | "radiogroup";
   onClose?: () => void;
 }) {
   const anchor = React.useRef<React.ComponentRef<typeof View>>(null);
@@ -47,6 +49,7 @@ function Harness({
           anchor={anchor}
           label="List actions"
           align={align}
+          kind={kind}
           items={items}
           onClose={() => {
             onClose();
@@ -55,6 +58,18 @@ function Harness({
         />
     </OverlayHost>
   );
+}
+
+/** An ancestor carries `inert`. */
+function inert(element: HTMLElement): boolean {
+  let node: HTMLElement | null = element;
+  while (node != null) {
+    if (node.hasAttribute("inert")) {
+      return true;
+    }
+    node = node.parentElement;
+  }
+  return false;
 }
 
 const items: MenuItem[] = [
@@ -232,23 +247,61 @@ describe("Menu", () => {
     placeAnchor({ x: 326, y: 20, width: 44, height: 44 });
     await openMenu();
 
-    const chosen = screen.getByRole("menuitem", { name: "My order" });
+    const chosen = screen.getByRole("menuitemradio", { name: "My order" });
     expect(chosen.getAttribute("aria-checked")).toBe("true");
     expect(chosen.textContent).toContain("Drag rows to sort");
     expect(
-      screen.getByRole("menuitem", { name: "Due date" }).getAttribute("aria-checked"),
+      screen.getByRole("menuitemradio", { name: "Due date" }).getAttribute("aria-checked"),
     ).toBe("false");
   });
 
-  it("hides the screen from assistive tech while it shows", async () => {
+  it("renders a radiogroup when the menu is a choice", async () => {
+    render(
+      <Harness
+        kind="radiogroup"
+        items={[
+          { key: "due", label: "Due date", selected: true, onPress: vi.fn() },
+          { key: "manual", label: "My order", selected: false, onPress: vi.fn() },
+        ]}
+      />,
+    );
+    placeAnchor({ x: 326, y: 20, width: 44, height: 44 });
+    fireEvent.click(screen.getByText("open"));
+    await waitFor(() => screen.getByRole("radiogroup", { name: "List actions" }));
+
+    expect(
+      screen.getByRole("radio", { name: "Due date" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("radio", { name: "My order" }).getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
+  it("makes the screen inert while it shows", async () => {
     render(<Harness items={items} />);
     placeAnchor({ x: 326, y: 20, width: 44, height: 44 });
-    expect(screen.getByTestId("screen").closest("[aria-hidden]")).toBeNull();
+    expect(inert(screen.getByTestId("screen"))).toBe(false);
 
     await openMenu();
 
-    expect(screen.getByTestId("screen").closest('[aria-hidden="true"]')).not.toBeNull();
-    expect(screen.getByRole("menu").closest('[aria-hidden="true"]')).toBeNull();
+    expect(inert(screen.getByTestId("screen"))).toBe(true);
+    expect(inert(screen.getByRole("menu"))).toBe(false);
+  });
+
+  it("moves focus into the menu and back to the opener", async () => {
+    render(<Harness items={items} />);
+    placeAnchor({ x: 326, y: 20, width: 44, height: 44 });
+    const opener = screen.getByText("open");
+    opener.focus();
+
+    fireEvent.click(opener);
+    await openMenu();
+    expect(document.activeElement?.getAttribute("role")).toBe("menuitem");
+    expect(document.activeElement?.getAttribute("role")).toBe("menuitem");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(document.activeElement).toBe(opener);
   });
 });
 

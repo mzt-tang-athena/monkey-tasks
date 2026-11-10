@@ -104,7 +104,7 @@ export function MonthPane({
 const styles = StyleSheet.create({
   open: {
     alignSelf: "flex-start",
-    minHeight: 32,
+    minHeight: 44,
     justifyContent: "center",
     paddingHorizontal: spacing.m,
     borderRadius: radius,

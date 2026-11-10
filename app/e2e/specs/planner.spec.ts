@@ -20,7 +20,7 @@ test("a swipe left on the day turns to the next day", async ({ page }) => {
 });
 
 test("a swipe left on the month turns to the next month", async ({ page }) => {
-  await page.getByRole("tab", { name: "Month" }).click();
+  await page.getByRole("tab", { name: "Month", exact: true }).click();
   const title = page.getByTestId("month-title");
   await expect(title).toHaveText(months.current);
 
@@ -44,7 +44,7 @@ test("a task dropped on an hour takes that time", async ({ page }) => {
 
 test.describe("week", () => {
   test.beforeEach(async ({ page }) => {
-    await page.getByRole("tab", { name: "Week" }).click();
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
     await expect(row(page, undated.second)).toBeVisible();
   });
 
@@ -57,11 +57,25 @@ test.describe("week", () => {
   test("a day column lists its tasks in time order", async ({ page }) => {
     // The daily task is stored on TODAY, in the evening. On the next
     // day its occurrence must still sort after the afternoon task.
-    const column = page.getByRole("button", { name: tomorrow.heading, exact: true });
+    const column = page.getByRole("button", { name: tomorrow.short });
 
     await expectAbove(
       column.getByText(tomorrow.task),
       column.getByText(supplements),
     );
   });
+});
+
+test("the timeline tick is a checkbox named by its task", async ({ page }) => {
+  const chip = page.getByTestId(`hour-task:${supplements}`);
+  const tick = chip.getByRole("checkbox", { name: supplements });
+  await expect(tick).toHaveAttribute("aria-checked", "false");
+
+  await tick.click();
+
+  await expect(
+    page.getByTestId(`hour-task:${supplements}`).getByRole("checkbox", {
+      name: supplements,
+    }),
+  ).toHaveAttribute("aria-checked", "true");
 });

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Platform, StyleSheet, useWindowDimensions } from "react-native";
+import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import Animated, {
   useAnimatedStyle,
@@ -85,6 +85,8 @@ export function Sheet({
   // closing panel must let the bar take the press, as it does natively,
   // so the whole panel is inert while it closes.
   const panelRef = React.useRef<React.ComponentRef<typeof Animated.View>>(null);
+  // The control that opened the sheet, so a close puts focus back.
+  const opener = React.useRef<HTMLElement | null>(null);
   React.useLayoutEffect(() => {
     if (Platform.OS !== "web") {
       return;
@@ -94,10 +96,21 @@ export function Sheet({
       node.inert = !open;
     }
   }, [open]);
+  React.useEffect(() => {
+    if (Platform.OS !== "web" || !open) {
+      return;
+    }
+    opener.current = document.activeElement as HTMLElement | null;
+    return () => {
+      const target = opener.current;
+      opener.current = null;
+      target?.focus?.();
+    };
+  }, [open]);
 
   return (
     <>
-      <Overlay layer="sheetScrim" modal>
+      <Overlay layer="sheetScrim" modal={open}>
         {scrim ? (
           <Animated.View
             pointerEvents={open ? "auto" : "none"}
@@ -125,9 +138,11 @@ export function Sheet({
               role="dialog"
               aria-modal
               aria-label={label}
+              tabIndex={-1}
               pointerEvents={open ? "auto" : "none"}
               style={[styles.panel, panel]}
             >
+              <PanelFocus open={open} />
               {children}
             </Animated.View>
           </Animated.View>
@@ -135,6 +150,27 @@ export function Sheet({
       </Overlay>
     </>
   );
+}
+
+/** Moves focus to the first control in the panel, or the panel itself.
+    It lives inside the panel, so it mounts with the overlay's portal. */
+function PanelFocus({ open }: { open: boolean }) {
+  const ref = React.useRef<React.ComponentRef<typeof View>>(null);
+  React.useEffect(() => {
+    if (!open || Platform.OS !== "web") {
+      return;
+    }
+    const node = ref.current as unknown as HTMLElement | null;
+    const dialog = node?.closest<HTMLElement>('[role="dialog"]');
+    if (dialog == null) {
+      return;
+    }
+    const first = dialog.querySelector<HTMLElement>(
+      'input, textarea, button, [tabindex]:not([tabindex="-1"])',
+    );
+    (first ?? dialog).focus();
+  }, [open]);
+  return <View ref={ref} />;
 }
 
 const styles = StyleSheet.create({

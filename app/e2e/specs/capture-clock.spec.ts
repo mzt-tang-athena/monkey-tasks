@@ -350,7 +350,7 @@ for (const input of inputs) {
       await page.clock.resume();
     });
 
-    test("a focus close leaves the bar whole and the sheet closed on return", async ({
+    test("a close leaves the bar whole and the sheet closed on return", async ({
       page,
     }) => {
       await page.goto("/");
@@ -358,11 +358,12 @@ for (const input of inputs) {
       await tap(page, input, page.getByRole("button", { name: "add task" }));
       await expect(page.getByRole("dialog")).toBeVisible();
 
-      // The scrim covers the bar, so the tab is reached by keyboard.
-      await page.locator('[role="tab"][aria-label="Planner"]').focus();
-      await page.keyboard.press("Enter");
-      await expect(page).toHaveURL(/\/planner$/);
+      // The sheet is modal, so the screen behind it is inert and the
+      // keyboard cannot reach the nav. Escape closes it first.
+      await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toHaveCount(0);
+      await page.getByRole("tab", { name: "Planner" }).click();
+      await expect(page).toHaveURL(/\/planner$/);
       await expect(
         page.getByRole("button", { name: "close capture" }),
       ).toHaveCount(0);

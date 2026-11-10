@@ -80,6 +80,15 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
     [held, reorderSection],
   );
 
+  // A row's Move action takes the same road as its drop: one
+  // ReorderEvent into `moveTask`.
+  const moveRow = React.useCallback(
+    (task: TaskItem, group: string, from: number, to: number) => {
+      moveTask({ payload: task, group, from, to });
+    },
+    [moveTask],
+  );
+
   // A real reload: the loader can fail when it talks to the vault, so
   // the error state keeps its retry affordance (also wired to the
   // list's pull to refresh).
@@ -134,13 +143,14 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           count={section.data.length}
           completed={faint}
           canDrag={sortMode === "manual" && !faint}
+          onMove={moveRow}
           onToggle={onToggle}
           onOpen={onOpen}
           onTickSettled={tickHold.settle}
         />
       );
     },
-    [sortMode, onToggle, onOpen, tickHold.settle],
+    [sortMode, moveRow, onToggle, onOpen, tickHold.settle],
   );
 
   const previewHeight = pagerHeight > 0 ? pagerHeight : window.height;

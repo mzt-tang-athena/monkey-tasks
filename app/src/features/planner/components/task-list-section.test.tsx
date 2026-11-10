@@ -57,13 +57,13 @@ describe("TaskListSection", () => {
     const onToggle = vi.fn();
     mount(tasks, onToggle);
 
-    const circles = screen.getAllByRole("button", { name: "mark done" });
-    expect(circles).toHaveLength(2);
+    const first = screen.getByRole("checkbox", { name: "Buy milk" });
+    const second = screen.getByRole("checkbox", { name: "Call the plumber" });
 
-    fireEvent.click(circles[0]);
+    fireEvent.click(first);
     expect(onToggle).toHaveBeenLastCalledWith(tasks[0]);
 
-    fireEvent.click(circles[1]);
+    fireEvent.click(second);
     expect(onToggle).toHaveBeenLastCalledWith(tasks[1]);
     expect(onToggle).toHaveBeenCalledTimes(2);
   });

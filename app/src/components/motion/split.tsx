@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/refs -- the worklet reads the animated
    ref when the gesture runs, not during render. */
 import * as React from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import Animated, {
   measure,
@@ -9,7 +9,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
-import { colors } from "@/theme/tokens";
+import { colors, touchTarget } from "@/theme/tokens";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
 import { usePressCancel } from "./internal/press-cancel";
@@ -51,6 +51,51 @@ export function Split({
   const grabbing = useSharedValue(0);
   const [hot, setHot] = React.useState(false);
   const pressCancel = usePressCancel();
+  const gripRef = React.useRef<React.ComponentRef<typeof Animated.View>>(null);
+  const height = React.useRef(0);
+
+  // One hour row of the timeline is one touch target tall. Keyboard
+  // arrows and TalkBack's increment and decrement move the split by
+  // that row, so the grabber has a non-drag path.
+  const step = React.useCallback(
+    (direction: 1 | -1) => {
+      const usable = height.current - dividerHeight;
+      if (usable <= 0) {
+        return;
+      }
+      const limit = Math.max(usable - minBottom, minTop);
+      const top = Math.min(
+        Math.max(fraction * usable + direction * touchTarget, minTop),
+        limit,
+      );
+      onResize(top / usable);
+    },
+    [fraction, minTop, minBottom, onResize],
+  );
+
+  React.useEffect(() => {
+    if (Platform.OS !== "web") {
+      return;
+    }
+    // The listener sits on the document. The grip's ref is not always
+    // attached when this effect runs, so the handler checks the focus
+    // at key time instead.
+    const onKeyDown = (event: KeyboardEvent) => {
+      const node = gripRef.current as unknown as HTMLElement | null;
+      if (node == null || document.activeElement !== node) {
+        return;
+      }
+      if (event.key === "ArrowUp" || event.key === "ArrowRight") {
+        event.preventDefault();
+        step(1);
+      } else if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
+        event.preventDefault();
+        step(-1);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [step]);
 
   // A new fraction from the screen, before paint: the panes never show
   // a frame between the release and the state that carries it.
@@ -106,7 +151,14 @@ export function Split({
   }));
 
   return (
-    <Animated.View ref={self} testID={testID} style={styles.root}>
+    <Animated.View
+      ref={self}
+      testID={testID}
+      style={styles.root}
+      onLayout={(event) => {
+        height.current = event.nativeEvent.layout.height;
+      }}
+    >
       <Animated.View
         testID={testID == null ? undefined : `${testID}:top`}
         style={[styles.pane, topStyle]}
@@ -115,23 +167,42 @@ export function Split({
       </Animated.View>
       <View style={styles.divider}>
         <View style={[styles.line, hot && styles.lineHot]} />
-        <GestureDetector gesture={gesture}>
-          <Animated.View
-            testID={testID == null ? undefined : `${testID}:grip`}
-            style={[styles.grip, hot && styles.gripHot]}
-            accessibilityRole="button"
-            accessibilityLabel="resize timeline"
-            // The hover handlers are React Native Web's, which the
-            // native props type omits. A surface only, so the cast
-            // stays here.
-            {...({
-              onHoverIn: () => setHot(true),
-              onHoverOut: () => setHot(false),
-            } as object)}
-          >
+        <View style={styles.gripSlot}>
+          <GestureDetector gesture={gesture}>
+            <Animated.View
+              ref={gripRef}
+              testID={testID == null ? undefined : `${testID}:grip`}
+              style={[styles.grip, hot && styles.gripHot]}
+              // "adjustable" is React Native's slider role. The web build
+              // maps it to `slider`, and the arrows follow the same step
+              // as TalkBack's increment and decrement.
+              accessibilityRole="adjustable"
+              accessibilityLabel="resize timeline"
+              accessibilityValue={{
+                min: 0,
+                max: 100,
+                now: Math.round(fraction * 100),
+              }}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(fraction * 100)}
+              accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+              onAccessibilityAction={(event) => {
+                step(event.nativeEvent.actionName === "increment" ? 1 : -1);
+              }}
+              tabIndex={0}
+              // The hover handlers are React Native Web's, which the
+              // native props type omits. A surface only, so the cast
+              // stays here.
+              {...({
+                onHoverIn: () => setHot(true),
+                onHoverOut: () => setHot(false),
+              } as object)}
+            >
             <Animated.View style={[styles.bar, barStyle]} />
-          </Animated.View>
-        </GestureDetector>
+            </Animated.View>
+          </GestureDetector>
+        </View>
       </View>
       <Animated.View
         testID={testID == null ? undefined : `${testID}:bottom`}
@@ -194,10 +265,20 @@ const styles = StyleSheet.create({
   lineHot: {
     borderTopColor: colors.accent,
   },
-  grip: {
+  // The divider keeps its 28pt height; the grabber's box is 44 tall,
+  // centered on it, so small fingers still reach it.
+  gripSlot: {
     alignSelf: "center",
     width: 72,
     height: dividerHeight,
+    position: "relative",
+  },
+  grip: {
+    position: "absolute",
+    top: (dividerHeight - touchTarget) / 2,
+    left: 0,
+    width: 72,
+    height: touchTarget,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 6,

@@ -112,7 +112,7 @@ test("a row, a pill and an hour task keep pan-y, and the grabber takes none", as
   await expectTouchAction(page.getByTestId("hour-task:Supplements"), "pan-y");
   await expectTouchAction(page.getByTestId("day-split:grip"), "none");
 
-  await page.getByRole("tab", { name: "Week" }).click();
+  await page.getByRole("tab", { name: "Week", exact: true }).click();
   await page.getByRole("tab", { name: "pill form" }).click();
   await expectTouchAction(page.getByTestId(`pill:${undated.second}`), "pan-y");
 });
@@ -215,7 +215,7 @@ for (const input of inputs) {
 
       await page.waitForTimeout(100);
       await row(page, overdue.name)
-        .getByRole("button", { name: "mark done" })
+        .getByRole("checkbox")
         .click();
 
       await expect.poll(() => noteText(page, overdueNote)).toContain("completed: 2026-10-26");
@@ -238,12 +238,12 @@ for (const input of inputs) {
 
     test("a pill dropped on Thursday keeps its time", async ({ page }) => {
       await openPlanner(page);
-      await page.getByRole("tab", { name: "Week" }).click();
+      await page.getByRole("tab", { name: "Week", exact: true }).click();
       await page.getByRole("tab", { name: "pill form" }).click();
       const pill = page.getByTestId(`pill:${supplements}`);
       await expect(pill).toBeVisible();
 
-      await dragWith(page, input, pill, page.getByRole("button", { name: "Thursday 29", exact: true }));
+      await dragWith(page, input, pill, page.getByRole("button", { name: "Thu 29" }));
 
       await expect.poll(() => noteText(page, supplementsNote)).toContain("due: 2026-10-29T19:00");
       await expect(pill).toContainText("Oct 29");
@@ -251,10 +251,10 @@ for (const input of inputs) {
 
     test("a row dropped on a month cell keeps its time and opens no day", async ({ page }) => {
       await openPlanner(page);
-      await page.getByRole("tab", { name: "Month" }).click();
+      await page.getByRole("tab", { name: "Month", exact: true }).click();
       const source = page.getByTestId(`task-source:${supplements}`);
       await expect(source).toBeVisible();
-      const cell = page.getByRole("button", { name: "Wednesday 28", exact: true });
+      const cell = page.getByRole("gridcell", { name: "Wednesday 28" });
 
       await dragWith(page, input, source, cell);
 

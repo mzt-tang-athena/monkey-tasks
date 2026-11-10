@@ -50,6 +50,19 @@ export function notePaths(page: Page, prefix: string): Promise<string[]> {
   );
 }
 
+/** Fail the next `create` of one file. */
+export async function failNextCreate(page: Page, fileName: string) {
+  await page.evaluate(
+    ({ fileName, missing }) => {
+      if (globalThis.__vault == null) {
+        throw new Error(missing);
+      }
+      globalThis.__vault.failNext("create", fileName);
+    },
+    { fileName, missing: NO_HOOKS },
+  );
+}
+
 /** Fail the next `write` of one file. */
 export async function failNextWrite(page: Page, fileName: string) {
   await page.evaluate(

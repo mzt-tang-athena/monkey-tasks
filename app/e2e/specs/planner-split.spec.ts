@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
-import { overdue, supplements, tomorrow, undated } from "../data";
+import { months, overdue, supplements, tomorrow, undated } from "../data";
 import { holdDrag, holdDragTo } from "../gestures";
 import { expectAbove, press, row, sectionHeader } from "../locators";
 import { putNote, returnToTab } from "../vault";
@@ -32,7 +32,7 @@ async function addEarlyTask(page: Page) {
  * handler ignores it; a retry is what a person does too.
  */
 async function pickDay(page: Page, name: string) {
-  const cell = page.getByRole("button", { name, exact: true });
+  const cell = page.getByRole("gridcell", { name });
   await expect
     .poll(async () => {
       await cell.click();
@@ -81,7 +81,7 @@ async function openSourceMenu(page: Page) {
 }
 
 test("the date strip keeps clear of the top edge", async ({ page }) => {
-  const box = await page.getByRole("button", { name: "Monday 26" }).boundingBox();
+  const box = await page.getByRole("tab", { name: "Mon 26" }).boundingBox();
   expect(box?.y ?? 0).toBeGreaterThanOrEqual(8);
 });
 
@@ -173,7 +173,7 @@ test.describe("the source menu", () => {
 
 test.describe("a day's order", () => {
   test("the day list sorts a recurring task by its time of day", async ({ page }) => {
-    await page.getByRole("button", { name: tomorrow.heading, exact: true }).click();
+    await page.getByRole("tab", { name: tomorrow.short, exact: true }).click();
     await expect(page.getByTestId("day-heading")).toContainText(tomorrow.heading);
     await addEarlyTask(page);
 
@@ -182,7 +182,7 @@ test.describe("a day's order", () => {
   });
 
   test("the month's picked day sorts the same way", async ({ page }) => {
-    await page.getByRole("tab", { name: "Month" }).click();
+    await page.getByRole("tab", { name: "Month", exact: true }).click();
     await addEarlyTask(page);
     await pickDay(page, tomorrow.heading);
 
@@ -197,9 +197,9 @@ test.describe("a day's order", () => {
     );
     await addEarlyTask(page);
     // Today's day page does not list it, so wait for the read in Week.
-    await page.getByRole("tab", { name: "Week" }).click();
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
     await expect(row(page, early.name)).toBeVisible();
-    await page.getByRole("tab", { name: "Day" }).click();
+    await page.getByRole("tab", { name: "Day", exact: true }).click();
     await expect(page.getByTestId("day-heading")).toBeVisible();
     // The pager sizes itself from its own layout, one frame after the
     // page mounts. Wait for two frames rather than a wall-clock guess.
@@ -254,35 +254,35 @@ test.describe("the source toggle names the period on screen", () => {
   test("day mode", async ({ page }) => {
     await expect(sourceToggle(page)).toHaveAccessibleName("task source: Due today");
 
-    await page.getByRole("button", { name: tomorrow.heading, exact: true }).click();
+    await page.getByRole("tab", { name: tomorrow.short, exact: true }).click();
     await expect(sourceToggle(page)).toHaveAccessibleName("task source: Due tomorrow");
 
-    await page.getByRole("button", { name: "Wednesday 28", exact: true }).click();
+    await page.getByRole("tab", { name: "Wed 28" }).click();
     await expect(sourceToggle(page)).toHaveAccessibleName(
       "task source: Due Wed, 28 Oct",
     );
   });
 
   test("week mode", async ({ page }) => {
-    await page.getByRole("tab", { name: "Week" }).click();
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
     await expect(sourceToggle(page)).toHaveAccessibleName(
       "task source: Due this week",
     );
 
     // Weeks start on Sunday: 8 November 2026 is one.
-    await page.getByRole("button", { name: "week of Nov 8-14" }).click();
+    await page.getByRole("tab", { name: /week of Nov 8-14/ }).click();
     await expect(sourceToggle(page)).toHaveAccessibleName(
       "task source: Due 8 to 14 Nov",
     );
   });
 
   test("month mode", async ({ page }) => {
-    await page.getByRole("tab", { name: "Month" }).click();
+    await page.getByRole("tab", { name: "Month", exact: true }).click();
     await expect(sourceToggle(page)).toHaveAccessibleName(
       "task source: Due this month",
     );
 
-    await page.getByRole("button", { name: "November 2026" }).click();
+    await page.getByRole("tab", { name: months.nextCell }).click();
     await expect(sourceToggle(page)).toHaveAccessibleName(
       "task source: Due November",
     );
@@ -291,8 +291,8 @@ test.describe("the source toggle names the period on screen", () => {
 
 test.describe("a drop writes the day", () => {
   test("a list row dropped on a week column takes that day", async ({ page }) => {
-    await page.getByRole("tab", { name: "Week" }).click();
-    const column = page.getByRole("button", { name: tomorrow.heading, exact: true });
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
+    const column = page.getByRole("button", { name: tomorrow.short });
 
     await holdDrag(page, row(page, undated.second), column);
 
@@ -300,8 +300,8 @@ test.describe("a drop writes the day", () => {
   });
 
   test("a list row dropped on a month cell takes that day", async ({ page }) => {
-    await page.getByRole("tab", { name: "Month" }).click();
-    const cell = page.getByRole("button", { name: "Wednesday 28", exact: true });
+    await page.getByRole("tab", { name: "Month", exact: true }).click();
+    const cell = page.getByRole("gridcell", { name: "Wednesday 28" });
 
     await holdDrag(page, row(page, "Groceries: milk, eggs, oats"), cell);
     // The drop does not pick the cell. A press does, and lists the day.
@@ -319,7 +319,7 @@ test("the month grid first paints where it settles", async ({ page }) => {
     const seen = window as unknown as { firstCell?: { x: number; y: number } };
     new MutationObserver(() => {
       const cell = document.querySelector(
-        '[data-testid="month-pager"] [aria-label="Wednesday 28"]',
+        '[data-testid="month-pager"] [aria-label^="Wednesday 28"]',
       );
       if (seen.firstCell == null && cell != null) {
         const box = cell.getBoundingClientRect();
@@ -327,8 +327,8 @@ test("the month grid first paints where it settles", async ({ page }) => {
       }
     }).observe(document.body, { childList: true, subtree: true });
   });
-  await page.getByRole("tab", { name: "Month" }).click();
-  const cell = page.getByRole("button", { name: "Wednesday 28", exact: true });
+  await page.getByRole("tab", { name: "Month", exact: true }).click();
+  const cell = page.getByRole("gridcell", { name: "Wednesday 28" });
   await expect(cell).toBeVisible();
   // Give a late layout time to land before reading the settled box.
   await page.waitForTimeout(500);
@@ -341,13 +341,13 @@ test("the month grid first paints where it settles", async ({ page }) => {
 });
 
 test("the month keeps its picked day after a visit to Day", async ({ page }) => {
-  await page.getByRole("tab", { name: "Month" }).click();
+  await page.getByRole("tab", { name: "Month", exact: true }).click();
   await pickDay(page, "Wednesday 28");
   await expect(sectionHeader(page, "Wednesday 28")).toBeVisible();
 
   await press(page, page.getByRole("button", { name: "open this day" }));
   await expect(page.getByTestId("day-heading")).toBeVisible();
-  await page.getByRole("tab", { name: "Month" }).click();
+  await page.getByRole("tab", { name: "Month", exact: true }).click();
 
   await expect(sectionHeader(page, "Wednesday 28")).toBeVisible();
   await expect(page.getByRole("button", { name: "open this day" })).toBeVisible();

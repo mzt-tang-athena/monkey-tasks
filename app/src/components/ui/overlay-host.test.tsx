@@ -19,6 +19,18 @@ function zOf(text: string): number {
   return Number.NaN;
 }
 
+/** An ancestor carries `inert`. */
+function inert(element: HTMLElement): boolean {
+  let node: HTMLElement | null = element;
+  while (node != null) {
+    if (node.hasAttribute("inert")) {
+      return true;
+    }
+    node = node.parentElement;
+  }
+  return false;
+}
+
 describe("OverlayHost", () => {
   it("draws overlays after the screen, at their layer", () => {
     render(
@@ -44,7 +56,7 @@ describe("OverlayHost", () => {
     expect(menu.compareDocumentPosition(toast) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("hides the screen from assistive tech only while a modal overlay shows", () => {
+  it("makes the screen inert only while a modal overlay shows", () => {
     function Harness({ modal }: { modal: boolean }) {
       return (
         <OverlayHost>
@@ -61,16 +73,16 @@ describe("OverlayHost", () => {
       );
     }
     const { rerender } = render(<Harness modal={false} />);
-    expect(screen.getByText("screen").closest('[aria-hidden="true"]')).toBeNull();
+    expect(inert(screen.getByText("screen"))).toBe(false);
 
     rerender(<Harness modal />);
-    expect(screen.getByText("screen").closest('[aria-hidden="true"]')).not.toBeNull();
-    expect(screen.getByText("sheet").closest('[aria-hidden="true"]')).toBeNull();
-    expect(screen.getByText("note").closest('[aria-hidden="true"]')).toBeNull();
+    expect(inert(screen.getByText("screen"))).toBe(true);
+    expect(inert(screen.getByText("sheet"))).toBe(false);
+    expect(inert(screen.getByText("note"))).toBe(false);
 
     rerender(<Harness modal={false} />);
     expect(screen.queryByText("sheet")).toBeNull();
-    expect(screen.getByText("screen").closest('[aria-hidden="true"]')).toBeNull();
+    expect(inert(screen.getByText("screen"))).toBe(false);
   });
 
   it("keeps an overlay's state while its content updates", () => {

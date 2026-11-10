@@ -27,13 +27,22 @@ describe("TaskRow", () => {
     const onToggle = vi.fn();
     render(<TaskRow task={item} onOpen={onOpen} onToggle={onToggle} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "open task" }));
+    fireEvent.click(screen.getByRole("button", { name: "Buy milk" }));
     expect(onOpen).toHaveBeenCalledWith(item);
     expect(onToggle).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "mark done" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Buy milk" }));
     expect(onToggle).toHaveBeenCalledWith(item);
     expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the row body with the task and its meta", () => {
+    const item = task("Buy milk", { due: "2026-10-20T15:00" });
+    render(<TaskRow task={item} onOpen={vi.fn()} onToggle={vi.fn()} />);
+
+    expect(
+      screen.getByRole("button", { name: "Buy milk, 3:00 PM, overdue" }),
+    ).toBeTruthy();
   });
 
   it("shows the check as soon as the data says done", () => {
@@ -42,12 +51,12 @@ describe("TaskRow", () => {
     const { rerender } = render(
       <TaskRow task={task("Buy milk")} onToggle={vi.fn()} />,
     );
-    expect(screen.getByRole("button", { name: "mark done" })).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "Buy milk" })).toBeTruthy();
     expect(screen.queryByText("✓")).toBeNull();
 
     rerender(<TaskRow task={task("Buy milk", { completed })} onToggle={vi.fn()} />);
 
-    expect(screen.getByRole("button", { name: "mark not done" })).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "Buy milk" })).toBeTruthy();
     expect(screen.getByText("✓")).toBeTruthy();
   });
 
@@ -59,7 +68,7 @@ describe("TaskRow", () => {
       <TaskRow task={task("Buy milk")} onToggle={vi.fn()} />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "mark done" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Buy milk" }));
 
     const styles = [...container.querySelectorAll<HTMLElement>("*")].map(
       (element) => element.style,
@@ -74,11 +83,11 @@ describe("TaskRow", () => {
     const { rerender } = render(
       <TaskRow task={task("Buy milk", { completed })} onToggle={vi.fn()} />,
     );
-    expect(screen.getByRole("button", { name: "mark not done" })).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "Buy milk" })).toBeTruthy();
 
     rerender(<TaskRow task={task("Buy milk")} onToggle={vi.fn()} />);
 
-    expect(screen.getByRole("button", { name: "mark done" })).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "Buy milk" })).toBeTruthy();
     expect(screen.queryByText("✓")).toBeNull();
   });
 
@@ -89,13 +98,13 @@ describe("TaskRow", () => {
       <TaskRow task={task("Buy milk")} onToggle={vi.fn()} />,
     );
     expect(
-      screen.getByRole("button", { name: "mark done" }).getAttribute("aria-checked"),
+      screen.getByRole("checkbox", { name: "Buy milk" }).getAttribute("aria-checked"),
     ).toBe("false");
 
     rerender(<TaskRow task={task("Buy milk", { completed })} onToggle={vi.fn()} />);
 
     expect(
-      screen.getByRole("button", { name: "mark not done" }).getAttribute("aria-checked"),
+      screen.getByRole("checkbox", { name: "Buy milk" }).getAttribute("aria-checked"),
     ).toBe("true");
   });
 

@@ -3,8 +3,8 @@ id: 0063
 title: Accessibility and touch targets
 created: 2026-10-26
 priority: high
-assignee:
-pr:
+assignee: omp
+pr: 105
 depends: [0049, 0055, 0056, 0057, 0060]
 ---
 
@@ -87,24 +87,63 @@ Add `@axe-core/playwright` as a dev dependency for the screen scans.
 
 ## Acceptance
 
-- [ ] Every state this ticket adds uses an `aria-*` prop, and `grep -rn accessibilityState app/src` still finds no match.
-- [ ] A test reproduces the row name bug first. Afterwards a query for role `checkbox` with the task's name finds its circle, and `aria-checked` follows the tick.
-- [ ] A row body's accessible name holds the task name and its meta.
-- [ ] The timeline tick reports role `checkbox` and `aria-checked`.
-- [ ] A Playwright check reproduces the target bug first. It covers Lists, Planner in day, week and month mode, the editor, and the open capture sheet.
-- [ ] Afterwards every element with role button, tab, checkbox, radio, option, gridcell, menuitem, link or switch has a layout box of at least 44 by 44, or appears in the ADR's exception list.
-- [ ] A test reproduces the silent error first. Afterwards the list write error, the repair notice, the editor save error and the capture failure toast each report role `alert`.
-- [ ] A test reproduces the reorder gap first. Afterwards the Move down action on the first row in My order moves it to second place and writes the new order.
-- [ ] The split grabber reports role `adjustable`, and increment and decrement change the timeline height.
-- [ ] Each editor field's accessible name equals its label.
-- [ ] The selected period strip cell and the selected month cell report `aria-selected`.
-- [ ] A month cell with tasks says so in its accessible name.
-- [ ] The sort and list menu buttons report `aria-expanded`.
-- [ ] Every `aria-checked` sits on a `checkbox`, `radio` or `switch`, and every `aria-selected` on a `tab`, `option`, `gridcell` or `row`. Ticket 0049 put `aria-checked` on the tick and `aria-selected` on the sort options while both still had role `button`, which ARIA does not allow. The sort options become `radio` items in a `radiogroup`.
-- [ ] Each tab group sits inside a `tablist`.
-- [ ] Playwright runs axe-core on each screen and finds no serious or critical issue.
-- [ ] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
+- [x] Every state this ticket adds uses an `aria-*` prop, and `grep -rn accessibilityState app/src` still finds no match.
+- [x] A test reproduces the row name bug first. Afterwards a query for role `checkbox` with the task's name finds its circle, and `aria-checked` follows the tick.
+- [x] A row body's accessible name holds the task name and its meta.
+- [x] The timeline tick reports role `checkbox` and `aria-checked`.
+- [x] A Playwright check reproduces the target bug first. It covers Lists, Planner in day, week and month mode, the editor, and the open capture sheet.
+- [x] Afterwards every element with role button, tab, checkbox, radio, option, gridcell, menuitem, link or switch has a layout box of at least 44 by 44, or appears in the ADR's exception list.
+- [x] A test reproduces the silent error first. Afterwards the list write error, the repair notice, the editor save error and the capture failure toast each report role `alert`.
+- [x] A test reproduces the reorder gap first. Afterwards the Move down action on the first row in My order moves it to second place and writes the new order.
+- [x] The split grabber reports role `adjustable`, and increment and decrement change the timeline height.
+- [x] Each editor field's accessible name equals its label.
+- [x] The selected period strip cell and the selected month cell report `aria-selected`.
+- [x] A month cell with tasks says so in its accessible name.
+- [x] The sort and list menu buttons report `aria-expanded`.
+- [x] Every `aria-checked` sits on a `checkbox`, `radio` or `switch`, and every `aria-selected` on a `tab`, `option`, `gridcell` or `row`. Ticket 0049 put `aria-checked` on the tick and `aria-selected` on the sort options while both still had role `button`, which ARIA does not allow. The sort options become `radio` items in a `radiogroup`.
+- [x] Each tab group sits inside a `tablist`.
+- [x] Playwright runs axe-core on each screen and finds no serious or critical issue.
+- [x] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
 
 ## Outcome
 
-(filled in before moving to done/)
+Every finding is fixed on the web build. Each new state uses an
+`aria-*` prop, and `grep -rn accessibilityState app/src` finds nothing.
+
+Where each finding lives now:
+
+1. Rows. `components/task-row.tsx` makes the circle a `checkbox` named
+   by its task, and the row body carries the task and its meta.
+   `features/planner/components/timeline.tsx` gives the tick the same
+   role and `aria-checked`.
+2. Targets. Each press box is 44 by 44 and the visible mark keeps its
+   size. The month card's side padding drops to 4, so a cell is 44.4
+   wide at 360pt. At 320pt it would be under 44; no ADR exception is
+   needed for the ticket's 360pt reference.
+3. Errors. The list write error, the repair notice, the editor save
+   error and the capture toast each render through `Banner` or `Toast`,
+   which report `alert`. New tests pin all four.
+4. Non-drag. A row in My order has an actions menu: Move up, Move down,
+   Move to top and Move to bottom. Each move writes the same
+   `ReorderEvent` a drop writes. The split grabber reports `adjustable`
+   on native, `slider` on the web, and its increment and decrement move
+   one hour row. Arrow keys run the same step on the web.
+5. Names and states. Editor fields take their label as their name. The
+   period strip and month cells report `aria-selected`. A month cell
+   names its task count. The sort and list buttons report
+   `aria-expanded`. Every tab group sits in a `tablist`. The sort
+   options are radios in a `radiogroup`.
+6. Overlays. A selected menu item is a `menuitemradio`, and the sort
+   menu is a radiogroup. Menu and Sheet take focus in and return it.
+   The screen behind a modal is `inert` on the web. ADR 0040 carries a
+   2026-11-10 amendment for that change.
+7. Axe. `@axe-core/playwright` scans Lists, Planner day, week and month,
+   the editor and the capture sheet. No serious or critical issue
+   remains.
+
+The muted ink in each theme is a step darker, so secondary text clears
+4.5 to 1 on the paper and on the soft fill.
+
+Not proven here: TalkBack reads the names and the increment and
+decrement actions on a phone. The Android emulator and the phone stay
+unchecked, and a hardware keyboard check stays with the operator.

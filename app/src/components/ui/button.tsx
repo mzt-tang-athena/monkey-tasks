@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
 
   // The planner's retry control: a padded label pill.
   pill: {
-    minHeight: 36,
+    minHeight: 44,
     justifyContent: "center",
     paddingHorizontal: spacing.l,
     borderRadius: radius,

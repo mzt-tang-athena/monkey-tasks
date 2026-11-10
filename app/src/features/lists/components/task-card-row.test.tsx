@@ -7,6 +7,11 @@ import { TaskCardRow, type TaskCardRowProps } from "./task-card-row";
 
 const spy = vi.hoisted(() => ({ renders: 0 }));
 
+// The row's actions menu reads the safe area, which node cannot load.
+vi.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}));
+
 vi.mock("@/components/task-row", async () => {
   const React = await import("react");
   const Row = React.memo(function Row() {
@@ -35,6 +40,7 @@ const props: TaskCardRowProps = {
   count: 3,
   completed: false,
   canDrag: true,
+  onMove: none,
   onToggle: none,
   onOpen: none,
   onTickSettled: none,

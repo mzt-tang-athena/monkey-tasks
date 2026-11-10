@@ -20,11 +20,11 @@ let nextId = 1;
 
 /**
  * Hides the screen from assistive tech while a modal overlay shows:
- * `aria-hidden` on the web, `no-hide-descendants` on Android, and
- * the element flag on iOS.
+ * `inert` on the web, which also removes it from the tab order,
+ * `no-hide-descendants` on Android, and the element flag on iOS.
  */
 const hidden: ViewProps = Platform.select<ViewProps>({
-  web: { "aria-hidden": true },
+  web: {},
   android: { importantForAccessibility: "no-hide-descendants" },
   default: { accessibilityElementsHidden: true },
 });
@@ -54,6 +54,17 @@ export function OverlayHost({ children }: { children: React.ReactNode }) {
     [],
   );
   const modal = entries.some((entry) => entry.modal);
+  const content = React.useRef<React.ComponentRef<typeof View>>(null);
+  // `inert` is a DOM attribute. React Native Web has no prop for it, so
+  // the host sets it on the screen wrapper itself. While it holds, the
+  // page cannot take focus or a press, and assistive tech skips it.
+  React.useLayoutEffect(() => {
+    if (Platform.OS !== "web") {
+      return;
+    }
+    const node = content.current as unknown as HTMLElement | null;
+    node?.toggleAttribute("inert", modal);
+  }, [modal]);
   // The layer orders the overlays. Within one layer, the newest draws
   // on top.
   const sorted = entries
@@ -63,7 +74,7 @@ export function OverlayHost({ children }: { children: React.ReactNode }) {
   return (
     <HostContext.Provider value={host}>
       <View style={styles.fill}>
-        <View style={styles.fill} {...(modal ? hidden : null)}>
+        <View ref={content} style={styles.fill} {...(modal ? hidden : null)}>
           {children}
         </View>
         {sorted.map((entry) => (

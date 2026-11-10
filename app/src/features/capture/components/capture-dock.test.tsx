@@ -89,6 +89,18 @@ function type(text: string) {
   });
 }
 
+/** An ancestor carries `inert`. */
+function inert(element: HTMLElement): boolean {
+  let node: HTMLElement | null = element;
+  while (node != null) {
+    if (node.hasAttribute("inert")) {
+      return true;
+    }
+    node = node.parentElement;
+  }
+  return false;
+}
+
 describe("CaptureDock", () => {
   beforeEach(() => {
     state.capture.mockReset();
@@ -106,14 +118,12 @@ describe("CaptureDock", () => {
     expect(screen.getByRole("dialog", { name: "Add a task" })).toBeTruthy();
   });
 
-  it("hides the screen content from assistive tech while the sheet shows", () => {
+  it("makes the screen content inert while the sheet shows", () => {
     render(<Screen />);
     openSheet();
 
-    expect(
-      screen.getByText("screen content").closest('[aria-hidden="true"]'),
-    ).not.toBeNull();
-    expect(screen.getByRole("dialog").closest('[aria-hidden="true"]')).toBeNull();
+    expect(inert(screen.getByText("screen content"))).toBe(true);
+    expect(inert(screen.getByRole("dialog"))).toBe(false);
   });
 
   it("names the target pill with its current target", () => {

@@ -111,3 +111,24 @@ here. The focus close fixes both reported paths, and the base let the
 same keys through. `inert` changes what the keyboard can reach on every
 modal overlay, so ticket 0063 can weigh it with the rest of the focus
 handling.
+
+## Amendment, 2026-11-10: a modal overlay makes the screen inert
+
+The 2026-11-07 amendment left `inert` for ticket 0063. Ticket 0063
+takes it.
+
+On the web the overlay host sets the `inert` attribute on the screen
+while a modal overlay shows. It no longer sets `aria-hidden` there.
+`inert` hides the screen from screen readers and other assistive tech,
+and it also removes the screen from the tab order. Focus cannot stay on
+a control behind a menu or a sheet. Chrome stops warning about a hidden
+element that still holds focus.
+
+Android keeps `no-hide-descendants`. iOS keeps the element flag.
+
+The menu and the sheet move focus in when they open, and back to the
+control that opened them when they close. The capture sheet returns
+focus after its exit, when the overlay leaves the tree.
+
+Alternative: keep `aria-hidden` and add `inert`. The two hide the screen
+on the web, and only `inert` stops focus. One attribute does both jobs.

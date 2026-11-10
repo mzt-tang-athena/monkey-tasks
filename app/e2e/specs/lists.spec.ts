@@ -45,7 +45,7 @@ test.describe("tab swipe", () => {
   });
 
   test("a plain tap on a row still opens the editor", async ({ page }) => {
-    await press(page, row(page, undated.second).getByRole("button", { name: "open task" }));
+    await press(page, row(page, undated.second).getByRole("button", { name: undated.second }));
 
     await expect(page).toHaveURL(/\/task\//);
   });
@@ -65,21 +65,44 @@ test.describe("tab swipe on a touch screen", () => {
   });
 });
 
+test.describe("row names and states", () => {
+  test("each row circle is a checkbox named by its task", async ({ page }) => {
+    const tick = row(page, undated.second).getByRole("checkbox", {
+      name: undated.second,
+    });
+    await expect(tick).toHaveAttribute("aria-checked", "false");
+
+    await press(page, tick);
+
+    await expect(
+      row(page, undated.second).getByRole("checkbox", { name: undated.second }),
+    ).toHaveAttribute("aria-checked", "true");
+  });
+
+  test("a row body is named by its task and its meta", async ({ page }) => {
+    await expect(
+      row(page, supplements).getByRole("button", {
+        name: `${supplements}, 7:00 PM`,
+      }),
+    ).toBeVisible();
+  });
+});
+
 test.describe("My order", () => {
   test.beforeEach(async ({ page }) => {
     await page.getByRole("button", { name: "sort list" }).click();
-    await page.getByRole("menuitem", { name: "My order" }).click();
+    await page.getByRole("radio", { name: "My order" }).click();
     await expectAbove(row(page, undated.first), row(page, undated.second));
   });
 
   test("the sort sheet marks the order in use", async ({ page }) => {
     await page.getByRole("button", { name: "sort list" }).click();
 
-    await expect(page.getByRole("menuitem", { name: "My order" })).toHaveAttribute(
+    await expect(page.getByRole("radio", { name: "My order" })).toHaveAttribute(
       "aria-checked",
       "true",
     );
-    await expect(page.getByRole("menuitem", { name: "Due date" })).toHaveAttribute(
+    await expect(page.getByRole("radio", { name: "Due date" })).toHaveAttribute(
       "aria-checked",
       "false",
     );
