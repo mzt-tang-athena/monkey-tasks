@@ -303,6 +303,10 @@ grip's first sideways move failed in the browser before their fixes.
 `tsc`, eslint and vitest are green. The full suite on the rebased
 branch was 288 passed and 24 skipped.
 
+The capture scenario waits for the capture write to settle before it
+ticks. A row that re-renders under a gesture handler press can drop it
+on the web, and the capture's cache settle is such a render (ADR 0046).
+
 Two tests outside the ticket changed for flakes the full run exposed.
 The menu backdrop now uses `NoPanPressable`, the ADR 0046 press for a
 target with no pan above it, so a press is not lost when the backdrop
