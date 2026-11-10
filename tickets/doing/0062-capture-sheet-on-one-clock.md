@@ -157,4 +157,83 @@ when the sheet closes.
       fade or a scale, and it still sits on the keyboard.
 
 ## Outcome
-(filled in before moving to done/)
+
+Built on 2026-11-10 on `feat/0062-capture-clock`.
+
+- `useCaptureSheet` calls
+  `useProgress(open, { ms: motion.ms.sheet, onSettled: (at) => at === 0 && setMounted(false) })`.
+  It drops `expand`, `Animated`, and the window and inset math.
+- `Sheet` takes `progress: Progress` and `rideKeyboard`, and drops
+  `useSheetMotion` and its own mounted state. With `rideKeyboard` it
+  reads `height` and `progress` from
+  `useReanimatedKeyboardAnimation`. The lift translates by the
+  keyboard's height, and the travel is
+  `max(progress, keyboard progress)`. The dock moves with `translateY`.
+- `BarState.lift` is gone. `useBar()` returns `setHide(progress)`, and
+  the dock calls it once at mount. `BottomBar` reads that `Progress` in
+  an animated style, keeps its layout box, and slides with a transform.
+  It measures its own height, so the full height of travel is exact.
+- `useSheetMotion` left `lib/motion/legacy.ts`. The ticket's four files
+  left the 0058 lint allowlist.
+- The closing panel is inert on the web. React Native Web gives Text
+  children `pointer-events: auto`, so a parent's `pointer-events: none`
+  did not stop a press on the fading Send button. The web now matches
+  native, where `pointerEvents="none"` releases the whole subtree.
+
+Decisions where the ticket was silent:
+
+- `Sheet` keeps `open`. The example call in the spec omits it, but it
+  drives pointer events, the dismiss listener and the web `inert` flip.
+  Without it a closing sheet cannot let the bar take the press.
+- `travel` uses `Math.max(progress, keyboard progress)`. The ticket
+  names both shared values and says the sheet follows the keyboard
+  while it moves. With reduce motion `useProgress` jumps to its end
+  state, so the fade and scale stay instant.
+- The reopen-during-exit scenario runs in jsdom and in the `motion`
+  Playwright project. The `reduced-motion` project skips it, because
+  its exit has no frames to reopen inside.
+- The send scenario proves the ADR 0021 order with a 1500 ms vault
+  write: the sheet leaves before the note file lands. The browser runs
+  Reanimated on the main thread, so the first painted close frame can
+  wait for the new row's commit. The test bounds that at 500 ms and
+  says why.
+- The bar's `testID="bottom-bar"` is a test hook for the frame samples.
+
+Proven on the web with the mouse and with CDP touch, in both Playwright
+projects:
+
+- `capture-clock.spec.ts` "the sheet, the scrim and the bar travel on
+  one clock": every moving sample has one value on the sheet, the scrim
+  and the bar, and the bar keeps one layout box.
+- "a send closes on the tap and lands the row once, behind the write":
+  the close starts with the tap, the exit plays, the row lands once,
+  and the sheet is gone before the note file lands.
+- "a reopen during the exit keeps the sheet mounted and opens it": the
+  reversed run supersedes the exit and the sheet never unmounts.
+- "a focus close leaves the bar whole and the sheet closed on return":
+  the scrim leaves the host, the screen is reachable again, and the
+  whole Add button opens the sheet.
+- "reduce motion lands the open and the close with no fade or scale":
+  no frame sits between the end states, and the sheet lands at scale 1.
+- jsdom: the sheet and dock tests mock
+  `useReanimatedKeyboardAnimation`; the scrim leaves the overlay host;
+  a reopen during the exit keeps the sheet mounted; opening and closing
+  render the screen behind zero times.
+
+The first run of `capture-clock` against the old code failed 9 of 10.
+The one pass was the motion half of the reduce test, which is the
+control that proves the sampler sees a fade. The rewritten sheet and
+dock component tests failed 18 of 19 against the old API.
+
+The emulator and phone boxes stay unchecked. This run did not start the
+Android emulator or a phone. Unproven here:
+
+- Emulator: in the recorded frames of the open and of a send, the gap
+  between the sheet and the keyboard's top edge stays within 2 px.
+- Phone: on send, the keyboard and the sheet leave together, the bar
+  returns, and no frame shows the keyboard up with the sheet gone.
+- Phone: the result holds with gesture navigation and with three
+  button navigation.
+- Phone, reduce motion on: the sheet appears and leaves with no fade
+  or scale, and it still sits on the keyboard.
+
