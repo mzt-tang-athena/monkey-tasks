@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { overdue, supplements, tomorrow, undated } from "../data";
 import { holdDrag, holdDragTo } from "../gestures";
-import { expectAbove, row, sectionHeader } from "../locators";
+import { expectAbove, press, row, sectionHeader } from "../locators";
 import { putNote, returnToTab } from "../vault";
 
 /**
@@ -202,8 +202,13 @@ test.describe("a day's order", () => {
     await page.getByRole("tab", { name: "Day" }).click();
     await expect(page.getByTestId("day-heading")).toBeVisible();
     // The pager sizes itself from its own layout, one frame after the
-    // page mounts. A drag before that has no width to follow.
-    await page.waitForTimeout(100);
+    // page mounts. Wait for two frames rather than a wall-clock guess.
+    await page.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => done()));
+        }),
+    );
     const heading = await page.getByTestId("day-heading").boundingBox();
     if (heading == null) {
       throw new Error("the day heading has no box");
@@ -340,7 +345,7 @@ test("the month keeps its picked day after a visit to Day", async ({ page }) => 
   await pickDay(page, "Wednesday 28");
   await expect(sectionHeader(page, "Wednesday 28")).toBeVisible();
 
-  await page.getByRole("button", { name: "open this day" }).click();
+  await press(page, page.getByRole("button", { name: "open this day" }));
   await expect(page.getByTestId("day-heading")).toBeVisible();
   await page.getByRole("tab", { name: "Month" }).click();
 

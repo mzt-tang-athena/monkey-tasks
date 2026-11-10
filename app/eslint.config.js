@@ -162,11 +162,8 @@ const motionSyntaxRules = [
 // deletes it. They keep the margin and file system rules.
 const motionAllowlist = [
   'src/lib/motion/legacy.ts',
-  // 0059, then 0060
+  // 0059, then 0060: the reorder's web pointer handlers stay here.
   'src/features/lists/lists-screen.tsx',
-  // 0059: the day pager host. 0061 takes the split handlers and the
-  // touch gate off it; the `swipeProps` import stays with 0059's host.
-  'src/features/planner/components/day/day-spread.tsx',
   // 0060
   'src/components/task-row.tsx',
   'src/components/ui/card-group-row.tsx',

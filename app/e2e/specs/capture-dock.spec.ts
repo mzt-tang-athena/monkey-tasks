@@ -1,6 +1,6 @@
 import { expect, test } from "../fixtures";
 import { capture, undated } from "../data";
-import { row } from "../locators";
+import { press, row } from "../locators";
 import type { Locator, Page } from "@playwright/test";
 
 // ADR 0010 caps content at 720. On a 1280 wide window the column runs
@@ -58,12 +58,15 @@ test.describe("the floating chrome on a wide window", () => {
 
     await failCapture(page);
     await page.getByRole("button", { name: "send task" }).click();
-    await expectInColumn(page.getByRole("alert"), "the toast");
+    await expectInColumn(
+      page.getByRole("alert").filter({ hasText: "create failed" }),
+      "the toast",
+    );
   });
 
   test("the editor header sits inside the column", async ({ page }) => {
     await page.goto("/");
-    await row(page, undated.second).click();
+    await press(page, row(page, undated.second));
 
     await expectInColumn(
       page.getByRole("button", { name: "cancel editing" }),
@@ -107,10 +110,9 @@ test("a failed capture toast belongs to its tab and shows over no other screen",
   await expect(toast).toHaveCount(1);
 
   // The editor opens over the tab. No toast floats over it. The row
-  // sits below the fold. A click that scrolls it in can see the scroll
-  // event land mid-press, and the web responder then drops the press.
-  await row(page, undated.second).scrollIntoViewIfNeeded();
-  await row(page, undated.second).click();
+  // sits below the fold, and a click that scrolls it in can land before
+  // its press target is measured; `press` scrolls and waits a frame.
+  await press(page, row(page, undated.second));
   await expect(page.getByRole("button", { name: "save task" })).toBeVisible();
   await expect(toast).toHaveCount(0);
 
@@ -153,7 +155,15 @@ test.describe("the sheet belongs to its tab", () => {
   test("a row opened by keyboard shows the editor with no sheet over it", async ({
     page,
   }) => {
-    await row(page, undated.second).locator('[aria-label="open task"]').focus();
+    const open = row(page, undated.second).locator('[aria-label="open task"]');
+    // The row can mount again while the list settles, which drops
+    // focus. Focus until the button holds it, then press Enter.
+    await expect
+      .poll(async () => {
+        await open.focus();
+        return open.evaluate((element) => element === document.activeElement);
+      })
+      .toBe(true);
     await page.keyboard.press("Enter");
 
     await expect(page.getByRole("button", { name: "save task" })).toBeVisible();
