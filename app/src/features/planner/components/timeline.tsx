@@ -1,6 +1,6 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Pressable } from "react-native-gesture-handler";
+import { Pressable } from "@/components/ui/pressable";
 import type { TaskItem } from "@/types/task";
 import { formatTime, parseStoredDate } from "@/utils/dates";
 import { hourOf, isDone, minuteOf } from "@/features/planner/model";

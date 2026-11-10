@@ -1,7 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/ui/icon";
-import { NoPanPressable as Pressable } from "@/components/ui/pressable";
+import { Pressable } from "@/components/ui/pressable";
 import { motion } from "@/lib/motion/tokens";
 import { colors, fonts, radius, spacing } from "@/theme/tokens";
 import {

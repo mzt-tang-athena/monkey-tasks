@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { NoPanPressable as Pressable } from "@/components/ui/pressable";
+import { Pressable } from "@/components/ui/pressable";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { addDays, isoOf, startOfDay } from "@/utils/dates";
 import { sortDay } from "@/features/planner/lib/day-rows";

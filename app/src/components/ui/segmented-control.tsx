@@ -1,6 +1,6 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { NoPanPressable } from "./pressable";
+import { Pressable } from "./pressable";
 import { colors, radius, touchTarget, type } from "@/theme/tokens";
 import { Icon, type IconName } from "./icon";
 
@@ -40,7 +40,7 @@ export function SegmentedControl<Key extends string>({
       {segments.map((segment, index) => {
         const active = segment.key === selected;
         return (
-          <NoPanPressable
+          <Pressable
             key={segment.key}
             style={({ pressed }) => [
               styles.segment,
@@ -61,7 +61,7 @@ export function SegmentedControl<Key extends string>({
                 {segment.label}
               </Text>
             )}
-          </NoPanPressable>
+          </Pressable>
         );
       })}
     </View>

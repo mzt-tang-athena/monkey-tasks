@@ -8,6 +8,7 @@ import {
 } from "react-native-reanimated";
 import { idle, step, type DragEvent, type DragState } from "@/lib/motion/drag-machine";
 import type { GridRect, Hit, Rect, ZoneRect } from "@/lib/motion/drag-math";
+import type { PressCancel } from "./press-cancel";
 
 /** A zone in the registry. A grid carries its cells, as indexes, with
     `null` for a cell that is no target. */
@@ -56,6 +57,8 @@ export type SessionHandlers = {
 export type Session = {
   ui: SessionUI;
   handlers: SessionHandlers;
+  /** Swallows the click a pan activation leaves behind. */
+  pressCancel: PressCancel;
   /** Payloads by source id and targets by zone id, refreshed in layout
       effects. A grid stores its whole cell list. */
   payloads: Map<number, unknown>;
@@ -71,6 +74,7 @@ const noGrab: Grab = { dx: 0, dy: 0, width: 0 };
     ends, so the return keeps their types. */
 export function useSession<H extends SessionHandlers = SessionHandlers>(
   makeHandlers: (session: Session) => H,
+  pressCancel: PressCancel,
 ): Session & { handlers: H } {
   const machine = useSharedValue<DragState>(idle);
   const generation = useSharedValue(0);
@@ -87,6 +91,7 @@ export function useSession<H extends SessionHandlers = SessionHandlers>(
     const made: Session = {
       ui: { machine, generation, x, y, grab, lift, hover, zones, clips, rects },
       handlers: { pickup() {}, drop() {}, cancel() {} },
+      pressCancel,
       payloads: new Map(),
       targets: new Map(),
       nextId: () => ++next,

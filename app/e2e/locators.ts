@@ -74,19 +74,10 @@ export async function expectBefore(first: Locator, second: Locator) {
 }
 
 /**
- * Press an element a virtualized list may have just mounted. Playwright
- * scrolls after its stability check, so a row that enters the DOM with
- * that scroll has no layout yet. Gesture handler's press drops a press
- * on a view it has not measured, so scroll first and give the browser
- * two frames to measure before the click.
+ * Press an element. Playwright scrolls it into view and waits for it to
+ * hold still. React Native's press takes the browser's click, so it
+ * needs no layout report and no frame wait (ADR 0046).
  */
 export async function press(page: Page, target: Locator) {
-  await target.scrollIntoViewIfNeeded();
-  await page.evaluate(
-    () =>
-      new Promise<void>((done) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => done()));
-      }),
-  );
   await target.click();
 }

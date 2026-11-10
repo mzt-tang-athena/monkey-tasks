@@ -9,7 +9,6 @@ import {
   type Input,
 } from "../gestures";
 import { expectAbove, expectBefore, listTab, row, sectionHeader } from "../locators";
-import { notePaths } from "../vault";
 
 /**
  * Ticket 0060: the row reorder, the tick hold and the capture landing
@@ -461,12 +460,6 @@ test("the capture entrance never replays within the freshness window", async ({
   await openMain(page);
   await capture(page, captured, captured);
   const landed = row(page, captured);
-  // Let the capture file land. A row that re-renders under the press
-  // can drop a gesture handler press on the web (ADR 0046).
-  await expect
-    .poll(() => notePaths(page, "Tasks/"))
-    .toContain(`Tasks/${captured}.md`);
-  await page.waitForTimeout(500);
 
   // A tick regroups the row under a completed key. The copy that mounts
   // there must show at full opacity on its first frame.

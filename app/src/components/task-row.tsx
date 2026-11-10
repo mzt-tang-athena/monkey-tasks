@@ -1,6 +1,5 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Pressable as PanPressable } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -10,7 +9,7 @@ import { useProgress } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
 import { taskIsDone } from "@monkey-tasks/schemas";
 import { colors } from "@/theme/tokens";
-import { NoPanPressable } from "./ui/pressable";
+import { Pressable } from "./ui/pressable";
 import { faceStyles, TaskRowFace } from "./task-row-face";
 
 /**
@@ -29,8 +28,6 @@ function TaskRowBase({
   /** "under" puts the time below the name; "right" adds a planner gutter. */
   timeAlign = "under",
   copy = false,
-  /** The row sits inside a drag source: a pan must cancel its press. */
-  panPress = false,
 }: {
   task: TaskItem;
   onToggle?: (task: TaskItem) => void;
@@ -44,11 +41,7 @@ function TaskRowBase({
   /** A still copy of a live row: a swipe preview or a drag ghost. A
       copy carries no test id, so the id finds the live row only. */
   copy?: boolean;
-  /** Gesture handler's press, for a row inside a drag source or a
-      pager: a pan cancels it, so a drop leaves no click behind. */
-  panPress?: boolean;
 }) {
-  const Press = panPress ? PanPressable : NoPanPressable;
   const [hot, setHot] = React.useState(false);
   // The store is optimistic: a tap flips this row's data in the same
   // frame. The row reads that data and nothing else, so a fast tick,
@@ -114,7 +107,7 @@ function TaskRowBase({
   // beneath without moving it (Google Tasks' rule).
   const toggle = (
     <Animated.View style={pop}>
-      <Press
+      <Pressable
         style={({ pressed }) => [
           faceStyles.circle,
           done && faceStyles.circleDone,
@@ -137,7 +130,7 @@ function TaskRowBase({
             <Text style={faceStyles.check}>{"✓"}</Text>
           </Animated.View>
         ) : null}
-      </Press>
+      </Pressable>
     </Animated.View>
   );
 
@@ -147,7 +140,7 @@ function TaskRowBase({
     onOpen == null
       ? undefined
       : (content: React.ReactNode) => (
-          <Press
+          <Pressable
             style={({ pressed }) => [
               faceStyles.text,
               pressed && styles.bodyPressed,
@@ -157,7 +150,7 @@ function TaskRowBase({
             accessibilityLabel="open task"
           >
             {content}
-          </Press>
+          </Pressable>
         );
 
   return (

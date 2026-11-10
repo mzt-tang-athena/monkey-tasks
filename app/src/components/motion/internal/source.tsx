@@ -90,7 +90,7 @@ export function Source({
   children: React.ReactNode;
 }) {
   const session = useSessionContext("Source");
-  const { ui, handlers } = session;
+  const { ui, handlers, pressCancel } = session;
   const [id] = React.useState(session.nextId);
   React.useLayoutEffect(() => {
     session.payloads.set(id, payload);
@@ -134,6 +134,7 @@ export function Source({
         if (send(ui, { type: "activate", source: id }) !== "pickup") {
           return;
         }
+        toJS(pressCancel.arm);
         const generation = ui.generation.value + 1;
         ui.generation.set(generation);
         const box = measure(self);

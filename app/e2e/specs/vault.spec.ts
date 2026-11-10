@@ -178,10 +178,15 @@ test("three ticks of a month-end task land on the last day of each month", async
   await returnToTab(page);
 
   for (const due of ["2026-02-28", "2026-03-31", "2026-04-30"]) {
+    // The tick regroups after its hold. Step the clock past it, so the
+    // next press lands on a row that has stopped moving.
+    await pauseClock(page);
     await press(
       page,
       row(page, "Pay rent").getByRole("button", { name: "mark done" }),
     );
+    await page.clock.runFor(600);
+    await page.clock.resume();
     await expect
       .poll(() => noteText(page, `Tasks/Pay rent ${due}.md`))
       .not.toBeNull();

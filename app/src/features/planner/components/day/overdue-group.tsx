@@ -23,7 +23,7 @@ export function OverdueGroup({ tasks }: { tasks: TaskItem[] }) {
           <React.Fragment key={task.id}>
             {index > 0 ? <RowSeparator /> : null}
             <PlanDrag.Source payload={task} hold="row" testID={`task-source:${task.name}`}>
-              <TaskRow task={task} onToggle={toggle} onOpen={open} panPress />
+              <TaskRow task={task} onToggle={toggle} onOpen={open} />
             </PlanDrag.Source>
           </React.Fragment>
         ))}

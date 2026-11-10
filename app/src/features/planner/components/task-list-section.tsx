@@ -62,7 +62,7 @@ export const TaskListSection = React.memo(function TaskListSection({
   const renderItem = React.useCallback<ListRenderItem<TaskItem>>(
     ({ item }) => (
       <PlanDrag.Source payload={item} hold="row" testID={`task-source:${item.name}`}>
-        <TaskRow task={item} onToggle={toggle} onOpen={open} panPress />
+        <TaskRow task={item} onToggle={toggle} onOpen={open} />
       </PlanDrag.Source>
     ),
     [toggle, open],

@@ -67,7 +67,6 @@ function TaskCardRowBase({
               onToggle={onToggle}
               onOpen={onOpen}
               onTickSettled={onTickSettled}
-              panPress
               grip={grip}
             />
           </Landing>

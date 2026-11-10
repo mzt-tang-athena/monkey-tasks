@@ -4,7 +4,7 @@ import { StyleSheet, Text } from "react-native";
 import { useBar } from "@/components/bottom-bar/bottom-bar";
 import type { CaptureSlot } from "@/components/bottom-bar/dock-slot";
 import { Icon } from "@/components/ui/icon";
-import { NoPanPressable } from "@/components/ui/pressable";
+import { Pressable } from "@/components/ui/pressable";
 import { Sheet } from "@/components/ui/sheet";
 import { Toast } from "@/components/ui/toast";
 import { useCaptureSheet } from "@/features/capture/hooks/use-capture-sheet";
@@ -25,7 +25,7 @@ export function CaptureDock(slot: CaptureSlot) {
 
   return (
     <>
-      <NoPanPressable
+      <Pressable
         style={({ pressed }) => [styles.add, pressed && styles.addPressed]}
         onPress={sheet.toggle}
         accessibilityRole="button"
@@ -33,7 +33,7 @@ export function CaptureDock(slot: CaptureSlot) {
       >
         <Icon name="plus" color="onAccent" />
         <Text style={styles.addLabel}>Add</Text>
-      </NoPanPressable>
+      </Pressable>
 
       {sheet.mounted ? (
         <Sheet

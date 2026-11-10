@@ -17,7 +17,7 @@ import {
   type,
 } from "@/theme/tokens";
 import { Overlay } from "./overlay-host";
-import { NoPanPressable } from "./pressable";
+import { Pressable } from "./pressable";
 
 export type MenuItem = {
   key: string;
@@ -147,7 +147,7 @@ export function Menu({
     <>
       <Overlay layer="menuBackdrop" modal>
         <Animated.View style={[StyleSheet.absoluteFill, fade]}>
-          <NoPanPressable
+          <Pressable
             style={StyleSheet.absoluteFill}
             onPress={onClose}
             accessibilityRole="button"
@@ -175,7 +175,7 @@ export function Menu({
 
 function MenuRow({ item }: { item: MenuItem }) {
   return (
-    <NoPanPressable
+    <Pressable
       style={({ pressed }) => [
         styles.item,
         pressed && !item.disabled && styles.itemPressed,
@@ -201,7 +201,7 @@ function MenuRow({ item }: { item: MenuItem }) {
         {item.hint != null ? <Text style={styles.hint}>{item.hint}</Text> : null}
       </View>
       {item.selected === true ? <Text style={styles.check}>{"✓"}</Text> : null}
-    </NoPanPressable>
+    </Pressable>
   );
 }
 

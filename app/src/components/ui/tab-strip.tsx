@@ -12,7 +12,7 @@ import {
   MotionScrollView,
   type MotionScrollRef,
 } from "@/components/motion/scroll-view";
-import { NoPanPressable } from "./pressable";
+import { Pressable } from "./pressable";
 import { colors, radius, spacing, touchTarget, type } from "@/theme/tokens";
 
 /** The fade's steps, from clear to solid, toward the strip's edge. A
@@ -109,7 +109,7 @@ export function TabStrip({
         {tabs.map((name) => {
           const active = name === selected;
           return (
-            <NoPanPressable
+            <Pressable
               key={name}
               style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
               onPress={() => onSelect(name)}
@@ -121,7 +121,7 @@ export function TabStrip({
             >
               <Text style={[styles.text, active && styles.textActive]}>{name}</Text>
               <View style={[styles.rule, active && styles.ruleActive]} />
-            </NoPanPressable>
+            </Pressable>
           );
         })}
       </MotionScrollView>

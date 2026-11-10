@@ -266,3 +266,65 @@ right press today.
 Test: the `vault` e2e spec presses Retry right after a failed tick. At
 head it went red in 2 runs of 5 under six browsers. The fix lost no
 press in 120, and the spec stayed green.
+
+## Amendment, 2026-11-10: every press takes the browser click
+
+The amendment above left every press under a pan on gesture handler's
+`Pressable`. That press fires from pointer up, and its web build first
+checks the press against the view's layout report. Before that report
+the box is 0 by 0, and a tap at the middle of the target fails
+`isTouchWithinInset`. A row that mounts after a drop can be tapped in
+that frame. The tap does nothing.
+
+The same press is bound to the node that took the pointer down. A view
+that mounts or is replaced under the finger loses it. The lists screen
+left this class in the amendment above. The planner rows and the
+reorder rows stayed on it because a pan must cancel their press.
+
+Reproduced on the head before the fix with a tap in the row's first
+layout frame: pointer down, pointer up and the browser click in the
+same task as the row's mount. The row did not tick, and a tap on a row
+that had reported layout did. Under load, a tap in the drop's frame
+lost 1 press of 80 on head. A tap 100 ms after the drop lost none in
+240 across six browsers, because the report had usually landed by
+then.
+
+Every press target now takes React Native's `Pressable` on the web,
+exported as `Pressable` from `components/ui/pressable.tsx`. That
+covers a Button, a row, a tab, a segment, a menu item and a planner
+cell. It fires from the browser's click, which goes to the element
+under the pointer at release. A row that mounts or re-renders under
+the finger still presses, and no layout report is needed.
+
+A press must still not run on a drag. Two rules keep it off:
+
+- A pointer that travels more than the hold's slop (8 px) from its
+  press drops the press. The old press cancelled on pointer leave,
+  and a browser click does not.
+- A pan that activates arms a one-shot guard for its surface, in
+  `components/motion/internal/press-cancel.ts`. The guard stops the
+  next click at `window` capture, however late the browser sends it.
+  It disarms on that click, or on the next pointer or key down, which
+  is a new gesture. A drag that makes no click leaves it armed until
+  that next press, so a late click is never missed and no window
+  blocks a later tap (V10). `createDragSurface`, `createReorderSurface`,
+  `Pager` and `Split` each own one guard.
+
+Alternative: remove the layout gate from gesture handler's web press.
+The gate sits inside the installed library, and the press still binds
+to the node that took the pointer down. A row that mounts or is
+replaced under the finger would still lose it. The native path keeps
+gesture handler's `Pressable`, where a pan cancels the press itself.
+
+Tests: `e2e/specs/press.spec.ts` presses a captured row in its first
+layout frame, and holds a tick in place with the mouse and with CDP
+touch. The first failed on head and passes at the fix. The planner's
+"a tap 100 ms after a drop still ticks the row" passed 20 of 20 runs.
+At the fix the six-browser load lost no press in 120 immediate taps
+and none in 240 taps at 100 ms. The two-frame press wait in
+`e2e/locators.ts` and the capture settle wait in `reorder.spec.ts` are
+gone. The press no longer needs either.
+
+A device would still prove the native half: gesture handler's press
+cancels under a pan with no click tail, and Enter and Space press on a
+hardware keyboard. No emulator ran here.
