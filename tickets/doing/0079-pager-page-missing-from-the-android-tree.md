@@ -3,7 +3,7 @@ id: 0079
 title: A non-first pager page is missing from the Android accessibility tree
 created: 2026-11-10
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [0059]
 ---
