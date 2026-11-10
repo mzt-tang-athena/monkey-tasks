@@ -1,9 +1,10 @@
 import * as React from "react";
 import { useIsFocused } from "expo-router";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { useBar } from "@/components/bottom-bar/bottom-bar";
 import type { CaptureSlot } from "@/components/bottom-bar/dock-slot";
 import { Icon } from "@/components/ui/icon";
+import { NoPanPressable } from "@/components/ui/pressable";
 import { Sheet } from "@/components/ui/sheet";
 import { Toast } from "@/components/ui/toast";
 import { useCaptureSheet } from "@/features/capture/hooks/use-capture-sheet";
@@ -24,7 +25,7 @@ export function CaptureDock(slot: CaptureSlot) {
 
   return (
     <>
-      <Pressable
+      <NoPanPressable
         style={({ pressed }) => [styles.add, pressed && styles.addPressed]}
         onPress={sheet.toggle}
         accessibilityRole="button"
@@ -32,19 +33,17 @@ export function CaptureDock(slot: CaptureSlot) {
       >
         <Icon name="plus" color="onAccent" />
         <Text style={styles.addLabel}>Add</Text>
-      </Pressable>
+      </NoPanPressable>
 
-      {/* The sheet stays mounted while its exit plays, and the scrim
-          follows the bar's collapse. */}
       {sheet.mounted ? (
         <Sheet
           open={sheet.open}
-          onClose={sheet.close}
+          progress={sheet.progress}
+          onDismiss={sheet.close}
+          rideKeyboard
+          scrim
           label="Add a task"
           closeLabel="close capture"
-          progress={sheet.expand}
-          bottom={sheet.dockBottom}
-          scrim={sheet.scrim}
         >
           <CaptureForm draft={sheet.draft} onClose={sheet.close} />
         </Sheet>

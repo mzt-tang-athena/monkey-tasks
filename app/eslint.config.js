@@ -185,11 +185,6 @@ const motionAllowlist = [
   'src/features/lists/components/task-card-row.test.tsx',
   'src/features/lists/components/task-card-row.tsx',
   'src/features/lists/hooks/use-row-reorder.ts',
-  // 0062
-  'src/components/bottom-bar/bottom-bar.tsx',
-  'src/components/ui/sheet.tsx',
-  'src/features/capture/components/capture-dock.tsx',
-  'src/features/capture/hooks/use-capture-sheet.ts',
 ];
 
 module.exports = defineConfig([

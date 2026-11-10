@@ -1,14 +1,10 @@
 import * as React from "react";
-import { Animated, useWindowDimensions } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BarState } from "@/components/bottom-bar/bottom-bar";
+import { useProgress, type Progress } from "@/lib/motion/progress";
+import { motion } from "@/lib/motion/tokens";
 import { useCaptureTask } from "@/stores/tasks/mutations/use-capture-task";
-import { spacing } from "@/theme/tokens";
 import type { CaptureTarget, ParsedCapture } from "@/types/task";
 import { useCaptureDraft, type CaptureDraft } from "./use-capture-draft";
-
-/** How long the sheet and the bar take to trade places. */
-const travelMs = 220;
 
 export type CaptureSheetState = {
   /** The user's intent: the sheet shows. */
@@ -16,12 +12,8 @@ export type CaptureSheetState = {
   /** The sheet is in the tree. It stays there while its exit plays. */
   mounted: boolean;
   draft: CaptureDraft;
-  /** 0 closed to 1 open. The bar's lift runs on the same clock. */
-  expand: Animated.Value;
-  /** The dock's distance from the bottom of the window. */
-  dockBottom: Animated.AnimatedInterpolation<number>;
-  /** Where the scrim ends: above the bar, following its collapse. */
-  scrim: { bottom: Animated.AnimatedInterpolation<number>; height: number };
+  /** 0 closed to 1 open. The sheet, its scrim and the bar share it. */
+  progress: Progress;
   /** The failure toast, or null when there is nothing to report. */
   toast: { message: string; retry: () => void; dismiss: () => void } | null;
   /** The Add button: opens the sheet, or closes it when it is open. */
@@ -30,10 +22,9 @@ export type CaptureSheetState = {
 };
 
 /**
- * The capture sheet's state: open and mounted, the animation clock,
- * the draft, and the failure toast. The sheet and the bar's collapse
- * run on one clock, so they move as a single motion. Ticket 0062 moves
- * that clock; the dock does not change.
+ * The capture sheet's state: open and mounted, the one clock, the
+ * draft, and the failure toast. The sheet, its scrim and the bar's
+ * slide all read the same `useProgress` value, so they move as one.
  *
  * Saving leaves in one motion: the sheet closes on the same frame the
  * input drops focus, and the note is written behind it. A failed write
@@ -55,8 +46,6 @@ export function useCaptureSheet({
   focused: boolean;
 }): CaptureSheetState {
   const capture = useCaptureTask();
-  const insets = useSafeAreaInsets();
-  const window = useWindowDimensions();
 
   // The failure the user has not dismissed, or null. The message and
   // the draft itself live in the draft hook. This only carries the
@@ -88,67 +77,19 @@ export function useCaptureSheet({
   });
 
   // Open is the user's intent. Mounted keeps the sheet on screen while
-  // the exit animation plays.
+  // the exit animation plays. The clock runs to closed with no view
+  // after a focus close, so the bar still ends shown.
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
-  const [expand] = React.useState(() => new Animated.Value(0));
-  const { lift, height: barHeight } = bar;
+  const progress = useProgress(open, {
+    ms: motion.ms.sheet,
+    onSettled: (at) => at === 0 && setMounted(false),
+  });
 
-  // One node for the whole session: the sheet re-renders on every
-  // keystroke, and a fresh node each time would attach and detach
-  // listeners while the user types.
-  const dockBottom = React.useMemo(
-    () =>
-      expand.interpolate({
-        inputRange: [0, 1],
-        outputRange: [barHeight + spacing.s + insets.bottom, spacing.s],
-      }),
-    [expand, barHeight, insets.bottom],
-  );
-  const scrimBottom = React.useMemo(
-    () =>
-      lift.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, barHeight],
-      }),
-    [lift, barHeight],
-  );
-
-  React.useEffect(() => {
-    // A tab that lost focus has no exit to play: its sheet left the
-    // tree with the focus. An exit run here would stop at once, because
-    // Animated stops a value whose last view goes, and the parallel
-    // stops the bar's lift with it. The bar would wait collapsed.
-    if (!focused) {
-      expand.setValue(0);
-      lift.setValue(1);
-      return;
-    }
-    // One clock for the sheet's travel and the bar's collapse: both
-    // start and finish on the same frame, so the close reads as a
-    // single motion.
-    const animation = Animated.parallel([
-      Animated.timing(expand, {
-        toValue: open ? 1 : 0,
-        duration: travelMs,
-        useNativeDriver: false,
-      }),
-      Animated.timing(lift, {
-        toValue: open ? 0 : 1,
-        duration: travelMs,
-        useNativeDriver: false,
-      }),
-    ]);
-    animation.start(({ finished }) => {
-      // The sheet leaves the tree when its exit has played, not on a
-      // timer: the closing frame keeps the input's height, and a
-      // reopened sheet cancels the unmount.
-      if (finished && !open) {
-        setMounted(false);
-      }
-    });
-    return () => animation.stop();
-  }, [expand, lift, open, focused]);
+  // The bar slides away on the sheet's clock. It reads the value in its
+  // own animated style, so a frame never renders the bar.
+  const { setHide } = bar;
+  React.useLayoutEffect(() => setHide(progress), [setHide, progress]);
 
   // The sheet draws above every screen, so it must not outlive its tab.
   // When another screen takes focus, from a nav tab or a row, the sheet
@@ -190,9 +131,7 @@ export function useCaptureSheet({
     open,
     mounted,
     draft,
-    expand,
-    dockBottom,
-    scrim: { bottom: scrimBottom, height: window.height },
+    progress,
     toast,
     toggle: () => (open ? close() : openSheet()),
     close,
