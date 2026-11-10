@@ -22,7 +22,7 @@ function task(name: string, data: TaskFrontmatter): TaskItem {
 /** The day cells carrying a dot, in grid order. */
 function dottedCells(): string[] {
   return screen
-    .getAllByRole("button", { name: /^\w+day \d+$/ })
+    .getAllByRole("gridcell", { name: /^\w+day \d+/ })
     .filter((cell) => within(cell).queryByTestId("month-dot") != null)
     .map((cell) => cell.getAttribute("aria-label") ?? "");
 }
@@ -47,7 +47,7 @@ describe("MonthView grid", () => {
     mount([]);
     // October 2026 has 31 days. Blank cells pad the grid but take no
     // role, so only the days answer.
-    expect(screen.getAllByRole("button", { name: /^\w+day \d+$/ })).toHaveLength(31);
+    expect(screen.getAllByRole("gridcell", { name: /^\w+day \d+/ })).toHaveLength(31);
   });
 
   it("buckets one recurring task onto several days", () => {
@@ -63,17 +63,17 @@ describe("MonthView grid", () => {
     ]);
 
     expect(dottedCells()).toEqual([
-      "Wednesday 21",
-      "Thursday 22",
-      "Friday 23",
-      "Saturday 24",
-      "Sunday 25",
-      "Monday 26",
-      "Tuesday 27",
-      "Wednesday 28",
-      "Thursday 29",
-      "Friday 30",
-      "Saturday 31",
+      "Wednesday 21, 1 task",
+      "Thursday 22, 1 task",
+      "Friday 23, 1 task",
+      "Saturday 24, 1 task",
+      "Sunday 25, 1 task",
+      "Monday 26, 1 task",
+      "Tuesday 27, 1 task",
+      "Wednesday 28, 1 task",
+      "Thursday 29, 1 task",
+      "Friday 30, 1 task",
+      "Saturday 31, 1 task",
     ]);
   });
 
@@ -86,7 +86,7 @@ describe("MonthView grid", () => {
       }),
     ]);
 
-    expect(dottedCells()).toEqual(["Monday 5"]);
+    expect(dottedCells()).toEqual(["Monday 5, 1 task"]);
   });
 
   it("never dots a done recurring task", () => {

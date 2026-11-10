@@ -1,5 +1,5 @@
 import * as React from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BackHandler, Platform, Text, TextInput } from "react-native";
 import { useProgress } from "@/lib/motion/progress";
@@ -36,7 +36,9 @@ function Harness({ initial = true }: { initial?: boolean }) {
   return (
     <OverlayHost>
       <Text>screen content</Text>
-      <Text onPress={openSheet}>open</Text>
+      <Text onPress={openSheet} accessibilityRole="button">
+        open
+      </Text>
       {mounted ? (
         <Sheet
           open={open}
@@ -58,6 +60,18 @@ async function finishMotion() {
   await act(() => new Promise<void>((resolve) => setTimeout(resolve, 320)));
 }
 
+/** An ancestor carries `inert`. */
+function inert(element: HTMLElement): boolean {
+  let node: HTMLElement | null = element;
+  while (node != null) {
+    if (node.hasAttribute("inert")) {
+      return true;
+    }
+    node = node.parentElement;
+  }
+  return false;
+}
+
 describe("Sheet", () => {
   it("reports a named modal dialog", () => {
     render(<Harness />);
@@ -67,11 +81,24 @@ describe("Sheet", () => {
     expect(screen.getByPlaceholderText("Add a task")).toBeTruthy();
   });
 
-  it("hides the screen content from assistive tech while it shows", () => {
+  it("makes the screen inert while it shows", () => {
     render(<Harness />);
 
-    expect(screen.getByText("screen content").closest('[aria-hidden="true"]')).not.toBeNull();
-    expect(screen.getByRole("dialog").closest('[aria-hidden="true"]')).toBeNull();
+    expect(inert(screen.getByText("screen content"))).toBe(true);
+    expect(inert(screen.getByRole("dialog"))).toBe(false);
+  });
+
+  it("moves focus into the sheet and back to the opener on close", async () => {
+    render(<Harness initial={false} />);
+    const opener = screen.getByText("open");
+    opener.focus();
+
+    fireEvent.click(opener);
+    const dialog = await screen.findByRole("dialog", { name: "Add a task" });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "close capture" }));
+    await waitFor(() => expect(document.activeElement).toBe(opener));
   });
 
   it("closes on a press on the scrim, and leaves once its exit has played", async () => {

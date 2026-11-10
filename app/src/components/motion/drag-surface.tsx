@@ -1,5 +1,5 @@
 import * as React from "react";
-import { StyleSheet, type StyleProp, type View, type ViewStyle } from "react-native";
+import { StyleSheet, type StyleProp, type View, type ViewProps, type ViewStyle } from "react-native";
 import Animated, {
   ReduceMotion,
   useAnimatedRef,
@@ -134,6 +134,8 @@ export function createDragSurface<P, T>() {
     cells,
     style,
     testID,
+    role,
+    "aria-label": label,
     children,
   }: {
     columns: number;
@@ -141,6 +143,9 @@ export function createDragSurface<P, T>() {
     cells: readonly (T | null)[];
     style?: StyleProp<ViewStyle>;
     testID?: string;
+    /** The grid's role and name, for the calendar's day cells. */
+    role?: ViewProps["role"];
+    "aria-label"?: string;
     children?: React.ReactNode;
   }) {
     const shape = React.useMemo(
@@ -164,7 +169,14 @@ export function createDragSurface<P, T>() {
       };
     });
     return (
-      <Animated.View ref={ref} collapsable={false} testID={testID} style={style}>
+      <Animated.View
+        ref={ref}
+        collapsable={false}
+        testID={testID}
+        role={role}
+        aria-label={label}
+        style={style}
+      >
         <Animated.View pointerEvents="none" style={[styles.cell, styles.hover, box]} />
         {children}
       </Animated.View>

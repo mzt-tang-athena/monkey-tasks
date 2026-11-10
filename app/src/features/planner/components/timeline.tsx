@@ -104,14 +104,20 @@ function HourTask({ task, copy }: { task: TaskItem; copy: boolean }) {
   const face = (
     <>
       <View style={[styles.bar, done && styles.barDone]} />
-      <Pressable
-        style={[styles.tick, done && styles.tickDone]}
+      <View style={styles.tickSlot}>
+        <Pressable
+        style={({ pressed }) => [styles.tickBox, pressed && styles.tickPressed]}
         onPress={() => toggle(task)}
-        accessibilityLabel={done ? "mark not done" : "mark done"}
-        accessibilityRole="button"
+        accessibilityLabel={task.name}
+        accessibilityRole="checkbox"
+        aria-checked={done}
       >
-        {done ? <Text style={styles.tickCheck}>{"✓"}</Text> : null}
-      </Pressable>
+        {/* The box is the 44pt target; the circle keeps its 18pt mark. */}
+        <View style={[styles.tick, done && styles.tickDone]}>
+          {done ? <Text style={styles.tickCheck}>{"✓"}</Text> : null}
+        </View>
+        </Pressable>
+      </View>
       <View style={styles.body}>
         <Text style={[styles.name, done && styles.nameDone]} numberOfLines={2}>
           {task.name}
@@ -174,6 +180,7 @@ const styles = StyleSheet.create({
   task: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 44,
     backgroundColor: colors.surface,
     borderRadius: radius,
     borderWidth: StyleSheet.hairlineWidth,
@@ -216,6 +223,25 @@ const styles = StyleSheet.create({
   },
   timeDone: {
     color: colors.inkFaint,
+  },
+  // The chip's done target: a 44 box around the 18pt circle, with the
+  // margins folded back so the chip keeps its height and its gaps.
+  tickSlot: {
+    width: 18,
+    height: 18,
+    position: "relative",
+  },
+  tickBox: {
+    position: "absolute",
+    left: -13,
+    top: -13,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tickPressed: {
+    opacity: 0.7,
   },
   // The chip's own circle is the done toggle.
   tick: {

@@ -75,6 +75,7 @@ export function ListsToolbar({
           <IconButton
             label="sort list"
             active={open === "sort" || sortMode !== "due"}
+            expanded={open === "sort"}
             onPress={() => setOpen(open === "sort" ? null : "sort")}
           >
             <SortGlyph />
@@ -84,6 +85,7 @@ export function ListsToolbar({
           <IconButton
             label="list menu"
             active={open === "more"}
+            expanded={open === "more"}
             onPress={() => setOpen(open === "more" ? null : "more")}
           >
             <DotsGlyph />
@@ -95,6 +97,7 @@ export function ListsToolbar({
         anchor={sortAnchor}
         onClose={close}
         label="Sort list"
+        kind="radiogroup"
         items={sortItems}
       />
       <Menu

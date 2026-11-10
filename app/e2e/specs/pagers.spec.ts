@@ -416,10 +416,10 @@ function commonScenarios(input: "mouse" | "touch") {
 
   test("a swipe on a month cell opens no day", async ({ page }) => {
     await page.goto("/planner");
-    await page.getByRole("tab", { name: "Month" }).click();
+    await page.getByRole("tab", { name: "Month", exact: true }).click();
     await expect(page.getByTestId("month-title")).toHaveText(months.current);
 
-    const cell = page.getByRole("button", { name: "Wednesday 28", exact: true });
+    const cell = page.getByRole("gridcell", { name: "Wednesday 28" });
     await turn(page, cell);
 
     await expect(page.getByTestId("month-title")).toHaveText(months.next);
@@ -543,7 +543,7 @@ test.describe("with the mouse", () => {
     await expect(page.getByTestId("day-heading")).toBeVisible();
     await expectTouchAction(page.getByTestId("day-pager"), "pan-y");
 
-    await page.getByRole("tab", { name: "Month" }).click();
+    await page.getByRole("tab", { name: "Month", exact: true }).click();
     await expect(page.getByTestId("month-title")).toHaveText(months.current);
     await expectTouchAction(page.getByTestId("month-pager"), "pan-y");
   });
@@ -572,7 +572,7 @@ test.describe("with the mouse", () => {
     await page.waitForTimeout(500);
     await expect.poll(() => trackX(page)).toBe(0);
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
-    await press(page, row(page, undated.second).getByRole("button", { name: "open task" }));
+    await press(page, row(page, undated.second).getByRole("button", { name: undated.second }));
     await expect(page).toHaveURL(/\/task\//);
   });
 
@@ -714,7 +714,7 @@ test.describe("with a touch screen", () => {
     await expect(page.getByTestId("day-heading")).toBeVisible();
     await expectTouchAction(page.getByTestId("day-pager"), "pan-y");
 
-    await page.getByRole("tab", { name: "Month" }).click();
+    await page.getByRole("tab", { name: "Month", exact: true }).click();
     await expect(page.getByTestId("month-title")).toHaveText(months.current);
     await expectTouchAction(page.getByTestId("month-pager"), "pan-y");
   });

@@ -49,7 +49,7 @@ test("a tick on a repeating task makes its next occurrence a note", async ({
   await page.goto("/");
   await expect(row(page, supplements)).toHaveCount(1);
 
-  await press(page, row(page, supplements).getByRole("button", { name: "mark done" }));
+  await press(page, row(page, supplements).getByRole("checkbox"));
 
   // The next occurrence is its own note, linked to this one (ADR 0027).
   await expect.poll(() => noteText(page, supplementsTick.next)).toContain(
@@ -65,7 +65,7 @@ test("a tick on a repeating task makes its next occurrence a note", async ({
   // the list shows it tomorrow, not now.
   const done = row(page, supplements);
   await expect(done).toHaveCount(1);
-  await expect(done.getByRole("button", { name: "mark not done" })).toHaveAttribute(
+  await expect(done.getByRole("checkbox")).toHaveAttribute(
     "aria-checked",
     "true",
   );
@@ -81,15 +81,15 @@ test("a Retry on a tick that landed since makes no second next occurrence", asyn
   const retry = page.getByRole("button", { name: "retry tick" });
 
   await failNextWrite(page, `${supplements}.md`);
-  await press(page, target.getByRole("button", { name: "mark done" }));
+  await press(page, target.getByRole("checkbox"));
   await expect(retry).toBeVisible();
-  await expect(target.getByRole("button", { name: "mark done" })).toHaveAttribute(
+  await expect(target.getByRole("checkbox")).toHaveAttribute(
     "aria-checked",
     "false",
   );
 
   // A second tap lands. The failure stays on the banner.
-  await press(page, target.getByRole("button", { name: "mark done" }));
+  await press(page, target.getByRole("checkbox"));
   await expect.poll(() => noteText(page, supplementsTick.next)).not.toBeNull();
   await expect(retry).toBeVisible();
 
@@ -97,7 +97,7 @@ test("a Retry on a tick that landed since makes no second next occurrence", asyn
   await expect(retry).toHaveCount(0);
   // Writes run one at a time in call order, so once a later tick lands,
   // the retry has run too.
-  await press(page, row(page, undated.second).getByRole("button", { name: "mark done" }));
+  await press(page, row(page, undated.second).getByRole("checkbox"));
   await expect.poll(() => noteText(page, `Tasks/${undated.second}.md`)).toContain(
     "completed:",
   );
@@ -131,11 +131,11 @@ test.describe("a slow vault and a failed write", () => {
       // With the clock stopped, the vault call waits until the test
       // moves the clock on. A short step lets the row render.
       await pauseClock(page);
-      await target.getByRole("button", { name: "mark done" }).click();
+      await target.getByRole("checkbox").click();
       await page.clock.runFor(50);
 
       await expect(
-        target.getByRole("button", { name: "mark not done" }),
+        target.getByRole("checkbox"),
         "the row ticks before the slow vault answers",
       ).toHaveAttribute("aria-checked", "true");
       expect(await noteText(page, note)).not.toContain("completed:");
@@ -145,7 +145,7 @@ test.describe("a slow vault and a failed write", () => {
 
       await expect(page.getByText(`write failed: ${fileName}`)).toBeVisible();
       await expect(
-        target.getByRole("button", { name: "mark done" }),
+        target.getByRole("checkbox"),
         "the failed write rolls the tick back",
       ).toHaveAttribute("aria-checked", "false");
       expect(await noteText(page, note)).not.toContain("completed:");
@@ -183,7 +183,7 @@ test("three ticks of a month-end task land on the last day of each month", async
     await pauseClock(page);
     await press(
       page,
-      row(page, "Pay rent").getByRole("button", { name: "mark done" }),
+      row(page, "Pay rent").getByRole("checkbox", { checked: false }),
     );
     await page.clock.runFor(600);
     await page.clock.resume();

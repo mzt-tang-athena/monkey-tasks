@@ -35,7 +35,10 @@ type Tracker = {
   consume: () => boolean;
 };
 
-function WebPress(props: PressProps) {
+const WebPress = React.forwardRef<
+  React.ComponentRef<typeof WebPressable>,
+  PressProps
+>(function WebPress(props, ref) {
   const [tracker] = React.useState<Tracker>(() => {
     const state = {
       start: null as { x: number; y: number } | null,
@@ -81,6 +84,7 @@ function WebPress(props: PressProps) {
   return (
     <WebPressable
       {...props}
+      ref={ref}
       onPressIn={(event) => {
         tracker.begin(event);
         props.onPressIn?.(event);
@@ -96,7 +100,7 @@ function WebPress(props: PressProps) {
       }}
     />
   );
-}
+});
 
 /** Every press target, with or without a pan above it. */
 export const Pressable = (Platform.OS === "web" ? WebPress : PanPressable) as typeof PanPressable;

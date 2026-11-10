@@ -52,6 +52,27 @@ async function dragGrip(points: [number, number][]) {
 }
 
 describe("Split", () => {
+  it("reports the grabber as an adjustable slider with a value", () => {
+    render(
+      <GestureHandlerRootView>
+        <Split
+          testID="split"
+          fraction={0.5}
+          onResize={() => undefined}
+          minTop={100}
+          minBottom={100}
+          top={<Text>top</Text>}
+          bottom={<Text>bottom</Text>}
+        />
+      </GestureHandlerRootView>,
+    );
+
+    const grip = screen.getByTestId("split:grip");
+    expect(grip.getAttribute("role")).toBe("slider");
+    expect(grip.getAttribute("aria-valuenow")).toBe("50");
+    expect(grip.getAttribute("aria-label")).toBe("resize timeline");
+  });
+
   it("lays both panes out by fraction, with a grabber that claims the touch", async () => {
     render(
       <GestureHandlerRootView>

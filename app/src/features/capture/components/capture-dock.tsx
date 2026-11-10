@@ -22,10 +22,26 @@ export function CaptureDock(slot: CaptureSlot) {
   const bar = useBar();
   const focused = useIsFocused();
   const sheet = useCaptureSheet({ ...slot, bar, focused });
+  const addRef = React.useRef<React.ComponentRef<typeof Pressable>>(null);
+  // The sheet's overlay outlives its `open` prop by the exit, and the
+  // page stays inert until it goes. The Add button takes focus back
+  // only once the sheet has left the tree.
+  const wasMounted = React.useRef(false);
+  React.useEffect(() => {
+    if (sheet.mounted) {
+      wasMounted.current = true;
+      return;
+    }
+    if (wasMounted.current) {
+      wasMounted.current = false;
+      (addRef.current as unknown as HTMLElement | null)?.focus?.();
+    }
+  }, [sheet.mounted]);
 
   return (
     <>
       <Pressable
+        ref={addRef}
         style={({ pressed }) => [styles.add, pressed && styles.addPressed]}
         onPress={sheet.toggle}
         accessibilityRole="button"

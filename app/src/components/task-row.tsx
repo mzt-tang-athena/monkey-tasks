@@ -10,7 +10,7 @@ import { motion } from "@/lib/motion/tokens";
 import { taskIsDone } from "@monkey-tasks/schemas";
 import { colors } from "@/theme/tokens";
 import { Pressable } from "./ui/pressable";
-import { faceStyles, TaskRowFace } from "./task-row-face";
+import { faceStyles, TaskRowFace, taskRowLabel } from "./task-row-face";
 
 /**
  * The live task row: `TaskRowFace` with the toggle, the open press,
@@ -107,30 +107,39 @@ function TaskRowBase({
   // beneath without moving it (Google Tasks' rule).
   const toggle = (
     <Animated.View style={pop}>
-      <Pressable
+      <View style={styles.tickSlot}>
+        <Pressable
         style={({ pressed }) => [
-          faceStyles.circle,
-          done && faceStyles.circleDone,
-          (hot || pressed) && !done && styles.circleHot,
-          pressed && done && styles.circlePressedDone,
+          styles.tickBox,
+          pressed && styles.tickBoxPressed,
         ]}
         onPress={press}
         disabled={onToggle == null}
-        hitSlop={11}
         onHoverIn={() => setHot(true)}
         onHoverOut={() => setHot(false)}
-        accessibilityLabel={done ? "mark not done" : "mark done"}
-        accessibilityRole="button"
+        accessibilityLabel={task.name}
+        accessibilityRole="checkbox"
         aria-checked={done}
       >
-        {/* The glyph travels on its own, so it lands on a circle that
-            is already filling rather than riding it. */}
-        {done ? (
-          <Animated.View style={glyph}>
-            <Text style={faceStyles.check}>{"✓"}</Text>
-          </Animated.View>
-        ) : null}
-      </Pressable>
+        {/* The box is the 44pt target; the circle inside keeps its 24pt
+            mark, and the negative margin keeps the row's layout. */}
+        <View
+          style={[
+            faceStyles.circle,
+            done && faceStyles.circleDone,
+            hot && !done && styles.circleHot,
+          ]}
+        >
+          {/* The glyph travels on its own, so it lands on a circle that
+              is already filling rather than riding it. */}
+          {done ? (
+            <Animated.View style={glyph}>
+              <Text style={faceStyles.check}>{"✓"}</Text>
+            </Animated.View>
+          ) : null}
+        </View>
+        </Pressable>
+      </View>
     </Animated.View>
   );
 
@@ -143,11 +152,12 @@ function TaskRowBase({
           <Pressable
             style={({ pressed }) => [
               faceStyles.text,
+              styles.bodyTarget,
               pressed && styles.bodyPressed,
             ]}
             onPress={() => onOpen(task)}
             accessibilityRole="button"
-            accessibilityLabel="open task"
+            accessibilityLabel={taskRowLabel(task, done)}
           >
             {content}
           </Pressable>
@@ -192,11 +202,34 @@ const styles = StyleSheet.create({
     left: 0,
     backgroundColor: colors.accentSoft,
   },
+  // The circle's 24pt slot in the row, and the 44pt press box that
+  // centers on it without widening the row.
+  tickSlot: {
+    width: 24,
+    height: 24,
+    position: "relative",
+  },
+  tickBox: {
+    position: "absolute",
+    left: -10,
+    top: -10,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tickBoxPressed: {
+    opacity: 0.7,
+  },
   circleHot: {
     backgroundColor: colors.pressed,
   },
-  circlePressedDone: {
-    opacity: 0.7,
+  // The row's vertical padding moves here, so the press box is 44 tall
+  // for a one-line name and the row keeps its height.
+  bodyTarget: {
+    minHeight: 44,
+    paddingVertical: 12,
+    justifyContent: "center",
   },
   bodyPressed: {
     opacity: 0.6,

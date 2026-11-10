@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "flex-start",
     gap: spacing.xs,
-    minHeight: 32,
+    minHeight: 44,
     paddingLeft: spacing.s,
     paddingRight: spacing.s,
     borderRadius: radius,

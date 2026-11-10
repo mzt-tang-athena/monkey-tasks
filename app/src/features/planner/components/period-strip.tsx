@@ -13,7 +13,7 @@ import {
   startOfWeek,
   type Mode,
 } from "@/features/planner/model";
-import { MONTHS, MONTHS_SHORT, WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
+import { MONTHS_SHORT, WEEKDAYS } from "@/features/planner/lib/labels";
 import {
   colors,
   fonts,
@@ -102,10 +102,12 @@ function PeriodRail({
   count,
   activeIdx,
   renderItem,
+  label,
 }: {
   count: number;
   activeIdx: number;
   renderItem: (index: number) => React.ReactNode;
+  label: string;
 }) {
   const scroller = React.useRef<MotionScrollRef | null>(null);
   const viewport = React.useRef(0);
@@ -148,6 +150,8 @@ function PeriodRail({
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.stripScroll}
+      role="tablist"
+      aria-label={label}
       onLayout={(e) => {
         viewport.current = e.nativeEvent.layout.width;
         // First real measurement may already need an alignment.
@@ -193,7 +197,9 @@ export function PeriodStrip({
       addDays(today, startIdx + offset),
     );
     return (
-      <View style={styles.strip}>
+      // The number carries a non-breaking space, so the cell's name
+      // joins the weekday and the day as two words.
+      <View style={styles.strip} role="tablist" aria-label="days">
         {days.map((day) => {
           const active = isSameDay(day, selected);
           const isToday = startOfDay(day).getTime() === todayStart;
@@ -207,8 +213,9 @@ export function PeriodStrip({
                 pressed && styles.pressedFill,
               ]}
               onPress={() => onSelect(day)}
-              accessibilityRole="button"
-              accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
+              role="tab"
+              aria-selected={active}
+              accessibilityLabel={`${WEEKDAYS[day.getDay()]} ${day.getDate()}`}
             >
               <Text
                 style={[
@@ -226,7 +233,7 @@ export function PeriodStrip({
                   isToday && !active && styles.stripNumToday,
                 ]}
               >
-                {day.getDate()}
+                {`\u00a0${day.getDate()}`}
               </Text>
             </Pressable>
           );
@@ -248,6 +255,7 @@ export function PeriodStrip({
       <PeriodRail
         key="week"
         count={12}
+        label="weeks"
         activeIdx={selWeekIdx - startIdx}
         renderItem={(index) => {
           const weekStartDay = addDays(railBase, 7 * (startIdx + index));
@@ -266,8 +274,9 @@ export function PeriodStrip({
                 pressed && styles.pressedFill,
               ]}
               onPress={() => onSelect(weekStartDay)}
-              accessibilityRole="button"
-              accessibilityLabel={`week of ${MONTHS_SHORT[weekStartDay.getMonth()]} ${weekStartDay.getDate()}-${weekEnd.getDate()}`}
+              role="tab"
+              aria-selected={active}
+              accessibilityLabel={`week of ${MONTHS_SHORT[weekStartDay.getMonth()]} ${weekStartDay.getDate()}-${weekEnd.getDate()} W${isoWeek(addDays(weekStartDay, 3))}`}
             >
               <Text
                 style={[
@@ -285,7 +294,7 @@ export function PeriodStrip({
                   isCurrent && !active && styles.stripNumToday,
                 ]}
               >
-                {`W${isoWeek(addDays(weekStartDay, 3))}`}
+                {`\u00a0W${isoWeek(addDays(weekStartDay, 3))}`}
               </Text>
             </Pressable>
           );
@@ -310,6 +319,7 @@ export function PeriodStrip({
     <PeriodRail
       key="month"
       count={12}
+      label="months"
       activeIdx={selRelMonthIdx - startIdx}
       renderItem={(index) => {
         const monthStartDay = new Date(railYear, railMonth + index, 1);
@@ -329,8 +339,9 @@ export function PeriodStrip({
               pressed && styles.pressedFill,
             ]}
             onPress={() => onSelect(monthStartDay)}
-            accessibilityRole="button"
-            accessibilityLabel={`${MONTHS[monthStartDay.getMonth()]} ${monthStartDay.getFullYear()}`}
+            role="tab"
+            aria-selected={active}
+            accessibilityLabel={`${monthStartDay.getFullYear()} ${MONTHS_SHORT[monthStartDay.getMonth()]}`}
           >
             <Text
               style={[
@@ -339,7 +350,7 @@ export function PeriodStrip({
                 isCurrent && !active && styles.stripNameToday,
               ]}
             >
-              {monthStartDay.getFullYear()}
+              {`${monthStartDay.getFullYear()}`}
             </Text>
             <Text
               style={[
@@ -348,7 +359,7 @@ export function PeriodStrip({
                 isCurrent && !active && styles.stripNumToday,
               ]}
             >
-              {MONTHS_SHORT[monthStartDay.getMonth()]}
+              {`\u00a0${MONTHS_SHORT[monthStartDay.getMonth()]}`}
             </Text>
           </Pressable>
         );

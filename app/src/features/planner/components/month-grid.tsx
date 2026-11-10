@@ -1,5 +1,5 @@
 import * as React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, type ViewProps } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { Pressable } from "@/components/ui/pressable";
 import { addDays, isoOf, isSameDay } from "@/utils/dates";
@@ -44,7 +44,7 @@ export function MonthGrid({
   // One rule pass per task over the whole grid, lead blanks included.
   // The range ends at the close of the last week row, so trailing
   // cells keep their dots if the grid ever pads them.
-  const dotted = React.useMemo(() => {
+  const { dotted, counts } = React.useMemo(() => {
     const year = viewMonth.getFullYear();
     const monthIdx = viewMonth.getMonth();
     const lead = startOfMonth(viewMonth).getDay();
@@ -52,15 +52,18 @@ export function MonthGrid({
     const gridStart = addDays(startOfMonth(viewMonth), -lead);
     const gridEnd = addDays(gridStart, Math.ceil((lead + days) / 7) * 7 - 1);
     const iso = new Set<string>();
+    const tally: Record<string, number> = {};
     for (const task of tasks) {
       if (isDone(task)) {
         continue;
       }
       for (const day of occurrencesBetween(task, gridStart, gridEnd)) {
-        iso.add(isoOf(day));
+        const key = isoOf(day);
+        iso.add(key);
+        tally[key] = (tally[key] ?? 0) + 1;
       }
     }
-    return iso;
+    return { dotted: iso, counts: tally };
   }, [tasks, viewMonth]);
 
   // Six rows, always: a month that needs five pads with trailing
@@ -92,7 +95,16 @@ export function MonthGrid({
             </Text>
           ))}
         </View>
-        <GridBody interactive={interactive} cells={cells} picked={picked} today={today} dotted={dotted} onPick={onPick} />
+        <GridBody
+          interactive={interactive}
+          cells={cells}
+          picked={picked}
+          today={today}
+          dotted={dotted}
+          counts={counts}
+          onPick={onPick}
+          label={`${MONTHS[monthIdx]} ${year}`}
+        />
       </View>
     </View>
   );
@@ -104,57 +116,85 @@ function GridBody({
   picked,
   today,
   dotted,
+  counts,
   onPick,
+  label,
 }: {
   interactive: boolean;
   cells: (Date | null)[];
   picked: PickedDay;
   today: Date;
   dotted: Set<string>;
+  counts: Record<string, number>;
   onPick?: (day: Date) => void;
+  label: string;
 }) {
-  const views = cells.map((day, index) => {
-    if (day == null) {
-      return <View key={`blank-${index}`} style={styles.cell} />;
-    }
-    const marks = [
-      styles.cell,
-      isSameDay(day, picked?.day ?? null) && styles.cellPicked,
-      isSameDay(day, today) && styles.cellToday,
-    ];
-    const face = (
-      <>
-        <Text style={[styles.num, isSameDay(day, today) && styles.numToday]}>
-          {day.getDate()}
-        </Text>
-        {/* The dot slot is always reserved, so every number sits on
-            one baseline with or without a dot. */}
-        <View style={styles.dotSlot}>
-          {dotted.has(isoOf(day)) ? <View style={styles.dot} testID="month-dot" /> : null}
-        </View>
-      </>
-    );
-    if (!interactive) {
-      return (
-        <View key={day.getTime()} style={marks}>
-          {face}
-        </View>
+  const rows: React.ReactNode[] = [];
+  for (let start = 0; start < cells.length; start += 7) {
+    const week = cells.slice(start, start + 7).map((day, offset) => {
+      const index = start + offset;
+      if (day == null) {
+        return <View key={`blank-${index}`} style={styles.cell} />;
+      }
+      const selected = isSameDay(day, picked?.day ?? null);
+      const marks = [
+        styles.cell,
+        selected && styles.cellPicked,
+        isSameDay(day, today) && styles.cellToday,
+      ];
+      const count = counts[isoOf(day)] ?? 0;
+      const name = `${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}${
+        count === 0 ? "" : count === 1 ? ", 1 task" : `, ${count} tasks`
+      }`;
+      const face = (
+        <>
+          <Text style={[styles.num, isSameDay(day, today) && styles.numToday]}>
+            {day.getDate()}
+          </Text>
+          {/* The dot slot is always reserved, so every number sits on
+              one baseline with or without a dot. */}
+          <View style={styles.dotSlot}>
+            {dotted.has(isoOf(day)) ? <View style={styles.dot} testID="month-dot" /> : null}
+          </View>
+        </>
       );
-    }
-    return (
-      <Pressable
-        key={day.getTime()}
-        style={({ pressed }) => [...marks, pressed && styles.pressed]}
-        onPress={() => onPick?.(day)}
-        accessibilityRole="button"
-        accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
-      >
-        {face}
-      </Pressable>
+      if (!interactive) {
+        return (
+          <View key={day.getTime()} style={marks}>
+            {face}
+          </View>
+        );
+      }
+      return (
+        <Pressable
+          key={day.getTime()}
+          style={({ pressed }) => [...marks, pressed && styles.pressed]}
+          onPress={() => onPick?.(day)}
+          // React Native's Role type omits the grid roles. The browser
+          // reads the name as given.
+          role={"gridcell" as ViewProps["role"]}
+          aria-selected={selected}
+          accessibilityLabel={name}
+        >
+          {face}
+        </Pressable>
+      );
+    });
+    // A week with no day at all is padding, not a row of the grid. An
+    // empty row would fail the grid's required-child rule.
+    const empty = cells.slice(start, start + 7).every((day) => day == null);
+    rows.push(
+      <View key={`week-${start}`} role={empty ? undefined : "row"} style={styles.row}>
+        {week}
+      </View>,
     );
-  });
+  }
   if (!interactive) {
-    return <View style={styles.grid}>{views}</View>;
+    return (
+      <View style={styles.grid} aria-hidden>
+        {rows}
+      </View>
+    );
   }
   return (
     <PlanDrag.Grid
@@ -162,8 +202,10 @@ function GridBody({
       rows={6}
       cells={cells.map((day) => (day == null ? null : { kind: "day", iso: isoOf(day) }))}
       style={styles.grid}
+      role="grid"
+      aria-label={label}
     >
-      {views}
+      {rows}
     </PlanDrag.Grid>
   );
 }
@@ -191,7 +233,8 @@ const styles = StyleSheet.create({
     borderRadius: radius,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
-    padding: spacing.m,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.m,
   },
   head: {
     flexDirection: "row",
@@ -206,12 +249,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   grid: {
+    flexDirection: "column",
+  },
+  row: {
     flexDirection: "row",
-    flexWrap: "wrap",
   },
   cell: {
     width: "14.28%",
-    aspectRatio: 1.1,
+    aspectRatio: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: 3,

@@ -57,6 +57,8 @@ export const overdue = {
     task it holds. */
 export const tomorrow = {
   heading: "Tuesday 27",
+  /** The week column's and day strip's short name for it. */
+  short: "Tue 27",
   task: "Dentist appointment",
   hour: 14,
   time: "2:30 PM",
@@ -66,6 +68,9 @@ export const tomorrow = {
 export const months = {
   current: "October 2026",
   next: "November 2026",
+  /** The period strip's short cell names, year then month. */
+  currentCell: "2026 Oct",
+  nextCell: "2026 Nov",
 } as const;
 
 /** A capture with a date phrase, and where it lands. */

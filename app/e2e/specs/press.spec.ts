@@ -14,7 +14,7 @@ const overdueNote = "Tasks/Return library books.md";
 
 /** The tick target of a live row. */
 function tick(page: Page, name: string) {
-  return row(page, name).getByRole("button", { name: "mark done" });
+  return row(page, name).getByRole("checkbox");
 }
 
 test("a tap in the first layout frame of a row ticks it", async ({
@@ -35,7 +35,7 @@ test("a tap in the first layout frame of a row ticks it", async ({
     const observer = new MutationObserver(() => {
       const added = document.querySelector(`[data-testid="${id}"]`);
       const button = added?.querySelector(
-        '[role="button"][aria-label="mark done"]',
+        '[role="checkbox"]',
       );
       if (button == null) {
         return;

@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     ...type.caption,
-    color: colors.inkFaint,
+    color: colors.inkMuted,
   },
   error: {
     ...type.caption,

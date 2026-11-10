@@ -138,26 +138,35 @@ test.describe("the sheet belongs to its tab", () => {
     await expect(page.getByRole("dialog")).toHaveCount(1);
   });
 
-  test("a nav tab reached by keyboard closes the sheet", async ({ page }) => {
-    await page.locator('[role="tab"][aria-label="Planner"]').focus();
-    await page.keyboard.press("Enter");
+  test("the screen behind the sheet cannot take focus", async ({ page }) => {
+    // The sheet is modal: the screen behind it is inert, so a keyboard
+    // cannot reach the nav under it. Escape closes the sheet first.
+    const plannerTab = page.locator('[role="tab"][aria-label="Planner"]');
+    await plannerTab.focus();
+    await expect(plannerTab).not.toBeFocused();
 
-    await expect(page).toHaveURL(/\/planner$/);
+    await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByPlaceholder("Add a task")).toHaveCount(0);
 
+    await page.getByRole("tab", { name: "Planner" }).click();
+    await expect(page).toHaveURL(/\/planner$/);
     await page.getByRole("tab", { name: "Lists" }).click();
     await expect(row(page, undated.second)).toBeVisible();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
     await expectBarBack(page);
   });
 
-  test("a row opened by keyboard shows the editor with no sheet over it", async ({
+  test("a row cannot take focus behind the sheet, and opens after it closes", async ({
     page,
   }) => {
-    const open = row(page, undated.second).locator('[aria-label="open task"]');
-    // The row can mount again while the list settles, which drops
-    // focus. Focus until the button holds it, then press Enter.
+    const open = row(page, undated.second).getByRole("button", { name: undated.second });
+    await open.focus();
+    await expect(open).not.toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    // The row is reachable again once the sheet leaves the tree.
     await expect
       .poll(async () => {
         await open.focus();
@@ -183,11 +192,16 @@ test("the planner's sheet belongs to its tab too", async ({ page }) => {
   await page.getByPlaceholder("Add a task").fill(capture.typed);
   await expect(page.getByRole("dialog")).toHaveCount(1);
 
-  await page.locator('[role="tab"][aria-label="Lists"]').focus();
-  await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/$/);
+  const listsTab = page.locator('[role="tab"][aria-label="Lists"]');
+  await listsTab.focus();
+  await expect(listsTab).not.toBeFocused();
+
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
+  await page.getByRole("tab", { name: "Lists" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("tab", { name: "Planner" })).toBeVisible();
   await page.getByRole("tab", { name: "Planner" }).click();
   await expect(page.getByTestId("day-heading")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);

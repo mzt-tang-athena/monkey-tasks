@@ -1,5 +1,5 @@
 import * as React from "react";
-import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Platform, StyleSheet, Text, View, useWindowDimensions, type ViewProps } from "react-native";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDismiss } from "@/hooks/use-dismiss";
@@ -37,7 +37,7 @@ type Box = { x: number; y: number; width: number; height: number };
 /** The space between the anchor and the menu. */
 const anchorGap = spacing.xs;
 /** Each item's height. A label with a hint still fits it. */
-const itemHeight = 40;
+const itemHeight = 44;
 
 /**
  * Where a menu goes. It opens below its anchor, and flips above when
@@ -88,6 +88,7 @@ export function Menu({
   label,
   items,
   align = "end",
+  kind = "menu",
 }: {
   open: boolean;
   /** The view the menu opens from. */
@@ -97,6 +98,8 @@ export function Menu({
   label: string;
   items: MenuItem[];
   align?: "start" | "end";
+  /** A choice of one item is a radio group; actions are a menu. */
+  kind?: "menu" | "radiogroup";
 }) {
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -128,6 +131,24 @@ export function Menu({
 
   useDismiss(open, onClose);
   const shown = open && box != null;
+  const opener = React.useRef<HTMLElement | null>(null);
+
+  // A menu takes focus when it opens and gives it back to the control
+  // that opened it. The first item takes focus from its own effect,
+  // after the host's portal has put it in the document.
+  React.useLayoutEffect(() => {
+    if (!shown || Platform.OS !== "web") {
+      return;
+    }
+    opener.current = document.activeElement as HTMLElement | null;
+    return () => {
+      const target = opener.current;
+      opener.current = null;
+      // The screen is inert until the host's own layout effect clears
+      // it, so the focus waits one microtask.
+      queueMicrotask(() => target?.focus?.());
+    };
+  }, [shown]);
   const backdrop = useProgress(shown, { ms: motion.ms.menu });
   const fade = useAnimatedStyle(() => ({ opacity: backdrop.value }));
 
@@ -158,14 +179,16 @@ export function Menu({
       <Overlay layer="menu">
         <Animated.View
           entering={menuEntering(corner)}
-          role="menu"
+          role={kind}
           aria-label={label}
+          tabIndex={-1}
           testID="menu"
           onLayout={(event) => setHeight(event.nativeEvent.layout.height)}
           style={[styles.menu, { top: place.top, left: place.left }]}
         >
+          <MenuFocus />
           {items.map((item) => (
-            <MenuRow key={item.key} item={item} />
+            <MenuRow key={item.key} item={item} radio={kind === "radiogroup"} />
           ))}
         </Animated.View>
       </Overlay>
@@ -173,7 +196,48 @@ export function Menu({
   );
 }
 
-function MenuRow({ item }: { item: MenuItem }) {
+/** Puts focus on the menu's first item. It sits inside the menu, so it
+    mounts with the host's portal and can take focus after that commit. */
+function MenuFocus() {
+  const ref = React.useRef<React.ComponentRef<typeof View>>(null);
+  React.useEffect(() => {
+    if (Platform.OS !== "web") {
+      return;
+    }
+    const node = ref.current as unknown as HTMLElement | null;
+    const menu = node?.closest<HTMLElement>('[role="menu"], [role="radiogroup"]');
+    const first = menu?.querySelector<HTMLElement>(
+      '[role="menuitem"], [role="menuitemradio"], [role="radio"]',
+    );
+    if (first == null) {
+      return;
+    }
+    // The menu's entrance is still on its first frame here, and a
+    // browser will not focus a hidden node. Retry on the next frames,
+    // until it takes, or give up after a short run.
+    let frame = 0;
+    let cancelled = false;
+    const focus = () => {
+      first.focus();
+      frame += 1;
+      if (!cancelled && document.activeElement !== first && frame < 10) {
+        requestAnimationFrame(focus);
+      }
+    };
+    focus();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return <View ref={ref} />;
+}
+
+function MenuRow({ item, radio }: { item: MenuItem; radio: boolean }) {
+  // ARIA allows a checked state only on a radio or a menuitemradio. An
+  // action item carries none.
+  const check = (
+    item.selected === undefined ? "menuitem" : radio ? "radio" : "menuitemradio"
+  ) as ViewProps["role"];
   return (
     <Pressable
       style={({ pressed }) => [
@@ -182,10 +246,11 @@ function MenuRow({ item }: { item: MenuItem }) {
       ]}
       onPress={item.onPress}
       disabled={item.disabled}
-      role="menuitem"
+      role={check}
       accessibilityLabel={item.label}
       aria-disabled={item.disabled ?? false}
-      aria-checked={item.selected}
+      aria-checked={item.selected === undefined ? undefined : item.selected ?? false}
+      tabIndex={0}
     >
       <View style={styles.itemText}>
         <Text

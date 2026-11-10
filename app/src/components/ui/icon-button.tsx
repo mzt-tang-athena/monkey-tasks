@@ -3,15 +3,18 @@ import { StyleSheet } from "react-native";
 import { Pressable } from "./pressable";
 import { colors, radius } from "@/theme/tokens";
 
-/** A quiet 36pt glyph button: hover, pressed, and active states. */
+/** A quiet 44pt glyph button: hover, pressed, and active states. */
 export function IconButton({
   label,
   active,
+  expanded,
   onPress,
   children,
 }: {
   label: string;
   active?: boolean;
+  /** The button opens a menu: whether that menu is showing. */
+  expanded?: boolean;
   onPress?: () => void;
   children: React.ReactNode;
 }) {
@@ -28,6 +31,8 @@ export function IconButton({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
+      aria-expanded={expanded}
+      aria-haspopup={expanded === undefined ? undefined : "menu"}
     >
       {children}
     </Pressable>
@@ -37,8 +42,8 @@ export function IconButton({
 const styles = StyleSheet.create({
   // Quiet top-right controls: sort glyph and the three-dot overflow.
   iconButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radius,

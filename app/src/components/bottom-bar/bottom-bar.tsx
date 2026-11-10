@@ -80,18 +80,20 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
           />
         ) : null}
         <View style={styles.row}>
-          <NavTab
-            label="Lists"
-            icon="list"
-            active={pathname === "/"}
-            onPress={() => router.navigate("/")}
-          />
-          <NavTab
-            label="Planner"
-            icon="calendar"
-            active={pathname === "/planner"}
-            onPress={() => router.navigate("/planner")}
-          />
+          <View style={styles.nav} role="tablist" aria-label="screens">
+            <NavTab
+              label="Lists"
+              icon="list"
+              active={pathname === "/"}
+              onPress={() => router.navigate("/")}
+            />
+            <NavTab
+              label="Planner"
+              icon="calendar"
+              active={pathname === "/planner"}
+              onPress={() => router.navigate("/planner")}
+            />
+          </View>
           {/* The air between the nav and the action. */}
           <View style={styles.spacer} />
           {action}
@@ -124,6 +126,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.s,
     minHeight: bottomBar.row,
+  },
+  nav: {
+    flexDirection: "row",
+    gap: spacing.s,
   },
   spacer: {
     flex: 1,

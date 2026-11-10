@@ -32,7 +32,7 @@ const chipLines = 2;
 const chipLineHeight = 15;
 const chipHeight = chipLines * chipLineHeight + 2 * spacing.xs;
 const chipGap = spacing.xs;
-const moreHeight = 18;
+const moreHeight = 44;
 // The column's height inside the canvas padding, less its own padding,
 // the day's name and number, and the rule under them.
 const columnHeight = weekCanvasHeight - 2 * spacing.xs;
@@ -89,6 +89,8 @@ export function WeekView({
           const isSelected =
             startOfDay(day).getTime() === startOfDay(selected).getTime();
           return (
+            // The day name and number carry non-breaking spaces, so the
+            // column's name keeps its words apart from the task text.
             <Pressable
               key={day.getTime()}
               style={({ pressed }) => [
@@ -99,13 +101,12 @@ export function WeekView({
               ]}
               onPress={() => onSelect(day)}
               accessibilityRole="button"
-              accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
             >
               <Text style={styles.dayName}>
                 {isToday ? "Today" : WEEKDAYS[day.getDay()]}
               </Text>
               <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>
-                {day.getDate()}
+                {`\u00a0${day.getDate()}\u00a0`}
               </Text>
               <View style={styles.ruleSlot}>
                 <View style={styles.rule} />
@@ -132,7 +133,7 @@ export function WeekView({
                       style={styles.more}
                       onPress={() => onOpenDay(day)}
                       accessibilityRole="button"
-                      accessibilityLabel={`${hidden} more on ${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}, open the day`}
+                      accessibilityLabel={`+${hidden} more on ${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}, open the day`}
                     >
                       <Text style={styles.moreText}>{`+${hidden} more`}</Text>
                     </Pressable>
@@ -245,6 +246,7 @@ const styles = StyleSheet.create({
   },
   more: {
     height: moreHeight,
+    minHeight: 44,
     justifyContent: "center",
     borderRadius: radius,
   },

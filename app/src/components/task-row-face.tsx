@@ -29,6 +29,35 @@ export const taskRowFace = {
 } as const;
 
 /**
+ * The row body's name: the task and its meta, for example
+ * "Buy milk, 3:00 PM, overdue". The meta line is hidden from assistive
+ * tech, so this name is the one a reader hears.
+ */
+export function taskRowLabel(task: TaskItem, done: boolean): string {
+  const meta = taskMeta(task, done);
+  return [
+    task.name,
+    meta.time,
+    meta.badDate ? "bad date" : null,
+    meta.recurring ? "repeats" : null,
+    meta.overdue ? "overdue" : null,
+  ]
+    .filter((part): part is string => part != null && part !== "")
+    .join(", ");
+}
+
+/** The meta line's parts: the time, a bad date, repeats, overdue. */
+export function taskMeta(task: TaskItem, done: boolean) {
+  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
+  return {
+    time: due?.hasTime === true && !done ? formatTime(due.date) : null,
+    badDate: due == null && Boolean(task.data?.due),
+    recurring: task.data?.recurrence != null && task.data.recurrence !== "",
+    overdue: !done && due != null && due.date.getTime() < startOfToday(),
+  };
+}
+
+/**
  * One task as still markup: the gutter time, the circle and the text.
  * It holds no state, no handler and no motion. `TaskRow` passes its
  * own toggle and wraps the text in a press target. `PreviewRow` uses
@@ -51,49 +80,60 @@ export function TaskRowFace({
       wrapper must carry `faceStyles.text`. */
   renderText?: (content: React.ReactNode) => React.ReactNode;
 }) {
-  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
-  const overdue = !done && due != null && due.date.getTime() < startOfToday();
-  const recurring =
-    task.data?.recurrence != null && task.data.recurrence !== "";
-  const time = due?.hasTime && !done ? formatTime(due.date) : null;
+  const meta = taskMeta(task, done);
+  const { badDate, recurring, overdue } = meta;
+  const time = meta.time;
   const timeUnder = timeAlign === "under" && time != null;
-  const badDate = due == null && Boolean(task.data?.due);
   // The meta line shows only when it holds something. An empty one
   // would add its gap under every single-line row (ADR 0012).
-  const meta = timeUnder || badDate || recurring || overdue;
+  const hasMeta = timeUnder || badDate || recurring || overdue;
 
+  // A non-breaking space joins the meta words in the button's name. The
+  // flex gap draws the space on screen but leaves no text for the name.
   const content = (
     <>
       <Text style={[styles.name, done && styles.nameDone]} numberOfLines={2}>
         {task.name}
       </Text>
-      {meta ? (
-        <View style={styles.metaRow}>
+      {hasMeta ? (
+        <View style={styles.metaRow} aria-hidden>
           {timeUnder ? (
             <Text style={[styles.time, overdue && styles.overdueText]}>
-              {time}
+              {`\u00a0${time}`}
             </Text>
           ) : null}
-          {badDate ? <Text style={styles.badDate}>bad date</Text> : null}
-          {recurring ? <Text style={styles.recur}>repeats</Text> : null}
-          {overdue ? <Text style={styles.overdueText}>overdue</Text> : null}
+          {badDate ? <Text style={styles.badDate}>{"\u00a0bad date"}</Text> : null}
+          {recurring ? <Text style={styles.recur}>{"\u00a0repeats"}</Text> : null}
+          {overdue ? <Text style={styles.overdueText}>{"\u00a0overdue"}</Text> : null}
         </View>
       ) : null}
     </>
   );
 
+  // A live row's text target owns the vertical padding, so its press box
+  // reaches 44 without growing the row. The circle's slot takes the same
+  // top padding, so the mark still sits on the first text line.
+  const live = renderText != null;
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, live && styles.rowLive]}>
       {timeAlign === "right" && time != null ? (
-        <Text style={[styles.gutterTime, overdue && styles.overdueText]}>
+        <Text
+          style={[
+            styles.gutterTime,
+            live && styles.gutterTimeLive,
+            overdue && styles.overdueText,
+          ]}
+        >
           {time}
         </Text>
       ) : null}
-      {toggle ?? (
-        <View style={[faceStyles.circle, done && faceStyles.circleDone]}>
-          {done ? <Text style={faceStyles.check}>{"✓"}</Text> : null}
-        </View>
-      )}
+      <View style={live ? styles.toggleLive : undefined}>
+        {toggle ?? (
+          <View style={[faceStyles.circle, done && faceStyles.circleDone]}>
+            {done ? <Text style={faceStyles.check}>{"✓"}</Text> : null}
+          </View>
+        )}
+      </View>
       {renderText == null ? (
         <View style={faceStyles.text}>{content}</View>
       ) : (
@@ -165,6 +205,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: taskRowFace.padX,
     paddingVertical: taskRowFace.padY,
   },
+  // The press target inside a live row carries the vertical padding.
+  rowLive: {
+    paddingVertical: 0,
+  },
+  toggleLive: {
+    paddingTop: taskRowFace.padY,
+  },
   name: {
     fontSize: 17,
     lineHeight: 24,
@@ -201,6 +248,12 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     // Centered on the 24pt first-line box: (24 - 18) / 2 on each side.
     paddingVertical: 3,
+  },
+  // Live rows lift the row's padding into the text target, so the
+  // gutter time centers on the same first line from the row's top.
+  gutterTimeLive: {
+    paddingVertical: 0,
+    paddingTop: 15,
   },
   recur: {
     fontSize: 12,
