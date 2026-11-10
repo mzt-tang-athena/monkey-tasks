@@ -2,6 +2,7 @@ import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskItem } from "@/types/task";
+import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { TestPlannerList } from "@/features/planner/testing/test-planner-list";
 import { TaskListSection } from "./task-list-section";
 
@@ -23,14 +24,16 @@ function mount(
   toggle: (task: TaskItem) => void = () => undefined,
 ) {
   render(
-    <TestPlannerList value={{ toggle }}>
-      <TaskListSection
-        mode="day"
-        day={new Date(2026, 9, 26)}
-        tasks={tasks}
-        emptyLabel="Nothing due today"
-      />
-    </TestPlannerList>,
+    <PlanDrag.Root onDrop={() => undefined} renderGhost={() => null}>
+      <TestPlannerList value={{ toggle }}>
+        <TaskListSection
+          mode="day"
+          day={new Date(2026, 9, 26)}
+          tasks={tasks}
+          emptyLabel="Nothing due today"
+        />
+      </TestPlannerList>
+    </PlanDrag.Root>,
   );
 }
 

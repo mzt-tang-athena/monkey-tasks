@@ -22,11 +22,8 @@ export function plannerListValue(
     openSourceMenu: noop,
     taskForm: "rows",
     changeForm: noop,
-    lifted: null,
-    api: undefined,
     toggle: noop,
     open: noop,
-    dragStart: noop,
     ...overrides,
   };
 }

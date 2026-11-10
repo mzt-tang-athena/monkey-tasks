@@ -15,8 +15,7 @@ import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useRefreshTasks } from "@/stores/tasks/use-vault-read";
 import { useOpenTasks } from "@/stores/tasks/selectors";
 import { layout } from "./planner-layout";
-import { pointerPickup } from "./components/drag";
-import { DragGhost } from "./components/drag-ghost";
+import { GhostPill } from "./components/ghost-pill";
 import { DaySpread } from "./components/day/day-spread";
 import { MonthPane } from "./components/month-pane";
 import { usePlannerMonth } from "./hooks/use-planner-month";
@@ -30,11 +29,20 @@ import { WeekPane } from "./components/week-pane";
 import { usePlannerGestures } from "./hooks/use-planner-gestures";
 import { usePlannerRoute } from "./hooks/use-planner-route";
 import { usePlannerSource } from "./hooks/use-planner-source";
+import { patchForDrop, PlanDrag, type PlanTarget } from "./lib/plan-drag";
 
 const TARGETS: CaptureTarget[] = [
   { kind: "list", name: "Focus" },
   { kind: "main" },
 ];
+
+/**
+ * The day split's starting share of the space under its divider. On the
+ * suite's 412 by 915 viewport it gives the timeline 319 px, where the
+ * layout used to settle; on a 360 by 640 screen the list starts at
+ * 401 px, well above the bar at 585.
+ */
+const DAY_SPLIT = 0.51;
 
 /**
  * The tasks the planner may show. A note that fails validation never
@@ -52,13 +60,9 @@ function useValid(tasks: TaskItem[]): TaskItem[] {
 /**
  * The consolidated Planner tab, as a composition root. It reads the
  * route and the store, mounts the list context and the overlays, and
- * lays out the panes. Day mode is a fixed split of timeline and list.
- * Week is a horizontal canvas of day columns. Month is a card with
- * dots that lists a day's tasks on tap.
- *
- * The pure rules sit in features/planner/model and lib/day-rows. Drag
- * for all three modes runs in hooks/use-drag-session, and the day and
- * month shifts in hooks/use-planner-gestures.
+ * lays out the panes. Day, week and month share one drag surface:
+ * rows, pills and hour tasks drop onto hour rows, week columns and
+ * month cells, and `patchForDrop` turns the target into a write.
  */
 export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   // The mode and the day live in the URL: a link, a tap on another
@@ -82,43 +86,29 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
     saveSetting("taskForm", form);
   }, []);
 
-  // A row body press opens the task editor. The guard against a
-  // drop's leftover click lives in the gesture hook.
   const openTask = React.useCallback((task: TaskItem) => {
     router.push(`/task/${encodeURIComponent(task.id)}`);
   }, []);
 
   const { source, cycle, choose, anchor, openMenu, closeMenu } =
     usePlannerSource();
+  const { shiftDay, shiftMonth } = usePlannerGestures({ day, setDay });
 
-  // The pointer machinery: drags, drops, click guards and the swipes.
-  const {
-    attachRoot,
-    pointerHandlers,
-    lifted,
-    api,
-    toggle,
-    open,
-    startDrag,
-    select,
-    shiftDay,
-    shiftMonth,
-    consumeClick,
-    dropTargets,
-    dragging,
-    ghost,
-  } = usePlannerGestures({
-    day,
-    setDay,
-    toggle: toggleTask,
-    open: openTask,
-    writeFields: patchTask,
-    pointerPickup,
-  });
+  // The day split is screen state: written once per release, shared by
+  // the live page and the swipe preview. It is not stored on disk.
+  const [split, setSplit] = React.useState(DAY_SPLIT);
 
   // The month's picked day lives here, not in the pane, so it survives
   // a visit to Day or Week and back.
   const month = usePlannerMonth({ tasks, source, day });
+
+  // One drop handler for every mode.
+  const drop = React.useCallback(
+    (task: TaskItem, target: PlanTarget) => {
+      void patchTask(task, patchForDrop(task, target, day));
+    },
+    [patchTask, day],
+  );
 
   // What every task list in the planner shares, whatever the mode.
   const list = React.useMemo<PlannerListValue>(
@@ -130,96 +120,84 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
       openSourceMenu: openMenu,
       taskForm,
       changeForm,
-      lifted,
-      api,
-      toggle,
-      open,
-      dragStart: startDrag,
+      toggle: toggleTask,
+      open: openTask,
     }),
-    [today, source, cycle, anchor, openMenu, taskForm, changeForm, lifted, api, toggle, open, startDrag],
+    [today, source, cycle, anchor, openMenu, taskForm, changeForm, toggleTask, openTask],
   );
 
   return (
     <View
-      ref={attachRoot}
       // The strip hangs from the top edge of the safe area. Where the
       // device has no inset, as in the web preview, it keeps a step
       // clear of the screen's edge.
       style={[layout.screen, { paddingTop: Math.max(insets.top, spacing.s) }]}
-      {...pointerHandlers}
     >
-      <PlannerListProvider value={list}>
-        {status === "ready" && mode === "day" ? (
-          <DaySpread
-            date={day}
-            today={today}
-            tasks={tasks}
-            onMode={setMode}
-            onSelectStrip={setDay}
-            onShiftDay={shiftDay}
-            drop={dropTargets}
-          />
-        ) : (
-          // Week and month: a fixed frame. The header strip and the
-          // calendar sit still; only the bottom task section scrolls,
-          // inside its own pane, like the day split.
-          <View style={layout.frame}>
-            <PlannerHeader
-              mode={mode}
-              selected={day}
+      <PlanDrag.Root onDrop={drop} renderGhost={(task) => <GhostPill task={task} />}>
+        <PlannerListProvider value={list}>
+          {status === "ready" && mode === "day" ? (
+            <DaySpread
+              date={day}
               today={today}
-              onSelect={setDay}
+              tasks={tasks}
+              fraction={split}
+              onResize={setSplit}
               onMode={setMode}
-              inset
+              onSelectStrip={setDay}
+              onShiftDay={shiftDay}
             />
-            {status === "loading" ? (
-              <View style={layout.gutter}>
-                <LoadingState label="Loading tasks" />
-              </View>
-            ) : null}
-            {status === "error" ? (
-              <View style={layout.gutter}>
-                <ErrorState
-                  message="Something went wrong."
-                  retryLabel="Retry loading tasks"
-                  onRetry={() => void refresh()}
+          ) : (
+            // Week and month: a fixed frame. The header strip and the
+            // calendar sit still; only the bottom task section scrolls,
+            // inside its own pane, like the day split.
+            <View style={layout.frame}>
+              <PlannerHeader
+                mode={mode}
+                selected={day}
+                today={today}
+                onSelect={setDay}
+                onMode={setMode}
+                inset
+              />
+              {status === "loading" ? (
+                <View style={layout.gutter}>
+                  <LoadingState label="Loading tasks" />
+                </View>
+              ) : null}
+              {status === "error" ? (
+                <View style={layout.gutter}>
+                  <ErrorState
+                    message="Something went wrong."
+                    retryLabel="Retry loading tasks"
+                    onRetry={() => void refresh()}
+                  />
+                </View>
+              ) : null}
+              {status === "ready" && mode === "week" ? (
+                <WeekPane
+                  tasks={tasks}
+                  openTasks={openTasks}
+                  day={day}
+                  today={today}
+                  onSelect={setDay}
+                  onOpenDay={openDay}
                 />
-              </View>
-            ) : null}
-            {status === "ready" && mode === "week" ? (
-              <WeekPane
-                tasks={tasks}
-                openTasks={openTasks}
-                day={day}
-                today={today}
-                onSelect={select}
-                onOpenDay={openDay}
-                drop={dropTargets}
-              />
-            ) : null}
-            {status === "ready" && mode === "month" ? (
-              <MonthPane
-                month={month}
-                tasks={tasks}
-                day={day}
-                today={today}
-                onShiftMonth={shiftMonth}
-                onOpenDay={openDay}
-                consumeClick={consumeClick}
-                drop={dropTargets}
-              />
-            ) : null}
-          </View>
-        )}
-      </PlannerListProvider>
+              ) : null}
+              {status === "ready" && mode === "month" ? (
+                <MonthPane
+                  month={month}
+                  tasks={tasks}
+                  day={day}
+                  today={today}
+                  onShiftMonth={shiftMonth}
+                  onOpenDay={openDay}
+                />
+              ) : null}
+            </View>
+          )}
+        </PlannerListProvider>
+      </PlanDrag.Root>
 
-      {/* The drag ghost and the source chooser draw through the overlay
-          host, so both sit above the bottom bar. */}
-      <DragGhost
-        task={dragging}
-        x={ghost.x}
-        y={ghost.y}
-      />
       <SourceMenu
         anchor={anchor}
         source={source}

@@ -1,7 +1,6 @@
 import * as React from "react";
 import { StyleSheet, View } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { swipeProps } from "@/lib/swipe";
 import { useSwipePager } from "@/components/swipe-pager";
 import { pageGutter, spacing } from "@/theme/tokens";
@@ -17,8 +16,6 @@ export function MonthView({
   picked,
   onPick,
   onShiftMonth,
-  dropZones,
-  hoveredDay,
   children,
 }: {
   viewMonth: Date;
@@ -29,9 +26,6 @@ export function MonthView({
   onPick: (day: Date) => void;
   /** Swipe left/right on the fixed calendar shifts a whole month. */
   onShiftMonth: (delta: 1 | -1) => void;
-  /** Cells register here for move-based hit testing. */
-  dropZones: DropZoneMap;
-  hoveredDay: Date | null;
   /** The picked-day list pane; both halves share one column. */
   children?: React.ReactNode;
 }) {
@@ -64,8 +58,6 @@ export function MonthView({
         picked={picked}
         interactive
         onPick={onPick}
-        dropZones={dropZones}
-        hoveredDay={hoveredDay}
       />
     ),
   });

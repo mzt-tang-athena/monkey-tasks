@@ -1,10 +1,9 @@
 import * as React from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import type { TaskItem } from "@/types/task";
+import { NoPanPressable as Pressable } from "@/components/ui/pressable";
 import { SectionHeader } from "@/components/ui/section-header";
 import { WEEKDAYS_FULL } from "@/features/planner/lib/labels";
-import { dayOfZone } from "@/features/planner/lib/dropzone";
-import { useDragHover, type DropTargets } from "@/features/planner/hooks/use-drag-session";
 import type { PlannerMonth } from "@/features/planner/hooks/use-planner-month";
 import { colors, fonts, radius, spacing } from "@/theme/tokens";
 import { layout } from "../planner-layout";
@@ -26,8 +25,6 @@ export function MonthPane({
   today,
   onShiftMonth,
   onOpenDay,
-  consumeClick,
-  drop,
 }: {
   /** The month state, held by the screen. */
   month: PlannerMonth;
@@ -36,23 +33,16 @@ export function MonthPane({
   today: Date;
   onShiftMonth: (delta: 1 | -1) => void;
   onOpenDay: (day: Date) => void;
-  /** True once for the click a drop leaves behind: the cell it landed
-      on must not take the pick. */
-  consumeClick: () => boolean;
-  drop: DropTargets;
 }) {
   const { source } = usePlannerList();
   const { picked, setPicked, viewMonth, monthKey, pickedDay, monthRows, pickedTasks } =
     month;
-  const hoveredDay = dayOfZone(useDragHover(drop.hover));
 
   const pick = React.useCallback(
     (next: Date) => {
-      if (!consumeClick()) {
-        setPicked({ key: monthKey, day: next });
-      }
+      setPicked({ key: monthKey, day: next });
     },
-    [consumeClick, setPicked, monthKey],
+    [setPicked, monthKey],
   );
 
   const header = React.useMemo(
@@ -88,8 +78,6 @@ export function MonthPane({
       picked={picked}
       onPick={pick}
       onShiftMonth={onShiftMonth}
-      dropZones={drop.zones}
-      hoveredDay={hoveredDay}
     >
       {/* The pane under the card: the source's month list until a day
           is picked, then that day's tasks. */}

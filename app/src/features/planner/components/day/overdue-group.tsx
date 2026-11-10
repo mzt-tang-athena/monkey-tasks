@@ -3,8 +3,8 @@ import { StyleSheet, View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { TaskRow } from "@/components/task-row";
 import { SectionHeader } from "@/components/ui/section-header";
+import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { spacing } from "@/theme/tokens";
-import { Pickup } from "../drag";
 import { usePlannerList } from "../planner-list-context";
 import { RowSeparator } from "../row-separator";
 
@@ -18,10 +18,10 @@ export function OverdueGroup({
   copy = false,
 }: {
   tasks: TaskItem[];
-  /** A still copy for the swipe preview: no test ids. */
+  /** A still copy for the swipe preview: no test ids and no sources. */
   copy?: boolean;
 }) {
-  const { lifted, api, toggle, open, dragStart } = usePlannerList();
+  const { toggle, open } = usePlannerList();
   return (
     <View testID={copy ? undefined : "overdue-group"} style={styles.group}>
       <SectionHeader label="Overdue" count={tasks.length} tone="danger" />
@@ -29,14 +29,13 @@ export function OverdueGroup({
         {tasks.map((task, index) => (
           <React.Fragment key={task.id}>
             {index > 0 ? <RowSeparator /> : null}
-            <Pickup
-              task={task}
-              api={api}
-              lifted={lifted}
-              onPointerDown={(e) => dragStart(task, e)}
-            >
-              <TaskRow task={task} onToggle={toggle} onOpen={open} copy={copy} />
-            </Pickup>
+            {copy ? (
+              <TaskRow task={task} onToggle={toggle} onOpen={open} copy />
+            ) : (
+              <PlanDrag.Source payload={task} hold="row" testID={`task-source:${task.name}`}>
+                <TaskRow task={task} onToggle={toggle} onOpen={open} panPress />
+              </PlanDrag.Source>
+            )}
           </React.Fragment>
         ))}
       </View>

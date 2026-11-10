@@ -1,8 +1,10 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/features/planner/lib/dropzone";
-import { addDays, isoOf, isSameDay, startOfDay } from "@/utils/dates";
+import { NoPanPressable as Pressable } from "@/components/ui/pressable";
+import { MotionScrollView } from "@/components/motion/scroll-view";
+import { addDays, isoOf, startOfDay } from "@/utils/dates";
 import { sortDay } from "@/features/planner/lib/day-rows";
+import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import {
   hasTime,
   startOfWeek,
@@ -19,8 +21,6 @@ import {
   weekCanvasHeight,
   weekColWidth,
 } from "@/theme/tokens";
-import { Pickup } from "./drag";
-import { usePlannerList } from "./planner-list-context";
 
 /*
  * A column has a fixed height, so it shows the chips that fit and a
@@ -56,8 +56,6 @@ export function WeekView({
   selected,
   onSelect,
   onOpenDay,
-  hoveredDay,
-  dropZones,
 }: {
   tasks: TaskItem[];
   today: Date;
@@ -65,93 +63,89 @@ export function WeekView({
   onSelect: (date: Date) => void;
   /** The "+N more" line opens that day in the day view. */
   onOpenDay: (date: Date) => void;
-  hoveredDay: Date | null;
-  /** The columns register here; moves hit-test instead of relying
-      on enter/leave events, which touch never delivers. */
-  dropZones: DropZoneMap;
 }) {
-  const { lifted, api, dragStart } = usePlannerList();
   const todayStart = startOfDay(today).getTime();
   // The strip picks the week; its seven columns start on Sunday.
   const weekStart = startOfWeek(selected);
   const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(weekStart, offset));
   return (
-    <ScrollView
+    <MotionScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
       style={styles.scroller}
       contentContainerStyle={styles.canvas}
     >
-      {days.map((day) => {
-        const items = sortDay(tasksForDay(tasks, day));
-        const shown = weekChipCount(items.length);
-        const hidden = items.length - shown;
-        const isToday = startOfDay(day).getTime() === todayStart;
-        const isSelected =
-          startOfDay(day).getTime() === startOfDay(selected).getTime();
-        const isHovered = isSameDay(day, hoveredDay);
-        return (
-          <Pressable
-            key={day.getTime()}
-            style={({ pressed }) => [
-              styles.col,
-              isSelected && !isToday && styles.colSelected,
-              isToday && styles.colToday,
-              isHovered && styles.colHovered,
-              pressed && styles.pressed,
-            ]}
-            ref={(node) => {
-              dropZones.set(`day:${isoOf(day)}`, node);
-            }}
-            onPress={() => onSelect(day)}
-            accessibilityRole="button"
-            accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
-          >
-            <Text style={styles.dayName}>
-              {isToday ? "Today" : WEEKDAYS[day.getDay()]}
-            </Text>
-            <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>
-              {day.getDate()}
-            </Text>
-            <View style={styles.ruleSlot}>
-              <View style={styles.rule} />
-            </View>
-            {items.length > 0 ? (
-              <View style={styles.tasks}>
-                {items.slice(0, shown).map((task) => (
-                  <Pickup
-                    key={task.id}
-                    task={task}
-                    api={api}
-                    lifted={lifted}
-                    onPointerDown={(e) => dragStart(task, e)}
-                    style={styles.task}
-                  >
-                    <View style={styles.bar} />
-                    <Text style={styles.taskText} numberOfLines={chipLines}>
-                      {hasTime(task) ? `${timeOf(task)}  ` : ""}
-                      {task.name}
-                    </Text>
-                  </Pickup>
-                ))}
-                {hidden > 0 ? (
-                  <Pressable
-                    style={({ pressed }) => [styles.more, pressed && styles.pressed]}
-                    onPress={() => onOpenDay(day)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${hidden} more on ${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}, open the day`}
-                  >
-                    <Text style={styles.moreText}>{`+${hidden} more`}</Text>
-                  </Pressable>
-                ) : null}
+      <PlanDrag.Grid
+        columns={7}
+        rows={1}
+        cells={days.map((day) => ({ kind: "day", iso: isoOf(day) }))}
+        style={styles.columns}
+      >
+        {days.map((day) => {
+          const items = sortDay(tasksForDay(tasks, day));
+          const shown = weekChipCount(items.length);
+          const hidden = items.length - shown;
+          const isToday = startOfDay(day).getTime() === todayStart;
+          const isSelected =
+            startOfDay(day).getTime() === startOfDay(selected).getTime();
+          return (
+            <Pressable
+              key={day.getTime()}
+              style={({ pressed }) => [
+                styles.col,
+                isSelected && !isToday && styles.colSelected,
+                isToday && styles.colToday,
+                pressed && styles.pressed,
+              ]}
+              onPress={() => onSelect(day)}
+              accessibilityRole="button"
+              accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
+            >
+              <Text style={styles.dayName}>
+                {isToday ? "Today" : WEEKDAYS[day.getDay()]}
+              </Text>
+              <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>
+                {day.getDate()}
+              </Text>
+              <View style={styles.ruleSlot}>
+                <View style={styles.rule} />
               </View>
-            ) : (
-              <Text style={styles.free}>free</Text>
-            )}
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+              {items.length > 0 ? (
+                <View style={styles.tasks}>
+                  {items.slice(0, shown).map((task) => (
+                    <PlanDrag.Source
+                      key={task.id}
+                      payload={task}
+                      hold="row"
+                      testID={`week-task:${task.name}`}
+                      style={styles.task}
+                    >
+                      <View style={styles.bar} />
+                      <Text style={styles.taskText} numberOfLines={chipLines}>
+                        {hasTime(task) ? `${timeOf(task)}  ` : ""}
+                        {task.name}
+                      </Text>
+                    </PlanDrag.Source>
+                  ))}
+                  {hidden > 0 ? (
+                    <Pressable
+                      style={styles.more}
+                      onPress={() => onOpenDay(day)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${hidden} more on ${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}, open the day`}
+                    >
+                      <Text style={styles.moreText}>{`+${hidden} more`}</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : (
+                <Text style={styles.free}>free</Text>
+              )}
+            </Pressable>
+          );
+        })}
+      </PlanDrag.Grid>
+    </MotionScrollView>
   );
 }
 
@@ -166,12 +160,16 @@ const styles = StyleSheet.create({
     height: weekCanvasHeight,
   },
   canvas: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.s,
     paddingVertical: spacing.xs,
     paddingLeft: pageGutter,
     paddingRight: pageGutter,
+  },
+  // The seven columns are one grid, so a drop reads the cell under the
+  // finger from the grid's own rect.
+  columns: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.s,
   },
   pressed: {
     backgroundColor: colors.pressed,
@@ -192,11 +190,6 @@ const styles = StyleSheet.create({
   colToday: {
     backgroundColor: colors.accentSoft,
     borderColor: colors.accent,
-  },
-  // A drop target during a drag.
-  colHovered: {
-    borderColor: colors.accent,
-    borderWidth: 1.5,
   },
   dayName: {
     fontSize: 11,

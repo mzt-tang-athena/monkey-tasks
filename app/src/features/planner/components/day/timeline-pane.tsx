@@ -1,50 +1,46 @@
 import * as React from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 import type { TaskItem } from "@/types/task";
+import { MotionScrollView } from "@/components/motion/scroll-view";
 import { SectionHeader } from "@/components/ui/section-header";
-import { DropZoneMap, hourOfZone } from "@/features/planner/lib/dropzone";
-import { useDragHover, type DropTargets } from "@/features/planner/hooks/use-drag-session";
 import { layout } from "../../planner-layout";
 import { Timeline } from "../timeline";
 
 /**
- * The timeline pane: the section header over the ruler, in a pane the
- * grabber resizes. It listens to the hover, so a drag over a new hour
- * re-renders this pane and nothing else in the day. The swipe preview
- * passes no `drop`: it draws the same pane, with no zones and no ids.
+ * The timeline pane: the section header over the ruler, in the split's
+ * top pane. The ruler scrolls inside the pane and holds still while a
+ * drag is active. The swipe preview draws the same pane with `copy`, so
+ * it carries no targets and no test ids.
  */
 export const TimelinePane = React.memo(function TimelinePane({
   tasks,
   isToday,
   now,
-  height,
-  drop,
+  copy = false,
 }: {
   /** The day's tasks that carry a time. */
   tasks: TaskItem[];
   isToday: boolean;
   now: Date;
-  height: number;
-  drop?: DropTargets;
+  /** A still copy: no drop zones and no drag sources. */
+  copy?: boolean;
 }) {
-  const hoverHour = hourOfZone(useDragHover(drop?.hover ?? null));
-  // The preview never hit-tests its rows, but the map must hold steady
-  // across renders.
-  const [spare] = React.useState(() => new DropZoneMap());
   return (
-    <View ref={drop?.clip} style={[layout.pane, { height }]}>
+    <View style={layout.pane}>
       <SectionHeader label="Timeline" count={tasks.length} />
-      <ScrollView style={layout.paneScroll} showsVerticalScrollIndicator={false}>
+      <MotionScrollView
+        testID={copy ? undefined : "timeline-scroller"}
+        style={layout.paneScroll}
+        showsVerticalScrollIndicator={false}
+      >
         <Timeline
           tasks={tasks}
           isToday={isToday}
           now={now}
-          hoverHour={hoverHour}
-          zones={drop?.zones ?? spare}
-          testID={drop == null ? undefined : "timeline-hour"}
+          copy={copy}
+          testID={copy ? undefined : "timeline-hour"}
         />
-      </ScrollView>
+      </MotionScrollView>
     </View>
   );
 });
-
