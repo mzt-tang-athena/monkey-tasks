@@ -3,7 +3,7 @@ import { sections, tabs, undated } from "../data";
 import { swipe } from "../gestures";
 import { listTab, row, sectionHeader } from "../locators";
 
-/** The slide is 220 ms (`src/components/swipe-pager.tsx`). */
+/** The slide is 220 ms (`motion.ms.settle` in `src/lib/motion/tokens.ts`). */
 const slideBudgetMs = 500;
 
 test("a list swipe follows the motion setting", async ({ page, reducedMotion }) => {

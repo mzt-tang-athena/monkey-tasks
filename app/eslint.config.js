@@ -162,16 +162,6 @@ const motionSyntaxRules = [
 // deletes it. They keep the margin and file system rules.
 const motionAllowlist = [
   'src/lib/motion/legacy.ts',
-  // 0059
-  'src/components/swipe-pager.tsx',
-  'src/components/ui/tab-strip.tsx',
-  'src/features/lists/components/list-notices.tsx',
-  'src/features/planner/components/month-grid.tsx',
-  'src/features/planner/components/month-pane.tsx',
-  'src/features/planner/components/month-view.tsx',
-  'src/features/planner/components/period-strip.tsx',
-  'src/lib/swipe.test.ts',
-  'src/lib/swipe.ts',
   // 0059, then 0060
   'src/features/lists/lists-screen.tsx',
   // 0059: the day pager host. 0061 takes the split handlers and the

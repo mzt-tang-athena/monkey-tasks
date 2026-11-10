@@ -1,6 +1,6 @@
 import { expect, test } from "../fixtures";
 import { rename, sections, undated } from "../data";
-import { expectInSection, row, sectionHeader } from "../locators";
+import { expectInSection, press, row, sectionHeader } from "../locators";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 test("a tick marks the task done and moves it to Completed", async ({ page }) => {
   const target = row(page, undated.second);
 
-  await target.getByRole("button", { name: "mark done" }).click();
+  await press(page, target.getByRole("button", { name: "mark done" }));
 
   await expect(target.getByRole("button", { name: "mark not done" })).toHaveAttribute(
     "aria-checked",
@@ -21,10 +21,10 @@ test("a tick marks the task done and moves it to Completed", async ({ page }) =>
 
 test("an untick puts the task back under No date", async ({ page }) => {
   const target = row(page, undated.second);
-  await target.getByRole("button", { name: "mark done" }).click();
+  await press(page, target.getByRole("button", { name: "mark done" }));
   await expectInSection(target, sectionHeader(page, sections.completed));
 
-  await target.getByRole("button", { name: "mark not done" }).click();
+  await press(page, target.getByRole("button", { name: "mark not done" }));
 
   await expect(target.getByRole("button", { name: "mark done" })).toHaveAttribute(
     "aria-checked",
@@ -62,7 +62,7 @@ test("a single-line row has equal space above and below its name", async ({ page
 });
 
 test("the editor saves a new name", async ({ page }) => {
-  await row(page, rename.from).getByRole("button", { name: "open task" }).click();
+  await press(page, row(page, rename.from).getByRole("button", { name: "open task" }));
   const name = page.getByRole("textbox", { name: "Name", exact: true });
   await expect(name).toHaveValue(rename.from);
 

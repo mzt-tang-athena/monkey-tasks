@@ -4,8 +4,8 @@ import * as React from "react";
 export const pressGuardMs = 350;
 
 export type PressGuard = {
-  /** A gesture that is not a press has started: a swipe past its
-      slop, a drag that was picked up. */
+  /** A gesture that is not a press has started: a drag that was
+      picked up. */
   arm: () => void;
   /** The gesture ended. A click that follows it is still blocked. */
   release: () => void;
@@ -39,11 +39,11 @@ export function makePressGuard(now: () => number = Date.now): PressGuard {
 }
 
 /**
- * Stops the click that ends a swipe or a drag from also pressing the
- * row under the pointer. On the web the browser sends a click after
- * pointer up, even when the pointer travelled. A gesture arms the
- * guard when it starts and releases it when it ends. A row press
- * asks `blocked()` first.
+ * Stops the click that ends a drag from also pressing the row under
+ * the pointer. On the web the browser sends a click after pointer up,
+ * even when the pointer travelled. A drag arms the guard when it ends,
+ * and a row press asks `blocked()` first. Ticket 0060 moves the last
+ * user onto the reorder surface and deletes this hook.
  */
 export function usePressGuard(): PressGuard {
   const [guard] = React.useState(() => makePressGuard());

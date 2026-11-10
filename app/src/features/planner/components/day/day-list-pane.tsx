@@ -18,25 +18,22 @@ export const DayListPane = React.memo(function DayListPane({
   date,
   tasks,
   overdue,
-  copy = false,
 }: {
   date: Date;
   tasks: TaskItem[];
   overdue: TaskItem[];
-  copy?: boolean;
 }) {
   const { today, source, taskForm } = usePlannerList();
   const header = React.useMemo(
     () =>
       taskForm === "rows" && source === "due-period" && overdue.length > 0 ? (
-        <OverdueGroup tasks={overdue} copy={copy} />
+        <OverdueGroup tasks={overdue} />
       ) : undefined,
-    [taskForm, source, overdue, copy],
+    [taskForm, source, overdue],
   );
   return (
     <View style={layout.paneList}>
       <TaskListSection
-        copy={copy}
         style={layout.paneScroll}
         mode="day"
         day={date}

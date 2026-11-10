@@ -1,7 +1,5 @@
 import * as React from "react";
 import {
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -9,6 +7,12 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
+import {
+  MotionScrollView,
+  type MotionScrollRef,
+} from "@/components/motion/scroll-view";
+import { NoPanPressable } from "./pressable";
 import { colors, radius, spacing, touchTarget, type } from "@/theme/tokens";
 
 /** The fade's steps, from clear to solid, toward the strip's edge. A
@@ -58,7 +62,9 @@ export function TabStrip({
   /** Names the tab list for assistive tech. */
   label: string;
 }) {
-  const strip = React.useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const strip = React.useRef<MotionScrollRef | null>(null);
+  // Reanimated reads the system switch once, at load.
+  const reduced = useReducedMotion();
   // Where each tab starts, from its layout. A tab keeps its place for
   // the session, so one measure is enough.
   const offsets = React.useRef<Record<string, number>>({});
@@ -72,12 +78,15 @@ export function TabStrip({
       return;
     }
     // Past the start fade, so the fade never pales the selected name.
-    strip.current?.scrollTo({ x: Math.max(0, x - fadeWidth), animated: true });
-  }, [selected]);
+    strip.current?.scrollTo({
+      x: Math.max(0, x - fadeWidth),
+      animated: !reduced,
+    });
+  }, [selected, reduced]);
 
   return (
     <View style={styles.strip}>
-      <ScrollView
+      <MotionScrollView
         ref={strip}
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -100,7 +109,7 @@ export function TabStrip({
         {tabs.map((name) => {
           const active = name === selected;
           return (
-            <Pressable
+            <NoPanPressable
               key={name}
               style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
               onPress={() => onSelect(name)}
@@ -112,10 +121,10 @@ export function TabStrip({
             >
               <Text style={[styles.text, active && styles.textActive]}>{name}</Text>
               <View style={[styles.rule, active && styles.ruleActive]} />
-            </Pressable>
+            </NoPanPressable>
           );
         })}
-      </ScrollView>
+      </MotionScrollView>
       {fadeStart ? <Fade side="start" /> : null}
       {fadeEnd ? <Fade side="end" /> : null}
     </View>

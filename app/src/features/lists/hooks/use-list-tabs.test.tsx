@@ -13,34 +13,38 @@ describe("useListTabState", () => {
     state.tabs = ["Main", "Tasks", "Finance"];
   });
 
-  it("turns to the next tab on a swipe", () => {
+  it("turns to the next tab on a page landing", () => {
     const { result } = renderHook(() => useListTabState());
-    act(() => result.current.onPage("left"));
+    act(() => result.current.onPage(1));
     expect(result.current.tab).toBe("Tasks");
+    expect(result.current.index).toBe(1);
   });
 
-  it("steps from Main when the open list note vanishes, then swipes", () => {
+  it("steps from Main when the open list note vanishes, then pages", () => {
     const { result, rerender } = renderHook(() => useListTabState());
     act(() => result.current.setTab("Finance"));
     expect(result.current.tab).toBe("Finance");
+    expect(result.current.index).toBe(2);
 
     state.tabs = ["Main", "Tasks"];
     rerender();
     expect(result.current.tab).toBe("Main");
-    expect(result.current.canGo("left")).toBe(true);
+    expect(result.current.index).toBe(0);
 
-    // The swipe must move from Main to Tasks. The stale selection would
-    // leave the pager on a blank page.
-    act(() => result.current.onPage("left"));
+    // A landing must move from the derived tab. The stale selection
+    // would leave the pager on a blank page.
+    act(() => result.current.onPage(1));
     expect(result.current.tab).toBe("Tasks");
   });
 
-  it("stays put on a swipe toward an end", () => {
+  it("stays put on a landing at a closed end", () => {
     const { result, rerender } = renderHook(() => useListTabState());
     act(() => result.current.setTab("Finance"));
     state.tabs = ["Main", "Tasks"];
     rerender();
-    act(() => result.current.onPage("right"));
+    act(() => result.current.onPage(-1));
+    expect(result.current.tab).toBe("Main");
+    act(() => result.current.onPage(2));
     expect(result.current.tab).toBe("Main");
   });
 });

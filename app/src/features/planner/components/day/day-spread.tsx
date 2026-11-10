@@ -1,11 +1,10 @@
 import * as React from "react";
-import { Platform, View, type PointerEvent as RNPointerEvent } from "react-native";
+import { View } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { swipeProps } from "@/lib/swipe";
-import { useSwipePager } from "@/components/swipe-pager";
-import { addDays, isoOf } from "@/utils/dates";
+import { Pager } from "@/components/motion/pager";
+import { addDays, startOfDay } from "@/utils/dates";
 import { dayRows } from "@/features/planner/lib/day-rows";
-import type { Mode } from "@/features/planner/model";
+import { dayIndexBetween, type Mode } from "@/features/planner/model";
 import { PlannerHeader } from "../planner-header";
 import { usePlannerList } from "../planner-list-context";
 import { layout } from "../../planner-layout";
@@ -17,12 +16,11 @@ const bodyFrame = { flex: 1 } as const;
 
 /**
  * The day composition: the stationary header, and under it the pager
- * that slides the day page. A swipe on the background turns the day.
- * The split owns its own grabber and the drag surface owns the rows,
- * so neither needs a claim on the swipe.
+ * that slides the day body. A swipe on the body turns the day. The
+ * date strip and the mode switch stay still.
  *
- * The pager's cell and the preview both draw `DayPage`; the preview
- * draws the same split still.
+ * The pager's cell and the preview both read `dayRows` and one `now`,
+ * so a recurring task and the now line do not shift when a page lands.
  */
 export function DaySpread({
   date,
@@ -32,7 +30,7 @@ export function DaySpread({
   onResize,
   onMode,
   onSelectStrip,
-  onShiftDay,
+  onSelectDay,
 }: {
   date: Date;
   today: Date;
@@ -42,11 +40,28 @@ export function DaySpread({
   onResize: (fraction: number) => void;
   onMode: (mode: Mode) => void;
   onSelectStrip: (date: Date) => void;
-  /** Swipe left/right on the background shifts one day. */
-  onShiftDay: (delta: 1 | -1) => void;
+  /** A strip tap or a page landing picks the day. */
+  onSelectDay: (date: Date) => void;
 }) {
   const live = usePlannerList();
   const { source, taskForm } = live;
+
+  // The day index counts from the day this screen mounted. The pager
+  // reads it, and a landing writes the day back through the screen.
+  const [origin] = React.useState(() => startOfDay(date));
+  const index = dayIndexBetween(origin.getTime(), startOfDay(date).getTime());
+
+  // One clock for the live page and its preview: the now line must not
+  // move when the page lands. It steps once a minute.
+  const [now, setNow] = React.useState(
+    () => new Date(Math.floor(Date.now() / 60_000) * 60_000),
+  );
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date(Math.floor(Date.now() / 60_000) * 60_000));
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   // The day's rows. The live page and the preview read the same
   // function, so a recurrence shows in both.
@@ -55,56 +70,13 @@ export function DaySpread({
     [tasks, date, today, source, taskForm],
   );
 
-  // Days are unbounded, so every swipe has a neighbour day to reveal.
-  // Only the body pages: the header above it never moves, and the
-  // current page keeps its identity and its scroll for the gesture.
-  const { controller: swipe, page: paged } = useSwipePager({
-    pageKey: isoOf(date),
-    canGo: () => true,
-    onPage: (dir) => onShiftDay(dir === "left" ? 1 : -1),
-    renderNeighbor: (dir) => (
-      <DayPreview
-        date={addDays(date, dir === "left" ? 1 : -1)}
-        today={today}
-        tasks={tasks}
-        fraction={fraction}
-      />
-    ),
-    children: (
-      <DayPage
-        date={date}
-        today={today}
-        rows={rows}
-        fraction={fraction}
-        onResize={onResize}
-      />
-    ),
-  });
+  const onPage = React.useCallback(
+    (next: number) => onSelectDay(addDays(origin, next)),
+    [onSelectDay, origin],
+  );
 
   return (
-    <View
-      style={layout.dayRoot}
-      {...(Platform.OS === "web"
-        ? {
-            onPointerDown: (e: RNPointerEvent) => {
-              swipe.down(e.nativeEvent.pageX, e.nativeEvent.pageY);
-            },
-            onPointerMove: (e: RNPointerEvent) => {
-              swipe.move(e.nativeEvent.pageX, e.nativeEvent.pageY);
-            },
-            onPointerUp: () => {
-              swipe.up();
-            },
-            onPointerCancel: () => {
-              swipe.up();
-            },
-          }
-        : // Android gets no pointer events, so the same tripwire reads
-          // the responder system there. A responder on the parent of a
-          // scroller still sees the moves, which a gesture handler
-          // would not.
-          swipeProps(swipe))}
-    >
+    <View style={layout.dayRoot}>
       <PlannerHeader
         mode="day"
         selected={date}
@@ -114,8 +86,31 @@ export function DaySpread({
       />
       {/* The pager sits under the header: only the day body slides,
           so the date strip and the mode switch never move. */}
-      <View testID="day-pager" style={bodyFrame}>
-        {paged}
+      <View style={bodyFrame}>
+        <Pager
+          testID="day-pager"
+          index={index}
+          onPage={onPage}
+          renderPreview={(page) => (
+            <DayPreview
+              date={addDays(origin, page)}
+              today={today}
+              tasks={tasks}
+              now={now}
+              fraction={fraction}
+            />
+          )}
+          fill
+        >
+          <DayPage
+            date={date}
+            today={today}
+            rows={rows}
+            now={now}
+            fraction={fraction}
+            onResize={onResize}
+          />
+        </Pager>
       </View>
     </View>
   );

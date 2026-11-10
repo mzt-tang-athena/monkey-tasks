@@ -36,6 +36,7 @@ export function Pager({
   onPage,
   renderPreview,
   fill = false,
+  enabled = true,
   testID,
   children,
 }: {
@@ -44,6 +45,8 @@ export function Pager({
   onPage: (next: number) => void;
   renderPreview: (page: number) => React.ReactNode;
   fill?: boolean;
+  /** False while a legacy drag owns the gesture, until 0060. */
+  enabled?: boolean;
   testID?: string;
   children: React.ReactNode;
 }) {
@@ -104,6 +107,7 @@ export function Pager({
 
   const gesture = usePanGesture(
     withTouchAction("pan-y", {
+      enabled,
       activeOffsetX: slop,
       failOffsetY: slop,
       onBegin: () => {
@@ -178,9 +182,13 @@ export function Pager({
   return (
     <GestureDetector gesture={gesture}>
       <View testID={testID} style={[styles.host, fill && styles.fill]} onLayout={onLayout}>
-        <Animated.View style={[fill && styles.fill, track]}>
+        <Animated.View testID="pager-track" style={[fill && styles.fill, track]}>
           {previews.map((rel) => (
-            <View key={`preview:${rel}`} style={[styles.preview, { left: `${rel * 100}%` }]}>
+            <View
+              key={`preview:${rel}`}
+              testID={`preview:${origin + rel}`}
+              style={[styles.preview, { left: `${rel * 100}%` }]}
+            >
               {renderPreview(origin + rel)}
             </View>
           ))}

@@ -39,9 +39,9 @@ export function usePlannerList(): PlannerListValue {
 const noop = () => undefined;
 
 /**
- * The same list, held still: no drag source, no action. The swipe
- * preview mounts this around a copy of a day, so the copy shows what
- * the live page will show and answers nothing.
+ * The same list, held still: no lift, no drag source, no action. The
+ * swipe preview mounts this around its still day, so the preview
+ * shows what the live page will show and answers nothing.
  */
 export function useInertList(): PlannerListValue {
   const live = usePlannerList();

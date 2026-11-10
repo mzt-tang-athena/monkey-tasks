@@ -7,7 +7,7 @@ import {
   supplementsTick,
   undated,
 } from "../data";
-import { expectInSection, row, sectionHeader } from "../locators";
+import { expectInSection, press, row, sectionHeader } from "../locators";
 import {
   failNextWrite,
   notePaths,
@@ -49,7 +49,7 @@ test("a tick on a repeating task makes its next occurrence a note", async ({
   await page.goto("/");
   await expect(row(page, supplements)).toHaveCount(1);
 
-  await row(page, supplements).getByRole("button", { name: "mark done" }).click();
+  await press(page, row(page, supplements).getByRole("button", { name: "mark done" }));
 
   // The next occurrence is its own note, linked to this one (ADR 0027).
   await expect.poll(() => noteText(page, supplementsTick.next)).toContain(
@@ -81,7 +81,7 @@ test("a Retry on a tick that landed since makes no second next occurrence", asyn
   const retry = page.getByRole("button", { name: "retry tick" });
 
   await failNextWrite(page, `${supplements}.md`);
-  await target.getByRole("button", { name: "mark done" }).click();
+  await press(page, target.getByRole("button", { name: "mark done" }));
   await expect(retry).toBeVisible();
   await expect(target.getByRole("button", { name: "mark done" })).toHaveAttribute(
     "aria-checked",
@@ -89,7 +89,7 @@ test("a Retry on a tick that landed since makes no second next occurrence", asyn
   );
 
   // A second tap lands. The failure stays on the banner.
-  await target.getByRole("button", { name: "mark done" }).click();
+  await press(page, target.getByRole("button", { name: "mark done" }));
   await expect.poll(() => noteText(page, supplementsTick.next)).not.toBeNull();
   await expect(retry).toBeVisible();
 
@@ -97,7 +97,7 @@ test("a Retry on a tick that landed since makes no second next occurrence", asyn
   await expect(retry).toHaveCount(0);
   // Writes run one at a time in call order, so once a later tick lands,
   // the retry has run too.
-  await row(page, undated.second).getByRole("button", { name: "mark done" }).click();
+  await press(page, row(page, undated.second).getByRole("button", { name: "mark done" }));
   await expect.poll(() => noteText(page, `Tasks/${undated.second}.md`)).toContain(
     "completed:",
   );
@@ -178,9 +178,10 @@ test("three ticks of a month-end task land on the last day of each month", async
   await returnToTab(page);
 
   for (const due of ["2026-02-28", "2026-03-31", "2026-04-30"]) {
-    await row(page, "Pay rent")
-      .getByRole("button", { name: "mark done" })
-      .click();
+    await press(
+      page,
+      row(page, "Pay rent").getByRole("button", { name: "mark done" }),
+    );
     await expect
       .poll(() => noteText(page, `Tasks/Pay rent ${due}.md`))
       .not.toBeNull();

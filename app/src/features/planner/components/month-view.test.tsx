@@ -36,7 +36,7 @@ function mount(tasks: TaskItem[]) {
         tasks={tasks}
         picked={null}
         onPick={() => undefined}
-        onShiftMonth={() => undefined}
+        onSelectMonth={() => undefined}
       />
     </PlanDrag.Root>,
   );

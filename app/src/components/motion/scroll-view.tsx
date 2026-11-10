@@ -5,6 +5,15 @@ import { useAnimatedRef } from "react-native-reanimated";
 import { ClipContext, DraggingContext, SessionContext } from "./internal/contexts";
 import { useRegistry } from "./internal/session";
 
+/** What a caller needs from the scroller: the imperative scroll calls. */
+export type MotionScrollRef = {
+  scrollTo: (options: { x?: number; y?: number; animated?: boolean }) => void;
+};
+
+type MotionScrollProps = Omit<ScrollViewProps, "ref"> & {
+  ref?: React.Ref<MotionScrollRef>;
+};
+
 function prevent(event: TouchEvent) {
   event.preventDefault();
 }
@@ -16,7 +25,7 @@ function prevent(event: TouchEvent) {
  * web a `touchmove` listener holds it, because `overflow: hidden`
  * makes the browser cancel the drag (ADR 0046).
  */
-export function MotionScrollView(props: ScrollViewProps) {
+export function MotionScrollView({ ref: outer, ...props }: MotionScrollProps) {
   const session = React.useContext(SessionContext);
   const dragging = React.useContext(DraggingContext);
   const [id] = React.useState(() => session?.nextId() ?? -1);
@@ -33,14 +42,14 @@ export function MotionScrollView(props: ScrollViewProps) {
 
   // A list clones its scroll component with a ref of its own. Both
   // refs get the node.
-  const outer = (props as { ref?: React.Ref<unknown> }).ref;
   const both = React.useCallback(
     (node: unknown) => {
       (ref as unknown as (node: unknown) => void)(node);
       if (typeof outer === "function") {
-        outer(node);
+        outer(node as MotionScrollRef);
       } else if (outer != null) {
-        (outer as React.RefObject<unknown>).current = node;
+        (outer as React.RefObject<MotionScrollRef | null>).current =
+          node as MotionScrollRef;
       }
     },
     [ref, outer],

@@ -1,18 +1,22 @@
 import * as React from "react";
 import type { CaptureTarget } from "@/types/task";
 import { useListTabs, type ListTab } from "@/stores/tasks/selectors";
-import type { PagerSide } from "@/components/swipe-pager";
 
 /**
  * The Lists screen's tab state: Main first, then one tab per list
- * note. It also gives the capture dock its targets and the pager its
- * two questions, "is there a page that way?" and "turn to it".
+ * note. The pager reads the tab's position as its index, and a landing
+ * writes the tab back. The capture dock reads the targets.
  */
 export function useListTabState() {
   const tabs = useListTabs();
   const [selected, setSelected] = React.useState<ListTab>("Main");
   // A list note can vanish while its tab is open. Main takes over.
   const tab = tabs.includes(selected) ? selected : "Main";
+  const index = Math.max(0, tabs.indexOf(tab));
+  const bounds = React.useMemo(
+    () => ({ first: 0, last: Math.max(0, tabs.length - 1) }),
+    [tabs.length],
+  );
 
   // The capture targets follow the tab order: Main, then one list
   // target per list note. Main stores nothing; a list target writes
@@ -30,46 +34,22 @@ export function useListTabState() {
   // The pill preselects the active tab's target. Main is the fallback
   // when the tab has no target of its own.
   const defaultTargetIndex = React.useMemo(() => {
-    const index = targets.findIndex((target) =>
+    const found = targets.findIndex((target) =>
       tab === "Main"
         ? target.kind === "main"
         : target.kind === "list" && target.name === tab,
     );
-    return index === -1 ? 1 : index;
+    return found === -1 ? 1 : found;
   }, [targets, tab]);
 
-  const canGo = React.useCallback(
-    (dir: PagerSide) => {
-      const index = tabs.indexOf(tab);
-      if (index === -1) {
-        return false;
-      }
-      return dir === "left" ? index + 1 < tabs.length : index > 0;
-    },
-    [tabs, tab],
-  );
-
   const onPage = React.useCallback(
-    (dir: PagerSide) => {
-      // Step from the derived tab, as canGo does. The raw selection can
-      // name a vanished list.
-      const next = tabs[tabs.indexOf(tab) + (dir === "left" ? 1 : -1)];
-      if (next != null) {
-        setSelected(next);
+    (next: number) => {
+      const name = tabs[next];
+      if (name != null) {
+        setSelected(name);
       }
     },
-    [tabs, tab],
-  );
-
-  /** The tab the finger travels toward, or null at either end. */
-  const neighbor = React.useCallback(
-    (dir: PagerSide): ListTab | null => {
-      const index = tabs.indexOf(tab);
-      return index === -1
-        ? null
-        : (tabs[dir === "left" ? index + 1 : index - 1] ?? null);
-    },
-    [tabs, tab],
+    [tabs],
   );
 
   return {
@@ -78,8 +58,8 @@ export function useListTabState() {
     setTab: setSelected,
     targets,
     defaultTargetIndex,
-    canGo,
+    index,
+    bounds,
     onPage,
-    neighbor,
   };
 }
