@@ -4,7 +4,7 @@ title: Reorder, tick hold and capture entrance run on the UI thread
 created: 2026-10-26
 priority: high
 assignee: omp
-pr:
+pr: 103
 depends: [0058, 0059]
 ---
 
@@ -239,7 +239,7 @@ start on native.
 
 ## Outcome
 
-Built on 2026-11-10 on `feat/0060-reorder-ui-thread`.
+Built on 2026-11-10 on `feat/0060-reorder-ui-thread`, PR #103.
 
 `src/components/motion/reorder.tsx` holds `createReorderSurface<P>()`
 with `Root`, `Item`, `Grip` and `useDragging`. `Root` owns the session,
