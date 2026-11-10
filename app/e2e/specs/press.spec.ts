@@ -6,7 +6,7 @@ import { row } from "../locators";
 import { notePaths, noteText } from "../vault";
 
 /**
- * Ticket 0077: a press runs even when its row mounts or re-renders under
+ * Ticket 0078: a press runs even when its row mounts or re-renders under
  * the finger, and a pan that starts on the row still cancels it.
  */
 

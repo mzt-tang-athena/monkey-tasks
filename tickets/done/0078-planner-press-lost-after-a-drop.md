@@ -1,5 +1,5 @@
 ---
-id: 0077
+id: 0078
 title: A planner row press is lost after a drop on the web
 created: 2026-11-10
 priority: high
