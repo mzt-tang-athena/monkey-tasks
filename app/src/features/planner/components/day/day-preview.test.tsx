@@ -30,7 +30,7 @@ function preview(tasks: TaskItem[]) {
         date={new Date(2026, 9, 27)}
         today={testToday}
         tasks={tasks}
-        timelineHeight={320}
+        fraction={0.51}
       />
     </TestPlannerList>,
   );

@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/features/planner/lib/dropzone";
+import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { MonthView } from "./month-view";
 
 function task(name: string, data: TaskFrontmatter): TaskItem {
@@ -29,16 +29,16 @@ function dottedCells(): string[] {
 
 function mount(tasks: TaskItem[]) {
   render(
-    <MonthView
-      viewMonth={new Date(2026, 9, 1)}
-      today={new Date(2026, 9, 1)}
-      tasks={tasks}
-      picked={null}
-      onPick={() => undefined}
-      onShiftMonth={() => undefined}
-      dropZones={new DropZoneMap()}
-      hoveredDay={null}
-    />,
+    <PlanDrag.Root onDrop={() => undefined} renderGhost={() => null}>
+      <MonthView
+        viewMonth={new Date(2026, 9, 1)}
+        today={new Date(2026, 9, 1)}
+        tasks={tasks}
+        picked={null}
+        onPick={() => undefined}
+        onShiftMonth={() => undefined}
+      />
+    </PlanDrag.Root>,
   );
 }
 

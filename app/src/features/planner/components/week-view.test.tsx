@@ -2,7 +2,7 @@ import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/features/planner/lib/dropzone";
+import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { TestPlannerList } from "@/features/planner/testing/test-planner-list";
 import { WeekView, weekChipCount } from "./week-view";
 
@@ -27,17 +27,17 @@ function mount(
   handlers: { onSelect?: (day: Date) => void; onOpenDay?: (day: Date) => void } = {},
 ) {
   render(
-    <TestPlannerList>
-      <WeekView
-        tasks={tasks}
-        today={monday}
-        selected={monday}
-        onSelect={handlers.onSelect ?? (() => undefined)}
-        onOpenDay={handlers.onOpenDay ?? (() => undefined)}
-        hoveredDay={null}
-        dropZones={new DropZoneMap()}
-      />
-    </TestPlannerList>,
+    <PlanDrag.Root onDrop={() => undefined} renderGhost={() => null}>
+      <TestPlannerList>
+        <WeekView
+          tasks={tasks}
+          today={monday}
+          selected={monday}
+          onSelect={handlers.onSelect ?? (() => undefined)}
+          onOpenDay={handlers.onOpenDay ?? (() => undefined)}
+        />
+      </TestPlannerList>
+    </PlanDrag.Root>,
   );
 }
 

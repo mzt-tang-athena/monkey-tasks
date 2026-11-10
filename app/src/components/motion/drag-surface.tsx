@@ -215,7 +215,7 @@ function Ghost({ session, children }: { session: Session; children: React.ReactN
     ],
   }));
   return (
-    <Animated.View pointerEvents="none" style={[styles.ghost, place]}>
+    <Animated.View testID="drag-ghost" pointerEvents="none" style={[styles.ghost, place]}>
       {children}
     </Animated.View>
   );

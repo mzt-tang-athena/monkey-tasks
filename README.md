@@ -220,7 +220,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
 | `features/<name>` | The UI of one feature: `capture`, `diagnostics`, `lists`, `planner`, `task-editor`. |
 | `components` | Shared UI. `components/ui` holds the primitives. |
-| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Landing` and `MotionScrollView`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
+| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing` and `MotionScrollView`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
 | `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
@@ -268,12 +268,12 @@ holds the type scale, the layer order and the shadows (ADR 0040).
 |---|---|
 | `planner-screen.tsx` | Route and store reads, the list context, the overlays, the layout. |
 | `planner-layout.ts` | The shared frame and pane styles. Every other style sits next to its component. |
-| `components/planner-list-context.tsx` | What every task list shares: the source, the form, the lift and the row actions. |
-| `components/day/` | The day. It holds the spread, the page, the timeline and list panes, and the split handle. It also holds the overdue group and the swipe preview. |
+| `components/planner-list-context.tsx` | What every task list shares: the source, the form and the row actions. |
+| `components/day/` | The day. It holds the spread, the page, the timeline and list panes, and the day split. It also holds the overdue group and the swipe preview. |
 | `components/week-pane.tsx`, `month-pane.tsx` | The week and month bodies. |
-| `hooks/use-drag-session.ts` | Drag for all three modes: hold, lift, ghost, touch gate, click guard and drop (ADR 0025). |
-| `hooks/use-planner-gestures.ts` | What each drop zone means, the guarded presses, and the day and month shifts. |
-| `hooks/use-split-pane.ts`, `use-planner-source.ts` | The day's split sizes, and the source and its chooser. |
+| `lib/plan-drag.ts` | The planner's one drag surface: the targets, the ghost payload and the pure drop patch. |
+| `hooks/use-planner-gestures.ts` | The day and month shifts, until 0059 moves the pagers. |
+| `hooks/use-planner-source.ts` | The source and its chooser. |
 | `lib/day-rows.ts` | The rows of a day, as pure functions. The live day, the swipe preview and the month's picked day read them. |
 
 `hooks/use-today` gives one start-of-day date that moves on at midnight

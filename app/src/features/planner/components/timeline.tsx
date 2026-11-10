@@ -1,34 +1,36 @@
 import * as React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Pressable } from "react-native-gesture-handler";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/features/planner/lib/dropzone";
 import { formatTime, parseStoredDate } from "@/utils/dates";
 import { hourOf, isDone, minuteOf } from "@/features/planner/model";
+import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { labelHour } from "@/features/planner/lib/labels";
 import { colors, fonts, radii, radius, spacing } from "@/theme/tokens";
-import { Pickup } from "./drag";
 import { usePlannerList } from "./planner-list-context";
 
 /** First and last hour shown by the ruler. */
 const RULER_START = 7;
 const RULER_END = 22;
 
-/** The hour ruler: hour marks down the left, tasks pinned between. */
+/**
+ * The hour ruler: hour marks down the left, tasks pinned between. Each
+ * hour row is a drop target, and each task is a drag source. A still
+ * copy (the swipe preview) draws the same rows with no targets and no
+ * sources.
+ */
 export function Timeline({
   tasks,
   isToday,
   now,
-  hoverHour,
-  zones,
+  copy = false,
   testID,
 }: {
   tasks: TaskItem[];
   isToday: boolean;
   now: Date;
-  /** The hour a drag hovers over, if any. */
-  hoverHour: number | null;
-  /** Rows register under their hour; moves hit-test these rects. */
-  zones: DropZoneMap;
+  /** A still copy: no drop zones and no drag sources. */
+  copy?: boolean;
   /** Each hour row's test id is this prefix and its hour, for example
       `timeline-hour:10`. The live day sets it; the swipe preview does
       not, so the id stays unique. */
@@ -62,43 +64,45 @@ export function Timeline({
             children.push(<NowLine key="now" />);
             placedNow = true;
           }
-          children.push(<HourTask key={task.id} task={task} />);
+          children.push(<HourTask key={task.id} task={task} copy={copy} />);
         }
         if (isToday && hour === now.getHours() && !placedNow) {
           children.push(<NowLine key="now" />);
         }
+        const row = <>{children}</>;
+        const rowTestID = testID == null ? undefined : `${testID}:${hour}`;
+        if (copy) {
+          return (
+            <View key={hour} style={styles.row}>
+              <Text style={styles.mark}>{labelHour(hour)}</Text>
+              <View style={styles.slot}>{row}</View>
+            </View>
+          );
+        }
         return (
-          <View
+          <PlanDrag.Zone
             key={hour}
-            testID={testID == null ? undefined : `${testID}:${hour}`}
-            ref={(node) => {
-              zones.set(`hour:${hour}`, node);
-            }}
-            style={[styles.row, hoverHour === hour && styles.rowHover]}
+            target={{ kind: "hour", hour }}
+            testID={rowTestID}
+            style={styles.row}
           >
             <Text style={styles.mark}>{labelHour(hour)}</Text>
-            <View style={styles.slot}>{children}</View>
-          </View>
+            <View style={styles.slot}>{row}</View>
+          </PlanDrag.Zone>
         );
       })}
     </View>
   );
 }
 
-function HourTask({ task }: { task: TaskItem }) {
-  const { lifted, api, toggle, dragStart } = usePlannerList();
+function HourTask({ task, copy }: { task: TaskItem; copy: boolean }) {
+  const { toggle } = usePlannerList();
   const done = isDone(task);
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
   // The chip body is selection only (no-op for now); its circle is
   // the done toggle. Done tasks stay in their slot, struck.
-  return (
-    <Pickup
-      task={task}
-      api={api}
-      lifted={lifted}
-      onPointerDown={(e) => dragStart(task, e)}
-      style={styles.task}
-    >
+  const face = (
+    <>
       <View style={[styles.bar, done && styles.barDone]} />
       <Pressable
         style={[styles.tick, done && styles.tickDone]}
@@ -118,7 +122,20 @@ function HourTask({ task }: { task: TaskItem }) {
           </Text>
         ) : null}
       </View>
-    </Pickup>
+    </>
+  );
+  if (copy) {
+    return <View style={styles.task}>{face}</View>;
+  }
+  return (
+    <PlanDrag.Source
+      payload={task}
+      hold="row"
+      testID={`hour-task:${task.name}`}
+      style={styles.task}
+    >
+      {face}
+    </PlanDrag.Source>
   );
 }
 
@@ -138,9 +155,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.hairline,
-  },
-  rowHover: {
-    backgroundColor: colors.accentSoft,
   },
   mark: {
     width: 56,

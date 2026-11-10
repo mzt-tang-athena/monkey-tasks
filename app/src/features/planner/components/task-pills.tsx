@@ -1,41 +1,43 @@
+import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { Landing } from "@/components/motion/landing";
 import type { TaskItem } from "@/types/task";
 import { pillDateLabel } from "@/features/planner/lib/labels";
+import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { colors, fonts, radii, spacing } from "@/theme/tokens";
-import { Pickup } from "./drag";
-import { usePlannerList } from "./planner-list-context";
 
 /** Round-1 tray pills, back as draggable chips: drag-first, no tick. */
-export function TaskPills({ tasks }: { tasks: TaskItem[] }) {
-  const { lifted, api, dragStart } = usePlannerList();
+export function TaskPills({ tasks, copy = false }: { tasks: TaskItem[]; copy?: boolean }) {
   if (tasks.length === 0) {
     return null;
   }
   return (
     <View style={styles.wrap}>
-      {tasks.map((task) => (
-        <Pickup
-          key={task.id}
-          task={task}
-          kind="pill"
-          api={api}
-          lifted={lifted}
-          onPointerDown={(e) => dragStart(task, e, "pill")}
-          style={styles.chip}
-        >
-          <View style={styles.grip}>
-            <View style={styles.gripDot} />
-            <View style={styles.gripDot} />
-          </View>
-          {/* A placed pill carries its date; dragging moves it. */}
-          {task.data?.due != null ? (
-            <Text style={styles.date}>{pillDateLabel(task)}</Text>
-          ) : null}
-          <Text style={styles.text} numberOfLines={1}>
-            {task.name}
-          </Text>
-        </Pickup>
-      ))}
+      {tasks.map((task) => {
+        const face = (
+          <>
+            <View style={styles.grip}>
+              <View style={styles.gripDot} />
+              <View style={styles.gripDot} />
+            </View>
+            {/* A placed pill carries its date; dragging moves it. */}
+            {task.data?.due != null ? (
+              <Text style={styles.date}>{pillDateLabel(task)}</Text>
+            ) : null}
+            <Text style={styles.text} numberOfLines={1}>
+              {task.name}
+            </Text>
+          </>
+        );
+        const chip = <View style={styles.chip}>{face}</View>;
+        return copy ? (
+          <React.Fragment key={task.id}>{chip}</React.Fragment>
+        ) : (
+          <PlanDrag.Source key={task.id} payload={task} hold="pill" testID={`pill:${task.name}`}>
+            <Landing id={task.id}>{chip}</Landing>
+          </PlanDrag.Source>
+        );
+      })}
     </View>
   );
 }

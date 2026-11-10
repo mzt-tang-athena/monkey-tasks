@@ -3,8 +3,8 @@ id: 0061
 title: Drag to schedule and the split grabber run on the UI thread
 created: 2026-10-26
 priority: high
-assignee:
-pr:
+assignee: omp
+pr: 99
 depends: [0058]
 ---
 
@@ -252,4 +252,53 @@ cover V11 and J3 too.
       still follow the finger.
 
 ## Outcome
-(filled in before moving to done/)
+
+Built on 2026-11-10 on `feat/0061-plan-drag`.
+
+- `src/components/motion/split.tsx` holds `Split` and `SplitStill` with
+  the 0058 signature. At rest each pane is a `flexGrow` from the
+  fraction, so the first frame needs no layout report. The grabber
+  measures its box at pickup, clamps to `minTop` and `minBottom`, and
+  calls `onResize` once at the release. The day screen owns the
+  fraction; the default is 0.51. That is 319 px on the suite's 412 by
+  915 viewport, and 178 px on a 360 by 640 screen where the bar starts
+  at 585.
+- `features/planner/lib/plan-drag.ts` holds `PlanTarget`, `DragPatch`,
+  `PlanDrag` and the pure `patchForDrop` with a Vitest file.
+- One `PlanDrag.Root` wraps the day, week and month bodies. Hour rows
+  are `Zone`s, week columns and month cells are `Grid`s, and rows,
+  hour tasks, week chips and pills are `Source`s.
+- Deleted: `components/drag.tsx`, `hooks/use-drag-session.ts` and its
+  test, `hooks/use-touch-drag-gate.ts`, `lib/dropzone.ts` and its test,
+  `hooks/use-split-pane.ts`, `day/split-handle.tsx`,
+  `day/use-claimed-list.ts` and its test, `components/drag-ghost.tsx`,
+  and every drag `onPointerDown` prop. `useShake` left
+  `lib/motion/legacy.ts`.
+- `day/day-spread.tsx` stays on the 0058 lint allowlist. It still
+  imports `swipeProps` for the native swipe that 0059 replaces with
+  `Pager`. The ticket's final state arrives when both lanes merge.
+- `drag` stays in `theme/tokens.ts` because 0060's reorder files still
+  read it. It leaves with 0060. `useRise` stays for `task-row` until
+  the same ticket.
+
+Proven on the web with the mouse and with CDP touch, in both Playwright
+projects: the touch-action table, the no-tint scroll, the row and hour
+drags with the minute kept, the 300 ms hour hold and the 150 ms
+release, the click after a drop, week and month drops, a release over
+no zone, a store write mid drag, the grabber follow and clamp, the
+scroll freeze, the shake, reduce motion, and a `touchCancel`. The
+split's first frame has its own test. The counts are in the PR.
+
+The emulator and phone boxes stay unchecked. This run did not start the
+Android emulator or a phone. Unproven here:
+
+- Emulator: a scroll on a row shows no tint; a held row shakes once and
+  follows the finger; drops on an hour, a week day and a month cell
+  write the right date and time.
+- Emulator: a store update mid drag does not drop it, and the grabber
+  resizes the split over a long day list.
+- Phone, reduce motion off: the ghost follows the finger without lag,
+  and the grabber resizes smoothly.
+- Phone, reduce motion on: no shake, and the drag and the grabber still
+  follow the finger.
+

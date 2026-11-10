@@ -20,12 +20,13 @@ export function DayPreview({
   date,
   today,
   tasks,
-  timelineHeight,
+  fraction,
 }: {
   date: Date;
   today: Date;
   tasks: TaskItem[];
-  timelineHeight: number;
+  /** The split the live day shows, drawn still. */
+  fraction: number;
 }) {
   const inert = useInertList();
   const { source, taskForm } = inert;
@@ -36,13 +37,7 @@ export function DayPreview({
   return (
     <PlannerListProvider value={inert}>
       <View style={styles.preview} pointerEvents="none">
-        <DayPage
-          copy
-          date={date}
-          today={today}
-          rows={rows}
-          timelineHeight={timelineHeight}
-        />
+        <DayPage copy date={date} today={today} rows={rows} fraction={fraction} />
       </View>
     </PlannerListProvider>
   );

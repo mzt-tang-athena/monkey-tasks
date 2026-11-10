@@ -9,11 +9,12 @@ import {
   type ViewStyle,
 } from "react-native";
 import type { TaskItem } from "@/types/task";
+import { renderMotionScroll } from "@/components/motion/scroll-view";
 import { TaskRow } from "@/components/task-row";
 import type { Mode } from "@/features/planner/model";
+import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { colors, fonts, spacing } from "@/theme/tokens";
 import { FormToggle } from "./form-toggle";
-import { Pickup } from "./drag";
 import { usePlannerList } from "./planner-list-context";
 import { RowSeparator } from "./row-separator";
 import { SourceToggle } from "./source-toggle";
@@ -33,7 +34,7 @@ const noTasks: TaskItem[] = [];
  * header, pills and footer are its header and footer slots. A caller
  * may pass a style to size the list, e.g. inside a pane.
  *
- * The source, the form, the lift and the row actions come from
+ * The source, the form and the row actions come from
  * `PlannerListContext`. The section takes the period it names and its
  * rows.
  */
@@ -59,21 +60,19 @@ export const TaskListSection = React.memo(function TaskListSection({
   copy?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const { taskForm, lifted, api, toggle, open, dragStart } = usePlannerList();
+  const { taskForm, toggle, open } = usePlannerList();
   const pills = taskForm === "pills" && tasks.length > 0;
 
   const renderItem = React.useCallback<ListRenderItem<TaskItem>>(
-    ({ item }) => (
-      <Pickup
-        task={item}
-        api={api}
-        lifted={lifted}
-        onPointerDown={(e) => dragStart(item, e)}
-      >
-        <TaskRow task={item} onToggle={toggle} onOpen={open} copy={copy} />
-      </Pickup>
-    ),
-    [api, lifted, dragStart, toggle, open, copy],
+    ({ item }) =>
+      copy ? (
+        <TaskRow task={item} onToggle={toggle} onOpen={open} copy />
+      ) : (
+        <PlanDrag.Source payload={item} hold="row" testID={`task-source:${item.name}`}>
+          <TaskRow task={item} onToggle={toggle} onOpen={open} panPress />
+        </PlanDrag.Source>
+      ),
+    [toggle, open, copy],
   );
 
   // A FlatList has no gap between its header slot and its first row,
@@ -89,6 +88,7 @@ export const TaskListSection = React.memo(function TaskListSection({
       data={taskForm === "rows" ? tasks : noTasks}
       keyExtractor={taskKey}
       renderItem={renderItem}
+      renderScrollComponent={renderMotionScroll}
       ItemSeparatorComponent={RowSeparator}
       ListHeaderComponentStyle={headStyle}
       ListHeaderComponent={
@@ -105,7 +105,7 @@ export const TaskListSection = React.memo(function TaskListSection({
                   items: each pill sizes itself to its label and the
                   grid reflows per row, which a vertical list cannot
                   do. */}
-              {pills ? <TaskPills tasks={tasks} /> : null}
+              {pills ? <TaskPills tasks={tasks} copy={copy} /> : null}
             </View>
           ) : null}
         </View>

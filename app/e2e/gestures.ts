@@ -121,6 +121,169 @@ export async function holdDragTo(
   await page.mouse.move(point.x, point.y, { steps: 12 });
 }
 
+export type Input = "mouse" | "touch";
+
+export type Point = { x: number; y: number };
+
+/** A drag held open by the caller. */
+export type Pointer = {
+  moveTo: (point: Point) => Promise<void>;
+  up: () => Promise<void>;
+};
+
+/** A touch drag, which can also end in a cancel. */
+export type TouchPointer = Pointer & { cancel: () => Promise<void> };
+
+/** A point on `target`, as `page.mouse` addresses it. */
+export async function pointOn(
+  page: Page,
+  target: Locator,
+  at: DropAt = "center",
+): Promise<Point> {
+  const box = await boxOf(target);
+  return {
+    x: box.x + box.width / 2,
+    y: box.y + box.height * (at === "upper" ? 0.25 : 0.5),
+  };
+}
+
+/** Steps a touch sends between two points. */
+const touchSteps = 12;
+
+/**
+ * Press `from` and hold past its delay, with the chosen input. The
+ * gesture stays open until the caller ends it. A paused page clock
+ * steps past the hold, so a busy runner cannot race it.
+ *
+ * `paused` leaves the page clock stopped after the press. A test that
+ * releases before the hold completes keeps it stopped through the
+ * release, so no timer can complete the long press in between.
+ */
+export async function press(
+  page: Page,
+  input: Input,
+  from: Locator,
+  { holdMs = 400, paused = false }: { holdMs?: number; paused?: boolean } = {},
+): Promise<Pointer | TouchPointer> {
+  const start = await boxOf(from);
+  await pauseClock(page);
+
+  if (input === "mouse") {
+    await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+    await page.mouse.down();
+    await page.clock.runFor(holdMs + 50);
+    if (!paused) {
+      await page.clock.resume();
+    }
+    return {
+      async moveTo(point) {
+        await page.mouse.move(point.x, point.y, { steps: touchSteps });
+      },
+      async up() {
+        await page.mouse.up();
+      },
+    };
+  }
+
+  const cdp = await page.context().newCDPSession(page);
+  const send = (type: "touchStart" | "touchMove" | "touchEnd" | "touchCancel", at?: Point) =>
+    cdp.send("Input.dispatchTouchEvent", {
+      type,
+      touchPoints: at == null ? [] : [at],
+    });
+  const at = { x: start.x + start.width / 2, y: start.y + start.height / 2 };
+  await send("touchStart", at);
+  await page.clock.runFor(holdMs + 50);
+  if (!paused) {
+    await page.clock.resume();
+  }
+  return {
+    async moveTo(point) {
+      for (let i = 1; i <= touchSteps; i++) {
+        await send("touchMove", {
+          x: at.x + ((point.x - at.x) * i) / touchSteps,
+          y: at.y + ((point.y - at.y) * i) / touchSteps,
+        });
+        // One frame between moves, as a finger sends them.
+        await page.waitForTimeout(16);
+      }
+    },
+    async up() {
+      await send("touchEnd");
+      await cdp.detach();
+    },
+    async cancel() {
+      await send("touchCancel");
+      await cdp.detach();
+    },
+  };
+}
+
+export async function dragWith(
+  page: Page,
+  input: Input,
+  from: Locator,
+  to: Locator,
+  { at = "center", holdMs = 400 }: { at?: DropAt; holdMs?: number } = {},
+) {
+  // The target's point comes first: scrolling it into view after the
+  // press would move the source under the finger.
+  const end = await pointOn(page, to, at);
+  const pointer = await press(page, input, from, { holdMs });
+  await pointer.moveTo(end);
+  await pointer.up();
+}
+
+/** Ends a touch drag as a cancel. A mouse drag has no cancel. */
+export async function cancelTouch(pointer: Pointer | TouchPointer) {
+  if (!("cancel" in pointer)) {
+    throw new Error("a mouse drag has no cancel");
+  }
+  await pointer.cancel();
+}
+
+/**
+ * A CDP touch from `from` that travels `dy` px with no hold, as a
+ * finger that scrolls before any hold can complete.
+ */
+export async function touchFlick(
+  page: Page,
+  from: Locator,
+  dy: number,
+  { steps = 10, waitMs = 16 }: { steps?: number; waitMs?: number } = {},
+) {
+  const box = await boxOf(from);
+  const cdp = await page.context().newCDPSession(page);
+  const send = (type: "touchStart" | "touchMove" | "touchEnd", at?: Point) =>
+    cdp.send("Input.dispatchTouchEvent", {
+      type,
+      touchPoints: at == null ? [] : [at],
+    });
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await send("touchStart", { x, y });
+  for (let i = 1; i <= steps; i++) {
+    await send("touchMove", { x, y: y + (dy * i) / steps });
+    await page.waitForTimeout(waitMs);
+  }
+  await send("touchEnd");
+  await cdp.detach();
+}
+
+/** How far a scrollable ancestor of `target` has scrolled down. */
+export async function scrollTopOf(target: Locator): Promise<number> {
+  return target.evaluate((element) => {
+    let node: HTMLElement | null = element as HTMLElement;
+    while (node != null) {
+      if (node.scrollHeight > node.clientHeight + 1) {
+        return node.scrollTop;
+      }
+      node = node.parentElement;
+    }
+    return 0;
+  });
+}
+
 /**
  * The `touch-action` the browser computes on `target`. A surface sets
  * it in its gesture config: `pan-y` on a pager and on a row or pill

@@ -46,13 +46,10 @@ export const layout = StyleSheet.create({
     flex: 1,
     gap: spacing.m,
   },
-  // The resizable split under the heading: timeline pane, divider,
-  // list pane.
-  daySplit: {
-    flex: 1,
-    gap: spacing.xs,
-  },
+  // The split's panes each fill their half; the surface sets their
+  // share by fraction.
   pane: {
+    flex: 1,
     gap: spacing.s,
   },
   paneList: {

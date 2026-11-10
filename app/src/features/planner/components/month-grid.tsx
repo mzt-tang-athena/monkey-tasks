@@ -1,10 +1,11 @@
 import * as React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { DropZoneMap } from "@/features/planner/lib/dropzone";
+import { NoPanPressable as Pressable } from "@/components/ui/pressable";
 import { addDays, isoOf, isSameDay } from "@/utils/dates";
 import { occurrencesBetween } from "@/lib/recurrence";
 import { isDone, startOfMonth } from "@/features/planner/model";
+import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import { colors, fonts, radius, spacing } from "@/theme/tokens";
 
@@ -24,8 +25,6 @@ export function MonthGrid({
   picked,
   interactive,
   onPick,
-  dropZones,
-  hoveredDay = null,
 }: {
   viewMonth: Date;
   tasks: TaskItem[];
@@ -35,12 +34,7 @@ export function MonthGrid({
   /** False for a neighbour page: it shows the month, it does not
       answer taps or accept drops. */
   interactive: boolean;
-  /** A press on a cell. The container guards it against the click a
-      drop leaves behind. */
   onPick?: (day: Date) => void;
-  dropZones?: DropZoneMap;
-  /** The cell a drag hovers over, if any. */
-  hoveredDay?: Date | null;
 }) {
   const year = viewMonth.getFullYear();
   const monthIdx = viewMonth.getMonth();
@@ -98,58 +92,79 @@ export function MonthGrid({
             </Text>
           ))}
         </View>
-        <View style={styles.grid}>
-          {cells.map((day, index) => {
-            if (day == null) {
-              return <View key={`blank-${index}`} style={styles.cell} />;
-            }
-            const marks = [
-              styles.cell,
-              isSameDay(day, picked?.day ?? null) && styles.cellPicked,
-              isSameDay(day, today) && styles.cellToday,
-              isSameDay(day, hoveredDay) && styles.cellHovered,
-            ];
-            const face = (
-              <>
-                <Text
-                  style={[styles.num, isSameDay(day, today) && styles.numToday]}
-                >
-                  {day.getDate()}
-                </Text>
-                {/* The dot slot is always reserved, so every number
-                    sits on one baseline with or without a dot. */}
-                <View style={styles.dotSlot}>
-                  {dotted.has(isoOf(day)) ? (
-                    <View style={styles.dot} testID="month-dot" />
-                  ) : null}
-                </View>
-              </>
-            );
-            if (!interactive) {
-              return (
-                <View key={day.getTime()} style={marks}>
-                  {face}
-                </View>
-              );
-            }
-            return (
-              <Pressable
-                key={day.getTime()}
-                style={({ pressed }) => [...marks, pressed && styles.pressed]}
-                onPress={() => onPick?.(day)}
-                ref={(node) => {
-                  dropZones?.set(`day:${isoOf(day)}`, node);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
-              >
-                {face}
-              </Pressable>
-            );
-          })}
-        </View>
+        <GridBody interactive={interactive} cells={cells} picked={picked} today={today} dotted={dotted} onPick={onPick} />
       </View>
     </View>
+  );
+}
+
+function GridBody({
+  interactive,
+  cells,
+  picked,
+  today,
+  dotted,
+  onPick,
+}: {
+  interactive: boolean;
+  cells: (Date | null)[];
+  picked: PickedDay;
+  today: Date;
+  dotted: Set<string>;
+  onPick?: (day: Date) => void;
+}) {
+  const views = cells.map((day, index) => {
+    if (day == null) {
+      return <View key={`blank-${index}`} style={styles.cell} />;
+    }
+    const marks = [
+      styles.cell,
+      isSameDay(day, picked?.day ?? null) && styles.cellPicked,
+      isSameDay(day, today) && styles.cellToday,
+    ];
+    const face = (
+      <>
+        <Text style={[styles.num, isSameDay(day, today) && styles.numToday]}>
+          {day.getDate()}
+        </Text>
+        {/* The dot slot is always reserved, so every number sits on
+            one baseline with or without a dot. */}
+        <View style={styles.dotSlot}>
+          {dotted.has(isoOf(day)) ? <View style={styles.dot} testID="month-dot" /> : null}
+        </View>
+      </>
+    );
+    if (!interactive) {
+      return (
+        <View key={day.getTime()} style={marks}>
+          {face}
+        </View>
+      );
+    }
+    return (
+      <Pressable
+        key={day.getTime()}
+        style={({ pressed }) => [...marks, pressed && styles.pressed]}
+        onPress={() => onPick?.(day)}
+        accessibilityRole="button"
+        accessibilityLabel={`${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}`}
+      >
+        {face}
+      </Pressable>
+    );
+  });
+  if (!interactive) {
+    return <View style={styles.grid}>{views}</View>;
+  }
+  return (
+    <PlanDrag.Grid
+      columns={7}
+      rows={6}
+      cells={cells.map((day) => (day == null ? null : { kind: "day", iso: isoOf(day) }))}
+      style={styles.grid}
+    >
+      {views}
+    </PlanDrag.Grid>
   );
 }
 
@@ -206,10 +221,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentSoft,
   },
   cellToday: {
-    backgroundColor: colors.accentSoft,
-  },
-  // A drop target during a drag.
-  cellHovered: {
     backgroundColor: colors.accentSoft,
   },
   num: {

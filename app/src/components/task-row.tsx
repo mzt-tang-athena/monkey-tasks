@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Animated, Platform, Pressable, StyleSheet, Text } from "react-native";
+import { Pressable as PanPressable } from "react-native-gesture-handler";
 import type { TaskItem } from "@/types/task";
 import { parseStoredDate } from "@/utils/dates";
 import { easeOut, useReduceMotion, useRise } from "@/lib/motion/legacy";
@@ -18,6 +19,8 @@ function TaskRowBase({
   /** "under" puts the time below the name; "right" adds a planner gutter. */
   timeAlign = "under",
   copy = false,
+  /** The row sits inside a drag source: a pan must cancel its press. */
+  panPress = false,
 }: {
   task: TaskItem;
   onToggle?: (task: TaskItem) => void;
@@ -27,7 +30,11 @@ function TaskRowBase({
   /** A still copy of a live row: a swipe preview or a drag ghost. A
       copy carries no test id, so the id finds the live row only. */
   copy?: boolean;
+  /** Gesture handler's press, for a row inside a drag source or a
+      pager: a pan cancels it, so a drop leaves no click behind. */
+  panPress?: boolean;
 }) {
+  const Press = panPress ? PanPressable : Pressable;
   const [hot, setHot] = React.useState(false);
   // The store is optimistic: a tap flips this row's data in the same
   // frame. The row reads that data and nothing else, so a fast tick,
@@ -111,7 +118,7 @@ function TaskRowBase({
   // beneath without moving it (Google Tasks' rule).
   const toggle = (
     <Animated.View style={{ transform: [{ scale: pop }] }}>
-      <Pressable
+      <Press
         style={({ pressed }) => [
           faceStyles.circle,
           done && faceStyles.circleDone,
@@ -134,7 +141,7 @@ function TaskRowBase({
             <Text style={faceStyles.check}>{"✓"}</Text>
           </Animated.View>
         ) : null}
-      </Pressable>
+      </Press>
     </Animated.View>
   );
 
@@ -144,7 +151,7 @@ function TaskRowBase({
     onOpen == null
       ? undefined
       : (content: React.ReactNode) => (
-          <Pressable
+          <Press
             style={({ pressed }) => [
               faceStyles.text,
               pressed && styles.bodyPressed,
@@ -154,7 +161,7 @@ function TaskRowBase({
             accessibilityLabel="open task"
           >
             {content}
-          </Pressable>
+          </Press>
         );
 
   return (

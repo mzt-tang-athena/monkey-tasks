@@ -174,7 +174,8 @@ const motionAllowlist = [
   'src/lib/swipe.ts',
   // 0059, then 0060
   'src/features/lists/lists-screen.tsx',
-  // 0059, then 0061
+  // 0059: the day pager host. 0061 takes the split handlers and the
+  // touch gate off it; the `swipeProps` import stays with 0059's host.
   'src/features/planner/components/day/day-spread.tsx',
   // 0060
   'src/components/task-row.tsx',
@@ -184,20 +185,6 @@ const motionAllowlist = [
   'src/features/lists/components/task-card-row.test.tsx',
   'src/features/lists/components/task-card-row.tsx',
   'src/features/lists/hooks/use-row-reorder.ts',
-  // 0061
-  'src/features/planner/components/day/overdue-group.tsx',
-  'src/features/planner/components/day/split-handle.tsx',
-  'src/features/planner/components/day/timeline-pane.tsx',
-  'src/features/planner/components/drag-ghost.tsx',
-  'src/features/planner/components/drag.tsx',
-  'src/features/planner/components/source-toggle.tsx',
-  'src/features/planner/components/task-list-section.tsx',
-  'src/features/planner/components/task-pills.tsx',
-  'src/features/planner/components/timeline.tsx',
-  'src/features/planner/components/week-view.tsx',
-  'src/features/planner/hooks/use-drag-session.ts',
-  'src/features/planner/hooks/use-split-pane.ts',
-  'src/features/planner/hooks/use-touch-drag-gate.ts',
   // 0062
   'src/components/bottom-bar/bottom-bar.tsx',
   'src/components/ui/sheet.tsx',
