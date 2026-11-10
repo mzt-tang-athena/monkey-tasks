@@ -263,10 +263,11 @@ again for the page preview.
 
 Deleted: `use-row-reorder.ts`, `reorder-row.tsx`, `reorder-ghost.tsx`,
 `use-press-guard.ts` and its test, the web reorder handlers in
-`lists-screen.tsx`, `layoutOrder`, both `freshMs` copies and `useRise`.
-No caller of `usePressGuard` remained. The ticket's files are out of
-the 0058 lint allowlist, including `lists-screen.tsx` and
-`task-row.tsx`.
+`lists-screen.tsx`, `layoutOrder`, both `freshMs` copies, `useRise`
+and `lib/motion/legacy.ts` itself. Ticket 0062 had taken the file's
+last sheet user, so nothing imported it. No caller of `usePressGuard`
+remained. The 0058 allowlist is empty, so the list and its lint block
+are gone.
 
 Pager coexistence: `ListPager` reads `ListReorder.useDragging()`, a
 context consumer inside `Root`. The pager re-renders at pickup and
@@ -300,7 +301,8 @@ project's own behavior. The jsdom tests cover J2, the refetch uri
 change and two and three tick holds. The two-hold placement and the
 grip's first sideways move failed in the browser before their fixes.
 `tsc`, eslint and vitest are green. The full suite was 270 passed and
-22 skipped.
+22 skipped on the commit before the rebase onto 0062. The rebased
+branch was re-run after the rebase.
 
 Not proven on a device. No Android emulator run with
 `android-frames.mjs` happened, and no phone pass at 60 Hz or 120 Hz
