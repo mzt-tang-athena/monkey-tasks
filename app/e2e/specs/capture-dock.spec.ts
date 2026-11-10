@@ -58,7 +58,10 @@ test.describe("the floating chrome on a wide window", () => {
 
     await failCapture(page);
     await page.getByRole("button", { name: "send task" }).click();
-    await expectInColumn(page.getByRole("alert"), "the toast");
+    await expectInColumn(
+      page.getByRole("alert").filter({ hasText: "create failed" }),
+      "the toast",
+    );
   });
 
   test("the editor header sits inside the column", async ({ page }) => {
