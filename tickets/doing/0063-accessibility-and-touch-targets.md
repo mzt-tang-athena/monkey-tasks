@@ -3,7 +3,7 @@ id: 0063
 title: Accessibility and touch targets
 created: 2026-10-26
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [0049, 0055, 0056, 0057, 0060]
 ---
