@@ -1,7 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { Pressable } from "react-native-gesture-handler";
+import { Pressable } from "@/components/ui/pressable";
 import { SectionHeader } from "@/components/ui/section-header";
 import { WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import type { PlannerMonth } from "@/features/planner/hooks/use-planner-month";

@@ -13,6 +13,7 @@ import { follow, releaseTarget, visiblePages, type PageBounds } from "@/lib/moti
 import { motion } from "@/lib/motion/tokens";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
+import { usePressCancel } from "./internal/press-cancel";
 
 const none = Number.NaN;
 const slop: [number, number] = [-motion.swipe.slop, motion.swipe.slop];
@@ -53,6 +54,7 @@ export function Pager({
 }) {
   // Pages count from the mount's index, so the first frame is at 0.
   const [origin] = React.useState(index);
+  const pressCancel = usePressCancel();
   const reduced = useReducedMotion();
   const width = useSharedValue(0);
   const pos = useSharedValue(0);
@@ -124,6 +126,7 @@ export function Pager({
       },
       onActivate: () => {
         "worklet";
+        toJS(pressCancel.arm);
         // Writing the value stops a settle in flight.
         anchor.set(pos.value);
         pos.set(anchor.value);

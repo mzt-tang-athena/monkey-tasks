@@ -17,6 +17,7 @@ import {
   SessionContext,
   useSessionContext,
 } from "./internal/contexts";
+import { usePressCancel } from "./internal/press-cancel";
 import {
   useRegistry,
   useSession,
@@ -47,6 +48,7 @@ export function createDragSurface<P, T>() {
       latest.current = onDrop;
     });
     const [guard] = React.useState(createBridgeGuard);
+    const pressCancel = usePressCancel();
     const picked = React.useRef(-1);
     const session = useSession((self) => ({
       pickup(source, generation) {
@@ -72,7 +74,7 @@ export function createDragSurface<P, T>() {
           setActive(null);
         }
       },
-    }));
+    }), pressCancel);
     React.useEffect(() => () => void guard.close(), [guard]);
 
     return (

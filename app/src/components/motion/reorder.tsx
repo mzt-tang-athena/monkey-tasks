@@ -30,6 +30,7 @@ import {
   SessionContext,
   useSessionContext,
 } from "./internal/contexts";
+import { usePressCancel } from "./internal/press-cancel";
 import {
   send,
   useSession,
@@ -198,6 +199,7 @@ export function createReorderSurface<P>() {
     // frame of its own (ADR 0032).
     const dropped = React.useRef(0);
     const [drops, setDrops] = React.useState(0);
+    const pressCancel = usePressCancel();
 
     const session = useSession<ReorderHandlers>((self) => ({
       pickup(source, generation) {
@@ -231,7 +233,7 @@ export function createReorderSurface<P>() {
         dropped.current = generation;
         setDrops((count) => count + 1);
       },
-    }));
+    }), pressCancel);
     React.useEffect(() => () => void guard.close(), [guard]);
     React.useEffect(() => {
       if (drops > 0) {
@@ -433,7 +435,7 @@ export function createReorderSurface<P>() {
   }) {
     const session = useSessionContext<ReorderHandlers>("ListReorder");
     const state = useStateContext("ListReorder");
-    const { ui } = session;
+    const { ui, pressCancel } = session;
     const cue = useSharedValue(0);
     const shake = useSharedValue(0);
     const from = useSharedValue(index);
@@ -472,6 +474,7 @@ export function createReorderSurface<P>() {
           if (send(ui, { type: "activate", source }) !== "pickup") {
             return;
           }
+          toJS(pressCancel.arm);
           const generation = ui.generation.value + 1;
           ui.generation.set(generation);
           const box = measure(self);

@@ -1,9 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text } from "react-native";
 import type { PressableProps } from "react-native-gesture-handler";
-// No pager or drag source sits above a Button, so it takes the no-pan
-// press. Gesture handler's web press loses a press that re-renders.
-import { NoPanPressable } from "./pressable";
+import { Pressable } from "./pressable";
 import {
   colors,
   fonts,
@@ -52,7 +50,7 @@ export function Button({
   const quiet = variant === "quiet";
   if (variant === "text") {
     return (
-      <NoPanPressable
+      <Pressable
         style={({ pressed }) => [
           styles.text,
           pressed && !disabled && styles.textPressed,
@@ -76,11 +74,11 @@ export function Button({
             {label}
           </Text>
         )}
-      </NoPanPressable>
+      </Pressable>
     );
   }
   return (
-    <NoPanPressable
+    <Pressable
       style={({ pressed }) => [
         circle ? styles.circle : styles.pill,
         quiet ? styles.quiet : styles.solid,
@@ -118,7 +116,7 @@ export function Button({
           {label}
         </Text>
       )}
-    </NoPanPressable>
+    </Pressable>
   );
 }
 

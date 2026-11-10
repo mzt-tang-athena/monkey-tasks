@@ -1,7 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Banner } from "@/components/ui/banner";
-import { NoPanPressable } from "@/components/ui/pressable";
+import { Pressable } from "@/components/ui/pressable";
 import { useVaultFailures } from "@/stores/tasks/use-vault-failures";
 import { colors, measure, pageGutter, spacing, type } from "@/theme/tokens";
 import type { Repair } from "../hooks/use-list-sections";
@@ -17,7 +17,7 @@ function sentence(text: string): string {
 export function VaultPrompt({ onGrant }: { onGrant: () => void }) {
   return (
     <View style={styles.slot}>
-      <NoPanPressable
+      <Pressable
         style={({ pressed }) => [styles.prompt, pressed && styles.pressed]}
         onPress={onGrant}
         accessibilityRole="button"
@@ -27,7 +27,7 @@ export function VaultPrompt({ onGrant }: { onGrant: () => void }) {
         <Text style={styles.promptHint}>
           Pick the Obsidian vault to use this app with real tasks.
         </Text>
-      </NoPanPressable>
+      </Pressable>
     </View>
   );
 }

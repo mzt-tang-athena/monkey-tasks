@@ -1,6 +1,6 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Pressable } from "react-native-gesture-handler";
+import { Pressable } from "@/components/ui/pressable";
 import { colors, fonts, radius, spacing } from "@/theme/tokens";
 
 type Props = {

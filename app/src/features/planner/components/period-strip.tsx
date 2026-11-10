@@ -4,7 +4,7 @@ import {
   MotionScrollView,
   type MotionScrollRef,
 } from "@/components/motion/scroll-view";
-import { NoPanPressable } from "@/components/ui/pressable";
+import { Pressable } from "@/components/ui/pressable";
 import { addDays, startOfDay, isSameDay } from "@/utils/dates";
 import {
   dayIndexBetween,
@@ -198,7 +198,7 @@ export function PeriodStrip({
           const active = isSameDay(day, selected);
           const isToday = startOfDay(day).getTime() === todayStart;
           return (
-            <NoPanPressable
+            <Pressable
               key={day.getTime()}
               style={({ pressed }) => [
                 styles.stripDay,
@@ -228,7 +228,7 @@ export function PeriodStrip({
               >
                 {day.getDate()}
               </Text>
-            </NoPanPressable>
+            </Pressable>
           );
         })}
       </View>
@@ -257,7 +257,7 @@ export function PeriodStrip({
           const active = selStart >= startT && selStart <= endT;
           const isCurrent = todayStart >= startT && todayStart <= endT;
           return (
-            <NoPanPressable
+            <Pressable
               key={startT}
               style={({ pressed }) => [
                 styles.stripDay,
@@ -287,7 +287,7 @@ export function PeriodStrip({
               >
                 {`W${isoWeek(addDays(weekStartDay, 3))}`}
               </Text>
-            </NoPanPressable>
+            </Pressable>
           );
         }}
       />
@@ -320,7 +320,7 @@ export function PeriodStrip({
           today.getFullYear() === monthStartDay.getFullYear() &&
           today.getMonth() === monthStartDay.getMonth();
         return (
-          <NoPanPressable
+          <Pressable
             key={monthStartDay.getTime()}
             style={({ pressed }) => [
               styles.stripDay,
@@ -350,7 +350,7 @@ export function PeriodStrip({
             >
               {MONTHS_SHORT[monthStartDay.getMonth()]}
             </Text>
-          </NoPanPressable>
+          </Pressable>
         );
       }}
     />

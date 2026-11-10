@@ -250,7 +250,7 @@ documents its props, and each primitive has a component test.
 | `SectionHeader` | An eyebrow label over a group, with a count and a tone. |
 | `CardGroupRow` | One row of a group card, with its edges and an inset divider. |
 | `TabStrip`, `SegmentedControl` | Tabs that scroll, with a fade over an edge that hides more tabs, and segments. Every target is at least 44 by 44. |
-| `NoPanPressable` | A press target with no pan above it: a `Button`, a tab, a segment or a menu item. Gesture handler's `Pressable` on native, and React Native's on the web. Gesture handler's web `Pressable` presses only a `button` role, and it drops a press when the view re-renders under the finger. A target inside a pager or a drag source keeps gesture handler's `Pressable`, so a pan cancels it. |
+| `Pressable` | Every press target. React Native's press on the web, because it takes the browser click. A row that mounts or re-renders under the finger still presses. It needs no layout report. Gesture handler's on native, where a pan cancels it. A surface swallows the one click a pan activation leaves behind. |
 | `TextField` | A labelled input, with a hint or an error. |
 
 `components/task-row-face` draws the still task row that `TaskRow` and

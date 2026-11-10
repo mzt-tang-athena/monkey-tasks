@@ -16,7 +16,7 @@ import {
   spacing,
 } from "@/theme/tokens";
 import { Overlay } from "./overlay-host";
-import { NoPanPressable } from "./pressable";
+import { Pressable } from "./pressable";
 
 /**
  * A floating sheet: a scrim over the page, a dock that rides the
@@ -103,7 +103,7 @@ export function Sheet({
             pointerEvents={open ? "auto" : "none"}
             style={[styles.scrim, { height: window.height }, fade]}
           >
-            <NoPanPressable
+            <Pressable
               style={StyleSheet.absoluteFill}
               onPress={onDismiss}
               accessibilityRole="button"

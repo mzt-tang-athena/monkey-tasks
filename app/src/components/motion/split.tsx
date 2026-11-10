@@ -12,6 +12,7 @@ import Animated, {
 import { colors } from "@/theme/tokens";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
+import { usePressCancel } from "./internal/press-cancel";
 
 const dividerHeight = 28;
 
@@ -49,6 +50,7 @@ export function Split({
   const startY = useSharedValue(0);
   const grabbing = useSharedValue(0);
   const [hot, setHot] = React.useState(false);
+  const pressCancel = usePressCancel();
 
   // A new fraction from the screen, before paint: the panes never show
   // a frame between the release and the state that carries it.
@@ -65,6 +67,7 @@ export function Split({
       },
       onActivate: (e) => {
         "worklet";
+        toJS(pressCancel.arm);
         const measured = measure(self);
         if (measured === null) {
           return;
