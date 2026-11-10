@@ -186,10 +186,14 @@ for (const input of inputs) {
       await page.goto("/");
       await expect(row(page, undated.second)).toBeVisible();
 
+      // Step the page clock, so a loaded runner cannot skip every
+      // intermediate frame of the 220 ms entrance.
+      await pauseClock(page);
       await startSampling(page, "not-a-row");
       await tap(page, input, page.getByRole("button", { name: "add task" }));
+      await page.clock.runFor(500);
+      await page.clock.resume();
       await expect(page.getByRole("dialog")).toBeVisible();
-      await page.waitForTimeout(500);
 
       const frames = await stopSampling(page);
       expectOneClock(frames, reducedMotion === "reduce");

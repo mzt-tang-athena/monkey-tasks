@@ -300,9 +300,15 @@ Three cells skip in the other project because they assert the motion
 project's own behavior. The jsdom tests cover J2, the refetch uri
 change and two and three tick holds. The two-hold placement and the
 grip's first sideways move failed in the browser before their fixes.
-`tsc`, eslint and vitest are green. The full suite was 270 passed and
-22 skipped on the commit before the rebase onto 0062. The rebased
-branch was re-run after the rebase.
+`tsc`, eslint and vitest are green. The full suite on the rebased
+branch was 288 passed and 24 skipped.
+
+Two tests outside the ticket changed for flakes the full run exposed.
+The menu backdrop now uses `NoPanPressable`, the ADR 0046 press for a
+target with no pan above it, so a press is not lost when the backdrop
+re-renders. The capture sheet's clock test steps a paused page clock
+through its sample, so a loaded runner cannot skip every intermediate
+frame of the entrance.
 
 Not proven on a device. No Android emulator run with
 `android-frames.mjs` happened, and no phone pass at 60 Hz or 120 Hz
