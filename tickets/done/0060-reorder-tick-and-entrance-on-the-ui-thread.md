@@ -306,9 +306,9 @@ branch was 288 passed and 24 skipped.
 Two tests outside the ticket changed for flakes the full run exposed.
 The menu backdrop now uses `NoPanPressable`, the ADR 0046 press for a
 target with no pan above it, so a press is not lost when the backdrop
-re-renders. The capture sheet's clock test steps a paused page clock
-through its sample, so a loaded runner cannot skip every intermediate
-frame of the entrance.
+re-renders. The capture sheet's clock tests step a paused page clock through the
+open and the send close, so a loaded runner cannot skip every frame
+between the states.
 
 Not proven on a device. No Android emulator run with
 `android-frames.mjs` happened, and no phone pass at 60 Hz or 120 Hz

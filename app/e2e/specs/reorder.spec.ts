@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "../fixtures";
+import { expect, pauseClock, test } from "../fixtures";
 import { sections, supplements, undated } from "../data";
 import {
   expectTouchAction,
@@ -357,10 +357,12 @@ test.describe("the tick hold", () => {
       requestAnimationFrame(loop);
     });
 
+    await pauseClock(page);
     await tickButton(page, apples).click();
-    await page.waitForTimeout(100);
+    await page.clock.runFor(100);
     await tickButton(page, plan).click();
-    await page.waitForTimeout(250);
+    await page.clock.runFor(350);
+    await page.clock.resume();
 
     const samples = await page.evaluate(() => {
       const seen = window as unknown as {
@@ -383,13 +385,13 @@ test.describe("the tick hold", () => {
   }) => {
     test.skip(reducedMotion === "reduce", "a reduced-motion tick regroups at once");
     await openMain(page);
+    await pauseClock(page);
     await tickButton(page, supplements).click();
-
-    await page.waitForTimeout(200);
+    await page.clock.runFor(200);
     await expectAbove(row(page, supplements), sectionHeader(page, sections.undated));
-
-    await page.waitForTimeout(400);
+    await page.clock.runFor(400);
     await expectAbove(sectionHeader(page, sections.completed), row(page, supplements));
+    await page.clock.resume();
   });
 });
 
@@ -491,16 +493,28 @@ test("the capture entrance never replays within the freshness window", async ({
   await page.getByRole("button", { name: "sort list" }).click();
   await page.getByRole("menuitem", { name: "My order" }).click();
   await expectAbove(row(page, undated.first), row(page, undated.second));
+  await row(page, captured).scrollIntoViewIfNeeded();
+  const previous = await page.evaluate((name) => {
+    const rows = [
+      ...document.querySelectorAll('[data-testid^="task-row:"]'),
+    ];
+    const at = rows.findIndex(
+      (element) => element.getAttribute("data-testid") === `task-row:${name}`,
+    );
+    const before = rows[at - 1]?.getAttribute("data-testid") ?? "";
+    return before.slice("task-row:".length);
+  }, captured);
+  expect(previous, "the captured row has a neighbour above it").not.toBe("");
   const rows = await page.getByTestId(/^task-row:/).count();
-  const above = await pointOn(page, row(page, undated.first), "upper");
+  const target = await pointOn(page, row(page, previous), "center");
   const pointer = await press(page, "mouse", row(page, captured), {
     holdMs: 400,
   });
-  await pointer.moveTo(above);
+  await pointer.moveTo(target);
   await expect(page.getByTestId("drag-ghost")).toBeVisible();
   expect(await page.getByTestId(/^task-row:/).count()).toBe(rows);
   await pointer.up();
-  await expectAbove(row(page, captured), row(page, undated.first));
+  await expectAbove(row(page, captured), row(page, previous));
   await expectResting(page);
 
   await watchRow(page, captured);
