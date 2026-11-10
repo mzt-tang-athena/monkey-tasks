@@ -4,7 +4,7 @@ title: Accessibility and touch targets
 created: 2026-10-26
 priority: high
 assignee: omp
-pr:
+pr: 105
 depends: [0049, 0055, 0056, 0057, 0060]
 ---
 
