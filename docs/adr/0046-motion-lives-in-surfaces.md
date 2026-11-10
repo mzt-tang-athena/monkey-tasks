@@ -229,7 +229,7 @@ Two facts change how the surfaces apply:
 - Gesture handler 3.3.0's web `Pressable` presses only a view whose role
   is `button` (`web/handlers/NativeViewGestureHandler.ts`, lines 87 to
   92). A tab, a segment or a menu item keeps its own role, so it presses
-  with `RolePressable` in `components/ui`. That is gesture handler's
+  with `NoPanPressable` in `components/ui`. That is gesture handler's
   `Pressable` on native and React Native's on the web. None of these
   targets sits under a pan.
 - Under jsdom, gesture handler's web `Pressable` never fires, by pointer
@@ -237,3 +237,32 @@ Two facts change how the surfaces apply:
   `src/testing/dom-setup.ts`. The Playwright suite presses the real one.
   The pan surfaces do run under jsdom, so their component tests drive
   gesture handler with pointer events.
+
+## Amendment, 2026-11-10: a press with no pan above it keeps its press
+
+The verifier of PR #97 found that gesture handler's web `Pressable`
+drops a press when the view re-renders under the finger. Under six
+browsers at once, the retry button of a write banner lost 15 presses
+of 120. React Native's `Pressable` lost none. The pointer down, up and
+click all reached the button, so the button did not move. The handler
+let the press go on its own. The same press turned the `vault` e2e
+spec red in 2 runs of 5.
+
+A banner re-renders while a finger rests on it. A failed write lands,
+or the app returns to the foreground. A press must still run.
+
+A press target with no pan above it now takes React Native's
+`Pressable` on the web. `components/ui/pressable.tsx` exports it as
+`NoPanPressable`. That holds a Button, a tab, a segment and a menu
+item, so it replaces `RolePressable`. A target inside a pager or a
+drag source keeps gesture handler's `Pressable`, because a pan must
+cancel the press. This refines the fact above that calls gesture
+handler's press the only one that cancels in every case.
+
+Alternative: keep every press on gesture handler and wait for the
+library. The library sits outside the repo, and the repo can hold the
+right press today.
+
+Test: the `vault` e2e spec presses Retry right after a failed tick. At
+head it went red in 2 runs of 5 under six browsers. The fix lost no
+press in 120, and the spec stayed green.

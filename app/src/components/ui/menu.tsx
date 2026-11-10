@@ -18,7 +18,7 @@ import {
   type,
 } from "@/theme/tokens";
 import { Overlay } from "./overlay-host";
-import { RolePressable } from "./role-pressable";
+import { NoPanPressable } from "./pressable";
 
 export type MenuItem = {
   key: string;
@@ -176,7 +176,7 @@ export function Menu({
 
 function MenuRow({ item }: { item: MenuItem }) {
   return (
-    <RolePressable
+    <NoPanPressable
       style={({ pressed }) => [
         styles.item,
         pressed && !item.disabled && styles.itemPressed,
@@ -202,7 +202,7 @@ function MenuRow({ item }: { item: MenuItem }) {
         {item.hint != null ? <Text style={styles.hint}>{item.hint}</Text> : null}
       </View>
       {item.selected === true ? <Text style={styles.check}>{"✓"}</Text> : null}
-    </RolePressable>
+    </NoPanPressable>
   );
 }
 

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { StyleSheet, Text } from "react-native";
-import { RolePressable } from "@/components/ui/role-pressable";
+import { NoPanPressable } from "@/components/ui/pressable";
 import {
   bottomBar,
   colors,
@@ -27,7 +27,7 @@ export function NavTab({
   onPress: () => void;
 }) {
   return (
-    <RolePressable
+    <NoPanPressable
       style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
       onPress={onPress}
       accessibilityRole="tab"
@@ -36,7 +36,7 @@ export function NavTab({
     >
       <Icon name={icon} color={active ? "accent" : "inkMuted"} />
       <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
-    </RolePressable>
+    </NoPanPressable>
   );
 }
 
