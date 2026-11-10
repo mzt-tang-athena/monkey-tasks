@@ -26,7 +26,6 @@ import {
 } from "./components/planner-list-context";
 import { SourceMenu } from "./components/source-menu";
 import { WeekPane } from "./components/week-pane";
-import { usePlannerGestures } from "./hooks/use-planner-gestures";
 import { usePlannerRoute } from "./hooks/use-planner-route";
 import { usePlannerSource } from "./hooks/use-planner-source";
 import { patchForDrop, PlanDrag, type PlanTarget } from "./lib/plan-drag";
@@ -92,7 +91,6 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
 
   const { source, cycle, choose, anchor, openMenu, closeMenu } =
     usePlannerSource();
-  const { shiftDay, shiftMonth } = usePlannerGestures({ day, setDay });
 
   // The day split is screen state: written once per release, shared by
   // the live page and the swipe preview. It is not stored on disk.
@@ -144,7 +142,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
               onResize={setSplit}
               onMode={setMode}
               onSelectStrip={setDay}
-              onShiftDay={shiftDay}
+              onSelectDay={setDay}
             />
           ) : (
             // Week and month: a fixed frame. The header strip and the
@@ -189,7 +187,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
                   tasks={tasks}
                   day={day}
                   today={today}
-                  onShiftMonth={shiftMonth}
+                  onSelectMonth={setDay}
                   onOpenDay={openDay}
                 />
               ) : null}

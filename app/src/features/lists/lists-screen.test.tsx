@@ -1,7 +1,8 @@
 import * as React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskItem } from "@/types/task";
+import { placeBox, setWindowSize } from "@/testing/layout";
 import { todayIso } from "@/utils/dates";
 import ListsScreen from "./lists-screen";
 
@@ -13,6 +14,7 @@ import ListsScreen from "./lists-screen";
 const spy = vi.hoisted(() => ({
   renders: {} as Record<string, number>,
   mounts: {} as Record<string, number>,
+  screenRenders: 0,
   push: vi.fn(),
   tasks: [] as unknown[],
   listeners: new Set<() => void>(),
@@ -31,6 +33,16 @@ vi.mock("@/lib/settings", () => ({
 
 vi.mock("@/components/bottom-bar/bottom-bar", () => ({ BottomBar: () => null }));
 
+// The toolbar renders only when the screen renders, so its count is
+// the screen's count. The pager's own state sits below it.
+vi.mock("./components/lists-toolbar", () => {
+  const Toolbar = () => {
+    spy.screenRenders += 1;
+    return null;
+  };
+  return { ListsToolbar: Toolbar };
+});
+
 vi.mock("@/stores/tasks/task-state", async () => {
   const React = await import("react");
   const subscribe = (listener: () => void) => {
@@ -42,7 +54,7 @@ vi.mock("@/stores/tasks/task-state", async () => {
     status: "ready",
     readError: null,
     brokenLists: [],
-    lists: [],
+    lists: ["Errands"],
   };
   return {
     useTaskList: () =>
@@ -115,10 +127,58 @@ function task(name: string, due?: string): TaskItem {
 const tick = (name: string) => fireEvent.click(screen.getByLabelText(`tick ${name}`));
 const holdBeat = () => act(() => void vi.advanceTimersByTime(400));
 
+/** A task on the Errands tab, so a preview of it has rows. */
+function listedTask(name: string): TaskItem {
+  const uri = `content://vault/Tasks/${name}.md`;
+  return {
+    id: uri,
+    uri,
+    fileName: `${name}.md`,
+    name,
+    text: "",
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      lists: ["[[Errands]]"],
+    },
+    body: "",
+  };
+}
+
+function pointer(type: string, x: number) {
+  return new PointerEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    pointerId: 1,
+    pointerType: "touch",
+    isPrimary: true,
+    clientX: x,
+    clientY: 300,
+    button: 0,
+    buttons: type === "pointerup" ? 0 : 1,
+  });
+}
+
+// React Native Web reports onLayout through a ResizeObserver, and
+// jsdom lays out nothing. This one reads the box the test placed.
+beforeAll(() => {
+  window.ResizeObserver = class {
+    constructor(private report: ResizeObserverCallback) {}
+    observe(target: Element) {
+      setTimeout(() =>
+        this.report([{ target } as ResizeObserverEntry], this as unknown as ResizeObserver),
+      );
+    }
+    unobserve() {}
+    disconnect() {}
+  };
+});
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   spy.renders = {};
   spy.mounts = {};
+  spy.screenRenders = 0;
   spy.push.mockClear();
 });
 
@@ -178,5 +238,45 @@ describe("ListsScreen", () => {
     expect(order()).toEqual(["row:Apple", "row:Banana"]);
     holdBeat();
     expect(order()).toEqual(["row:Banana", "row:Apple"]);
+  });
+
+  it("renders nothing at a swipe start, and caps the preview rows", async () => {
+    // J1: the old pager set screen state at swipe start and the list
+    // preview rendered all 300 rows. The surface owns the visible set,
+    // and the preview draws one screenful.
+    vi.useRealTimers();
+    setWindowSize(390, 600);
+    spy.tasks = Array.from({ length: 300 }, (_, index) =>
+      listedTask(`Task ${index}`),
+    );
+    render(<ListsScreen dock={dock} />);
+    const host = screen.getByTestId("list-pager");
+    placeBox(host, { x: 0, y: 0, width: 390, height: 600 });
+    await act(async () => {
+      window.dispatchEvent(new Event("resize"));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    const before = spy.screenRenders;
+
+    await act(async () => {
+      host.dispatchEvent(pointer("pointerdown", 300));
+    });
+    const steps = 6;
+    for (let i = 1; i <= steps; i++) {
+      await act(async () => {
+        host.dispatchEvent(pointer("pointermove", 300 - (60 * i) / steps));
+        await new Promise((resolve) => setTimeout(resolve, 16));
+      });
+    }
+
+    expect(spy.screenRenders, "a swipe start renders the screen").toBe(before);
+    const previewRows = screen.queryAllByText(/^Task \d+$/);
+    expect(previewRows.length).toBeGreaterThan(0);
+    expect(previewRows.length).toBeLessThanOrEqual(Math.floor(600 / 48));
+
+    await act(async () => {
+      host.dispatchEvent(pointer("pointerup", 240));
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
   });
 });

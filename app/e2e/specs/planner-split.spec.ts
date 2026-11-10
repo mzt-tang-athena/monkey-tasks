@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { overdue, supplements, tomorrow, undated } from "../data";
 import { holdDrag, holdDragTo } from "../gestures";
-import { expectAbove, row, sectionHeader } from "../locators";
+import { expectAbove, press, row, sectionHeader } from "../locators";
 import { putNote, returnToTab } from "../vault";
 
 /**
@@ -26,14 +26,31 @@ async function addEarlyTask(page: Page) {
   await returnToTab(page);
 }
 
+/**
+ * Press a month cell until the pane lists that day. A press can land
+ * before the cell's own layout reaches the press handler, and then the
+ * handler ignores it; a retry is what a person does too.
+ */
+async function pickDay(page: Page, name: string) {
+  const cell = page.getByRole("button", { name, exact: true });
+  await expect
+    .poll(async () => {
+      await cell.click();
+      return page.getByRole("button", { name: "open this day" }).count();
+    })
+    .toBeGreaterThan(0);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/planner");
   await expect(page.getByTestId("day-heading")).toBeVisible();
 });
 
-/** The source toggle, whatever it reads. */
+/** The live source toggle, whatever it reads. While a page slides,
+    the pager also renders the still preview's toggle; the live one is
+    the last in the pager. */
 function sourceToggle(page: Page) {
-  return page.getByRole("button", { name: /^task source:/ });
+  return page.getByRole("button", { name: /^task source:/ }).last();
 }
 
 /** Wait until the source toggle sits above the bottom bar. On a small
@@ -167,7 +184,7 @@ test.describe("a day's order", () => {
   test("the month's picked day sorts the same way", async ({ page }) => {
     await page.getByRole("tab", { name: "Month" }).click();
     await addEarlyTask(page);
-    await page.getByRole("button", { name: tomorrow.heading, exact: true }).click();
+    await pickDay(page, tomorrow.heading);
 
     await expectAbove(row(page, early.name), row(page, tomorrow.task));
     await expectAbove(row(page, tomorrow.task), row(page, supplements));
@@ -184,6 +201,14 @@ test.describe("a day's order", () => {
     await expect(row(page, early.name)).toBeVisible();
     await page.getByRole("tab", { name: "Day" }).click();
     await expect(page.getByTestId("day-heading")).toBeVisible();
+    // The pager sizes itself from its own layout, one frame after the
+    // page mounts. Wait for two frames rather than a wall-clock guess.
+    await page.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => done()));
+        }),
+    );
     const heading = await page.getByTestId("day-heading").boundingBox();
     if (heading == null) {
       throw new Error("the day heading has no box");
@@ -317,10 +342,10 @@ test("the month grid first paints where it settles", async ({ page }) => {
 
 test("the month keeps its picked day after a visit to Day", async ({ page }) => {
   await page.getByRole("tab", { name: "Month" }).click();
-  await page.getByRole("button", { name: "Wednesday 28", exact: true }).click();
+  await pickDay(page, "Wednesday 28");
   await expect(sectionHeader(page, "Wednesday 28")).toBeVisible();
 
-  await page.getByRole("button", { name: "open this day" }).click();
+  await press(page, page.getByRole("button", { name: "open this day" }));
   await expect(page.getByTestId("day-heading")).toBeVisible();
   await page.getByRole("tab", { name: "Month" }).click();
 

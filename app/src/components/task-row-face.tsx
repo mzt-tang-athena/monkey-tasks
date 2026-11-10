@@ -103,6 +103,29 @@ export function TaskRowFace({
   );
 }
 
+/**
+ * The face's height, in px, for a name that draws `lines` lines. The
+ * list preview uses it to stop drawing rows before the viewport ends.
+ */
+export function taskFaceHeight(
+  task: TaskItem,
+  lines = 1,
+  timeAlign: "under" | "right" = "under",
+): number {
+  const done = task.data?.completed != null;
+  const due = task.data?.due ? parseStoredDate(task.data.due) : null;
+  const overdue = !done && due != null && due.date.getTime() < startOfToday();
+  const recurring = task.data?.recurrence != null && task.data.recurrence !== "";
+  const timeUnder = timeAlign === "under" && !done && due?.hasTime === true;
+  const badDate = due == null && Boolean(task.data?.due);
+  const meta = timeUnder || badDate || recurring || overdue;
+  return (
+    taskRowFace.padY * 2 +
+    24 * Math.min(Math.max(lines, 1), 2) +
+    (meta ? 20 : 0)
+  );
+}
+
 /** The parts a live row rebuilds with its own handlers and motion. */
 export const faceStyles = StyleSheet.create({
   circle: {

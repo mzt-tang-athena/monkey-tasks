@@ -1,7 +1,7 @@
 import { expect, test } from "../fixtures";
 import { sections, supplements, tabs, undated } from "../data";
 import { holdDrag, swipe, touchSwipe } from "../gestures";
-import { expectAbove, listTab, row, sectionHeader } from "../locators";
+import { expectAbove, listTab, press, row, sectionHeader } from "../locators";
 import { putNote, returnToTab } from "../vault";
 
 test.beforeEach(async ({ page }) => {
@@ -45,7 +45,7 @@ test.describe("tab swipe", () => {
   });
 
   test("a plain tap on a row still opens the editor", async ({ page }) => {
-    await row(page, undated.second).getByRole("button", { name: "open task" }).click();
+    await press(page, row(page, undated.second).getByRole("button", { name: "open task" }));
 
     await expect(page).toHaveURL(/\/task\//);
   });
@@ -55,11 +55,8 @@ test.describe("tab swipe on a touch screen", () => {
   test.use({ hasTouch: true, isMobile: true });
 
   test("a touch swipe turns the page", async ({ page }) => {
-    // B2: the swipe body keeps `touch-action: auto`, so the browser
-    // claims the pan and cancels the pointer. Ticket 0059 fixes it and
-    // removes this mark.
-    test.fail();
-
+    // B2: the pager sets `touch-action: pan-y`, so the browser leaves
+    // the horizontal pan to the surface.
     await touchSwipe(page, sectionHeader(page, sections.today), "left");
 
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true", {

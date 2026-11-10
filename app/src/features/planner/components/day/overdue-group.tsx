@@ -13,29 +13,18 @@ import { RowSeparator } from "../row-separator";
  * hairline the list below draws between its own. Each row is a drag
  * source, like every other row.
  */
-export function OverdueGroup({
-  tasks,
-  copy = false,
-}: {
-  tasks: TaskItem[];
-  /** A still copy for the swipe preview: no test ids and no sources. */
-  copy?: boolean;
-}) {
+export function OverdueGroup({ tasks }: { tasks: TaskItem[] }) {
   const { toggle, open } = usePlannerList();
   return (
-    <View testID={copy ? undefined : "overdue-group"} style={styles.group}>
+    <View testID="overdue-group" style={styles.group}>
       <SectionHeader label="Overdue" count={tasks.length} tone="danger" />
       <View>
         {tasks.map((task, index) => (
           <React.Fragment key={task.id}>
             {index > 0 ? <RowSeparator /> : null}
-            {copy ? (
-              <TaskRow task={task} onToggle={toggle} onOpen={open} copy />
-            ) : (
-              <PlanDrag.Source payload={task} hold="row" testID={`task-source:${task.name}`}>
-                <TaskRow task={task} onToggle={toggle} onOpen={open} panPress />
-              </PlanDrag.Source>
-            )}
+            <PlanDrag.Source payload={task} hold="row" testID={`task-source:${task.name}`}>
+              <TaskRow task={task} onToggle={toggle} onOpen={open} panPress />
+            </PlanDrag.Source>
           </React.Fragment>
         ))}
       </View>

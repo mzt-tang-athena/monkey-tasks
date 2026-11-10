@@ -13,18 +13,39 @@ export type Direction = "left" | "right";
 
 /**
  * How far a swipe travels. `page` is well past the 80 px commit
- * threshold (`swipeThreshold` in `src/lib/swipe.ts`). `short` reads as
- * a swipe but stays under it, so the page springs back.
+ * threshold (`motion.swipe` in `src/lib/motion/tokens.ts`). `short`
+ * reads as a swipe but stays under it, so the page springs back.
  */
 export type Travel = "page" | "short";
 
 const travelPx: Record<Travel, number> = { page: 300, short: 50 };
+
+/** The drag distances the pager scenarios send, in px. */
+export const dragPx = {
+  /** A drag that follows the finger but stays under the commit. */
+  short: 40,
+  /** A drag past the commit threshold, and past the flick speed. */
+  flick: 120,
+  /** A long drag that commits on distance, not speed. */
+  turn: 300,
+  /** A drag against a closed end, where the rubber band caps. */
+  rubber: 200,
+  /** A vertical drag, and the sideways drift a thumb adds. */
+  driftY: 300,
+  driftX: 30,
+} as const;
+
+/** The share of the pager width a held drag travels. */
+export const holdShare = 0.95;
 
 /** A swipe starts this far in from the edge it travels away from. */
 const startInset = { left: 52, right: 60 };
 
 /** The steps of a swipe move, as the probe for ticket 0049 sent. */
 const swipeSteps = 15;
+
+/** A drag that keeps the button down ends here, short of the edge. */
+const holdInset = 16;
 
 /** The box of an element that is in view. */
 async function boxOf(target: Locator) {
@@ -295,6 +316,56 @@ export async function expectTouchAction(target: Locator, value: "pan-y" | "none"
     .toBe(value);
 }
 
+/** Where a drag starts on the target: its vertical middle, and one of
+    the horizontal anchors. */
+async function dragStart(
+  target: Locator,
+  side: "left" | "center" | "right",
+): Promise<{ x: number; y: number }> {
+  const box = await boxOf(target);
+  const x =
+    side === "left"
+      ? box.x + holdInset
+      : side === "right"
+        ? box.x + box.width - holdInset
+        : box.x + box.width / 2;
+  return { x, y: box.y + box.height / 2 };
+}
+
+/**
+ * A CDP touch from one point to another. `end` is the CDP event that
+ * finishes it: a release, or a cancel the browser sends when a system
+ * gesture takes over. It needs a context with `hasTouch`.
+ */
+async function touchPath(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  end: "touchEnd" | "touchCancel",
+  steps = swipeSteps,
+) {
+  const cdp = await page.context().newCDPSession(page);
+  const send = (
+    type: "touchStart" | "touchMove" | typeof end,
+    at?: { x: number; y: number },
+  ) =>
+    cdp.send("Input.dispatchTouchEvent", {
+      type,
+      touchPoints: at == null ? [] : [at],
+    });
+  await send("touchStart", from);
+  for (let i = 1; i <= steps; i++) {
+    await send("touchMove", {
+      x: from.x + ((to.x - from.x) * i) / steps,
+      y: from.y + ((to.y - from.y) * i) / steps,
+    });
+    // One frame between moves, as a finger sends them.
+    await page.waitForTimeout(16);
+  }
+  await send(end);
+  await cdp.detach();
+}
+
 /**
  * A touch swipe through CDP that starts on `from`. It needs a context
  * with `hasTouch`.
@@ -306,6 +377,135 @@ export async function touchSwipe(
   travel: Travel = "page",
 ) {
   const { x, y, dx } = await swipePath(page, from, dir, travel);
+  await touchPath(page, { x, y }, { x: x + dx, y }, "touchEnd");
+}
+
+/**
+ * The same travel as `touchSwipe`, ended by the browser's
+ * `touchCancel`. A cancelled touch is no release, so it never turns a
+ * page (V12).
+ */
+export async function touchCancel(
+  page: Page,
+  from: Locator,
+  dir: Direction,
+  travel: Travel = "page",
+) {
+  const { x, y, dx } = await swipePath(page, from, dir, travel);
+  await touchPath(page, { x, y }, { x: x + dx, y }, "touchCancel");
+}
+
+/**
+ * A mouse drag of `dx` px that starts on `target`. It leaves the
+ * button down, so the caller can read the mid-drag frame, take a
+ * screenshot, or end the gesture over another element. Returns where
+ * the pointer now stands.
+ */
+export async function dragHold(
+  page: Page,
+  target: Locator,
+  dx: number,
+  { side = "center", steps = swipeSteps }: { side?: "left" | "center" | "right"; steps?: number } = {},
+) {
+  const start = await dragStart(target, side);
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + dx, start.y + 2, { steps });
+  return { start, at: { x: start.x + dx, y: start.y + 2 } };
+}
+
+/** A mouse drag of `dx` px on `target`, released at the same y. */
+export async function mouseDrag(
+  page: Page,
+  target: Locator,
+  dx: number,
+  options: { side?: "left" | "center" | "right"; steps?: number } = {},
+) {
+  await dragHold(page, target, dx, options);
+  await page.mouse.up();
+}
+
+/**
+ * A CDP touch drag of `dx` px on `target`, with an optional drift.
+ * `end` says whether the browser releases it or cancels it.
+ */
+export async function touchDrag(
+  page: Page,
+  target: Locator,
+  dx: number,
+  {
+    dy = 0,
+    side = "center",
+    end = "touchEnd",
+    steps = swipeSteps,
+  }: {
+    dy?: number;
+    side?: "left" | "center" | "right";
+    end?: "touchEnd" | "touchCancel";
+    steps?: number;
+  } = {},
+) {
+  const start = await dragStart(target, side);
+  await touchPath(
+    page,
+    start,
+    { x: start.x + dx, y: start.y + dy },
+    end,
+    steps,
+  );
+}
+
+/**
+ * A vertical CDP touch drag with a little sideways drift. It reads as
+ * a scroll, so the list scrolls and no page turns (B2).
+ */
+export async function touchDrift(
+  page: Page,
+  target: Locator,
+  dy: number,
+  dx: number,
+) {
+  const start = await dragStart(target, "center");
+  await touchPath(
+    page,
+    start,
+    { x: start.x + dx, y: start.y + dy },
+    "touchEnd",
+  );
+}
+
+/**
+ * A mouse drag held at its end, so `during` can read or capture the
+ * mid-gesture frame. It releases after the callback returns.
+ */
+export async function mouseHold(
+  page: Page,
+  target: Locator,
+  dx: number,
+  during: () => Promise<void>,
+  { side = "center", steps = swipeSteps }: { side?: "left" | "center" | "right"; steps?: number } = {},
+) {
+  await dragHold(page, target, dx, { side, steps });
+  await during();
+  await page.mouse.up();
+}
+
+/**
+ * A CDP touch drag held at its end, so `during` can read or capture
+ * the mid-gesture frame. It releases after the callback returns.
+ */
+export async function touchHold(
+  page: Page,
+  target: Locator,
+  dx: number,
+  during: () => Promise<void>,
+  {
+    dy = 0,
+    side = "center",
+    steps = swipeSteps,
+  }: { dy?: number; side?: "left" | "center" | "right"; steps?: number } = {},
+) {
+  const start = await dragStart(target, side);
   const cdp = await page.context().newCDPSession(page);
   const send = (
     type: "touchStart" | "touchMove" | "touchEnd",
@@ -315,12 +515,15 @@ export async function touchSwipe(
       type,
       touchPoints: at == null ? [] : [at],
     });
-  await send("touchStart", { x, y });
-  for (let i = 1; i <= swipeSteps; i++) {
-    await send("touchMove", { x: x + (dx * i) / swipeSteps, y });
-    // One frame between moves, as a finger sends them.
+  await send("touchStart", start);
+  for (let i = 1; i <= steps; i++) {
+    await send("touchMove", {
+      x: start.x + (dx * i) / steps,
+      y: start.y + (dy * i) / steps,
+    });
     await page.waitForTimeout(16);
   }
+  await during();
   await send("touchEnd");
   await cdp.detach();
 }

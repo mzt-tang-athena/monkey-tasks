@@ -1,7 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { NoPanPressable as Pressable } from "@/components/ui/pressable";
+import { Pressable } from "react-native-gesture-handler";
 import { SectionHeader } from "@/components/ui/section-header";
 import { WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import type { PlannerMonth } from "@/features/planner/hooks/use-planner-month";
@@ -23,7 +23,7 @@ export function MonthPane({
   tasks,
   day,
   today,
-  onShiftMonth,
+  onSelectMonth,
   onOpenDay,
 }: {
   /** The month state, held by the screen. */
@@ -31,7 +31,8 @@ export function MonthPane({
   tasks: TaskItem[];
   day: Date;
   today: Date;
-  onShiftMonth: (delta: 1 | -1) => void;
+  /** A strip tap or a page landing picks the month. */
+  onSelectMonth: (month: Date) => void;
   onOpenDay: (day: Date) => void;
 }) {
   const { source } = usePlannerList();
@@ -77,7 +78,7 @@ export function MonthPane({
       tasks={tasks}
       picked={picked}
       onPick={pick}
-      onShiftMonth={onShiftMonth}
+      onSelectMonth={onSelectMonth}
     >
       {/* The pane under the card: the source's month list until a day
           is picked, then that day's tasks. */}

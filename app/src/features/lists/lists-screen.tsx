@@ -1,11 +1,19 @@
 import * as React from "react";
-import { SectionList, StyleSheet, View } from "react-native";
+import {
+  Platform,
+  SectionList,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type PointerEvent as RNPointerEvent,
+} from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
-import { useSwipePager } from "@/components/swipe-pager";
+import { Pager } from "@/components/motion/pager";
+import { renderMotionScroll } from "@/components/motion/scroll-view";
 import { cardPosition } from "@/components/ui/card-group-row";
 import {
   EmptyState,
@@ -14,7 +22,6 @@ import {
 } from "@/components/ui/list-states";
 import { useStableCallback } from "@/hooks/use-stable-callback";
 import { usePressGuard } from "@/hooks/use-press-guard";
-import { swipeProps, type SwipeController } from "@/lib/swipe";
 import { useStoreMeta } from "@/stores/tasks/task-state";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
@@ -38,6 +45,8 @@ import { useTickHold } from "./hooks/use-tick-hold";
 import type { ListsSection } from "./lib/list-sections";
 import { applyTickHold } from "./lib/tick-hold";
 
+const noop = () => undefined;
+
 /**
  * Lists tab: Main first, then one tab per list note, with capture
  * docked above the bottom bar. Main shows every task. The screen
@@ -51,20 +60,20 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const refresh = useRefreshTasks();
   const grant = useGrantFolder();
   const insets = useSafeAreaInsets();
+  const window = useWindowDimensions();
+  const [pagerHeight, setPagerHeight] = React.useState(0);
 
   const tabState = useListTabState();
-  const { tab, setTab } = tabState;
+  const { tab, setTab, index, bounds, onPage } = tabState;
   const { sortMode, setSortMode } = useSortMode();
   const { shown, repairs, sections, onlyCompleted } = useListSections(
     tab,
     sortMode,
   );
 
-  // A press that ends a swipe or a drop must not also press the row.
+  // A press that ends a drop must not also press the row. The swipe no
+  // longer arms it: the pager's pan cancels the press itself.
   const guard = usePressGuard();
-  // The reorder claims the gesture through this ref. The pager makes
-  // its controller after the reorder hook runs.
-  const swipe = React.useRef<SwipeController | null>(null);
 
   const tickHold = useTickHold(toggleTask);
   const held = React.useMemo(
@@ -85,7 +94,9 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   } = useRowReorder({
     sections: held,
     write: reorderSection,
-    claimSwipe: () => swipe.current?.claim(),
+    // The reorder no longer has a swipe to claim. It keeps its web
+    // pointer handlers until 0060 moves it onto the reorder surface.
+    claimSwipe: noop,
     onDrop: () => {
       guard.arm();
       guard.release();
@@ -181,72 +192,26 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
     ],
   );
 
-  // The pager's page: the current list, plus the neighbour the finger
-  // travels toward. The pager owns the horizontal offset. The current
-  // list keeps its identity, so its scroll position survives a swipe.
-  const { page, controller } = useSwipePager({
-    pageKey: tab,
-    canGo: tabState.canGo,
-    onPage: tabState.onPage,
-    onSwipeStart: guard.arm,
-    onSwipeEnd: guard.release,
-    renderNeighbor: (dir) => {
-      const neighbor = tabState.neighbor(dir);
-      return neighbor == null ? null : (
-        <ListPagePreview tab={neighbor} sortMode={sortMode} />
-      );
-    },
-    children: (
-      <SectionList<TaskItem, ListsSection>
-        contentContainerStyle={styles.content}
-        onRefresh={reload}
-        refreshing={refreshing}
-        sections={displaySections}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        renderSectionHeader={renderSectionHeader}
-        ListHeaderComponent={
-          <>
-            <RepairNotice repairs={repairs} />
-            {status === "ready" && onlyCompleted ? (
-              <EmptyState label="Nothing on this list yet." />
-            ) : null}
-          </>
+  // The reorder's web moves and ups live on the page, not on the pager
+  // host. They keep working until 0060 owns the reorder.
+  const reorderHandlers =
+    Platform.OS === "web"
+      ? {
+          onPointerMove: (e: RNPointerEvent) =>
+            moveRow(e.nativeEvent.pageX, e.nativeEvent.pageY),
+          onPointerUp: endRow,
+          onPointerCancel: endRow,
         }
-        ListEmptyComponent={
-          status === "loading" ? (
-            <LoadingState />
-          ) : status === "error" ? (
-            <ErrorState
-              message={readError ?? "Something went wrong."}
-              onRetry={() => void reload()}
-            />
-          ) : (
-            <EmptyState label="Nothing on this list yet." />
-          )
-        }
-        scrollEnabled={lifted == null}
-        stickySectionHeadersEnabled={false}
-        removeClippedSubviews={false}
-      />
-    ),
-  });
+      : {};
 
-  React.useLayoutEffect(() => {
-    swipe.current = controller;
-  }, [controller]);
+  const previewHeight = pagerHeight > 0 ? pagerHeight : window.height;
 
   return (
     <View style={styles.screen}>
       {/* The status bar strip takes the header's surface, so the top
           chrome reads as one band instead of a paper gap. */}
       <View style={[styles.statusStrip, { height: insets.top }]} />
-      {/* A horizontal swipe on the body walks the tabs. */}
-      <View
-        testID="list-pager"
-        style={styles.body}
-        {...swipeProps(controller, { move: moveRow, up: endRow })}
-      >
+      <View style={styles.body}>
         {(rootUri == null && status === "ready") || status === "error" ? (
           <VaultPrompt onGrant={() => void grant()} />
         ) : null}
@@ -262,7 +227,68 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
         {/* A failed tick or field write leaves the list usable, so each
             one is a quiet banner over it, not the error state. */}
         {status !== "error" ? <FailureBanner /> : null}
-        {page}
+        {/* The pager is the body under the fixed chrome. A swipe on it
+            walks the tabs, and a landing writes the tab. */}
+        <View
+          style={styles.pageHost}
+          onLayout={(e) => setPagerHeight(e.nativeEvent.layout.height)}
+        >
+          <Pager
+            testID="list-pager"
+            index={index}
+            bounds={bounds}
+            onPage={onPage}
+            // The legacy reorder owns the pointer while a row is lifted.
+            enabled={lifted == null}
+            renderPreview={(page) => {
+              const name = tabState.tabs[page];
+              return name == null ? null : (
+                <ListPagePreview
+                  tab={name}
+                  sortMode={sortMode}
+                  height={previewHeight}
+                />
+              );
+            }}
+            fill
+          >
+            <View style={styles.page} {...reorderHandlers}>
+              <SectionList<TaskItem, ListsSection>
+                contentContainerStyle={styles.content}
+                onRefresh={reload}
+                refreshing={refreshing}
+                sections={displaySections}
+                keyExtractor={keyExtractor}
+                renderItem={renderItem}
+                renderSectionHeader={renderSectionHeader}
+                renderScrollComponent={renderMotionScroll}
+                ListHeaderComponent={
+                  <>
+                    <RepairNotice repairs={repairs} />
+                    {status === "ready" && onlyCompleted ? (
+                      <EmptyState label="Nothing on this list yet." />
+                    ) : null}
+                  </>
+                }
+                ListEmptyComponent={
+                  status === "loading" ? (
+                    <LoadingState />
+                  ) : status === "error" ? (
+                    <ErrorState
+                      message={readError ?? "Something went wrong."}
+                      onRetry={() => void reload()}
+                    />
+                  ) : (
+                    <EmptyState label="Nothing on this list yet." />
+                  )
+                }
+                scrollEnabled={lifted == null}
+                stickySectionHeadersEnabled={false}
+                removeClippedSubviews={false}
+              />
+            </View>
+          </Pager>
+        </View>
       </View>
       <ReorderGhost lifted={lifted} y={ghostY} />
 
@@ -296,6 +322,13 @@ const styles = StyleSheet.create({
   },
   // The body holds the pager under the fixed chrome.
   body: {
+    flex: 1,
+  },
+  // The pager's slot: the page below the toolbar and the banners.
+  pageHost: {
+    flex: 1,
+  },
+  page: {
     flex: 1,
   },
   content: {

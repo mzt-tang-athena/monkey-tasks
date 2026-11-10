@@ -1,5 +1,10 @@
 import * as React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import {
+  MotionScrollView,
+  type MotionScrollRef,
+} from "@/components/motion/scroll-view";
+import { NoPanPressable } from "@/components/ui/pressable";
 import { addDays, startOfDay, isSameDay } from "@/utils/dates";
 import {
   dayIndexBetween,
@@ -102,7 +107,7 @@ function PeriodRail({
   activeIdx: number;
   renderItem: (index: number) => React.ReactNode;
 }) {
-  const scroller = React.useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const scroller = React.useRef<MotionScrollRef | null>(null);
   const viewport = React.useRef(0);
   const railX = React.useRef(0);
 
@@ -138,7 +143,7 @@ function PeriodRail({
   React.useLayoutEffect(alignToActive, [activeIdx, alignToActive]);
 
   return (
-    <ScrollView
+    <MotionScrollView
       ref={scroller}
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -154,7 +159,7 @@ function PeriodRail({
       scrollEventThrottle={64}
     >
       {Array.from({ length: count }, (_, index) => renderItem(index))}
-    </ScrollView>
+    </MotionScrollView>
   );
 }
 
@@ -193,7 +198,7 @@ export function PeriodStrip({
           const active = isSameDay(day, selected);
           const isToday = startOfDay(day).getTime() === todayStart;
           return (
-            <Pressable
+            <NoPanPressable
               key={day.getTime()}
               style={({ pressed }) => [
                 styles.stripDay,
@@ -223,7 +228,7 @@ export function PeriodStrip({
               >
                 {day.getDate()}
               </Text>
-            </Pressable>
+            </NoPanPressable>
           );
         })}
       </View>
@@ -252,7 +257,7 @@ export function PeriodStrip({
           const active = selStart >= startT && selStart <= endT;
           const isCurrent = todayStart >= startT && todayStart <= endT;
           return (
-            <Pressable
+            <NoPanPressable
               key={startT}
               style={({ pressed }) => [
                 styles.stripDay,
@@ -282,7 +287,7 @@ export function PeriodStrip({
               >
                 {`W${isoWeek(addDays(weekStartDay, 3))}`}
               </Text>
-            </Pressable>
+            </NoPanPressable>
           );
         }}
       />
@@ -315,7 +320,7 @@ export function PeriodStrip({
           today.getFullYear() === monthStartDay.getFullYear() &&
           today.getMonth() === monthStartDay.getMonth();
         return (
-          <Pressable
+          <NoPanPressable
             key={monthStartDay.getTime()}
             style={({ pressed }) => [
               styles.stripDay,
@@ -345,7 +350,7 @@ export function PeriodStrip({
             >
               {MONTHS_SHORT[monthStartDay.getMonth()]}
             </Text>
-          </Pressable>
+          </NoPanPressable>
         );
       }}
     />

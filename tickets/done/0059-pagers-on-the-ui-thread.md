@@ -3,8 +3,8 @@ id: 0059
 title: The three pagers run on the UI thread
 created: 2026-10-26
 priority: high
-assignee:
-pr:
+assignee: omp
+pr: 100
 depends: [0058]
 ---
 
@@ -186,22 +186,22 @@ phone show those.
 
 ## Acceptance
 
-- [ ] Each scenario above has a failing Playwright or component test
+- [x] Each scenario above has a failing Playwright or component test
       before its fix, and all pass after, with the mouse and with
       touch.
-- [ ] `list-pager`, `day-pager` and `month-pager` compute
+- [x] `list-pager`, `day-pager` and `month-pager` compute
       `touch-action: pan-y` in the browser.
-- [ ] The B2 test in `e2e/specs/lists.spec.ts` passes without
+- [x] The B2 test in `e2e/specs/lists.spec.ts` passes without
       `test.fail()`, and the swipe arm of `use-press-guard` is gone.
-- [ ] The list, the day and the month page through
+- [x] The list, the day and the month page through
       `src/components/motion/pager.tsx`. `swipe-pager.tsx`,
       `lib/swipe.ts` and `lib/swipe.test.ts` are gone.
-- [ ] Web reorder still works in My order, through the handlers that
+- [x] Web reorder still works in My order, through the handlers that
       moved off the pager host.
-- [ ] The web grabber still resizes the day split, through the calls
-      kept on the day root.
-- [ ] Lint passes with this ticket's files out of the allowlist, except
-      `lists-screen.tsx` and `day/day-spread.tsx`.
+- [x] The web grabber still resizes the day split. 0061's `Split` now
+      owns the grabber, and `day-spread.tsx` holds no split handler.
+- [x] Lint passes with this ticket's files out of the allowlist, except
+      `lists-screen.tsx` for the 0060 reorder handlers.
 - [ ] Emulator, with the `verify-monkey-tasks` Android path: on the
       list, the day and the month, a slow drag, a flick, a short drag,
       a double flick and a swipe at each end show no blank strip, no
@@ -230,4 +230,81 @@ phone show those.
   guard exists to stay armed. The second B1 scenario above proves it.
 
 ## Outcome
-(filled in before moving to done/)
+
+Moved the list tabs, the planner day body and the month calendar onto
+`src/components/motion/pager.tsx`, on `799afbd` after the 0061 rebase.
+Deleted `components/swipe-pager.tsx`, `lib/swipe.ts` and
+`lib/swipe.test.ts`. Also deleted `use-claimed-list.ts` and its test,
+which the day split no longer used, and `hooks/use-planner-gestures.ts`,
+whose day and month shifts `onSelectDay` and `onSelectMonth` replace.
+
+Web gates, all clean:
+
+| Gate | Result |
+|---|---|
+| `npx tsc --noEmit` | clean |
+| `npx eslint src scripts e2e --max-warnings 0` | clean |
+| `npx vitest run` | 79 files, 708 tests, all pass |
+| `E2E_PORT=8581 npm run e2e` | 235 passed, 19 skipped, 0 failed, 0 retries |
+
+`e2e/specs/pagers.spec.ts` runs the ticket's scenarios with the mouse
+and with CDP touch, in the `motion` and `reduced-motion` projects.
+The scenario names are the ticket's own: a swipe turns the list page,
+a swipe that starts on a row opens no editor, a short drag keeps its
+preview until the track rests, two fast drags move two tabs, a landed
+tab holds no page two away, a drag right at the first list stops at
+the rubber band, a tab tap one page away slides, a tab tap three pages
+away cuts, a swipe on a month cell opens no day, a swipe released over
+the bottom bar rests and the next tap opens, the list and day preview
+screenshot pairs, a touch drag that ends in touchCancel keeps the tab,
+a vertical touch drag with sideways drift scrolls and never pages, the
+reduce-motion track, and the tab strip. The J1 component test is
+`lists-screen.test.tsx` "renders nothing at a swipe start, and caps the
+preview rows".
+
+Decisions taken while building:
+
+- `Pager` gained `enabled`. The lists screen passes
+  `enabled={lifted == null}`, so the legacy reorder drag does not also
+  page.
+- The list index is the tab position. The day and month indexes count
+  days and months from the mount day or month. A strip tap sets route
+  state, and `onPage` writes the absolute date back.
+- List rows pass 0061's `panPress`, so their press cancels under the
+  pager's pan. The month cells and the month pane's open link use
+  gesture handler's `Pressable`, because a swipe must not pick a day.
+  Controls with no pan above them stay on `NoPanPressable` through
+  `components/ui/pressable.tsx`: the tab strip, the period strip and
+  the list notices.
+- `day-spread.tsx` left the 0058 lint allowlist. 0061 had already
+  deleted the split handlers and the touch gate the ticket wanted kept,
+  and the pager host needs no banned motion path. `lists-screen.tsx`
+  stays for the 0060 reorder handlers.
+- The day preview draws still `PreviewRow`s and `SplitStill` from the
+  same `dayRows` and one `now` in `day-spread.tsx`. It mounts no live
+  `TaskRow`, `TaskListSection` or `OverdueGroup`.
+- Web reorder keeps its `onPointerMove`, `onPointerUp` and
+  `onPointerCancel` handlers on a plain `View` inside the list page.
+
+Test-harness decisions:
+
+- `press()` in `e2e/locators.ts` scrolls, waits two frames, then
+  clicks. Gesture handler's web press drops a press on a target it has
+  not measured, and Playwright scrolls after its own stability check,
+  so a row that mounts with that scroll loses the press.
+- `pickDay` retries a month cell until the picked pane shows, and the
+  keyboard test in `capture-dock.spec.ts` focuses until the button holds
+  focus. The toast check scopes `alert` to its text.
+- The preview screenshot pairs compare pixels with a small tolerance.
+  The held page stands a fraction of a pixel beside the landed page,
+  and the test also asserts that the landed pager's `scrollTop` is 0.
+
+Not proven:
+
+- Emulator boxes: every drag, flick, double flick, end swipe, drift,
+  hold-to-lift and chip strip scenario in the recorded Android frames.
+- Phone boxes: the system back gesture, reduce motion on the device,
+  and the 0046 phone pass.
+- The browser cannot show the V3 frame flash or the 0046 flicker,
+  because Reanimated runs on the main thread there.
+

@@ -46,7 +46,6 @@ export const TaskListSection = React.memo(function TaskListSection({
   header,
   footer,
   style,
-  copy = false,
 }: {
   /** The mode and the day the source toggle names its period from. */
   mode: Mode;
@@ -55,24 +54,18 @@ export const TaskListSection = React.memo(function TaskListSection({
   emptyLabel: string;
   header?: React.ReactNode;
   footer?: React.ReactNode;
-  /** The rows are a still copy (the day swipe preview), so they carry
-      no test ids. */
-  copy?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const { taskForm, toggle, open } = usePlannerList();
   const pills = taskForm === "pills" && tasks.length > 0;
 
   const renderItem = React.useCallback<ListRenderItem<TaskItem>>(
-    ({ item }) =>
-      copy ? (
-        <TaskRow task={item} onToggle={toggle} onOpen={open} copy />
-      ) : (
-        <PlanDrag.Source payload={item} hold="row" testID={`task-source:${item.name}`}>
-          <TaskRow task={item} onToggle={toggle} onOpen={open} panPress />
-        </PlanDrag.Source>
-      ),
-    [toggle, open, copy],
+    ({ item }) => (
+      <PlanDrag.Source payload={item} hold="row" testID={`task-source:${item.name}`}>
+        <TaskRow task={item} onToggle={toggle} onOpen={open} panPress />
+      </PlanDrag.Source>
+    ),
+    [toggle, open],
   );
 
   // A FlatList has no gap between its header slot and its first row,
@@ -105,7 +98,7 @@ export const TaskListSection = React.memo(function TaskListSection({
                   items: each pill sizes itself to its label and the
                   grid reflows per row, which a vertical list cannot
                   do. */}
-              {pills ? <TaskPills tasks={tasks} copy={copy} /> : null}
+              {pills ? <TaskPills tasks={tasks} /> : null}
             </View>
           ) : null}
         </View>

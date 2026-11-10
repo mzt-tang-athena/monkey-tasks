@@ -83,7 +83,9 @@ function TaskCardRowBase({
         onEnd={onEnd}
       >
         <View style={[styles.main, lifted && styles.hidden]}>
-          <TaskRow task={task} onToggle={onToggle} onOpen={onOpen} />
+          {/* The row sits inside the list pager: a pan cancels its
+              press, so a swipe that starts on a row opens no editor. */}
+          <TaskRow task={task} onToggle={onToggle} onOpen={onOpen} panPress />
         </View>
       </ReorderRow>
       {canDrag ? (

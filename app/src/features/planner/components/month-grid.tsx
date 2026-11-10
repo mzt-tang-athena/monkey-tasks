@@ -1,7 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { NoPanPressable as Pressable } from "@/components/ui/pressable";
+import { Pressable } from "react-native-gesture-handler";
 import { addDays, isoOf, isSameDay } from "@/utils/dates";
 import { occurrencesBetween } from "@/lib/recurrence";
 import { isDone, startOfMonth } from "@/features/planner/model";
