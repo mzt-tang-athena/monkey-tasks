@@ -33,12 +33,25 @@ vi.mock("expo-file-system/legacy", () => ({
   },
   EncodingType: { UTF8: "utf8" },
   readAsStringAsync: async () => state.fileText,
-  writeAsStringAsync: async (uri: string, text: string) => {
-    if (state.failWrite) {
-      throw new Error("disk full");
+}));
+
+vi.mock("expo-file-system", () => ({
+  FileMode: { Truncate: "wt" },
+  File: class {
+    constructor(private readonly uri: string) {}
+    open() {
+      const uri = this.uri;
+      return {
+        writeBytes: async (bytes: Uint8Array) => {
+          if (state.failWrite) {
+            throw new Error("disk full");
+          }
+          state.writes.push({ uri, text: new TextDecoder().decode(bytes) });
+          state.events.push("write");
+        },
+        close: () => undefined,
+      };
     }
-    state.writes.push({ uri, text });
-    state.events.push("write");
   },
 }));
 
