@@ -67,8 +67,11 @@ const noRects: Rects = { generation: 0, zones: [], grids: [], clips: {} };
 const noGrab: Grab = { dx: 0, dy: 0, width: 0 };
 
 /** One session per surface mount. `makeHandlers` builds the root's JS
-    ends once, from the session they serve. */
-export function useSession(makeHandlers: (session: Session) => SessionHandlers): Session {
+    ends once, from the session they serve. A surface may add its own
+    ends, so the return keeps their types. */
+export function useSession<H extends SessionHandlers = SessionHandlers>(
+  makeHandlers: (session: Session) => H,
+): Session & { handlers: H } {
   const machine = useSharedValue<DragState>(idle);
   const generation = useSharedValue(0);
   const x = useSharedValue(0);
@@ -91,7 +94,7 @@ export function useSession(makeHandlers: (session: Session) => SessionHandlers):
     made.handlers = makeHandlers(made);
     return made;
   });
-  return session;
+  return session as Session & { handlers: H };
 }
 
 /** Feeds the machine one event and returns its effect. */

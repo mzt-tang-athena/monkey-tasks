@@ -81,7 +81,8 @@ const scheduledAt: number[] = [];
 /** A phone with no folder granted: the vault has no saved root. */
 let noFolder = false;
 
-vi.mock("react-native", () => ({
+vi.mock("react-native", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-native")>()),
   Platform: { OS: "android" },
   AppState: {
     addEventListener: () => ({ remove: () => undefined }),

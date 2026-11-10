@@ -1,11 +1,5 @@
 import * as React from "react";
-import {
-  Animated,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from "react-native";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { taskRowFace } from "@/components/task-row-face";
 import type { CardPosition } from "@/lib/motion/drag-math";
 import { colors, radius } from "@/theme/tokens";
@@ -17,32 +11,25 @@ export { cardPosition, type CardPosition } from "@/lib/motion/drag-math";
  * every row draws the sides, the first adds the top and its corners,
  * and the last adds the bottom. A row below another draws the divider
  * at its own top, inset to the task text, so a dragged row carries its
- * divider with it.
- *
- * It renders an animated view, so a caller can pass a drag transform
- * in `style`.
+ * divider with it. The live list draws its cards through
+ * `ListReorder.Item`; this still card shapes the page preview.
  */
 export function CardGroupRow({
   position,
   style,
-  ref,
   children,
 }: {
   position: CardPosition;
-  style?: StyleProp<Animated.WithAnimatedValue<ViewStyle>>;
-  ref?: React.Ref<React.ComponentRef<typeof Animated.View>>;
+  style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 }) {
   const top = position === "first" || position === "only";
   const bottom = position === "last" || position === "only";
   return (
-    <Animated.View
-      ref={ref}
-      style={[styles.row, top && styles.top, bottom && styles.bottom, style]}
-    >
+    <View style={[styles.row, top && styles.top, bottom && styles.bottom, style]}>
       {top ? null : <View testID="card-divider" style={styles.divider} />}
       {children}
-    </Animated.View>
+    </View>
   );
 }
 

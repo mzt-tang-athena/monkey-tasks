@@ -212,18 +212,18 @@ start on native.
 
 ## Acceptance
 
-- [ ] Each scenario above has a failing test before its fix, and all
+- [x] Each scenario above has a failing test before its fix, and all
       pass after, with the mouse and with touch.
-- [ ] `src/components/motion/reorder.tsx` exists with the 0058
+- [x] `src/components/motion/reorder.tsx` exists with the 0058
       signature, and the lists screen reorders only through
       `ListReorder`.
 - [ ] ADR 0032 carries a dated note naming the drop that shipped (the
       index stamp, or a new key per moved row), with the emulator
       evidence folder and the phone rates it ran on.
-- [ ] The reorder, the tick hold and the entrance use only
+- [x] The reorder, the tick hold and the entrance use only
       `src/components/motion` and `useProgress`. Lint passes with this
       ticket's files out of the allowlist.
-- [ ] `use-row-reorder.ts`, `reorder-row.tsx`, `reorder-ghost.tsx`,
+- [x] `use-row-reorder.ts`, `reorder-row.tsx`, `reorder-ghost.tsx`,
       `freshMs` and the tick hold timer are gone. `use-press-guard.ts`
       is gone, or the Outcome names the caller that keeps it.
 - [ ] Emulator, reduce motion off: a long press lift, a grip drag, a
@@ -238,4 +238,72 @@ start on native.
       slide, a tick regroups at once, and a capture appears at rest.
 
 ## Outcome
-(filled in before moving to done/)
+
+Built on 2026-11-10 on `feat/0060-reorder-ui-thread`.
+
+`src/components/motion/reorder.tsx` holds `createReorderSurface<P>()`
+with `Root`, `Item`, `Grip` and `useDragging`. `Root` owns the session,
+the bridge guard and the ghost in the `dragGhost` layer. `Item` takes
+`payload`, `id`, `group`, `index`, `count` and `disabled`, registers
+its animated ref and measures its group once at pickup. Slots come
+from `slotForY` and `slotTops`. `onReorder({payload, group, from, to})`
+runs once per drop and only when `from !== to`. A row's shift and
+corners count only while its `index` equals the index it had at
+pickup, so the commit that reorders the data carries zero shift.
+Shared values reset after the commit, and at pickup and cancel. The
+ghost renders `renderGhost` through `Overlay`.
+
+`features/lists/lib/list-reorder.ts` holds
+`createReorderSurface<TaskItem>()`. `lists-screen.tsx` wraps the pager
+in `ListReorder.Root` and sends the drop through
+`use-reorder-section`. `task-card-row.tsx` renders `Landing` and
+`ListReorder.Item`; `TaskRow` takes `grip`. `Item` owns the card
+corners and the divider, and `card-group-row.tsx` is a plain `View`
+again for the page preview.
+
+Deleted: `use-row-reorder.ts`, `reorder-row.tsx`, `reorder-ghost.tsx`,
+`use-press-guard.ts` and its test, the web reorder handlers in
+`lists-screen.tsx`, `layoutOrder`, both `freshMs` copies and `useRise`.
+No caller of `usePressGuard` remained. The ticket's files are out of
+the 0058 lint allowlist, including `lists-screen.tsx` and
+`task-row.tsx`.
+
+Pager coexistence: `ListPager` reads `ListReorder.useDragging()`, a
+context consumer inside `Root`. The pager re-renders at pickup and
+drop only, never the screen and never per crossing. A resting row
+leaves the pager on, so a sideways drag still pages. Gesture
+arbitration alone did not hold on the web: the pager took the first
+sideways move from the grip. The grip also claims on a 1 ms long
+press, because a web pan with `minDistance: 0` waits for the first
+move.
+
+The tick holds are a map keyed by row uri in `use-tick-hold.ts`. No
+timer remains. `TaskRow` runs `useProgress(done, { ms: tickWash,
+onSettled })`. `onSettled(1)` ends that row's hold, and unmount
+settles it too. A hold stores its neighbours and falls back to its
+index, so a row that leaves first cannot push a held row past its
+remaining neighbour.
+
+`use-capture-task.ts` calls `markLanded(id)` before the optimistic row
+mounts. `Landing id={task.uri}` takes the mark once. The remount under
+the file uri finds nothing.
+
+Tests on the web. The Playwright spec `e2e/specs/reorder.spec.ts`
+runs in both projects, with the mouse and with CDP touch where a
+gesture is involved. Its scenarios are the ticket's: the touch action
+table, V6 connection through a group that empties, V8 one-slot and
+instant drops plus a drop in place, the hold and pager cells, V9 two
+ticks, the tick timing, V10 a tick after a drop, L3 leaving a held
+row, V7 the capture remount chain, and the reduced-motion end states.
+Three cells skip in the other project because they assert the motion
+project's own behavior. The jsdom tests cover J2, the refetch uri
+change and two and three tick holds. The two-hold placement and the
+grip's first sideways move failed in the browser before their fixes.
+`tsc`, eslint and vitest are green. The full suite was 270 passed and
+22 skipped.
+
+Not proven on a device. No Android emulator run with
+`android-frames.mjs` happened, and no phone pass at 60 Hz or 120 Hz
+happened. The emulator and phone acceptance boxes stay unchecked. The
+2026-11-10 amendment to ADR 0032 records the drop and the web
+evidence, and names both device checks as still open.

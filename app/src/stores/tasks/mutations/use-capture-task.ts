@@ -1,4 +1,5 @@
 import * as React from "react";
+import { markLanded } from "@/lib/motion/entrances";
 import { createNote } from "@/lib/vault/notes";
 import type { CaptureTarget, ParsedCapture, TaskItem } from "@/types/task";
 import { captureDraft } from "../capture-draft";
@@ -75,8 +76,13 @@ export function useCaptureTask(): (
   const { mutateAsync } = useVaultMutation(spec);
   return React.useCallback(
     async (parsed, target, preselectedDue) => {
+      const id = pendingId();
+      // The row mounts under this id first, so its landing is the only
+      // thing that finds the mark. The remount under its file uri
+      // finds nothing (ticket 0060).
+      markLanded(id);
       await mutateAsync({
-        id: pendingId(),
+        id,
         draft: captureDraft(parsed, target, preselectedDue),
       });
     },

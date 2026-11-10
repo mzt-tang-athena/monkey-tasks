@@ -18,6 +18,7 @@ const spy = vi.hoisted(() => ({
   push: vi.fn(),
   tasks: [] as unknown[],
   listeners: new Set<() => void>(),
+  sortMode: "due" as "due" | "manual",
 }));
 
 vi.mock("react-native-safe-area-context", () => ({
@@ -27,7 +28,7 @@ vi.mock("react-native-safe-area-context", () => ({
 vi.mock("expo-router", () => ({ router: { push: spy.push } }));
 
 vi.mock("@/lib/settings", () => ({
-  loadSettings: () => ({ taskForm: "rows", sortMode: "due" }),
+  loadSettings: () => ({ taskForm: "rows", sortMode: spy.sortMode }),
   saveSetting: () => undefined,
 }));
 
@@ -90,19 +91,34 @@ vi.mock("@/components/task-row", async () => {
     task,
     onToggle,
     onOpen,
+    onTickSettled,
+    grip,
   }: {
     task: TaskItem;
     onToggle?: (task: TaskItem) => void;
     onOpen?: (task: TaskItem) => void;
+    onTickSettled?: (task: TaskItem) => void;
+    grip?: React.ReactNode;
   }) {
     spy.renders[task.name] = (spy.renders[task.name] ?? 0) + 1;
     React.useEffect(() => {
       spy.mounts[task.name] = (spy.mounts[task.name] ?? 0) + 1;
     }, [task.name]);
+    // The real row ends its hold from the tick's animation. The
+    // stand-in does the same after the wash's 320 ms.
+    const done = task.data?.completed != null;
+    React.useEffect(() => {
+      if (!done) {
+        return;
+      }
+      const timer = setTimeout(() => onTickSettled?.(task), 320);
+      return () => clearTimeout(timer);
+    }, [done, task, onTickSettled]);
     return (
       <div data-testid={`row:${task.name}`}>
         <button aria-label={`tick ${task.name}`} onClick={() => onToggle?.(task)} />
         <button aria-label={`open ${task.name}`} onClick={() => onOpen?.(task)} />
+        {grip}
       </div>
     );
   });
@@ -145,7 +161,7 @@ function listedTask(name: string): TaskItem {
   };
 }
 
-function pointer(type: string, x: number) {
+function pointer(type: string, x: number, y = 300) {
   return new PointerEvent(type, {
     bubbles: true,
     cancelable: true,
@@ -153,11 +169,13 @@ function pointer(type: string, x: number) {
     pointerType: "touch",
     isPrimary: true,
     clientX: x,
-    clientY: 300,
+    clientY: y,
     button: 0,
     buttons: type === "pointerup" ? 0 : 1,
   });
 }
+
+const wait = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
 // React Native Web reports onLayout through a ResizeObserver, and
 // jsdom lays out nothing. This one reads the box the test placed.
@@ -180,6 +198,7 @@ beforeEach(() => {
   spy.mounts = {};
   spy.screenRenders = 0;
   spy.push.mockClear();
+  spy.sortMode = "due";
 });
 
 afterEach(() => {
@@ -238,6 +257,53 @@ describe("ListsScreen", () => {
     expect(order()).toEqual(["row:Apple", "row:Banana"]);
     holdBeat();
     expect(order()).toEqual(["row:Banana", "row:Apple"]);
+  });
+
+  it("renders no row and no screen while a grip crosses three slots", async () => {
+    // J2: the ghost, the shifts and the corners are shared values, so
+    // the screen and every task row stay still for the whole drag.
+    vi.useRealTimers();
+    spy.sortMode = "manual";
+    const names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
+    spy.tasks = names.map((name) => task(name));
+    render(<ListsScreen dock={dock} />);
+    names.forEach((name, index) => {
+      placeBox(screen.getByTestId(`reorder-item:${name}`), {
+        x: 0,
+        y: index * 48,
+        width: 390,
+        height: 48,
+      });
+      placeBox(screen.getByTestId(`reorder-grip:${name}`), {
+        x: 360,
+        y: index * 48 + 12,
+        width: 44,
+        height: 44,
+      });
+    });
+    const grip = screen.getByTestId("reorder-grip:Delta");
+
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerdown", 370, 156));
+    });
+    await wait(50);
+    expect(screen.getByTestId("drag-ghost"), "the grip picked the row up").toBeTruthy();
+    const pickedScreen = spy.screenRenders;
+    const pickedRows = { ...spy.renders };
+
+    for (let step = 1; step <= 6; step += 1) {
+      await act(async () => {
+        grip.dispatchEvent(pointer("pointermove", 370, 156 - step * 25));
+      });
+      await wait(16);
+    }
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerup", 370, 6));
+    });
+    await wait(50);
+
+    expect(spy.screenRenders, "a crossing renders the screen").toBe(pickedScreen);
+    expect(spy.renders, "a crossing renders a task row").toEqual(pickedRows);
   });
 
   it("renders nothing at a swipe start, and caps the preview rows", async () => {

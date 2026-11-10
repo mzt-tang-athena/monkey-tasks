@@ -157,23 +157,6 @@ const motionSyntaxRules = [
   },
 ];
 
-// Today's users of the old motion paths. Each port ticket (0059 to
-// 0062) removes its own files, and the port that empties the list
-// deletes it. They keep the margin and file system rules.
-const motionAllowlist = [
-  'src/lib/motion/legacy.ts',
-  // 0059, then 0060: the reorder's web pointer handlers stay here.
-  'src/features/lists/lists-screen.tsx',
-  // 0060
-  'src/components/task-row.tsx',
-  'src/components/ui/card-group-row.tsx',
-  'src/features/lists/components/reorder-ghost.tsx',
-  'src/features/lists/components/reorder-row.tsx',
-  'src/features/lists/components/task-card-row.test.tsx',
-  'src/features/lists/components/task-card-row.tsx',
-  'src/features/lists/hooks/use-row-reorder.ts',
-];
-
 module.exports = defineConfig([
   expoConfig,
   {
@@ -278,13 +261,6 @@ module.exports = defineConfig([
       'no-restricted-imports': importBans({
         feature: { allowGestures: ['GestureHandlerRootView'] },
       }),
-    },
-  },
-  {
-    files: motionAllowlist,
-    rules: {
-      'no-restricted-imports': ['error', { paths: [fileSystemPath] }],
-      'no-restricted-syntax': ['error', marginRule],
     },
   },
   {

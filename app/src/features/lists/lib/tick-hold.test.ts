@@ -32,24 +32,38 @@ const done = "2026-10-26T10:00:00";
 const names = (sections: ListsSection[]) =>
   sections.map((s) => `${s.key}:${s.data.map((t) => t.name).join(",")}`);
 
+function hold(
+  target: TaskItem,
+  section: string,
+  sectionIndex: number,
+  index: number,
+  tone: ListsSection["tone"] = "muted",
+  after: TaskItem | null = null,
+  before: TaskItem | null = null,
+): TickHold {
+  return {
+    uri: target.uri,
+    section,
+    tone,
+    sectionIndex,
+    after: after?.uri ?? null,
+    before: before?.uri ?? null,
+    index,
+  };
+}
+
 describe("applyTickHold", () => {
   it("returns the groups as they are when nothing is held", () => {
     const sections = [group("Today", [task("A")])];
 
-    expect(applyTickHold(sections, null, [])).toBe(sections);
+    expect(applyTickHold(sections, [], [])).toBe(sections);
   });
 
   it("returns the groups as they are when the held row is not done", () => {
     const sections = [group("Today", [task("A")])];
-    const hold: TickHold = {
-      uri: task("A").uri,
-      section: "Today",
-      tone: "ink",
-      sectionIndex: 0,
-      index: 0,
-    };
+    const held = hold(task("A"), "Today", 0, 0, "ink");
 
-    expect(applyTickHold(sections, hold, [task("A")])).toBe(sections);
+    expect(applyTickHold(sections, [held], [task("A")])).toBe(sections);
   });
 
   it("puts a held row back in its own group, at its own place", () => {
@@ -59,15 +73,9 @@ describe("applyTickHold", () => {
       group("Today", [task("A"), task("C")]),
       group("Completed", [b], "faint"),
     ];
-    const hold: TickHold = {
-      uri: b.uri,
-      section: "Today",
-      tone: "muted",
-      sectionIndex: 0,
-      index: 1,
-    };
+    const held = hold(b, "Today", 0, 1);
 
-    const next = applyTickHold(sections, hold, [b]);
+    const next = applyTickHold(sections, [held], [b]);
 
     expect(names(next)).toEqual(["Today:A,B,C"]);
   });
@@ -80,15 +88,9 @@ describe("applyTickHold", () => {
       group("No date", [task("B")]),
       group("Completed", [a], "faint"),
     ];
-    const hold: TickHold = {
-      uri: a.uri,
-      section: "Today",
-      tone: "ink",
-      sectionIndex: 0,
-      index: 0,
-    };
+    const held = hold(a, "Today", 0, 0, "ink");
 
-    const next = applyTickHold(sections, hold, [a]);
+    const next = applyTickHold(sections, [held], [a]);
 
     expect(names(next)).toEqual(["Today:A", "No date:B"]);
     expect(next[0].tone).toBe("ink");
@@ -98,18 +100,93 @@ describe("applyTickHold", () => {
     const a = task("A", done);
     const old = task("Old", done);
     const sections = [group("Completed", [a, old], "faint")];
-    const hold: TickHold = {
-      uri: a.uri,
-      section: "Today",
-      tone: "ink",
-      sectionIndex: 0,
-      index: 0,
-    };
+    const held = hold(a, "Today", 0, 0, "ink");
 
-    expect(names(applyTickHold(sections, hold, [a, old]))).toEqual([
+    expect(names(applyTickHold(sections, [held], [a, old]))).toEqual([
       "Today:A",
       "Completed:Old",
     ]);
+  });
+
+  it("puts two held rows back, so a second tick never moves the first", () => {
+    const a = task("A", done);
+    const b = task("B", done);
+    // A and B were adjacent in Today, which now holds only C.
+    const sections = [
+      group("Today", [task("C")]),
+      group("Completed", [a, b], "faint"),
+    ];
+    const holds = [hold(a, "Today", 0, 0), hold(b, "Today", 0, 1)];
+
+    expect(names(applyTickHold(sections, holds, [a, b, task("C")]))).toEqual([
+      "Today:A,B,C",
+    ]);
+  });
+
+  it("places three holds in their own order", () => {
+    const a = task("A", done);
+    const b = task("B", done);
+    const c = task("C", done);
+    const sections = [
+      group("No date", [task("D")]),
+      group("Completed", [a, b, c], "faint"),
+    ];
+    const holds = [
+      hold(a, "Today", 0, 0, "ink"),
+      hold(b, "Today", 0, 1, "ink"),
+      hold(c, "Today", 0, 2, "ink"),
+    ];
+
+    expect(
+      names(applyTickHold(sections, holds, [a, b, c, task("D")])),
+    ).toEqual(["Today:A,B,C", "No date:D"]);
+  });
+
+  it("applies holds in their own order whatever order they were ticked", () => {
+    const a = task("A", done);
+    const b = task("B", done);
+    const c = task("C", done);
+    const sections = [
+      group("Today", []),
+      group("No date", [task("D")]),
+      group("Completed", [a, b, c], "faint"),
+    ];
+    const holds = [
+      hold(c, "Today", 0, 2, "ink"),
+      hold(a, "Today", 0, 0, "ink"),
+      hold(b, "Today", 0, 1, "ink"),
+    ];
+
+    expect(
+      names(applyTickHold(sections, holds, [a, b, c, task("D")])),
+    ).toEqual(["Today:A,B,C", "No date:D"]);
+  });
+
+  it("keeps a held row by its lower neighbour when the row above leaves", () => {
+    const b = task("B", done);
+    const c = task("C");
+    // A, B and C sat together. A ticked first and left; B is still
+    // held at the place it had, which now rests against C.
+    const sections = [group("Today", [c])];
+    const holds = [hold(b, "Today", 0, 1, "muted", task("A"), c)];
+
+    expect(names(applyTickHold(sections, holds, [b, c]))).toEqual([
+      "Today:B,C",
+    ]);
+  });
+
+  it("keeps holds from two groups in each group", () => {
+    const a = task("A", done);
+    const b = task("B", done);
+    const sections = [
+      group("No date", [task("C")]),
+      group("Completed", [a, b], "faint"),
+    ];
+    const holds = [hold(a, "Today", 0, 0, "ink"), hold(b, "No date", 1, 0)];
+
+    expect(
+      names(applyTickHold(sections, holds, [a, b, task("C")])),
+    ).toEqual(["Today:A", "No date:B,C"]);
   });
 });
 
@@ -125,6 +202,8 @@ describe("startTickHold", () => {
       section: "No date",
       tone: "muted",
       sectionIndex: 1,
+      after: task("B").uri,
+      before: null,
       index: 1,
     });
   });

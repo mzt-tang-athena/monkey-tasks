@@ -34,7 +34,8 @@ let renameOnCreate = false;
 const creates: { fileName: string; content: string }[] = [];
 const deletes: string[] = [];
 
-vi.mock("react-native", () => ({
+vi.mock("react-native", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-native")>()),
   Platform: { OS: "android" },
   AppState: {
     addEventListener: () => ({ remove: () => undefined }),

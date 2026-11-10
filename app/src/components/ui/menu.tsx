@@ -1,6 +1,5 @@
 import * as React from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { Pressable } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDismiss } from "@/hooks/use-dismiss";
@@ -148,7 +147,7 @@ export function Menu({
     <>
       <Overlay layer="menuBackdrop" modal>
         <Animated.View style={[StyleSheet.absoluteFill, fade]}>
-          <Pressable
+          <NoPanPressable
             style={StyleSheet.absoluteFill}
             onPress={onClose}
             accessibilityRole="button"

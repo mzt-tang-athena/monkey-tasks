@@ -45,7 +45,8 @@ export function Pager({
   onPage: (next: number) => void;
   renderPreview: (page: number) => React.ReactNode;
   fill?: boolean;
-  /** False while a legacy drag owns the gesture, until 0060. */
+  /** False while a drag surface under the same root owns the
+      gesture, so a row drag never turns a page. */
   enabled?: boolean;
   testID?: string;
   children: React.ReactNode;

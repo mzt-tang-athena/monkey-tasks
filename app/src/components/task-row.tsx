@@ -1,21 +1,31 @@
 import * as React from "react";
-import { Animated, Platform, Pressable, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Pressable as PanPressable } from "react-native-gesture-handler";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import type { TaskItem } from "@/types/task";
-import { parseStoredDate } from "@/utils/dates";
-import { easeOut, useReduceMotion, useRise } from "@/lib/motion/legacy";
+import { useProgress } from "@/lib/motion/progress";
+import { motion } from "@/lib/motion/tokens";
 import { taskIsDone } from "@monkey-tasks/schemas";
 import { colors } from "@/theme/tokens";
+import { NoPanPressable } from "./ui/pressable";
 import { faceStyles, TaskRowFace } from "./task-row-face";
 
 /**
  * The live task row: `TaskRowFace` with the toggle, the open press,
- * and today's motion (the tick, the wash and the landing).
+ * and the tick. The tick runs on `useProgress`, the one clock React
+ * drives. Its completion ends the row's hold (ADR 0034), so no timer
+ * runs beside the animation. A row already done at mount plays
+ * nothing.
  */
 function TaskRowBase({
   task,
   onToggle,
   onOpen,
+  onTickSettled,
+  grip,
   /** "under" puts the time below the name; "right" adds a planner gutter. */
   timeAlign = "under",
   copy = false,
@@ -26,6 +36,10 @@ function TaskRowBase({
   onToggle?: (task: TaskItem) => void;
   /** A press on the body opens the task; the circle stays the toggle. */
   onOpen?: (task: TaskItem) => void;
+  /** The tick's animation ended, so the row's hold can let go. */
+  onTickSettled?: (task: TaskItem) => void;
+  /** The reorder handle, when the row can be picked up. */
+  grip?: React.ReactNode;
   timeAlign?: "under" | "right";
   /** A still copy of a live row: a swipe preview or a drag ghost. A
       copy carries no test id, so the id finds the live row only. */
@@ -34,80 +48,62 @@ function TaskRowBase({
       pager: a pan cancels it, so a drop leaves no click behind. */
   panPress?: boolean;
 }) {
-  const Press = panPress ? PanPressable : Pressable;
+  const Press = panPress ? PanPressable : NoPanPressable;
   const [hot, setHot] = React.useState(false);
   // The store is optimistic: a tap flips this row's data in the same
   // frame. The row reads that data and nothing else, so a fast tick,
   // untick, tick sequence has one source of truth.
   const done = task.data != null && taskIsDone(task.data);
-  const reduced = useReduceMotion();
 
-  // The tick is an acknowledgement, not a colour change: the circle
-  // fills, the check pops in over it, and a wash crosses the row once.
-  // The circle and the glyph travel apart, so the check lands on a
-  // surface that is already settling.
-  const [pop] = React.useState(() => new Animated.Value(1));
-  const [glyph] = React.useState(() => new Animated.Value(1));
-  // One wash serves both acknowledgements: the tick and the landing of
-  // a capture. They never run together on the same row for long, and
-  // sharing the layer keeps a single cheap animated view.
-  const [wash] = React.useState(() => new Animated.Value(0));
-
-  // A row created moments ago rises in where it will live instead of
-  // appearing under the finger. The fade is the app's shared entrance;
-  // the travel is a touch longer, which reads as the row settling.
-  const rise = useRise(task.data?.created);
-  // The entrance helper owns the freshness window and does not export
-  // it: a landing needs the same gate to know whether it travels and
-  // washes at all.
-  const [fresh] = React.useState(() => {
-    const at = task.data?.created ? parseStoredDate(task.data.created) : null;
-    return at != null && Date.now() - at.date.getTime() < freshMs;
-  });
-  const [land] = React.useState(() => new Animated.Value(fresh ? 0 : 1));
-
-  // A row that is already done at mount is not a tick. Every later
-  // change plays, or lands at once when motion is reduced. The tick
-  // starts from the data, not from the press: a write that fails at
-  // once rolls the tick back before the row renders it, and a tick the
-  // row never sees must leave nothing behind. A layout effect puts the
-  // values where the tick starts before the frame paints, so the first
-  // frame never shows the end state.
-  const played = React.useRef(false);
+  // `active` marks a tick that started after mount. It keeps an untick
+  // from playing the tick backwards, and keeps a row that mounts done
+  // at rest. It is a shared value, so the commit does not render for it.
+  const active = useSharedValue(0);
+  const wasDone = React.useRef(done);
   React.useLayoutEffect(() => {
-    if (!played.current) {
-      played.current = true;
-      return;
+    if (done && !wasDone.current) {
+      active.set(1);
     }
-    if (reduced || !done) {
-      settle(pop, 1);
-      settle(glyph, 1);
-      settle(wash, 0);
-      return;
+    if (!done) {
+      active.set(0);
     }
-    settle(pop, 0.9);
-    settle(glyph, 0.6);
-    settle(wash, 0.9);
-    play(pop, 1, 120);
-    play(glyph, 1, 120);
-    play(wash, 0, 320);
-  }, [done, reduced, pop, glyph, wash]);
+    wasDone.current = done;
+  }, [done, active]);
 
-  // A captured task lands with a visible rise and the same wash, so
-  // the new row is seen arriving rather than found in the list.
-  React.useEffect(() => {
-    if (!fresh) {
-      return;
-    }
-    if (reduced) {
-      settle(land, 1);
-      settle(wash, 0);
-      return;
-    }
-    settle(wash, 0.9);
-    play(land, 1, 220);
-    play(wash, 0, 600);
-  }, [fresh, reduced, land, wash]);
+  const tick = useProgress(done, {
+    ms: motion.ms.tickWash,
+    onSettled: (at) => {
+      active.set(0);
+      if (at === 1) {
+        onTickSettled?.(task);
+      }
+    },
+  });
+
+  // The tick acknowledges the tap; it is not a colour change.
+  const pop = useAnimatedStyle(() => ({
+    transform: [
+      {
+        scale:
+          active.value === 1
+            ? 0.9 + 0.1 * Math.min(1, tick.value / 0.375)
+            : 1,
+      },
+    ],
+  }));
+  const glyph = useAnimatedStyle(() => ({
+    transform: [
+      {
+        scale:
+          active.value === 1
+            ? 0.6 + 0.4 * Math.min(1, tick.value / 0.375)
+            : 1,
+      },
+    ],
+  }));
+  const wash = useAnimatedStyle(() => ({
+    opacity: active.value === 1 ? 0.9 * (1 - tick.value) : 0,
+  }));
 
   const press = () => {
     onToggle?.(task);
@@ -117,7 +113,7 @@ function TaskRowBase({
   // line: 24pt circle on a 24pt line box, so wrapped lines flow
   // beneath without moving it (Google Tasks' rule).
   const toggle = (
-    <Animated.View style={{ transform: [{ scale: pop }] }}>
+    <Animated.View style={pop}>
       <Press
         style={({ pressed }) => [
           faceStyles.circle,
@@ -137,7 +133,7 @@ function TaskRowBase({
         {/* The glyph travels on its own, so it lands on a circle that
             is already filling rather than riding it. */}
         {done ? (
-          <Animated.View style={{ transform: [{ scale: glyph }] }}>
+          <Animated.View style={glyph}>
             <Text style={faceStyles.check}>{"✓"}</Text>
           </Animated.View>
         ) : null}
@@ -165,61 +161,36 @@ function TaskRowBase({
         );
 
   return (
-    <Animated.View
+    <View
       testID={copy ? undefined : `task-row:${task.name}`}
-      style={{
-        opacity: rise,
-        transform: [
-          {
-            translateY: land.interpolate({
-              inputRange: [0, 1],
-              outputRange: [landingPx, 0],
-            }),
-          },
-        ],
-      }}
+      style={styles.row}
     >
-      {/* The acknowledgement sits behind the content and never takes a
-          touch: a tick and a landing both show the same accent wash. */}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.wash, { opacity: wash }]}
-      />
-      <TaskRowFace
-        task={task}
-        done={done}
-        timeAlign={timeAlign}
-        toggle={toggle}
-        renderText={renderText}
-      />
-    </Animated.View>
+      <View style={styles.body}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.wash, wash]}
+        />
+        <TaskRowFace
+          task={task}
+          done={done}
+          timeAlign={timeAlign}
+          toggle={toggle}
+          renderText={renderText}
+        />
+      </View>
+      {grip}
+    </View>
   );
 }
 
-/** How far a capture travels as it lands. */
-const landingPx = 12;
-
-/** The freshness window the entrance helper uses, kept in step with
-    it: a landing must not outlive the rise it belongs to. */
-const freshMs = 90_000;
-
-/** Put a value at its end state, stopping whatever was playing. */
-function settle(value: Animated.Value, toValue: number) {
-  value.stopAnimation();
-  value.setValue(toValue);
-}
-
-/** Travel on the app's entrance curve. */
-function play(value: Animated.Value, toValue: number, duration: number) {
-  Animated.timing(value, {
-    toValue,
-    duration,
-    easing: easeOut,
-    useNativeDriver: Platform.OS !== "web",
-  }).start();
-}
-
 const styles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  body: {
+    flex: 1,
+  },
   wash: {
     position: "absolute",
     top: 0,
