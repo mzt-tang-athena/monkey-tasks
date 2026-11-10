@@ -3,7 +3,7 @@ id: 0077
 title: A planner row press is lost after a drop on the web
 created: 2026-11-10
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [0058, 0061]
 ---
