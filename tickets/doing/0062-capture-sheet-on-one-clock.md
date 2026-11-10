@@ -3,7 +3,7 @@ id: 0062
 title: The capture sheet and the bar move on one clock
 created: 2026-10-26
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: [0058]
 ---
