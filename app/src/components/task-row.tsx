@@ -2,7 +2,7 @@ import * as React from "react";
 import { Animated, Platform, Pressable, StyleSheet, Text } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { parseStoredDate } from "@/utils/dates";
-import { easeOut, useReduceMotion, useRise } from "@/lib/motion";
+import { easeOut, useReduceMotion, useRise } from "@/lib/motion/legacy";
 import { taskIsDone } from "@monkey-tasks/schemas";
 import { colors } from "@/theme/tokens";
 import { faceStyles, TaskRowFace } from "./task-row-face";

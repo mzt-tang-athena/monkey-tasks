@@ -1,5 +1,8 @@
 import * as React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Pressable } from "react-native-gesture-handler";
+import { MotionScrollView } from "@/components/motion/scroll-view";
+import { MotionCheck, MotionCheckRoot } from "./motion-check";
 import { useVault } from "@/lib/vault/vault-provider";
 import {
   alarmsSupported,
@@ -85,49 +88,52 @@ export default function DevScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.section}>
-        <Text style={styles.label}>layout</Text>
-        {insightLines(insights).map((line) => (
-          <Text key={line} style={styles.line}>
-            {line}
-          </Text>
-        ))}
-      </View>
-      <View style={styles.section}>
-        <Text style={styles.label}>alarms</Text>
-        <Text style={styles.line}>{alarm}</Text>
-        <Text style={styles.line}>{scheduled.length} notification(s) scheduled</Text>
-        {scheduled.map((item) => (
-          <Text key={item.id} style={styles.sub}>
-            {item.id.slice(0, 8)}: {item.title ?? "(no title)"}
-            {item.when ? ` at ${new Date(item.when).toLocaleTimeString()}` : ""}
-          </Text>
-        ))}
-      </View>
-      <View style={styles.actions}>
-        <Pressable style={styles.button} onPress={refresh}>
-          <Text style={styles.buttonText}>Refresh</Text>
-        </Pressable>
-        <Pressable style={styles.button} onPress={test}>
-          <Text style={styles.buttonText}>Test: 10s</Text>
-        </Pressable>
-        <Pressable style={styles.button} onPress={peek}>
-          <Text style={styles.buttonText}>Peek at vault root</Text>
-        </Pressable>
-        <Pressable
-          style={styles.button}
-          onPress={async () => {
-            await vault.grant();
-            await refresh();
-          }}
-        >
-          <Text style={styles.buttonText}>Grant vault folder</Text>
-        </Pressable>
-        <Text style={styles.line}>{message}</Text>
-      </View>
-      <ThemeSwitcher />
-    </ScrollView>
+    <MotionCheckRoot>
+      <MotionScrollView contentContainerStyle={styles.content}>
+        <MotionCheck />
+        <View style={styles.section}>
+          <Text style={styles.label}>layout</Text>
+          {insightLines(insights).map((line) => (
+            <Text key={line} style={styles.line}>
+              {line}
+            </Text>
+          ))}
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.label}>alarms</Text>
+          <Text style={styles.line}>{alarm}</Text>
+          <Text style={styles.line}>{scheduled.length} notification(s) scheduled</Text>
+          {scheduled.map((item) => (
+            <Text key={item.id} style={styles.sub}>
+              {item.id.slice(0, 8)}: {item.title ?? "(no title)"}
+              {item.when ? ` at ${new Date(item.when).toLocaleTimeString()}` : ""}
+            </Text>
+          ))}
+        </View>
+        <View style={styles.actions}>
+          <Pressable style={styles.button} onPress={refresh}>
+            <Text style={styles.buttonText}>Refresh</Text>
+          </Pressable>
+          <Pressable style={styles.button} onPress={test}>
+            <Text style={styles.buttonText}>Test: 10s</Text>
+          </Pressable>
+          <Pressable style={styles.button} onPress={peek}>
+            <Text style={styles.buttonText}>Peek at vault root</Text>
+          </Pressable>
+          <Pressable
+            style={styles.button}
+            onPress={async () => {
+              await vault.grant();
+              await refresh();
+            }}
+          >
+            <Text style={styles.buttonText}>Grant vault folder</Text>
+          </Pressable>
+          <Text style={styles.line}>{message}</Text>
+        </View>
+        <ThemeSwitcher />
+      </MotionScrollView>
+    </MotionCheckRoot>
   );
 }
 

@@ -7,20 +7,10 @@ import {
   type ViewStyle,
 } from "react-native";
 import { taskRowFace } from "@/components/task-row-face";
+import type { CardPosition } from "@/lib/motion/drag-math";
 import { colors, radius } from "@/theme/tokens";
 
-export type CardPosition = "first" | "middle" | "last" | "only";
-
-/** Where row `index` of `count` sits in its card. */
-export function cardPosition(index: number, count: number): CardPosition {
-  if (count <= 1) {
-    return "only";
-  }
-  if (index === 0) {
-    return "first";
-  }
-  return index === count - 1 ? "last" : "middle";
-}
+export { cardPosition, type CardPosition } from "@/lib/motion/drag-math";
 
 /**
  * One row of a group card (ADR 0030). A card is built from its rows:
