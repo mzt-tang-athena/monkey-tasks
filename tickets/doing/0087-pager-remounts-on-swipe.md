@@ -3,7 +3,7 @@ id: 0087
 title: A day or month swipe remounts the page
 created: 2026-11-11
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
