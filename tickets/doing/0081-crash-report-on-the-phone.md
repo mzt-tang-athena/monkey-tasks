@@ -4,7 +4,7 @@ title: Keep a crash report on the phone
 created: 2026-11-11
 priority: normal
 assignee: opencode
-pr:
+pr: 121
 depends: [0084]
 ---
 
