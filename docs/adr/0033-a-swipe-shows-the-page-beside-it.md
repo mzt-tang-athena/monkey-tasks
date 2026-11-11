@@ -137,10 +137,10 @@ only the animated position. Without this split the track trailed the
 content by one frame, and the pager showed a blank strip at the
 commit.
 
-The day preview draws at the live panes' scroll offsets. A landing
-then moves nothing vertically. A day keeps one scroll across days, so
-the hour window stays. A change in row height can move that scroll by
-the browser's scroll anchor.
+Each day keeps its own scroll. A page starts at the top the first
+time it shows. A later visit returns to its saved offset, and the
+preview draws at that offset. The commit restores the offset in the
+same frame as the content, so a landing moves nothing vertically.
 
 A list tab is a different list. Its inner list still starts at the
 top, as its preview draws it. A tab tap does not restore the previous

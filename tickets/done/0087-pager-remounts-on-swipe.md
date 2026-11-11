@@ -68,10 +68,11 @@ preview, which is a blank strip. Now the live page carries its own
 space. The content and the place change in one React render. No frame
 shows the old page in place or a blank strip.
 
-The day keeps its scroll. The neighbour preview draws at the live
-panes' offsets, so the landed page matches what the swipe showed. The
-browser's scroll anchor can move the offset by less than a row when a
-changed row sits above it. It never returns to the top.
+Each day keeps its own scroll. A day starts at the top the first time
+it shows. A later visit restores its saved offset in the same frame as
+the content, and the neighbour preview draws at that same offset. A
+swipe and back therefore returns to the exact position, with no
+vertical jump at the commit.
 
 A list tab is a different list. Its inner list still starts at the top,
 as its preview draws it. A tab tap does not restore the previous tab's
@@ -90,19 +91,27 @@ Frame evidence in `/tmp/opencode/0087/`:
 
 - `day-motion-hold.png`, `day-motion-frame-00..23.png` and
   `day-motion-landed.png` show the neighbour sliding in, then the
-  commit at frame 13 with Tuesday 27 at the pager's origin.
-- `day-reduced-*` shows the same end state with reduce motion. The
-  commit is frame 0.
+  commit at frame 14 with Tuesday 27 at the pager's origin and a
+  scroll of 0.
+- `day-back-motion-*.png` shows the return. Today's saved scroll of
+  300 returns in the commit frame, alongside the content.
+- `day-reduced-*` and `day-back-reduced-*` show the same end states
+  with reduce motion. The commit is frame 0.
 - `month-motion-*` and `month-reduced-*` show October to November.
   The commit is frame 14 with motion and frame 0 with reduce motion.
-- `*-frames.json` holds the track position, live offset, preview count
-  and heading per frame. No frame has no preview and a live page off
-  its origin.
+- `*-frames.json` holds the track position, live offset, preview count,
+  scroll and heading per frame. No frame has no preview and a live
+  page off its origin.
 
 `pagers.spec.ts` asserts the one-frame commit in "a day swipe swaps the
 page and its place in one frame" and its month twin. The day scroll
 and the preview match are asserted by "the day preview matches the
 landed page" with the mouse and touch.
+
+The full run also caught a flaky capture-sheet test. It sampled the
+220 ms fade in real time and could miss every fade frame on a loaded
+runner. It now steps the fade on the page clock. Twenty of twenty
+repeats pass.
 
 Not proven: the native Android frames. The web suite cannot show
 UI-thread animation timing there.
