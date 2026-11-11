@@ -16,6 +16,8 @@ export type IconName =
   | "repeat"
   | "grip"
   | "grip-bars"
+  | "settings"
+  | "chevron-right"
   | "chevron-down";
 
 /**
@@ -145,6 +147,25 @@ function glyph(
         <View style={styles.gripBars}>
           <View style={[styles.gripBar, fill]} />
           <View style={[styles.gripBar, fill]} />
+        </View>
+      );
+    // The settings control: a ring with four teeth.
+    case "settings":
+      return (
+        <View style={styles.settings}>
+          <View style={[styles.settingsRing, edge]} />
+          <View style={[styles.settingsToothTop, fill]} />
+          <View style={[styles.settingsToothBottom, fill]} />
+          <View style={[styles.settingsToothLeft, fill]} />
+          <View style={[styles.settingsToothRight, fill]} />
+        </View>
+      );
+    // An open-right chevron: the same turned square, facing a row's
+    // next screen.
+    case "chevron-right":
+      return (
+        <View style={styles.chevronBox}>
+          <View style={[styles.chevron, styles.chevronRight, edge]} />
         </View>
       );
     // An open-down chevron: two strokes of a turned square.
@@ -320,6 +341,51 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
 
+  settings: {
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingsRing: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+  },
+  settingsToothTop: {
+    position: "absolute",
+    left: 8,
+    top: 0,
+    width: 2,
+    height: 5,
+    borderRadius: 1,
+  },
+  settingsToothBottom: {
+    position: "absolute",
+    left: 8,
+    bottom: 0,
+    width: 2,
+    height: 5,
+    borderRadius: 1,
+  },
+  settingsToothLeft: {
+    position: "absolute",
+    top: 8,
+    left: 0,
+    width: 5,
+    height: 2,
+    borderRadius: 1,
+  },
+  settingsToothRight: {
+    position: "absolute",
+    top: 8,
+    right: 0,
+    width: 5,
+    height: 2,
+    borderRadius: 1,
+  },
+
   chevronBox: {
     width: 10,
     height: 10,
@@ -334,5 +400,8 @@ const styles = StyleSheet.create({
     borderRightWidth: 1.5,
     borderBottomWidth: 1.5,
     transform: [{ translateY: -1.5 }, { rotate: "45deg" }],
+  },
+  chevronRight: {
+    transform: [{ translateX: -1.5 }, { rotate: "-45deg" }],
   },
 });

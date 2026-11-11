@@ -48,6 +48,9 @@ export default function RootLayout() {
                     <Stack>
                       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                       <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
+                      {/* The screen draws its own back button, so the
+                          stack's header never covers the page. */}
+                      <Stack.Screen name="settings" options={{ headerShown: false }} />
                     </Stack>
                   </OverlayHost>
                 </TasksProvider>

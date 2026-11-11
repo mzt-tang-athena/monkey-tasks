@@ -3,8 +3,8 @@ id: 0084
 title: A settings screen
 created: 2026-11-11
 priority: normal
-assignee:
-pr:
+assignee: opencode
+pr: 119
 depends: [0083]
 ---
 

@@ -1,4 +1,7 @@
 import { StyleSheet, View } from "react-native";
+import { router } from "expo-router";
+import { Icon } from "@/components/ui/icon";
+import { IconButton } from "@/components/ui/icon-button";
 import { SegmentedControl, type Segment } from "@/components/ui/segmented-control";
 import type { Mode } from "@/features/planner/model";
 import { pageGutter, spacing } from "@/theme/tokens";
@@ -43,13 +46,23 @@ export function PlannerHeader({
       />
 
       <View style={inset && styles.gutter}>
-        <SegmentedControl
-          segments={segments}
-          selected={mode}
-          onSelect={onMode}
-          label="planner mode"
-          stretch
-        />
+        <View style={styles.modeRow}>
+          <View style={styles.modeControl}>
+            <SegmentedControl
+              segments={segments}
+              selected={mode}
+              onSelect={onMode}
+              label="planner mode"
+              stretch
+            />
+          </View>
+          <IconButton
+            label="open settings"
+            onPress={() => router.push("/settings")}
+          >
+            <Icon name="settings" />
+          </IconButton>
+        </View>
       </View>
     </View>
   );
@@ -63,5 +76,13 @@ const styles = StyleSheet.create({
   },
   gutter: {
     paddingHorizontal: pageGutter,
+  },
+  modeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.s,
+  },
+  modeControl: {
+    flex: 1,
   },
 });

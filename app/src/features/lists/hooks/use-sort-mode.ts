@@ -1,18 +1,12 @@
-import * as React from "react";
-import { loadSettings, saveSetting, type SortMode } from "@/lib/settings";
+import { useSetting } from "@/lib/settings-store";
+import type { SortMode } from "@/lib/settings";
 
-/** The list order the user picked. It starts from the saved setting,
-    and a change saves at once. */
+/** The list order the user picked, live across the Lists screen and
+    the settings screen. */
 export function useSortMode(): {
   sortMode: SortMode;
   setSortMode: (mode: SortMode) => void;
 } {
-  const [sortMode, setMode] = React.useState<SortMode>(
-    () => loadSettings().sortMode,
-  );
-  const setSortMode = React.useCallback((mode: SortMode) => {
-    setMode(mode);
-    saveSetting("sortMode", mode);
-  }, []);
+  const [sortMode, setSortMode] = useSetting("sortMode");
   return { sortMode, setSortMode };
 }

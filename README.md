@@ -263,6 +263,11 @@ layer order and the shadows (ADR 0040). `theme/theme-provider.tsx` owns
 the active palette (ADR 20261111-runtime-theme-provider). A component
 keeps its styles in a `makeStyles(palette)` factory. It reads them
 through `useThemedStyles`. A theme switch then repaints it in place.
+`lib/settings-store.ts` holds the live sort order and task form for the
+mounted Lists and Planner screens. `features/settings` is the one
+screen that writes the palette and both settings (ADR
+20261111-settings-screen). Lists opens it from the list menu and Planner
+opens it from the gear beside the mode switch.
 
 ### Planner
 

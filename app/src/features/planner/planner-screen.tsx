@@ -7,7 +7,7 @@ import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { ErrorState, LoadingState } from "@/components/ui/list-states";
 import { isoOf } from "@/utils/dates";
-import { loadSettings, saveSetting, type TaskForm } from "@/lib/settings";
+import { useSetting } from "@/lib/settings-store";
 import { spacing } from "@/theme/tokens";
 import { useTheme } from "@/theme/theme-provider";
 import { useTaskList, useStoreMeta } from "@/stores/tasks/task-state";
@@ -78,14 +78,8 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   const { colors } = useTheme();
 
   // One global task form (rows or pills) for every planner mode,
-  // persisted in app-internal settings; default rows.
-  const [taskForm, setTaskForm] = React.useState<TaskForm>(
-    () => loadSettings().taskForm,
-  );
-  const changeForm = React.useCallback((form: TaskForm) => {
-    setTaskForm(form);
-    saveSetting("taskForm", form);
-  }, []);
+  // live across the planner and the settings screen; default rows.
+  const [taskForm, changeForm] = useSetting("taskForm");
 
   const openTask = React.useCallback((task: TaskItem) => {
     router.push(`/task/${encodeURIComponent(task.id)}`);

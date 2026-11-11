@@ -54,6 +54,14 @@ export function ListsToolbar({
   // ticket 0065. Until then the menu holds only what works.
   const moreItems: MenuItem[] = [
     {
+      key: "settings",
+      label: "Settings",
+      onPress: () => {
+        close();
+        router.push("/settings");
+      },
+    },
+    {
       key: "diagnostics",
       label: "Diagnostics",
       onPress: () => {
