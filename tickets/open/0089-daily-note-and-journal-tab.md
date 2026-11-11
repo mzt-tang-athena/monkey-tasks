@@ -53,10 +53,9 @@ note and do not run Templater. Record the choice in the ADR.
 
 `app/src/app/(tabs)/journal.tsx`, thin, re-exporting
 `features/journal`. The bottom bar gains a Journal destination. Ticket
-0095 adds a Notes destination and owns the final bar layout, because
-four destinations plus Add do not fit at 360pt as they stand. Build
-the bar as a `tablist` that can take one more destination without a
-rewrite. Keep every target 44pt.
+0095 adds a Notes destination and owns the final bar layout. The bar
+gains a destination, so check the hierarchy and the labels at 360pt
+before hardcoding a fourth tab. Keep every target 44pt.
 
 ### State
 

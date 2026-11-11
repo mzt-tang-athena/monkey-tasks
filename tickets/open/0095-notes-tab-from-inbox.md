@@ -38,9 +38,9 @@ v1:
 
 Two open design calls:
 
-1. The bar now has four destinations, Lists, Planner, Journal and
-   Notes, plus the Add action. That does not fit at 360pt as it stands.
-   The design session decides the layout, and ticket 0089 adopts the
+1. The bar goes from two destinations to four plus Add. The measured
+   widths fit at 360pt, but the hierarchy and the labels still need a
+   decision. The design session decides, and ticket 0089 adopts the
    result.
 2. The tab label. `Notes` is the operator's word, but the vault has a
    separate `Notes/` folder of 92 curated notes. `Inbox` names the
