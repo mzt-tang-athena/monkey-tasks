@@ -10,6 +10,12 @@ import { THEMES, type ThemeName } from "@/theme/tokens";
 export type TaskForm = "rows" | "pills";
 export type SortMode = "due" | "manual";
 
+/** The name each sort order shows on screen. */
+export const SORT_LABELS: Record<SortMode, string> = {
+  due: "Due date",
+  manual: "My order",
+};
+
 export type Settings = {
   /** The planner's bottom section: rows or chips. */
   taskForm: TaskForm;

@@ -18,6 +18,8 @@ export type CaptureSheetState = {
   toast: { message: string; retry: () => void; dismiss: () => void } | null;
   /** The Add button: opens the sheet, or closes it when it is open. */
   toggle: () => void;
+  /** Opens the sheet, for the command pane. */
+  show: () => void;
   close: () => void;
 };
 
@@ -134,6 +136,7 @@ export function useCaptureSheet({
     progress,
     toast,
     toggle: () => (open ? close() : openSheet()),
+    show: openSheet,
     close,
   };
 }

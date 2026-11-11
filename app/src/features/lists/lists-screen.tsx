@@ -6,6 +6,7 @@ import type { TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { Pager } from "@/components/motion/pager";
+import { PullSurface } from "@/components/motion/pull";
 import { PreviewRow } from "@/components/preview-row";
 import { renderMotionScroll } from "@/components/motion/scroll-view";
 import {
@@ -14,6 +15,7 @@ import {
   LoadingState,
 } from "@/components/ui/list-states";
 import { useStableCallback } from "@/hooks/use-stable-callback";
+import { useCommandPane } from "@/hooks/use-command-pane";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { useStoreMeta } from "@/stores/tasks/task-state";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
@@ -49,6 +51,7 @@ import type { ReorderEvent } from "@/components/motion/reorder";
  */
 export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const { styles } = useThemedStyles(makeStyles);
+  const { show: showCommands } = useCommandPane();
   const { rootUri, status, readError } = useStoreMeta();
   const toggleTask = useToggleTask();
   const reorderSection = useReorderSection();
@@ -160,14 +163,22 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           <VaultPrompt onGrant={() => void grant()} />
         ) : null}
         {/* The tab bar sits above the scroller: the page's fixed
-            chrome. Sections scroll beneath it, the bar never moves. */}
-        <ListsToolbar
-          tabs={tabState.tabs}
-          tab={tab}
-          onSelectTab={setTab}
-          sortMode={sortMode}
-          onSortMode={setSortMode}
-        />
+            chrome. Sections scroll beneath it, the bar never moves.
+            A downward pull on this band opens the command pane; the
+            list below never starts it (ticket 0085). */}
+        <PullSurface
+          direction="down"
+          onPull={showCommands}
+          testID="header-band-lists"
+        >
+          <ListsToolbar
+            tabs={tabState.tabs}
+            tab={tab}
+            onSelectTab={setTab}
+            sortMode={sortMode}
+            onSortMode={setSortMode}
+          />
+        </PullSurface>
         {/* A failed tick or field write leaves the list usable, so each
             one is a quiet banner over it, not the error state. */}
         {status !== "error" ? <FailureBanner /> : null}

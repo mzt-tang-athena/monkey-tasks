@@ -48,4 +48,20 @@ a list row or a pager body does nothing.
 
 ## Outcome
 
-(filled in before moving to done/)
+The command pane is built and wired. It opens from a downward pull on
+the Lists or Planner header band, from a two-finger swipe down, or from
+the header's "open commands" button. The search takes focus, the screen
+behind is inert, and Escape, Android back, a tap outside, the Close
+button or a pull up closes it. Focus returns to the opener.
+
+Commands: Add task (the focused tab's capture sheet), Go to Lists, Go
+to Planner, Switch list (one row, moves to the next tab and wraps),
+Sort mode, Theme, Settings and Diagnostics. Theme and Sort mode open
+the Settings screen instead of repeating its pickers. Recent commands
+come first and the pane caps at 12 rows.
+
+The list scroll, the pager swipe and a row drag never open it. Tests
+cover all three. The web suite sends two touch points for the
+two-finger swipe. The Android emulator and a phone were not run, so
+the pull feel, the two-finger gesture and TalkBack are still open for
+the operator.

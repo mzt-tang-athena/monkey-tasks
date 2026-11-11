@@ -1,9 +1,11 @@
 import * as React from "react";
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { Icon } from "@/components/ui/icon";
 import { IconButton } from "@/components/ui/icon-button";
 import { Menu, type MenuItem } from "@/components/ui/menu";
 import { TabStrip } from "@/components/ui/tab-strip";
+import { useCommandPane } from "@/hooks/use-command-pane";
 import type { SortMode } from "@/lib/settings";
 import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -34,6 +36,7 @@ export function ListsToolbar({
   onSortMode: (mode: SortMode) => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
+  const { show } = useCommandPane();
   // One menu at a time: opening one closes the other.
   const [open, setOpen] = React.useState<"sort" | "more" | null>(null);
   const sortAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
@@ -81,6 +84,9 @@ export function ListsToolbar({
           label="Lists"
         />
         <View style={styles.spacer} />
+        <IconButton label="open commands" onPress={show}>
+          <Icon name="chevron-down" />
+        </IconButton>
         <View ref={sortAnchor}>
           <IconButton
             label="sort list"

@@ -218,7 +218,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | Folder | Holds |
 |---|---|
 | `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
-| `features/<name>` | The UI of one feature: `capture`, `diagnostics`, `lists`, `planner`, `task-editor`. |
+| `features/<name>` | The UI of one feature: `capture`, `command`, `diagnostics`, `lists`, `planner`, `task-editor`. |
 | `components` | Shared UI. `components/ui` holds the primitives. |
 | `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing` and `MotionScrollView`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
@@ -245,6 +245,7 @@ documents its props, and each primitive has a component test.
 | `OverlayHost`, `Overlay` | The root portal in `app/_layout.tsx`. An overlay draws above every screen at its layer. A `modal` overlay hides the screen from assistive tech. |
 | `Menu`, `placeMenu` | A menu that opens from an anchor. It flips above near the bottom bar and stays inside the page gutter. |
 | `Sheet` | A scrim, a dock that rides the keyboard, and a panel. The scrim and Android back close it. |
+| `CommandPane` | A searchable command list that slides down from the top edge. The screen behind is inert. |
 | `Banner`, `Toast` | A danger or info message with role `alert`. A toast floats above every other layer. |
 | `LoadingState`, `EmptyState`, `ErrorState` | One look for a list that loads, holds nothing or fails. |
 | `SectionHeader` | An eyebrow label over a group, with a count and a tone. |
@@ -270,6 +271,14 @@ screen that writes the palette and both settings (ADR
 opens it from the gear beside the mode switch. Its Diagnostics section
 reads the crash log from app storage and offers Copy and Share (ticket
 0081).
+
+`features/command` holds the command pane that ticket 0085 adds
+(ADR 20261111-command-pane). A downward pull on a header band, or the
+"open commands" button, drops it from the top edge. The search takes
+focus, and a row runs one action and closes the pane. The screen
+behind is inert. The list body, the pager and a row drag never start
+the gesture. Theme and Sort mode open Settings rather than repeat its
+pickers.
 
 ### Planner
 

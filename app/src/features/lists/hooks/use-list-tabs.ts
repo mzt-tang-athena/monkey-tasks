@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { CaptureTarget } from "@/types/task";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
+import { selectList, useSelectedList } from "@/lib/selected-list";
 import { useListTabs, type ListTab } from "@/stores/tasks/selectors";
 
 /**
@@ -10,7 +11,7 @@ import { useListTabs, type ListTab } from "@/stores/tasks/selectors";
  */
 export function useListTabState() {
   const tabs = useListTabs();
-  const [selected, setSelected] = React.useState<ListTab>("Main");
+  const selected = useSelectedList();
   // A list note can vanish while its tab is open. Main takes over.
   const tab = tabs.includes(selected) ? selected : "Main";
   const index = Math.max(0, tabs.indexOf(tab));
@@ -45,7 +46,7 @@ export function useListTabState() {
 
   const setTab = React.useCallback((next: ListTab) => {
     recordBreadcrumb("tab", next);
-    setSelected(next);
+    selectList(next);
   }, []);
 
   const onPage = React.useCallback(
@@ -53,7 +54,7 @@ export function useListTabState() {
       const name = tabs[next];
       if (name != null) {
         recordBreadcrumb("tab", name);
-        setSelected(name);
+        selectList(name);
       }
     },
     [tabs],
