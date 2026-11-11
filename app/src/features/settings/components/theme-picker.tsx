@@ -89,7 +89,6 @@ const makeStyles = (colors: Palette) => ({
       paddingHorizontal: spacing.m,
       paddingVertical: spacing.s,
     },
-    first: {},
     divider: {
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.hairline,

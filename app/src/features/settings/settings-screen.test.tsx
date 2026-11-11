@@ -111,7 +111,8 @@ describe("SettingsScreen", () => {
     expect(getComputedStyle(page).backgroundColor).toBe(rgb(THEMES.midnight.paper));
   });
 
-  it("saves the sort order and the task form, and reads them back", () => {    const first = mount();
+  it("saves the sort order and the task form, and reads them back", () => {
+    const first = mount();
     expect(
       screen.getByRole("tab", { name: "Due date" }).getAttribute("aria-selected"),
     ).toBe("true");
