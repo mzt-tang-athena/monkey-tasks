@@ -79,6 +79,21 @@ export function dropSpan(
   };
 }
 
+/** The data indexes a one-place move writes. `direction` is 1 for down
+    the list and -1 for up. Null at the group's edge, where no move
+    exists. */
+export function stepSpan(
+  index: number,
+  count: number,
+  direction: 1 | -1,
+): { from: number; to: number } | null {
+  "worklet";
+  if (direction === 1) {
+    return index < count - 1 ? { from: index, to: index + 2 } : null;
+  }
+  return index > 0 ? { from: index, to: index - 1 } : null;
+}
+
 /** The index in its group's data that each mounted row shows its card
     by after the drop. The result is indexed by mount position. */
 export function slotIndexes(

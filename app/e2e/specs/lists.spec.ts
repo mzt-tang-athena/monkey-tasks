@@ -108,21 +108,31 @@ test.describe("My order", () => {
     );
   });
 
-  test("each row has a named reorder handle", async ({ page }) => {
+  test("each grip is a slider named by its task at its place", async ({ page }) => {
     // B4: the grip rendered six dots with no name.
     const grip = page.getByTestId(`reorder-grip:${undated.second}`);
 
-    await expect(grip).toHaveRole("button");
-    await expect(grip).toHaveAccessibleName("reorder handle");
-    await expect(page.getByRole("button", { name: "reorder handle" }).first()).toBeVisible();
-    // It has no keyboard action yet (0063), so it is no tab stop.
-    await expect(grip).toHaveAttribute("tabindex", "-1");
+    await expect(grip).toHaveRole("slider");
+    await expect(grip).toHaveAccessibleName(`reorder ${undated.second}`);
+    await expect(
+      page.getByRole("slider", { name: `reorder ${undated.second}` }),
+    ).toBeVisible();
+    await expect(grip).toHaveAttribute("aria-valuenow", "2");
+    // The arrows step it, so it is a tab stop on the web.
+    await expect(grip).toHaveAttribute("tabindex", "0");
+    // The grip is the only non-drag path; the row's actions menu is gone.
+    await expect(
+      page.getByRole("button", { name: `actions for ${undated.second}` }),
+    ).toHaveCount(0);
   });
 
-  test("a held row moves and keeps its place", async ({ page }) => {
-    await holdDrag(page, row(page, undated.second), row(page, undated.first), {
-      at: "upper",
-    });
+  test("a grip drag moves the row and keeps its place", async ({ page }) => {
+    await holdDrag(
+      page,
+      page.getByTestId(`reorder-grip:${undated.second}`),
+      row(page, undated.first),
+      { at: "upper", holdMs: 0 },
+    );
 
     await expectAbove(row(page, undated.second), row(page, undated.first));
 

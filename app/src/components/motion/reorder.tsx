@@ -7,8 +7,6 @@ import Animated, {
   useAnimatedRef,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
-  withSequence,
   withTiming,
   type AnimatedRef,
   type SharedValue,
@@ -22,11 +20,13 @@ import {
   slotForY,
   slotIndexes,
   slotTops,
+  stepSpan,
   type RowSpan,
 } from "@/lib/motion/drag-math";
 import { holds, motion } from "@/lib/motion/tokens";
 import { colors, radius, shadows, touchTarget } from "@/theme/tokens";
 import { createBridgeGuard, toJS } from "./internal/bridge";
+import { useArrowKeys } from "./internal/keys";
 import {
   DraggingContext,
   SessionContext,
@@ -82,8 +82,13 @@ type ItemValue = {
   id: string;
   group: string;
   index: number;
+  count: number;
   disabled: boolean;
   ref: AnimatedRef<View>;
+  /** The row's one drag source. Its grip picks the row up by it. */
+  source: number;
+  /** Move the row to the place a drop writes, by its data indexes. */
+  move: (from: number, to: number) => void;
 };
 
 const StateContext = React.createContext<ReorderState | null>(null);
@@ -174,6 +179,9 @@ function snapshotOf(state: ReorderState, group: string) {
  * pickup, so the commit that reorders the data carries zero shift.
  */
 export function createReorderSurface<P>() {
+  type Move = (payload: P, group: string, from: number, to: number) => void;
+  const MoveContext = React.createContext<Move | null>(null);
+
   function Root({
     onReorder,
     renderGhost,
@@ -188,6 +196,14 @@ export function createReorderSurface<P>() {
     React.useLayoutEffect(() => {
       latest.current = onReorder;
     });
+    // A step from the grip's screen reader actions or arrow keys takes
+    // the same event a drop writes, with no pickup to settle.
+    const move = React.useCallback<Move>(
+      (payload, group, from, to) => {
+        latest.current({ payload, group, from, to });
+      },
+      [],
+    );
     const [guard] = React.useState(createBridgeGuard);
     const items = useSharedValue<Record<string, ItemEntry>>({});
     const snapshot = useSharedValue<Record<string, RowSnapshot>>({});
@@ -250,12 +266,14 @@ export function createReorderSurface<P>() {
       <SessionContext.Provider value={session}>
         <DraggingContext.Provider value={active !== null}>
           <StateContext.Provider value={state}>
-            {children}
-            {active !== null ? (
-              <Overlay layer="dragGhost">
-                <Ghost session={session}>{renderGhost(active.payload)}</Ghost>
-              </Overlay>
-            ) : null}
+            <MoveContext.Provider value={move}>
+              {children}
+              {active !== null ? (
+                <Overlay layer="dragGhost">
+                  <Ghost session={session}>{renderGhost(active.payload)}</Ghost>
+                </Overlay>
+              ) : null}
+            </MoveContext.Provider>
           </StateContext.Provider>
         </DraggingContext.Provider>
       </SessionContext.Provider>
@@ -283,11 +301,25 @@ export function createReorderSurface<P>() {
   }) {
     const session = useSessionContext<ReorderHandlers>("ListReorder.Item");
     const state = useStateContext("ListReorder.Item");
+    const move = React.useContext(MoveContext);
+    if (move === null) {
+      throw new Error("ListReorder.Item must render inside its surface's Root.");
+    }
     const ref = useAnimatedRef<View>();
     const [source] = React.useState(session.nextId);
     const item = React.useMemo<ItemValue>(
-      () => ({ payload, id, group, index, disabled, ref }),
-      [payload, id, group, index, disabled, ref],
+      () => ({
+        payload,
+        id,
+        group,
+        index,
+        count,
+        disabled,
+        ref,
+        source,
+        move: (from, to) => move(payload, group, from, to),
+      }),
+      [payload, id, group, index, count, disabled, ref, source, move],
     );
     React.useLayoutEffect(() => {
       session.payloads.set(source, payload);
@@ -317,14 +349,6 @@ export function createReorderSurface<P>() {
       [state, id],
     );
 
-    const { gesture, cue, shake } = useItemGesture({
-      source,
-      id,
-      group,
-      disabled,
-      hold: "row",
-      self: ref,
-    });
     const look = useAnimatedStyle(() => {
       const snap = state.snapshot.value[id];
       const stamped = snap !== undefined && snap.index === index;
@@ -338,7 +362,7 @@ export function createReorderSurface<P>() {
         machine.phase !== "pending";
       return {
         opacity: mine ? 1 - 0.5 * session.ui.lift.value : 1,
-        transform: [{ translateY: shift }, { translateX: shake.value }],
+        transform: [{ translateY: shift }],
         borderTopLeftRadius: position === "first" || position === "only" ? radius : 0,
         borderTopRightRadius: position === "first" || position === "only" ? radius : 0,
         borderBottomLeftRadius: position === "last" || position === "only" ? radius : 0,
@@ -354,58 +378,69 @@ export function createReorderSurface<P>() {
       const position = cardPosition(slot, count);
       return { opacity: position === "first" || position === "only" ? 0 : 1 };
     });
-    const tint = useAnimatedStyle(() => ({ opacity: cue.value }));
 
     return (
-      <GestureDetector gesture={gesture}>
+      <Animated.View
+        ref={ref}
+        collapsable={false}
+        testID={testID}
+        style={[styles.item, look]}
+      >
         <Animated.View
-          ref={ref}
-          collapsable={false}
-          testID={testID}
-          style={[styles.item, look]}
-        >
-          <Animated.View pointerEvents="none" style={[styles.tint, tint]} />
-          <Animated.View
-            pointerEvents="none"
-            testID="card-divider"
-            style={[styles.divider, divider]}
-          />
-          <ItemContext.Provider value={item}>{children}</ItemContext.Provider>
-        </Animated.View>
-      </GestureDetector>
+          pointerEvents="none"
+          testID="card-divider"
+          style={[styles.divider, divider]}
+        />
+        <ItemContext.Provider value={item}>{children}</ItemContext.Provider>
+      </Animated.View>
     );
   }
 
-  function Grip({ testID }: { testID?: string }) {
-    const session = useSessionContext<ReorderHandlers>("ListReorder.Grip");
+  function Grip({ testID, label }: { testID?: string; label: string }) {
     const item = useItemContext("ListReorder.Grip");
-    const [source] = React.useState(session.nextId);
-    React.useLayoutEffect(() => {
-      session.payloads.set(source, item.payload);
-    });
-    React.useEffect(
-      () => () => {
-        session.payloads.delete(source);
-        scheduleOnUI(abandonSource, session.ui, source, session.handlers.cancel);
-      },
-      [session, source],
-    );
-    const { gesture, hidden: look } = useItemGesture({
-      source,
+    const gripRef = React.useRef<React.ComponentRef<typeof Animated.View>>(null);
+    const { gesture, hidden: look } = useGripGesture({
+      source: item.source,
       id: item.id,
       group: item.group,
       disabled: item.disabled,
-      hold: "grip",
       self: item.ref,
-      grip: true,
     });
+    // A step is one place in My order, and it writes through the same
+    // data-index event a drop sends.
+    const { index, count, move } = item;
+    const step = React.useCallback(
+      (direction: 1 | -1) => {
+        const span = stepSpan(index, count, direction);
+        if (span !== null) {
+          move(span.from, span.to);
+        }
+      },
+      [index, count, move],
+    );
+    // The arrow key points up or down the screen, so the up arrow is a
+    // step to the earlier place.
+    const arrow = React.useCallback(
+      (pointing: 1 | -1) => step(pointing === 1 ? -1 : 1),
+      [step],
+    );
+    useArrowKeys(gripRef, arrow);
     return (
       <GestureDetector gesture={gesture}>
         <Animated.View
+          ref={gripRef}
           testID={testID}
-          accessibilityRole="button"
-          accessibilityLabel="reorder handle"
-          focusable={false}
+          accessibilityRole="adjustable"
+          accessibilityLabel={label}
+          accessibilityValue={{ min: 1, max: item.count, now: item.index + 1 }}
+          aria-valuemin={1}
+          aria-valuemax={item.count}
+          aria-valuenow={item.index + 1}
+          accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+          onAccessibilityAction={(event) => {
+            step(event.nativeEvent.actionName === "increment" ? 1 : -1);
+          }}
+          tabIndex={0}
           style={[styles.grip, look]}
         >
           <View style={styles.gripDots}>
@@ -421,28 +456,22 @@ export function createReorderSurface<P>() {
     );
   }
 
-  function useItemGesture({
+  function useGripGesture({
     source,
     id,
     group,
     disabled,
-    hold,
     self,
-    grip = false,
   }: {
     source: number;
     id: string;
     group: string;
     disabled: boolean;
-    hold: "row" | "grip";
     self: AnimatedRef<View>;
-    grip?: boolean;
   }) {
     const session = useSessionContext<ReorderHandlers>("ListReorder");
     const state = useStateContext("ListReorder");
     const { ui, pressCancel } = session;
-    const cue = useSharedValue(0);
-    const shake = useSharedValue(0);
     // The picked row's mount position, and the boundary it lands on.
     // The group's data indexes stay on the other side of the bridge.
     const from = useSharedValue(0);
@@ -450,31 +479,20 @@ export function createReorderSurface<P>() {
     const keys = useSharedValue<string[]>([]);
     const rows = useSharedValue<RowSpan[]>(none);
     const indexes = useSharedValue<number[]>([]);
-    const { ms, touchAction } = holds[hold];
+    const { touchAction } = holds.grip;
 
     const gesture = usePanGesture(
       withTouchAction(touchAction, {
         enabled: !disabled,
-        minDistance: grip ? 0 : undefined,
+        minDistance: 0,
         // The grip claims on the press. The web pan needs one timer tick
         // to do that, or the pager's pan takes the first sideways move.
-        activateAfterLongPress: grip ? 1 : ms,
+        activateAfterLongPress: 1,
         onBegin: () => {
           "worklet";
           if (send(ui, { type: "begin", source }) === "flush") {
             ui.lift.set(0);
             ui.hover.set(null);
-          }
-          if (!grip) {
-            cue.set(
-              withDelay(
-                motion.hold.cue,
-                withTiming(1, {
-                  duration: ms - motion.hold.cue,
-                  reduceMotion: reduce,
-                }),
-              ),
-            );
           }
         },
         onActivate: (event) => {
@@ -512,17 +530,8 @@ export function createReorderSurface<P>() {
           to.set(at);
           ui.x.set(event.absoluteX);
           ui.y.set(event.absoluteY);
-          cue.set(1);
           ui.lift.set(
             withTiming(1, { duration: motion.ms.tap, reduceMotion: reduce }),
-          );
-          shake.set(
-            withSequence(
-              withTiming(-2.5, { duration: 40, reduceMotion: reduce }),
-              withTiming(2.5, { duration: 50, reduceMotion: reduce }),
-              withTiming(-1.5, { duration: 50, reduceMotion: reduce }),
-              withTiming(0, { duration: 40, reduceMotion: reduce }),
-            ),
           );
           toJS(session.handlers.pickup, source, generation);
         },
@@ -604,7 +613,6 @@ export function createReorderSurface<P>() {
             toJS(session.handlers.cancel, ui.generation.value);
             settleSession(ui);
           }
-          cue.set(withTiming(0, { duration: motion.ms.tap, reduceMotion: reduce }));
         },
       }),
     );
@@ -616,7 +624,7 @@ export function createReorderSurface<P>() {
         machine.phase !== "pending";
       return { opacity: mine ? 0 : 1 };
     });
-    return { gesture, cue, shake, hidden };
+    return { gesture, hidden };
   }
 
   /** Whether a row is held or dragged. A pager under the same Root
@@ -655,14 +663,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: hairline,
     borderRightWidth: hairline,
     borderColor: colors.hairline,
-  },
-  tint: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: colors.accentSoft,
   },
   divider: {
     position: "absolute",

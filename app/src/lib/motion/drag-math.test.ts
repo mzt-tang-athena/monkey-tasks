@@ -6,6 +6,7 @@ import {
   slotForY,
   slotIndexes,
   slotTops,
+  stepSpan,
   type GridRect,
   type ZoneRect,
 } from "./drag-math";
@@ -61,6 +62,21 @@ describe("dropSpan", () => {
     expect(dropSpan(0, 0, [])).toBeNull();
     expect(dropSpan(-1, 0, [3, 4])).toBeNull();
     expect(dropSpan(2, 0, [3, 4])).toBeNull();
+  });
+});
+
+describe("stepSpan", () => {
+  it("moves one place as the data indexes a drop writes", () => {
+    // Down one place lands the row before the item after its neighbour.
+    expect(stepSpan(1, 4, 1)).toEqual({ from: 1, to: 3 });
+    expect(stepSpan(1, 4, -1)).toEqual({ from: 1, to: 0 });
+  });
+
+  it("holds at the group's edges", () => {
+    expect(stepSpan(0, 4, -1)).toBeNull();
+    expect(stepSpan(3, 4, 1)).toBeNull();
+    expect(stepSpan(0, 1, 1)).toBeNull();
+    expect(stepSpan(0, 1, -1)).toBeNull();
   });
 });
 

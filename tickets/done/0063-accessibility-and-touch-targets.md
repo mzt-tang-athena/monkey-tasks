@@ -147,3 +147,21 @@ The muted ink in each theme is a step darker, so secondary text clears
 Not proven here: TalkBack reads the names and the increment and
 decrement actions on a phone. The Android emulator and the phone stay
 unchecked, and a hardware keyboard check stays with the operator.
+
+## Amendment, 2026-11-11: the non-drag path moves onto the grip
+
+Ticket 0086 removes the row's actions menu. The row body no longer
+starts a drag, so the horizontal swipe between lists works. The grip is
+the one drag source, and it keeps the non-drag path.
+
+The grip reports `adjustable` on native and `slider` on the web. Its
+name is `reorder <task>`. Its value is the row's one-based place in My
+order, from 1 to the group's size. Increment moves the row one place
+later and decrement one place earlier. Each step writes the same
+data-index `ReorderEvent` a drop writes. Arrow keys run the same step
+on the web. The menu's four moves are gone with the menu.
+
+The trade-off is unchanged in kind: a user must find the grip. It
+stays visible in My order, and its name and value explain it to
+TalkBack. The register entry stays unchecked until an emulator or a
+phone drives the two actions.

@@ -3,8 +3,8 @@ id: 0086
 title: Reorder from the grip only, with screen reader steps
 created: 2026-11-11
 priority: normal
-assignee:
-pr:
+assignee: omp
+pr: 115
 depends: []
 ---
 
@@ -36,16 +36,16 @@ outcome or to ADR 0040.
 
 ## Acceptance
 
-- [ ] No row overflow menu in My order, and no other screen shows
+- [x] No row overflow menu in My order, and no other screen shows
       Move up, Move down, Move to top or Move to bottom.
-- [ ] A hold on a row body does not pick it up. A hold on the grip
+- [x] A hold on a row body does not pick it up. A hold on the grip
       does. A horizontal swipe on a row pages.
-- [ ] The grip reports `adjustable` with increment and decrement, and
+- [x] The grip reports `adjustable` with increment and decrement, and
       each step writes the order like a drop, proven by reading the
       note back.
-- [ ] The grip is 44 by 44 by layout, and axe reports no serious or
+- [x] The grip is 44 by 44 by layout, and axe reports no serious or
       critical issue.
-- [ ] The e2e suite covers the swipe, the grip drag and the steps. The
+- [x] The e2e suite covers the swipe, the grip drag and the steps. The
       TalkBack check is listed as unproven if the emulator cannot
       drive the actions.
 

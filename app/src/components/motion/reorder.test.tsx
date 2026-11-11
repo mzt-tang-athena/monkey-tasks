@@ -36,7 +36,7 @@ function Screen({
             count={count}
             testID={`reorder-item:${name}`}
           >
-            <List.Grip testID={`reorder-grip:${name}`} />
+            <List.Grip testID={`reorder-grip:${name}`} label={`reorder ${name}`} />
           </List.Item>
         ))}
       </List.Root>
@@ -108,5 +108,62 @@ describe("createReorderSurface", () => {
     expect(onReorder.mock.calls).toEqual([
       [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3 }],
     ]);
+  });
+
+  it("reports each grip as a slider at the row's place", () => {
+    render(
+      <Screen
+        rows={[
+          { name: "Delta", index: 3 },
+          { name: "Echo", index: 4 },
+        ]}
+        count={5}
+        onReorder={() => undefined}
+      />,
+    );
+
+    const grip = screen.getByTestId("reorder-grip:Echo");
+    expect(grip.getAttribute("role")).toBe("slider");
+    expect(grip.getAttribute("aria-label")).toBe("reorder Echo");
+    expect(grip.getAttribute("aria-valuemin")).toBe("1");
+    expect(grip.getAttribute("aria-valuemax")).toBe("5");
+    expect(grip.getAttribute("aria-valuenow")).toBe("5");
+  });
+
+  it("steps a row one place from the keyboard through the drop's event", async () => {
+    const onReorder = vi.fn();
+    render(
+      <Screen
+        rows={[
+          { name: "Alpha", index: 0 },
+          { name: "Delta", index: 3 },
+          { name: "Echo", index: 4 },
+        ]}
+        count={5}
+        onReorder={onReorder}
+      />,
+    );
+    const key = async (name: string, value: string) => {
+      screen.getByTestId(`reorder-grip:${name}`).focus();
+      await act(async () => {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: value }));
+      });
+    };
+
+    await key("Echo", "ArrowUp");
+    expect(onReorder.mock.calls).toEqual([
+      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3 }],
+    ]);
+
+    await key("Delta", "ArrowDown");
+    expect(onReorder.mock.calls).toEqual([
+      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3 }],
+      [{ payload: { name: "Delta" }, group: "Today", from: 3, to: 5 }],
+    ]);
+
+    onReorder.mockClear();
+    await key("Echo", "ArrowDown");
+    await key("Alpha", "ArrowUp");
+    expect(onReorder, "the group's edges hold").not.toHaveBeenCalled();
   });
 });

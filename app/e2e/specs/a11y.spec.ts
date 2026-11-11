@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { months, supplements, tabs, tomorrow, undated } from "../data";
-import { press, row } from "../locators";
+import { expectAbove, press, row } from "../locators";
 import {
   failNextCreate,
   failNextWrite,
@@ -317,36 +317,41 @@ test.describe("errors announce", () => {
 });
 
 test.describe("non-drag paths", () => {
-  test("Move down on the first row in My order moves it second and writes the order", async ({
+  test("the grip is a slider whose steps move the row one place and write the order", async ({
     page,
   }) => {
     await openLists(page);
     await press(page, page.getByRole("button", { name: "sort list" }));
     await press(page, page.getByRole("radio", { name: "My order" }));
-    await expect.poll(async () => {
-      const first = await row(page, undated.first).boundingBox();
-      const second = await row(page, undated.second).boundingBox();
-      return first != null && second != null && first.y < second.y;
-    }).toBe(true);
+    await expectAbove(row(page, undated.first), row(page, undated.second));
 
-    await press(
-      page,
-      page.getByRole("button", { name: `actions for ${undated.first}` }),
-    );
-    await press(page, page.getByRole("menuitem", { name: "Move down" }));
+    const grip = page.getByRole("slider", {
+      name: `reorder ${undated.first}`,
+    });
+    await expect(grip).toHaveAttribute("aria-valuenow", "1");
 
-    await expect.poll(async () => {
-      const first = await row(page, undated.first).boundingBox();
-      const second = await row(page, undated.second).boundingBox();
-      return first != null && second != null && second.y < first.y;
-    }).toBe(true);
-
+    // Arrow down is the increment action: one place down the list.
+    await grip.focus();
+    await expect(grip).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expectAbove(row(page, undated.second), row(page, undated.first));
     await expect
       .poll(() => noteText(page, `Tasks/${undated.first}.md`))
       .toContain("order: 2");
     await expect
       .poll(() => noteText(page, `Tasks/${undated.second}.md`))
       .toContain("order: 1");
+    await expect(grip).toHaveAttribute("aria-valuenow", "2");
+
+    // Arrow up is the decrement action, and it lands the row back.
+    await page.keyboard.press("ArrowUp");
+    await expectAbove(row(page, undated.first), row(page, undated.second));
+    await expect
+      .poll(() => noteText(page, `Tasks/${undated.first}.md`))
+      .toContain("order: 1");
+    await expect
+      .poll(() => noteText(page, `Tasks/${undated.second}.md`))
+      .toContain("order: 2");
   });
 
   test("the split grabber is adjustable and its actions move it one hour row", async ({
@@ -360,6 +365,7 @@ test.describe("non-drag paths", () => {
     const top = page.getByTestId("day-split:top");
     const before = (await top.boundingBox())?.height ?? 0;
     await slider.focus();
+    await expect(slider).toBeFocused();
     await page.keyboard.press("ArrowDown");
 
     await expect.poll(async () => (await top.boundingBox())?.height ?? 0).toBeLessThan(
