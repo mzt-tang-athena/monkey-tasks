@@ -52,9 +52,11 @@ note and do not run Templater. Record the choice in the ADR.
 ### The tab
 
 `app/src/app/(tabs)/journal.tsx`, thin, re-exporting
-`features/journal`. The bottom bar becomes Lists, Planner, Journal and
-the Add action. Keep the nav a `tablist`, keep every target 44pt, and
-keep the Add action where it is.
+`features/journal`. The bottom bar gains a Journal destination. Ticket
+0095 adds a Notes destination and owns the final bar layout, because
+four destinations plus Add do not fit at 360pt as they stand. Build
+the bar as a `tablist` that can take one more destination without a
+rewrite. Keep every target 44pt.
 
 ### State
 

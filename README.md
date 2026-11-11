@@ -323,6 +323,7 @@ After that:
 - 0092 optional quests and evergreen tasks, a discovery
 - 0093 the task editor rebuild, starting with a design
 - 0094 review the task note schema
+- 0095 a Notes tab from Inbox, starting with a design
 
 Open feature tickets:
 
