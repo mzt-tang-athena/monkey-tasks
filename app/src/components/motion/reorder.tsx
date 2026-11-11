@@ -18,7 +18,9 @@ import { taskRowFace } from "@/components/task-row-face";
 import { Overlay } from "@/components/ui/overlay-host";
 import {
   cardPosition,
+  dropSpan,
   slotForY,
+  slotIndexes,
   slotTops,
   type RowSpan,
 } from "@/lib/motion/drag-math";
@@ -77,6 +79,7 @@ type ReorderHandlers = SessionHandlers & {
 
 type ItemValue = {
   payload: unknown;
+  id: string;
   group: string;
   index: number;
   disabled: boolean;
@@ -115,7 +118,7 @@ function clearShifts(
 }
 
 /** The owning row's snapshot: the mounted rows of its group, top down,
-    with the index each carries. */
+    with the index each carries and its place by mount order. */
 function snapshotOf(state: ReorderState, group: string) {
   "worklet";
   const entries = state.items.value;
@@ -149,14 +152,16 @@ function snapshotOf(state: ReorderState, group: string) {
   const keys: string[] = [];
   const rows: RowSpan[] = [];
   const slots: Record<string, number> = {};
+  const indexes: number[] = [];
   for (let i = 0; i < list.length; i += 1) {
     const row = list[i];
     snapshot[row.key] = { index: row.index, top: row.top, height: row.height };
     keys[i] = row.key;
     rows[i] = { top: row.top, height: row.height };
     slots[row.key] = row.index;
+    indexes[i] = row.index;
   }
-  return { snapshot, keys, rows, slots };
+  return { snapshot, keys, rows, slots, indexes };
 }
 
 /**
@@ -281,8 +286,8 @@ export function createReorderSurface<P>() {
     const ref = useAnimatedRef<View>();
     const [source] = React.useState(session.nextId);
     const item = React.useMemo<ItemValue>(
-      () => ({ payload, group, index, disabled, ref }),
-      [payload, group, index, disabled, ref],
+      () => ({ payload, id, group, index, disabled, ref }),
+      [payload, id, group, index, disabled, ref],
     );
     React.useLayoutEffect(() => {
       session.payloads.set(source, payload);
@@ -314,8 +319,8 @@ export function createReorderSurface<P>() {
 
     const { gesture, cue, shake } = useItemGesture({
       source,
+      id,
       group,
-      index,
       disabled,
       hold: "row",
       self: ref,
@@ -387,8 +392,8 @@ export function createReorderSurface<P>() {
     );
     const { gesture, hidden: look } = useItemGesture({
       source,
+      id: item.id,
       group: item.group,
-      index: item.index,
       disabled: item.disabled,
       hold: "grip",
       self: item.ref,
@@ -418,16 +423,16 @@ export function createReorderSurface<P>() {
 
   function useItemGesture({
     source,
+    id,
     group,
-    index,
     disabled,
     hold,
     self,
     grip = false,
   }: {
     source: number;
+    id: string;
     group: string;
-    index: number;
     disabled: boolean;
     hold: "row" | "grip";
     self: AnimatedRef<View>;
@@ -438,10 +443,13 @@ export function createReorderSurface<P>() {
     const { ui, pressCancel } = session;
     const cue = useSharedValue(0);
     const shake = useSharedValue(0);
-    const from = useSharedValue(index);
-    const to = useSharedValue(index);
+    // The picked row's mount position, and the boundary it lands on.
+    // The group's data indexes stay on the other side of the bridge.
+    const from = useSharedValue(0);
+    const to = useSharedValue(0);
     const keys = useSharedValue<string[]>([]);
     const rows = useSharedValue<RowSpan[]>(none);
+    const indexes = useSharedValue<number[]>([]);
     const { ms, touchAction } = holds[hold];
 
     const gesture = usePanGesture(
@@ -486,13 +494,22 @@ export function createReorderSurface<P>() {
             });
           }
           const taken = snapshotOf(state, group);
+          const at = taken.keys.indexOf(id);
+          if (at === -1) {
+            // The row has no laid-out box, so its group has no order to
+            // move it in. Let go before anything lifts.
+            toJS(session.handlers.cancel, generation);
+            settleSession(ui);
+            return;
+          }
           state.snapshot.set(taken.snapshot);
           state.slots.set(taken.slots);
           state.shifts.set({});
           keys.set(taken.keys);
           rows.set(taken.rows);
-          from.set(index);
-          to.set(index);
+          indexes.set(taken.indexes);
+          from.set(at);
+          to.set(at);
           ui.x.set(event.absoluteX);
           ui.y.set(event.absoluteY);
           cue.set(1);
@@ -538,8 +555,9 @@ export function createReorderSurface<P>() {
           const nextShifts = {} as Record<string, number>;
           const nextSlots = {} as Record<string, number>;
           const names = keys.value;
-          for (let position = 0; position < order.length; position += 1) {
-            nextSlots[names[order[position]]] = position;
+          const slotsAfter = slotIndexes(from.value, target, indexes.value);
+          for (let position = 0; position < names.length; position += 1) {
+            nextSlots[names[position]] = slotsAfter[position];
           }
           const slide = {
             duration: motion.ms.settle,
@@ -561,14 +579,19 @@ export function createReorderSurface<P>() {
             canceled: event.canceled,
           });
           if (effect === "drop") {
-            toJS(
-              session.handlers.reorder,
-              ui.generation.value,
-              source,
-              group,
-              from.value,
-              to.value,
-            );
+            const span = dropSpan(from.value, to.value, indexes.value);
+            if (span === null) {
+              toJS(session.handlers.cancel, ui.generation.value);
+            } else {
+              toJS(
+                session.handlers.reorder,
+                ui.generation.value,
+                source,
+                group,
+                span.from,
+                span.to,
+              );
+            }
             settleSession(ui);
           } else if (effect === "cancel") {
             toJS(session.handlers.cancel, ui.generation.value);
