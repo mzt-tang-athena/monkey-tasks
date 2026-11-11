@@ -4,7 +4,7 @@ title: A drag right after a tick crashes the app
 created: 2026-11-11
 priority: high
 assignee: omp
-pr:
+pr: 113
 depends: []
 ---
 
@@ -85,7 +85,7 @@ if a real alternative remains open.
 
 ## Outcome
 
-Fixed on 2026-11-11 on `fix/0080-drag-after-tick`.
+Fixed on 2026-11-11 on `fix/0080-drag-after-tick`. Pull request #113.
 
 The surface now works in mount positions and crosses to data indexes
 once, at the drop. `snapshotOf` returns `indexes`, each mounted row's
