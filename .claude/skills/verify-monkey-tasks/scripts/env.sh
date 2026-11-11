@@ -1,0 +1,18 @@
+# Sourced by the other scripts. Paths and the port for one instance.
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO="$(git -C "$SKILL_DIR" rev-parse --show-toplevel)"
+APP="$REPO/app"
+PORT="${VERIFY_PORT:-8300}"
+STATE="$APP/build/verify"
+PIDFILE="$STATE/server-$PORT.pid"
+STAMP="$APP/dist/.verify-head"
+EVIDENCE_ROOT="$STATE/evidence"
+mkdir -p "$STATE" "$EVIDENCE_ROOT"
+
+fingerprint() {
+  (cd "$REPO" && {
+    git rev-parse HEAD
+    git diff HEAD -- app contracts
+    git ls-files -o --exclude-standard -z -- app contracts | xargs -0 -r sha1sum
+  } | sha1sum | cut -c1-40)
+}

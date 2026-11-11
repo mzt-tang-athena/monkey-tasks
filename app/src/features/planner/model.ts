@@ -1,7 +1,15 @@
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { addDays, formatLocal, parseStoredDate, startOfDay } from "../../lib/dates";
-import type { TaskItem } from "../tasks/query";
-import { occursOn } from "../tasks/recurrence";
+import {
+  addDays,
+  formatLocal,
+  formatTime,
+  isoOf,
+  parseStoredDate,
+  startOfDay,
+} from "@/utils/dates";
+import type { TaskItem } from "@/types/task";
+import { occursOn } from "@/lib/recurrence";
+import { MONTHS, MONTHS_SHORT, WEEKDAYS } from "@/features/planner/lib/labels";
 
 /*
  * The planner's pure domain layer: the source vocabulary, the period
@@ -20,25 +28,79 @@ export type { Mode, Source };
 export { SOURCES };
 
 /** The source cycle: due period, then each named list, then back. */
-export function cycleSource(
-  source: Source,
-  setSource: (next: Source) => void,
-): () => void {
-  return () => {
-    const index = SOURCES.indexOf(source);
-    setSource(SOURCES[(index + 1) % SOURCES.length]);
-  };
+export function nextSource(source: Source): Source {
+  return SOURCES[(SOURCES.indexOf(source) + 1) % SOURCES.length];
 }
 
-export function sourceLabel(source: Source, mode: Mode): string {
-  if (source === "due-period") {
-    return mode === "day"
-      ? "Due today"
-      : mode === "week"
-        ? "Due this week"
-        : "Due this month";
+/**
+ * The source toggle's text. A due period names the period on screen:
+ * "Due today", "Due tomorrow", "Due Wed, 28 Oct", "Due this week",
+ * "Due 8 to 14 Nov", "Due this month" or "Due November". A year shows
+ * only when it differs from today's. A named list shows its own name.
+ */
+export function sourceLabel(
+  source: Source,
+  mode: Mode,
+  day: Date,
+  today: Date,
+): string {
+  if (source !== "due-period") {
+    return source;
   }
-  return source;
+  if (mode === "day") {
+    return `Due ${dayName(day, today)}`;
+  }
+  if (mode === "week") {
+    return `Due ${weekName(day, today)}`;
+  }
+  return `Due ${monthName(day, today)}`;
+}
+
+/** The year, spaced for a label, when it differs from today's. */
+function yearSuffix(day: Date, today: Date): string {
+  return day.getFullYear() === today.getFullYear() ? "" : ` ${day.getFullYear()}`;
+}
+
+function dayName(day: Date, today: Date): string {
+  const apart = dayIndexBetween(
+    startOfDay(today).getTime(),
+    startOfDay(day).getTime(),
+  );
+  if (apart === 0) {
+    return "today";
+  }
+  if (apart === 1) {
+    return "tomorrow";
+  }
+  if (apart === -1) {
+    return "yesterday";
+  }
+  return `${WEEKDAYS[day.getDay()]}, ${day.getDate()} ${MONTHS_SHORT[day.getMonth()]}${yearSuffix(day, today)}`;
+}
+
+function weekName(day: Date, today: Date): string {
+  const first = startOfWeek(day);
+  if (first.getTime() === startOfDay(startOfWeek(today)).getTime()) {
+    return "this week";
+  }
+  const last = addDays(first, 6);
+  const from = `${first.getDate()} ${MONTHS_SHORT[first.getMonth()]}`;
+  const to = `${last.getDate()} ${MONTHS_SHORT[last.getMonth()]}`;
+  const range =
+    first.getMonth() === last.getMonth()
+      ? `${first.getDate()} to ${to}`
+      : `${from} to ${to}`;
+  return `${range}${yearSuffix(last, today)}`;
+}
+
+function monthName(day: Date, today: Date): string {
+  if (
+    day.getFullYear() === today.getFullYear() &&
+    day.getMonth() === today.getMonth()
+  ) {
+    return "this month";
+  }
+  return `${MONTHS[day.getMonth()]}${yearSuffix(day, today)}`;
 }
 
 /**
@@ -123,6 +185,21 @@ export function sortOpenFirst(items: TaskItem[]): TaskItem[] {
   ];
 }
 
+/** One day's tasks in the order the day runs: all day tasks first, by
+    name, then timed ones by time of day. A recurring task sorts by its
+    own time of day, so its occurrence lands among the day's times, not
+    by the day it is stored on. */
+export function sortByTimeOfDay(items: TaskItem[]): TaskItem[] {
+  const minutes = (task: TaskItem): number => {
+    const due = task.data?.due ? parseStoredDate(task.data.due) : null;
+    return due?.hasTime ? due.date.getHours() * 60 + due.date.getMinutes() : -1;
+  };
+  return items
+    .map((task) => ({ task, at: minutes(task) }))
+    .sort((a, b) => a.at - b.at || a.task.name.localeCompare(b.task.name))
+    .map((entry) => entry.task);
+}
+
 /** The open tasks touching the day: due that day, or an occurrence
     their rule puts there. */
 export function tasksForDay(tasks: TaskItem[], day: Date): TaskItem[] {
@@ -194,17 +271,6 @@ export function withKeptTime(
     ),
     true,
   );
-}
-
-export function formatTime(date: Date): string {
-  const h = date.getHours() % 12 || 12;
-  const ampm = date.getHours() >= 12 ? "PM" : "AM";
-  return `${h}:${String(date.getMinutes()).padStart(2, "0")} ${ampm}`;
-}
-
-export function isoOf(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 /** Sunday of the week holding date. */

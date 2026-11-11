@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
-import type { TaskItem } from "../tasks/query";
+import type { TaskItem } from "@/types/task";
 import {
   hasTime,
   inSourceList,
   parseMode,
   parsePlannerDay,
   plannerDayParam,
+  sortByTimeOfDay,
   sortOpenFirst,
+  sourceLabel,
   tasksForDay,
   tasksForDayAll,
   timeOf,
@@ -133,6 +135,36 @@ describe("sortOpenFirst", () => {
   });
 });
 
+describe("sortByTimeOfDay", () => {
+  it("orders a recurring occurrence by its time, not by its stored day", () => {
+    // The daily task is stored a day earlier at 7 PM. On the 27th its
+    // occurrence must still come after the 2:30 PM task.
+    const items = [
+      task("Supplements", recurringDue("2026-10-26T19:00", "RRULE:FREQ=DAILY")),
+      task("Dentist", due("2026-10-27T14:30")),
+    ];
+    expect(sortByTimeOfDay(items).map((item) => item.name)).toEqual([
+      "Dentist",
+      "Supplements",
+    ]);
+  });
+
+  it("puts all day tasks first, by name, then timed ones by time", () => {
+    const items = [
+      task("Late", due("2026-10-27T21:00")),
+      task("Plan", due("2026-10-27")),
+      task("Early", due("2026-10-27T07:15")),
+      task("Groceries", due("2026-10-27")),
+    ];
+    expect(sortByTimeOfDay(items).map((item) => item.name)).toEqual([
+      "Groceries",
+      "Plan",
+      "Early",
+      "Late",
+    ]);
+  });
+});
+
 describe("inSourceList", () => {
   const focused = task("Alpha", {
     kind: "[[tasks]]",
@@ -250,5 +282,46 @@ describe("tasksForDay", () => {
       completed: "2026-10-21",
     });
     expect(tasksForDayAll([done], DAY)).toEqual([]);
+  });
+});
+
+describe("sourceLabel", () => {
+  // Monday 26 October 2026. Weeks start on Sunday.
+  const today = new Date(2026, 9, 26);
+  const label = (mode: "day" | "week" | "month", day: Date) =>
+    sourceLabel("due-period", mode, day, today);
+
+  it("names a day relative to today", () => {
+    expect(label("day", today)).toBe("Due today");
+    expect(label("day", new Date(2026, 9, 27))).toBe("Due tomorrow");
+    expect(label("day", new Date(2026, 9, 25))).toBe("Due yesterday");
+    expect(label("day", new Date(2026, 9, 28))).toBe("Due Wed, 28 Oct");
+  });
+
+  it("adds the year to a day in another year", () => {
+    expect(label("day", new Date(2027, 0, 4))).toBe("Due Mon, 4 Jan 2027");
+  });
+
+  it("names a week by the range it runs, Sunday to Saturday", () => {
+    expect(label("week", new Date(2026, 9, 28))).toBe("Due this week");
+    // 8 November 2026 is a Sunday: the week runs 8 to 14.
+    expect(label("week", new Date(2026, 10, 8))).toBe("Due 8 to 14 Nov");
+    expect(label("week", new Date(2026, 10, 11))).toBe("Due 8 to 14 Nov");
+  });
+
+  it("names both months when a week crosses a month end", () => {
+    expect(label("week", new Date(2026, 10, 1))).toBe("Due 1 to 7 Nov");
+    expect(label("week", new Date(2026, 10, 29))).toBe("Due 29 Nov to 5 Dec");
+  });
+
+  it("names a month, with its year when the year differs", () => {
+    expect(label("month", new Date(2026, 9, 3))).toBe("Due this month");
+    expect(label("month", new Date(2026, 10, 1))).toBe("Due November");
+    expect(label("month", new Date(2027, 1, 1))).toBe("Due February 2027");
+  });
+
+  it("names a list by its own name in every mode", () => {
+    expect(sourceLabel("Focus", "day", new Date(2026, 9, 28), today)).toBe("Focus");
+    expect(sourceLabel("Main", "month", new Date(2026, 10, 1), today)).toBe("Main");
   });
 });

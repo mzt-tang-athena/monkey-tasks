@@ -127,7 +127,8 @@ function checkNote(file: string, text: string): Finding[] {
   const bareKeys = new Set<string>();
   block.split(/\r?\n/).forEach((line, index) => {
     if (!BARE_ITEM.test(line) && !BARE_SCALAR.test(line)) return;
-    const key = line.startsWith("  ")
+    // An item belongs to the key above it, at any indent.
+    const key = BARE_ITEM.test(line)
       ? previousKey(block, index)
       : line.slice(0, line.indexOf(":")).trim();
     if (key != null) bareKeys.add(key);
@@ -160,11 +161,8 @@ function checkNote(file: string, text: string): Finding[] {
   } catch (error) {
     findings.push({
       file,
-      line: 2,
+      ...parseFailure(error),
       kind: "parser-disagreement",
-      reason: `js-yaml cannot parse the frontmatter: ${
-        error instanceof Error ? error.message.split("\n")[0] : String(error)
-      }`,
     });
     return findings;
   }
@@ -196,6 +194,22 @@ function checkNote(file: string, text: string): Finding[] {
     });
   }
   return findings;
+}
+
+/**
+ * Where and why js-yaml stopped. Its mark counts lines from the start
+ * of the block, so the file line is two more: one for the zero base
+ * and one for the opening `---`.
+ */
+function parseFailure(error: unknown): { line: number; reason: string } {
+  const prefix = "js-yaml cannot parse the frontmatter";
+  if (error instanceof yaml.YAMLException) {
+    return {
+      line: error.mark == null ? 2 : error.mark.line + 2,
+      reason: `${prefix}: ${error.reason}`,
+    };
+  }
+  return { line: 2, reason: `${prefix}: ${String(error)}` };
 }
 
 /** The key a list item belongs to: the nearest `key:` line above it. */

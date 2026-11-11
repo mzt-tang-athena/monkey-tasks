@@ -1,23 +1,15 @@
 import { useState } from "react";
 import { Stack } from "expo-router";
-import * as Notifications from "expo-notifications";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import { makeQueryClient } from "../store/query-client";
-import { TasksProvider } from "../store/tasks";
-import { ErrorBoundary } from "../components/ErrorBoundary";
-import { installErrorAlert } from "../lib/errors";
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+import { makeQueryClient } from "@/lib/react-query";
+import { TasksProvider } from "@/stores/tasks/tasks-provider";
+import { VaultProvider } from "@/lib/vault/vault-provider";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { OverlayHost } from "@/components/ui/overlay-host";
+import { installErrorAlert } from "@/lib/errors";
 
 // Before anything renders: a release build closes on the first
 // uncaught error, and a closed app cannot report what broke.
@@ -42,12 +34,20 @@ export default function RootLayout() {
             outside render. */}
         <ErrorBoundary>
           <QueryClientProvider client={queryClient}>
-            <TasksProvider>
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
-              </Stack>
-            </TasksProvider>
+            {/* The vault the store reads: SAF on a phone, the memory
+                vault in the browser (ADR 0037). */}
+            <VaultProvider>
+              <TasksProvider>
+                {/* Menus, sheets and toasts draw here, above every
+                    screen, in one z order (ADR 0040). */}
+                <OverlayHost>
+                  <Stack>
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
+                  </Stack>
+                </OverlayHost>
+              </TasksProvider>
+            </VaultProvider>
           </QueryClientProvider>
         </ErrorBoundary>
       </KeyboardProvider>

@@ -1,6 +1,6 @@
 # 0019. Gesture callbacks run on the JS thread
 
-- **Status:** accepted
+- **Status:** superseded by 0036
 - **Date:** 2026-10-22
 
 ## Context
@@ -44,3 +44,22 @@ asynchronous hops.
 **Keep the worklets and make the drag UI-thread native.** It needs the
 drop zones in shared values and the store write behind a JS hop. That is
 a rewrite of the drag, and the drag is not the bottleneck.
+
+## Amendment, 2026-10-26: superseded by 0036
+
+Gesture callbacks now run as worklets on the UI thread (ADR 0036).
+They reach app code only through `scheduleOnRN`, at a pickup, a drop
+or a page commit. Only the primitives in `src/lib/motion` make that
+call. The crash this ADR fixed comes back if a feature worklet calls
+app code directly, and the primitives exist to prevent it.
+
+The consequence above held for the logic and failed for the visuals.
+The ghost, the row slides and the pager lagged whenever the JS thread
+rendered a page or wrote a note.
+
+## Amendment, 2026-11-08: the surfaces make the call
+
+ADR 0046 moves the line above. Only `src/components/motion/internal/`
+and the clocks in `src/lib/motion/progress.ts` call `scheduleOnRN`.
+Every surface reaches JS through the internal bridge. Features and
+routes write no worklet, and lint bans the imports that would let them.

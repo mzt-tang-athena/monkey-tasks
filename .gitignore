@@ -29,3 +29,8 @@ __pycache__/
 .vale/styles/MyRules/
 .vale/styles/Readability/
 .openchamber/
+
+# Claude Code: only the shared workflow scripts and project skills are tracked
+.claude/*
+!.claude/workflows/
+!.claude/skills/

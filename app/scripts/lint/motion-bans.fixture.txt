@@ -1,0 +1,35 @@
+import { Animated } from "react-native"; // ADR 0046
+import { PanResponder } from "react-native"; // ADR 0046
+import { Pressable } from "react-native"; // ADR 0046
+import { TouchableOpacity } from "react-native"; // ADR 0046
+import { TouchableHighlight } from "react-native"; // ADR 0046
+import { TouchableWithoutFeedback } from "react-native"; // ADR 0046
+import { ScrollView } from "react-native"; // ADR 0046
+import { Gesture } from "react-native-gesture-handler"; // ADR 0046
+import { GestureDetector } from "react-native-gesture-handler"; // ADR 0046
+import { usePanGesture } from "react-native-gesture-handler"; // ADR 0046
+import { FlatList as HandlerList } from "react-native-gesture-handler"; // ADR 0046
+import { useSharedValue } from "react-native-reanimated"; // ADR 0046
+import { scheduleOnRN } from "react-native-worklets"; // ADR 0046
+import { toJS } from "@/components/motion/internal/bridge"; // ADR 0046
+import { swipeProps } from "@/lib/swipe"; // ADR 0046
+import { step } from "@/lib/motion/drag-machine"; // ADR 0046
+import { useReduceMotion } from "@/lib/motion/legacy"; // ADR 0046
+import { takeLanded } from "@/lib/motion/entrances"; // ADR 0046
+import { timing } from "@/lib/motion/progress"; // ADR 0046
+import { StorageAccessFramework } from "expo-file-system/legacy"; // ADR 0037
+import { Pressable as Press } from "react-native-gesture-handler";
+import { markLanded } from "@/lib/motion/entrances";
+import { useProgress, type Progress } from "@/lib/motion/progress";
+import { motion } from "@/lib/motion/tokens";
+import { FlatList, View, AccessibilityInfo } from "react-native";
+
+export const style = { marginTop: 4 }; // ADR 0012
+export const handlers = { onPointerDown: () => undefined }; // ADR 0046
+export const view = <View onPointerMove={() => undefined} />; // ADR 0046
+document.addEventListener("touchmove", () => undefined); // ADR 0046
+void AccessibilityInfo.isReduceMotionEnabled(); // ADR 0046
+export const list = <FlatList data={[]} renderItem={() => null} />; // ADR 0046
+export const scroller = <FlatList data={[]} renderItem={() => null} renderScrollComponent={() => null} />;
+export const used = [Animated, PanResponder, Pressable, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, ScrollView, Gesture, GestureDetector, usePanGesture, HandlerList, useSharedValue, scheduleOnRN, toJS, swipeProps, step, useReduceMotion, takeLanded, timing, StorageAccessFramework, Press, markLanded, useProgress, motion];
+export type Used = Progress;

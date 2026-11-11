@@ -1,0 +1,116 @@
+import { describe, expect, it } from "vitest";
+import { load } from "js-yaml";
+import { captureContent, captureDraft } from "./capture-draft";
+
+import type { ParsedCapture } from "@/types/task";
+
+const CREATED = "2026-10-25T14:03";
+
+const sample: ParsedCapture = {
+  name: "water the plants",
+  due: "2026-10-21T07:30",
+  recurrence: "FREQ=DAILY;INTERVAL=2",
+  reminders: ["2026-10-21T07:30"],
+};
+
+/** What a standard YAML parser makes of the note capture wrote. */
+function parsed(text: string): Record<string, unknown> {
+  const match = /^---\n([\s\S]*?)\n---/.exec(text);
+  if (!match) {
+    throw new Error("no frontmatter block");
+  }
+  return load(match[1]) as Record<string, unknown>;
+}
+
+describe("captureContent", () => {
+  it("writes the frontmatter only, no replacement surgery", () => {
+    const text = captureContent(sample, undefined, CREATED);
+    expect(text).toBe(
+      [
+        "---",
+        'kind: "[[tasks]]"',
+        `created: ${CREATED}`,
+        "due: 2026-10-21T07:30",
+        "reminders:",
+        "  - 2026-10-21T07:30",
+        'recurrence: "FREQ=DAILY;INTERVAL=2"',
+        "---",
+        "",
+      ].join("\n") + "\n",
+    );
+  });
+
+  it("emits the lists property natively for a list target", () => {
+    const text = captureContent(sample, "Focus");
+    expect(text).toContain("lists:");
+    expect(text).toContain('  - "[[Focus]]"');
+    expect(text.indexOf("lists:")).toBeGreaterThan(
+      text.indexOf("due:"),
+    );
+    expect(text.trimEnd().endsWith("---")).toBe(true);
+  });
+
+  it("writes no lists property for the Main target", () => {
+    expect(captureContent(sample)).not.toContain("lists:");
+  });
+
+  it("reads back through js-yaml as the values the row holds", () => {
+    const data = parsed(captureContent(sample, "Focus", CREATED));
+    expect(data).toEqual({
+      kind: "[[tasks]]",
+      created: CREATED,
+      due: "2026-10-21T07:30",
+      lists: ["[[Focus]]"],
+      reminders: ["2026-10-21T07:30"],
+      recurrence: "FREQ=DAILY;INTERVAL=2",
+    });
+  });
+
+  it("writes a one-item list as a block that js-yaml reads as a list", () => {
+    const text = captureContent(sample);
+    expect(text).toContain("reminders:\n  - 2026-10-21T07:30");
+    expect(text).not.toContain("reminders:   -");
+    expect(parsed(text).reminders).toEqual(["2026-10-21T07:30"]);
+  });
+
+  it("writes several list items as strings, not nested arrays", () => {
+    const text = captureContent(
+      { ...sample, reminders: ["2026-10-21T07:30", "2026-10-21T19:00"] },
+      "Focus",
+    );
+    expect(parsed(text).lists).toEqual(["[[Focus]]"]);
+    expect(parsed(text).reminders).toEqual([
+      "2026-10-21T07:30",
+      "2026-10-21T19:00",
+    ]);
+  });
+});
+
+describe("month-end rules (ticket 0066)", () => {
+  const rent: ParsedCapture = {
+    name: "pay rent",
+    due: "2027-01-31",
+    recurrence: "FREQ=MONTHLY",
+  };
+
+  it("writes the month-end rule for a 31st due date", () => {
+    const text = captureContent(rent, undefined, CREATED);
+    expect(parsed(text).recurrence).toBe("FREQ=MONTHLY;BYMONTHDAY=-1");
+  });
+
+  it("keeps a bare rule for a due day up to the 28th", () => {
+    const text = captureContent({ ...rent, due: "2027-01-15" }, undefined);
+    expect(parsed(text).recurrence).toBe("FREQ=MONTHLY");
+  });
+
+  it("writes the rule the row holds, with a due day from the preselected date", () => {
+    const draft = captureDraft(
+      { name: "pay rent", recurrence: "FREQ=MONTHLY;INTERVAL=2" },
+      { kind: "main" },
+      "2026-12-31",
+    );
+    const rule = "FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=-1";
+    expect(draft.data.recurrence).toBe(rule);
+    expect(parsed(draft.content).recurrence).toBe(rule);
+  });
+});

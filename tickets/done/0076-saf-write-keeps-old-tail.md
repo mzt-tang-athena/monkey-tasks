@@ -4,19 +4,16 @@ title: A shorter note write keeps the old tail on Android
 created: 2026-11-08
 priority: high
 assignee: claude
-pr: 96
+pr: 95
 depends: []
 ---
 
 ## Spec
 
-This is the hotfix for the app on the owner's phone. The epic tracks
-the same bug under the same number.
-
-Untick a task on Android and its note keeps the end of the longer
-text it had before. A tick adds `completed: <date>` and an untick
-removes it. The untick writes fewer bytes, and the file keeps the last
-bytes of the ticked text:
+The emulator run for ticket 0073 found this. Untick a task on Android
+and its note keeps the end of the longer text it had before. A tick
+adds `completed: <date>` and an untick removes it. The untick writes
+fewer bytes, and the file keeps the last bytes of the ticked text:
 
 ```
 due: 2026-11-08
@@ -25,31 +22,50 @@ leted: 2026-11-08
 ---
 ```
 
-The app then reads that tail as the note body. Any edit that shortens
-a note corrupts it this way.
+The app then reads that tail as the note body, and writes it back on
+every later edit. Any edit that shortens a note corrupts it this way.
 
-The cause is in `expo-file-system` 58. For a SAF uri, the legacy
+The cause is in `expo-file-system` 58, the legacy API. For a SAF uri,
 `writeAsStringAsync` calls `contentResolver.openOutputStream(uri, "w")`
-(`legacy/FileSystemLegacyModule.kt`, `getOutputStream`). On Android 10
-and later, the external storage provider opens "w" without truncating.
-Mode "wt" truncates.
+(`FileSystemLegacyModule.kt`, `getOutputStream`). On Android 10 and
+later, the external storage provider opens "w" without truncating. Mode
+"wt" truncates. The web preview and the tests use the memory adapter,
+so they never see it.
 
-`writeNote` in `app/src/features/vault/notes.ts` is the only SAF write.
-Make it truncate.
+Fix the write in `app/src/lib/vault/adapters/saf.ts`. Options: write
+through an API that truncates (the new `expo-file-system` `File` API, or
+a patch that opens "wt"), or write to a new file and swap it in. Pick
+one in an ADR, since each has a trade-off.
 
 ## Acceptance
 
-- [x] A test fails when a shorter write keeps the old tail.
-- [x] On the emulator, an APK from `main` shows the tail after an untick.
-- [x] On the emulator, an APK from this branch writes the same note clean.
+- [x] `journeys/android-list-swipe.sh` in the verification skill passes on the emulator: the note after the untick matches the note before the tick, byte for byte.
+- [x] A test pins the truncating write for the SAF adapter.
+- [ ] The owner's phone shows the same round trip.
 
 ## Outcome
 
-Pull request [#96](https://github.com/mzt-tang-athena/monkey-tasks/pull/96) carries the hotfix.
-`writeNote` now opens a `File` handle with `FileMode.Truncate`, which
-asks the provider for mode "wt". The epic's ADR 0045 records why this
-beats a native patch or delete and create.
+Pull request [#95](https://github.com/mzt-tang-athena/monkey-tasks/pull/95) carries the fix.
+The SAF adapter now writes through `File.open(FileMode.Truncate)`,
+which opens the document with mode "wt". ADR 0045 records why.
 
-On the emulator, an APK from 2d7178b left `leted: 2026-11-08` and a
-second `---` after an untick. An APK from this branch wrote the note
-back byte for byte.
+The fake provider keeps the old tail on mode "w", as the phone does. A
+contract case, "leaves no old tail when a write is shorter", failed on
+the old adapter and passes now.
+
+On the emulator, the journey failed on an APK from 4828d9c with the
+`leted:` tail, and passed on an APK from this branch. The phone check
+waits for the owner.
+
+### The same bug on main, 2026-11-09
+
+The bug reached `main` before this branch merged. Pull request
+[#96](https://github.com/mzt-tang-athena/monkey-tasks/pull/96) fixed it
+there in `writeNote` in `app/src/features/vault/notes.ts`, with the
+same `File.open(FileMode.Truncate)` write. An APK from `2d7178b` left
+the tail; an APK from that branch wrote the note back byte for byte.
+
+The epic then moved the vault code into `app/src/lib/vault`, so the
+main file is gone on this branch and the adapter owns the write. Only
+one fix remains in the code, and it is the adapter's. Both emulator
+runs are recorded above.
