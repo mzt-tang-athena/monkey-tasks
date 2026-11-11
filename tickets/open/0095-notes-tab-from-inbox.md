@@ -22,10 +22,11 @@ read a note with no frontmatter, no title and no fixed shape.
 
 v1:
 
-- A Notes tab lists `Inbox/*.md` as cards, newest first. The visible
-  title is the first non-empty line with markdown marks stripped. The
-  preview is the next few lines. The file name is secondary, because a
-  timestamp is not a human title.
+- A Notes tab lists `Inbox/*.md` as cards, newest first. The title is
+  the note's own title, which is the file name. A timestamp name shows
+  as a readable local date and time, such as 11 Nov 2026, 18:08. A slug
+  name shows as words. Do not infer a title from the content. The first
+  lines are the preview.
 - A composer creates a note. The default name is the local
   `YYYYMMDDHHMM`. A typed title adds a kebab slug, so the name becomes
   `YYYYMMDDHHMM-<slug>`. A collision gets a suffix. A new note has no
@@ -51,8 +52,9 @@ adapter already lists and reads any folder under the root.
 
 ## Acceptance
 
-- [ ] The tab lists Inbox notes, newest first, with a first-line title
-      and a preview. A note with no frontmatter works.
+- [ ] The tab lists Inbox notes, newest first, with the note's title
+      and a content preview. A timestamp title reads as a date and
+      time. A note with no frontmatter works.
 - [ ] A new note gets a unique name. Timestamp only by default, a slug
       when a title is typed, a suffix on a collision.
 - [ ] A new note appears in Obsidian as a normal note in `Inbox/`.
