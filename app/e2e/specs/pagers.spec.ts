@@ -389,7 +389,9 @@ function commonScenarios(input: "mouse" | "touch") {
     expect(Math.abs(x), "the track is between the pages").toBeGreaterThan(1);
     expect(Math.abs(x)).toBeLessThan(width - 1);
     await page.clock.runFor(500);
-    await expect.poll(() => trackX(page)).toBe(-width);
+    // The commit moves the live page to the track's origin, so the
+    // track rests at 0 with the new page in place.
+    await expect.poll(() => trackX(page)).toBe(0);
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
     await page.clock.resume();
   });
@@ -397,7 +399,6 @@ function commonScenarios(input: "mouse" | "touch") {
   test("a tab tap three pages away cuts", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
-    const width = (await pagerBox(page, "list-pager")).width;
 
     await pauseClock(page);
     if (input === "touch") {
@@ -407,7 +408,7 @@ function commonScenarios(input: "mouse" | "touch") {
     }
     await frame(page);
 
-    await expect.poll(() => trackX(page)).toBe(-3 * width);
+    await expect.poll(() => trackX(page)).toBe(0);
     await expect(page.getByTestId("preview:1")).toHaveCount(0);
     await expect(page.getByTestId("preview:2")).toHaveCount(0);
     await expect(listTab(page, focus)).toHaveAttribute("aria-selected", "true");
@@ -641,7 +642,6 @@ test.describe("with the mouse", () => {
     test.skip(isMotion(testInfo), "the motion project follows the finger");
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
-    const width = (await pagerBox(page, "list-pager")).width;
 
     await pauseClock(page);
     await mouseHold(page, sectionHeader(page, sections.today), -dragPx.flick, async () => {
@@ -650,7 +650,7 @@ test.describe("with the mouse", () => {
     });
     await frame(page, 32);
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
-    await expect.poll(() => trackX(page)).toBe(-width);
+    await expect.poll(() => trackX(page)).toBe(0);
     await page.clock.resume();
   });
 
@@ -658,12 +658,11 @@ test.describe("with the mouse", () => {
     test.skip(isMotion(testInfo), "the motion project slides");
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
-    const width = (await pagerBox(page, "list-pager")).width;
 
     await pauseClock(page);
     await listTab(page, tabs.next).click();
     await frame(page);
-    await expect.poll(() => trackX(page)).toBe(-width);
+    await expect.poll(() => trackX(page)).toBe(0);
     await page.clock.resume();
   });
 
@@ -809,7 +808,6 @@ test.describe("with a touch screen", () => {
     test.skip(isMotion(testInfo), "the motion project follows the finger");
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
-    const width = (await pagerBox(page, "list-pager")).width;
 
     await pauseClock(page);
     await touchHold(page, sectionHeader(page, sections.today), -dragPx.flick, async () => {
@@ -818,7 +816,7 @@ test.describe("with a touch screen", () => {
     });
     await frame(page, 32);
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
-    await expect.poll(() => trackX(page)).toBe(-width);
+    await expect.poll(() => trackX(page)).toBe(0);
     await page.clock.resume();
   });
 });
