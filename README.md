@@ -267,7 +267,9 @@ through `useThemedStyles`. A theme switch then repaints it in place.
 mounted Lists and Planner screens. `features/settings` is the one
 screen that writes the palette and both settings (ADR
 20261111-settings-screen). Lists opens it from the list menu and Planner
-opens it from the gear beside the mode switch.
+opens it from the gear beside the mode switch. Its Diagnostics section
+reads the crash log from app storage and offers Copy and Share (ticket
+0081).
 
 ### Planner
 
@@ -322,8 +324,9 @@ month (ADR 0042).
 
 The phase 4 rebuild merged in `b3acdb1`. The current round is tickets
 0080 to 0087. It covers the crash after a tick, the pager remount and
-the selected state recipe. It adds runtime themes, a settings screen,
-a command pane and a crash log. It also moves reorder to the grip.
+the selected state recipe. It added runtime themes, a settings screen
+and a crash log. The command pane and the move of reorder to the grip
+are still open.
 
 After that:
 
