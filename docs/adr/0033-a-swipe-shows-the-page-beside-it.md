@@ -122,3 +122,26 @@ Three cells and one live page stay. These parts change:
 - A release reads the finger's velocity, so a flick commits.
 - The day preview builds its rows with the live day's function and
   the real today state. The list preview draws one screenful.
+
+## Amendment, 2026-11-11: the page survives a swipe
+
+Ticket 0087 keeps the live page mounted for the pager's life. It no
+longer keys on its page. A swipe keeps the page's scroll and its rows.
+The month grid keeps its state too.
+
+A commit swaps the content and the page's place in one frame. The
+track moves through page space, so a page `rel` sits at `rel × width`.
+The live page carries its own `live × width` as a plain React style.
+That style and the content change in the same render. The track reads
+only the animated position. Without this split the track trailed the
+content by one frame, and the pager showed a blank strip at the
+commit.
+
+The day preview draws at the live panes' scroll offsets. A landing
+then moves nothing vertically. A day keeps one scroll across days, so
+the hour window stays. A change in row height can move that scroll by
+the browser's scroll anchor.
+
+A list tab is a different list. Its inner list still starts at the
+top, as its preview draws it. A tab tap does not restore the previous
+tab's scroll. Per-tab memory is a separate change.
