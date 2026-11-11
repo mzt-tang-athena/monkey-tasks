@@ -2,6 +2,7 @@ import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Pressable } from "@/components/ui/pressable";
 import {
+  THEME_NAMES,
   THEMES,
   radius,
   spacing,
@@ -14,12 +15,7 @@ import { useTheme, useThemedStyles } from "@/theme/theme-provider";
 
 /** What each palette is called on screen. The record keys match the
     palette registry, so a new palette cannot ship without a name. */
-const names: Record<ThemeName, string> = {
-  budget: "Budget",
-  todoist: "Todoist",
-  clay: "Clay",
-  midnight: "Midnight",
-};
+const names = THEME_NAMES;
 
 /**
  * The appearance picker: one radio per palette, each with a swatch of

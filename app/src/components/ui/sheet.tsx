@@ -11,6 +11,7 @@ import { measure, radiusFloating, shadows, sheetGap, spacing, type Palette } fro
 import { useThemedStyles } from "@/theme/theme-provider";
 import { Overlay } from "./overlay-host";
 import { Pressable } from "./pressable";
+import { useOpenerFocus } from "./use-opener-focus";
 
 /**
  * A floating sheet: a scrim over the page, a dock that rides the
@@ -49,6 +50,7 @@ export function Sheet({
 }) {
   const { styles } = useThemedStyles(makeStyles);
   useDismiss(open, onDismiss);
+  useOpenerFocus(open);
 
   const window = useWindowDimensions();
   const keyboard = useReanimatedKeyboardAnimation();
@@ -80,8 +82,6 @@ export function Sheet({
   // closing panel must let the bar take the press, as it does natively,
   // so the whole panel is inert while it closes.
   const panelRef = React.useRef<React.ComponentRef<typeof Animated.View>>(null);
-  // The control that opened the sheet, so a close puts focus back.
-  const opener = React.useRef<HTMLElement | null>(null);
   React.useLayoutEffect(() => {
     if (Platform.OS !== "web") {
       return;
@@ -90,17 +90,6 @@ export function Sheet({
     if (node != null) {
       node.inert = !open;
     }
-  }, [open]);
-  React.useEffect(() => {
-    if (Platform.OS !== "web" || !open) {
-      return;
-    }
-    opener.current = document.activeElement as HTMLElement | null;
-    return () => {
-      const target = opener.current;
-      opener.current = null;
-      target?.focus?.();
-    };
   }, [open]);
 
   return (

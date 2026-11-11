@@ -168,7 +168,7 @@ test.describe("the tab strip", () => {
       throw new Error("the tab strip has no box");
     }
     await page.mouse.move(strip.x + strip.width / 2, strip.y + strip.height / 2);
-    await page.mouse.wheel(600, 0);
+    await page.mouse.wheel(1200, 0);
 
     await expect(page.getByTestId("tab-fade-end")).toHaveCount(0);
     await expect(page.getByTestId("tab-fade-start")).toBeVisible();

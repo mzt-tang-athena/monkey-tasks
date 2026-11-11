@@ -92,5 +92,14 @@ export const THEMES = {
 
 export type ThemeName = keyof typeof THEMES;
 
+/** The name each palette shows on screen. A new palette cannot ship
+    without a name. */
+export const THEME_NAMES: Record<ThemeName, string> = {
+  budget: "Budget",
+  todoist: "Todoist",
+  clay: "Clay",
+  midnight: "Midnight",
+};
+
 /** The palette shape every theme shares; screens type against this. */
 export type Palette = Record<keyof (typeof THEMES)["budget"], string>;

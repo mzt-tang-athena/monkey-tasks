@@ -3,6 +3,7 @@ import { motion } from "@/lib/motion/tokens";
 
 export {
   THEMES,
+  THEME_NAMES,
   type Palette,
   type ThemeName,
 } from "@/theme/palettes";

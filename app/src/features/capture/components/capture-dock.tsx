@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
 import { Sheet } from "@/components/ui/sheet";
 import { Toast } from "@/components/ui/toast";
+import { useCaptureRequest } from "@/lib/capture-request";
 import { useCaptureSheet } from "@/features/capture/hooks/use-capture-sheet";
 import { bottomBar, fonts, radii, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -24,6 +25,12 @@ export function CaptureDock(slot: CaptureSlot) {
   const bar = useBar();
   const focused = useIsFocused();
   const sheet = useCaptureSheet({ ...slot, bar, focused });
+  // The command pane's Add task reaches the dock on the focused tab.
+  useCaptureRequest(() => {
+    if (focused) {
+      sheet.show();
+    }
+  });
   const addRef = React.useRef<React.ComponentRef<typeof Pressable>>(null);
   // The sheet's overlay outlives its `open` prop by the exit, and the
   // page stays inert until it goes. The Add button takes focus back
