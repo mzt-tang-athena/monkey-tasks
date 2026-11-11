@@ -4,7 +4,7 @@ title: Switch themes at runtime on the phone
 created: 2026-11-11
 priority: high
 assignee: omp
-pr:
+pr: 117
 depends: []
 ---
 
