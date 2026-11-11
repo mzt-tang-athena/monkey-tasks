@@ -59,6 +59,53 @@ export function slotTops(
   return tops;
 }
 
+/** The data indexes a drop writes. `from` and `to` are mount
+    positions: the picked row's, and the boundary it lands on. `indexes`
+    holds each mounted row's index in its group's data, top down. Null
+    when the group mounted no row, so there is nothing to move. */
+export function dropSpan(
+  from: number,
+  to: number,
+  indexes: readonly number[],
+): { from: number; to: number } | null {
+  "worklet";
+  const mounted = indexes.length;
+  if (from < 0 || from >= mounted) {
+    return null;
+  }
+  return {
+    from: indexes[from],
+    to: to >= mounted ? indexes[mounted - 1] + 1 : indexes[to],
+  };
+}
+
+/** The index in its group's data that each mounted row shows its card
+    by after the drop. The result is indexed by mount position. */
+export function slotIndexes(
+  from: number,
+  to: number,
+  indexes: readonly number[],
+): number[] {
+  "worklet";
+  const out = indexes.slice();
+  const span = dropSpan(from, to, indexes);
+  if (span === null) {
+    return out;
+  }
+  const landed = span.to > span.from ? span.to - 1 : span.to;
+  for (let i = 0; i < indexes.length; i += 1) {
+    const at = indexes[i];
+    if (i === from) {
+      out[i] = landed;
+    } else if (at > span.from && at <= landed) {
+      out[i] = at - 1;
+    } else if (at >= landed && at < span.from) {
+      out[i] = at + 1;
+    }
+  }
+  return out;
+}
+
 function inside(x: number, y: number, rect: Rect): boolean {
   "worklet";
   return (
