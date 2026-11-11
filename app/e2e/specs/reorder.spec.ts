@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, pauseClock, test } from "../fixtures";
 import { sections, supplements, undated } from "../data";
 import {
+  dragPx,
   expectTouchAction,
   holdDrag,
   pointOn,
@@ -9,6 +10,7 @@ import {
   type Input,
 } from "../gestures";
 import { expectAbove, expectBefore, listTab, row, sectionHeader } from "../locators";
+import { noteText } from "../vault";
 
 /**
  * Ticket 0060: the row reorder, the tick hold and the capture landing
@@ -140,12 +142,9 @@ async function capture(page: Page, typed: string, name: string) {
 const tickButton = (page: Page, name: string) =>
   row(page, name).getByRole("checkbox");
 
-test("a row's surface keeps pan-y and the grip takes none", async ({ page }) => {
+test("the pager keeps pan-y and the grip takes none", async ({ page }) => {
   await openMyOrder(page);
-  await expectTouchAction(
-    page.getByTestId(`reorder-item:${undated.second}`),
-    "pan-y",
-  );
+  await expectTouchAction(page.getByTestId("list-pager"), "pan-y");
   await expectTouchAction(
     page.getByTestId(`reorder-grip:${undated.second}`),
     "none",
@@ -261,11 +260,29 @@ test.describe("the drop", () => {
       await expectResting(page);
     });
   }
+
+  test("a grip drop writes the new order to the notes", async ({ page }) => {
+    await openMyOrder(page);
+    await holdDrag(
+      page,
+      page.getByTestId(`reorder-grip:${undated.second}`),
+      row(page, undated.first),
+      { at: "upper", holdMs: 0 },
+    );
+
+    await expectAbove(row(page, undated.second), row(page, undated.first));
+    await expect
+      .poll(() => noteText(page, `Tasks/${undated.second}.md`))
+      .toContain("order: 1");
+    await expect
+      .poll(() => noteText(page, `Tasks/${undated.first}.md`))
+      .toContain("order: 2");
+  });
 });
 
-test.describe("the pager and a held row", () => {
+test.describe("the row body and the pager", () => {
   for (const input of inputs) {
-    test(`a hold then a sideways drag lifts the row and keeps the page, ${input}`, async ({
+    test(`a hold on a row body lifts nothing and the sideways drag pages, ${input}`, async ({
       page,
     }) => {
       await openMyOrder(page);
@@ -273,13 +290,16 @@ test.describe("the pager and a held row", () => {
       const pointer = await press(page, input, row(page, undated.second), {
         holdMs: 400,
       });
-      await pointer.moveTo({ x: start.x - 80, y: start.y });
-      await expect(page.getByTestId("drag-ghost")).toBeVisible();
-      await expect(listTab(page, "Main")).toHaveAttribute(
-        "aria-selected",
-        "true",
-      );
+      await pointer.moveTo({ x: start.x - dragPx.turn, y: start.y });
+      await expect(
+        page.getByTestId("drag-ghost"),
+        "the row body started no drag",
+      ).toHaveCount(0);
       await pointer.up();
+      await expect(
+        listTab(page, "Errands"),
+        "the row's sideways drag turned the page",
+      ).toHaveAttribute("aria-selected", "true", { timeout: 3000 });
     });
 
     test(`a swipe that starts on a resting row opens no editor, ${input}`, async ({
@@ -425,27 +445,29 @@ test.describe("leaving a held row", () => {
       }
     });
     await openMyOrder(page);
-    const point = await pointOn(page, row(page, undated.second));
+    const point = await pointOn(
+      page,
+      page.getByTestId(`reorder-grip:${undated.second}`),
+    );
 
     await page.mouse.move(point.x, point.y);
     await page.mouse.down();
     await page.waitForTimeout(100);
-    await page.evaluate(() => {
-      const planner = [...document.querySelectorAll('[role="tab"]')].find(
-        (tab) => tab.textContent?.trim() === "Planner",
-      );
-      (planner as HTMLElement | undefined)?.click();
-    });
+    // A tap begins with a pointer down. The drag's one-shot click guard
+    // disarms on it, as it does for a real second finger.
+    const tap = (name: string) => {
+      const tab = [...document.querySelectorAll('[role="tab"]')].find(
+        (element) => element.textContent?.trim() === name,
+      ) as HTMLElement | undefined;
+      tab?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      tab?.click();
+    };
+    await page.evaluate(tap, "Planner");
     await page.mouse.move(10, 10, { steps: 2 });
     await page.mouse.up();
     await expect(page).toHaveURL("/planner");
 
-    await page.evaluate(() => {
-      const lists = [...document.querySelectorAll('[role="tab"]')].find(
-        (tab) => tab.textContent?.trim() === "Lists",
-      );
-      (lists as HTMLElement | undefined)?.click();
-    });
+    await page.evaluate(tap, "Lists");
     await expect(row(page, undated.second)).toBeVisible();
     await page.waitForTimeout(500);
 
@@ -507,9 +529,12 @@ test("the capture entrance never replays within the freshness window", async ({
   expect(previous, "the captured row has a neighbour above it").not.toBe("");
   const rows = await page.getByTestId(/^task-row:/).count();
   const target = await pointOn(page, row(page, previous), "center");
-  const pointer = await press(page, "mouse", row(page, captured), {
-    holdMs: 400,
-  });
+  const pointer = await press(
+    page,
+    "mouse",
+    page.getByTestId(`reorder-grip:${captured}`),
+    { holdMs: 0 },
+  );
   await pointer.moveTo(target);
   await expect(page.getByTestId("drag-ghost")).toBeVisible();
   expect(await page.getByTestId(/^task-row:/).count()).toBe(rows);
