@@ -100,3 +100,20 @@ The spawn of a recurring task still copies a timed due into
 `reminders` (`use-toggle-task.ts`). That copy is now redundant, and the
 whole-minute dedupe keeps it to one ring. It stays because this ticket
 does not change the spawned note shape.
+
+Merged as `09b88d3`. The verifier passed eight checks. It ran the new
+tests against the base commit and saw exactly six fail, matching the
+report. It also confirmed the minute bucket cannot drop a reminder one
+minute later, because a stored value never carries seconds.
+
+Two evidence notes. The saved dumpsys files bracket the run but do not
+contain the two restored-alarm lines quoted in the proof text; the
+screenshots carry the delivery proof. The evidence APK came from
+`5357916`, the commit before the rebase, so it is not byte-identical to
+the merged head, though the rule code is the same.
+
+Risks that stay open. Sound, doze and battery saver on the real phone
+are unproven, and so is a real timezone change. Two different reminders
+in the same minute would ring once; the app cannot write that today. A
+hand-written due with a `Z` or an offset reads as undated and stays
+silent.
