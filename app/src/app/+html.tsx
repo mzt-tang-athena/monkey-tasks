@@ -3,18 +3,10 @@ import { type PropsWithChildren } from "react";
 import { THEMES } from "@/theme/palettes";
 
 /**
- * Root HTML for web. The paper background is set here so there is no
- * white flash while the bundle loads. The inline script then swaps in
- * the saved palette's paper before hydration, so a restart on midnight
- * does not flash the default cream.
+ * Root HTML for web. The paper background is set here so the page has
+ * a ground while the bundle loads. The first palette paints from the
+ * provider once the app mounts.
  */
-
-/** The paper for each palette, inlined for the pre-hydration script. */
-const papers = JSON.stringify(
-  Object.fromEntries(
-    Object.entries(THEMES).map(([name, palette]) => [name, palette.paper]),
-  ),
-);
 
 export default function Root({ children }: PropsWithChildren) {
   const { headNodes, bodyNodes, htmlAttributes, bodyAttributes } =
@@ -32,15 +24,9 @@ export default function Root({ children }: PropsWithChildren) {
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
-            __html: `html, body { background-color: var(--paper, ${THEMES.budget.paper}); }
+            __html: `html, body { background-color: ${THEMES.budget.paper}; }
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; }`,
-          }}
-        />
-        {/* Before hydration, so the saved palette paints first. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try { var papers = ${papers}; var saved = localStorage.getItem("monkey-tasks.theme"); var bg = papers[saved] || papers.budget; document.documentElement.style.setProperty("--paper", bg); } catch (error) {}`,
           }}
         />
         {headNodes}
