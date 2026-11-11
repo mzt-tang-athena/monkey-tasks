@@ -19,6 +19,12 @@ A related case: a pickup that fires while a regroup's layout effects
 are mid-flight can read a mix of old and new indexes. That degrades the
 drop's correctness, not its safety.
 
+Another related case: a grip step or a TalkBack increment while another
+row's drag is in flight reorders the data under the stale snapshot. The
+drop can then write a span against pre-step indexes. The grip path
+makes this easier to reach than the old menu. The same fix should
+cover it.
+
 Nothing crashes. The user sees a drag that does not move the row, or
 moves it to the wrong place.
 
