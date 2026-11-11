@@ -9,6 +9,7 @@ import { TasksProvider } from "@/stores/tasks/tasks-provider";
 import { VaultProvider } from "@/lib/vault/vault-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { OverlayHost } from "@/components/ui/overlay-host";
+import { ThemeProvider } from "@/theme/theme-provider";
 import { installErrorAlert } from "@/lib/errors";
 
 // Before anything renders: a release build closes on the first
@@ -27,29 +28,33 @@ export default function RootLayout() {
           device. Android with edge to edge never resizes the window for
           the keyboard, so the app has to know the height itself. */}
       <KeyboardProvider>
-        {/* Render errors inside a screen show the boundary panel
-            instead of unmounting to a blank app. It wraps the data
-            layer so a provider that throws still renders the panel.
-            installErrorAlert above still covers errors thrown
-            outside render. */}
-        <ErrorBoundary>
-          <QueryClientProvider client={queryClient}>
-            {/* The vault the store reads: SAF on a phone, the memory
-                vault in the browser (ADR 0037). */}
-            <VaultProvider>
-              <TasksProvider>
-                {/* Menus, sheets and toasts draw here, above every
-                    screen, in one z order (ADR 0040). */}
-                <OverlayHost>
-                  <Stack>
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
-                  </Stack>
-                </OverlayHost>
-              </TasksProvider>
-            </VaultProvider>
-          </QueryClientProvider>
-        </ErrorBoundary>
+        {/* One palette for every screen, sheet and toast, so a switch
+            repaints the whole tree without a remount. */}
+        <ThemeProvider>
+          {/* Render errors inside a screen show the boundary panel
+              instead of unmounting to a blank app. It wraps the data
+              layer so a provider that throws still renders the panel.
+              installErrorAlert above still covers errors thrown
+              outside render. */}
+          <ErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+              {/* The vault the store reads: SAF on a phone, the memory
+                  vault in the browser (ADR 0037). */}
+              <VaultProvider>
+                <TasksProvider>
+                  {/* Menus, sheets and toasts draw here, above every
+                      screen, in one z order (ADR 0040). */}
+                  <OverlayHost>
+                    <Stack>
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
+                    </Stack>
+                  </OverlayHost>
+                </TasksProvider>
+              </VaultProvider>
+            </QueryClientProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
   );

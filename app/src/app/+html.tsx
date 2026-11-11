@@ -1,12 +1,13 @@
 import { ScrollViewStyleReset, useServerDocumentContext } from "expo-router/html";
 import { type PropsWithChildren } from "react";
-import { colors } from "@/theme/tokens";
+import { THEMES } from "@/theme/palettes";
 
 /**
- * Root HTML for web. The paper background is set here so there is no
- * white flash while the bundle loads. The browser focus ring is
- * themed to the accent instead of the default black.
+ * Root HTML for web. The paper background is set here so the page has
+ * a ground while the bundle loads. The first palette paints from the
+ * provider once the app mounts.
  */
+
 export default function Root({ children }: PropsWithChildren) {
   const { headNodes, bodyNodes, htmlAttributes, bodyAttributes } =
     useServerDocumentContext();
@@ -23,7 +24,7 @@ export default function Root({ children }: PropsWithChildren) {
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
-            __html: `html, body { background-color: ${colors.paper}; }
+            __html: `html, body { background-color: ${THEMES.budget.paper}; }
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; }`,
           }}

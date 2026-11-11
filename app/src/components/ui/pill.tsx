@@ -1,14 +1,8 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Pressable } from "./pressable";
-import {
-  colors,
-  spacing,
-  radius,
-  radii,
-  touchTarget,
-  type,
-} from "@/theme/tokens";
+import { spacing, radius, radii, touchTarget, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /**
  * Two quiet pill forms: the capture sheet's target list control, and
@@ -29,6 +23,7 @@ export function Pill({
   accessibilityLabel?: string;
   children?: React.ReactNode;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const chip = tone === "chip";
   const body = (
     <>
@@ -56,42 +51,44 @@ export function Pill({
   );
 }
 
-const styles = StyleSheet.create({
-  // Target list pill, inside the sheet's action row.
-  control: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    backgroundColor: colors.accentSoft,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.m,
-    minHeight: touchTarget,
-    justifyContent: "center",
-  },
-  controlText: {
-    ...type.control,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  pressed: {
-    backgroundColor: colors.pressed,
-  },
-
-  // Parse feedback chip, one per parsed field.
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: colors.accentSoft,
-    borderRadius: radius,
-    paddingHorizontal: spacing.s,
-    height: 24,
-  },
-  chipText: {
-    ...type.caption,
-    color: colors.accent,
-    fontWeight: "600",
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // Target list pill, inside the sheet's action row.
+    control: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      backgroundColor: colors.accentSoft,
+      borderRadius: radii.pill,
+      paddingHorizontal: spacing.m,
+      minHeight: touchTarget,
+      justifyContent: "center",
+    },
+    controlText: {
+      ...type.control,
+      color: colors.accent,
+      fontWeight: "600",
+    },
+    pressed: {
+      backgroundColor: colors.pressed,
+    },
+  
+    // Parse feedback chip, one per parsed field.
+    chip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: colors.accentSoft,
+      borderRadius: radius,
+      paddingHorizontal: spacing.s,
+      height: 24,
+    },
+    chipText: {
+      ...type.caption,
+      color: colors.accent,
+      fontWeight: "600",
+    },
+  }),
 });

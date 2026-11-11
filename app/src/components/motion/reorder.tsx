@@ -24,7 +24,8 @@ import {
   type RowSpan,
 } from "@/lib/motion/drag-math";
 import { holds, motion } from "@/lib/motion/tokens";
-import { colors, radius, shadows, touchTarget } from "@/theme/tokens";
+import { radius, shadows, touchTarget, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { createBridgeGuard, toJS } from "./internal/bridge";
 import { useArrowKeys } from "./internal/keys";
 import {
@@ -299,6 +300,7 @@ export function createReorderSurface<P>() {
     testID?: string;
     children: React.ReactNode;
   }) {
+    const { styles } = useThemedStyles(makeStyles);
     const session = useSessionContext<ReorderHandlers>("ListReorder.Item");
     const state = useStateContext("ListReorder.Item");
     const move = React.useContext(MoveContext);
@@ -397,6 +399,7 @@ export function createReorderSurface<P>() {
   }
 
   function Grip({ testID, label }: { testID?: string; label: string }) {
+    const { styles } = useThemedStyles(makeStyles);
     const item = useItemContext("ListReorder.Grip");
     const gripRef = React.useRef<React.ComponentRef<typeof Animated.View>>(null);
     const { gesture, hidden: look } = useGripGesture({
@@ -639,6 +642,7 @@ export function createReorderSurface<P>() {
 /** The ghost under the finger. It renders in the overlay, outside the
     screen's providers, so it takes the session as a prop. */
 function Ghost({ session, children }: { session: Session; children: React.ReactNode }) {
+  const { styles } = useThemedStyles(makeStyles);
   const { x, y, grab } = session.ui;
   const place = useAnimatedStyle(() => ({
     width: grab.value.width,
@@ -655,50 +659,52 @@ function Ghost({ session, children }: { session: Session; children: React.ReactN
   );
 }
 
-const styles = StyleSheet.create({
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderLeftWidth: hairline,
-    borderRightWidth: hairline,
-    borderColor: colors.hairline,
-  },
-  divider: {
-    position: "absolute",
-    left: taskRowFace.textInset,
-    right: 0,
-    top: 0,
-    height: hairline,
-    backgroundColor: colors.hairline,
-  },
-  ghost: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    backgroundColor: colors.surface,
-    borderWidth: hairline,
-    borderColor: colors.hairline,
-    borderRadius: radius,
-    ...shadows.lifted,
-  },
-  grip: {
-    width: touchTarget,
-    height: touchTarget,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  gripDots: {
-    gap: 3,
-  },
-  gripRow: {
-    flexDirection: "row",
-    gap: 4,
-  },
-  gripDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: colors.inkFaint,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    item: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderLeftWidth: hairline,
+      borderRightWidth: hairline,
+      borderColor: colors.hairline,
+    },
+    divider: {
+      position: "absolute",
+      left: taskRowFace.textInset,
+      right: 0,
+      top: 0,
+      height: hairline,
+      backgroundColor: colors.hairline,
+    },
+    ghost: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      backgroundColor: colors.surface,
+      borderWidth: hairline,
+      borderColor: colors.hairline,
+      borderRadius: radius,
+      ...shadows.lifted,
+    },
+    grip: {
+      width: touchTarget,
+      height: touchTarget,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    gripDots: {
+      gap: 3,
+    },
+    gripRow: {
+      flexDirection: "row",
+      gap: 4,
+    },
+    gripDot: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: colors.inkFaint,
+    },
+  }),
 });

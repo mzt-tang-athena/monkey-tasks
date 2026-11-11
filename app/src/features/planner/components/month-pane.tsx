@@ -5,7 +5,8 @@ import { Pressable } from "@/components/ui/pressable";
 import { SectionHeader } from "@/components/ui/section-header";
 import { WEEKDAYS_FULL } from "@/features/planner/lib/labels";
 import type { PlannerMonth } from "@/features/planner/hooks/use-planner-month";
-import { colors, fonts, radius, spacing } from "@/theme/tokens";
+import { fonts, radius, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { layout } from "../planner-layout";
 import { usePlannerList } from "./planner-list-context";
 import { MonthView } from "./month-view";
@@ -35,6 +36,7 @@ export function MonthPane({
   onSelectMonth: (month: Date) => void;
   onOpenDay: (day: Date) => void;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const { source } = usePlannerList();
   const { picked, setPicked, viewMonth, monthKey, pickedDay, monthRows, pickedTasks } =
     month;
@@ -68,7 +70,7 @@ export function MonthPane({
           <Text style={styles.openText}>Open in day view</Text>
         </Pressable>
       ),
-    [pickedDay, onOpenDay],
+    [pickedDay, onOpenDay, styles],
   );
 
   return (
@@ -101,22 +103,24 @@ export function MonthPane({
   );
 }
 
-const styles = StyleSheet.create({
-  open: {
-    alignSelf: "flex-start",
-    minHeight: 44,
-    justifyContent: "center",
-    paddingHorizontal: spacing.m,
-    borderRadius: radius,
-  },
-  openPressed: {
-    backgroundColor: colors.pressed,
-  },
-  openText: {
-    fontSize: 13,
-    lineHeight: 17,
-    fontFamily: fonts.body,
-    color: colors.accent,
-    fontWeight: "600",
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    open: {
+      alignSelf: "flex-start",
+      minHeight: 44,
+      justifyContent: "center",
+      paddingHorizontal: spacing.m,
+      borderRadius: radius,
+    },
+    openPressed: {
+      backgroundColor: colors.pressed,
+    },
+    openText: {
+      fontSize: 13,
+      lineHeight: 17,
+      fontFamily: fonts.body,
+      color: colors.accent,
+      fontWeight: "600",
+    },
+  }),
 });

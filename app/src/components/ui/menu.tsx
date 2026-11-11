@@ -6,16 +6,8 @@ import { useDismiss } from "@/hooks/use-dismiss";
 import { menuEntering, type MenuCorner } from "@/lib/motion/entrances";
 import { useProgress } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
-import {
-  bottomBar,
-  colors,
-  menuWidth,
-  pageGutter,
-  radiusFloating,
-  shadows,
-  spacing,
-  type,
-} from "@/theme/tokens";
+import { bottomBar, menuWidth, pageGutter, radiusFloating, shadows, spacing, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { Overlay } from "./overlay-host";
 import { Pressable } from "./pressable";
 
@@ -101,6 +93,7 @@ export function Menu({
   /** A choice of one item is a radio group; actions are a menu. */
   kind?: "menu" | "radiogroup";
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [box, setBox] = React.useState<Box | null>(null);
@@ -233,6 +226,7 @@ function MenuFocus() {
 }
 
 function MenuRow({ item, radio }: { item: MenuItem; radio: boolean }) {
+  const { styles } = useThemedStyles(makeStyles);
   // ARIA allows a checked state only on a radio or a menuitemradio. An
   // action item carries none.
   const check = (
@@ -270,51 +264,53 @@ function MenuRow({ item, radio }: { item: MenuItem; radio: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
-  menu: {
-    position: "absolute",
-    width: menuWidth,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    borderRadius: radiusFloating,
-    paddingVertical: spacing.xs,
-    ...shadows.floating,
-  },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    minHeight: itemHeight,
-    paddingHorizontal: spacing.m,
-  },
-  itemPressed: {
-    backgroundColor: colors.pressed,
-  },
-  itemText: {
-    flex: 1,
-    gap: 1,
-  },
-  label: {
-    ...type.control,
-    color: colors.ink,
-  },
-  danger: {
-    color: colors.danger,
-  },
-  selected: {
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  disabled: {
-    color: colors.inkFaint,
-  },
-  hint: {
-    ...type.caption,
-    color: colors.inkMuted,
-  },
-  check: {
-    ...type.meta,
-    color: colors.accent,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    menu: {
+      position: "absolute",
+      width: menuWidth,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      borderRadius: radiusFloating,
+      paddingVertical: spacing.xs,
+      ...shadows.floating,
+    },
+    item: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+      minHeight: itemHeight,
+      paddingHorizontal: spacing.m,
+    },
+    itemPressed: {
+      backgroundColor: colors.pressed,
+    },
+    itemText: {
+      flex: 1,
+      gap: 1,
+    },
+    label: {
+      ...type.control,
+      color: colors.ink,
+    },
+    danger: {
+      color: colors.danger,
+    },
+    selected: {
+      color: colors.accent,
+      fontWeight: "600",
+    },
+    disabled: {
+      color: colors.inkFaint,
+    },
+    hint: {
+      ...type.caption,
+      color: colors.inkMuted,
+    },
+    check: {
+      ...type.meta,
+      color: colors.accent,
+    },
+  }),
 });

@@ -9,6 +9,7 @@ import { ErrorState, LoadingState } from "@/components/ui/list-states";
 import { isoOf } from "@/utils/dates";
 import { loadSettings, saveSetting, type TaskForm } from "@/lib/settings";
 import { spacing } from "@/theme/tokens";
+import { useTheme } from "@/theme/theme-provider";
 import { useTaskList, useStoreMeta } from "@/stores/tasks/task-state";
 import { usePatchTask } from "@/stores/tasks/mutations/use-patch-task";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
@@ -74,6 +75,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   const patchTask = usePatchTask();
   const refresh = useRefreshTasks();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   // One global task form (rows or pills) for every planner mode,
   // persisted in app-internal settings; default rows.
@@ -126,10 +128,17 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
 
   return (
     <View
+      testID="planner-screen"
       // The strip hangs from the top edge of the safe area. Where the
       // device has no inset, as in the web preview, it keeps a step
       // clear of the screen's edge.
-      style={[layout.screen, { paddingTop: Math.max(insets.top, spacing.s) }]}
+      style={[
+        layout.screen,
+        {
+          backgroundColor: colors.paper,
+          paddingTop: Math.max(insets.top, spacing.s),
+        },
+      ]}
     >
       <PlanDrag.Root onDrop={drop} renderGhost={(task) => <GhostPill task={task} />}>
         <PlannerListProvider value={list}>

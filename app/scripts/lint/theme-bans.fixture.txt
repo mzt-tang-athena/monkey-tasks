@@ -1,0 +1,23 @@
+import { colors } from "@/theme/tokens"; // ADR 20261111
+import { colors as palette } from "@/theme/tokens"; // ADR 20261111
+import { spacing } from "@/theme/tokens";
+import type { Palette } from "@/theme/tokens";
+
+export const gaps = spacing.m;
+export const shape: Palette = {
+  paper: "#000000",
+  surface: "#000000",
+  pressed: "#000000",
+  ink: "#000000",
+  inkMuted: "#000000",
+  inkFaint: "#000000",
+  hairline: "#000000",
+  accent: "#000000",
+  accentDeep: "#000000",
+  accentSoft: "#000000",
+  danger: "#000000",
+  dangerSoft: "#000000",
+  onAccent: "#000000",
+  scrim: "#000000",
+};
+export const leak = [colors, palette];

@@ -13,7 +13,8 @@ import {
   type MotionScrollRef,
 } from "@/components/motion/scroll-view";
 import { Pressable } from "./pressable";
-import { colors, radius, spacing, touchTarget, type } from "@/theme/tokens";
+import { radius, spacing, touchTarget, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /** The fade's steps, from clear to solid, toward the strip's edge. A
     stepped fade needs no gradient library and draws the same on every
@@ -27,6 +28,7 @@ const fadeEdge = 2;
 
 /** A fade over the strip's edge, where more tabs wait past it. */
 function Fade({ side }: { side: "start" | "end" }) {
+  const { styles } = useThemedStyles(makeStyles);
   const steps = side === "end" ? fadeSteps : [...fadeSteps].reverse();
   return (
     <View
@@ -62,6 +64,7 @@ export function TabStrip({
   /** Names the tab list for assistive tech. */
   label: string;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const strip = React.useRef<MotionScrollRef | null>(null);
   // Reanimated reads the system switch once, at load.
   const reduced = useReducedMotion();
@@ -131,60 +134,62 @@ export function TabStrip({
   );
 }
 
-const styles = StyleSheet.create({
-  strip: {
-    flexShrink: 1,
-  },
-  fade: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    flexDirection: "row",
-  },
-  fadeStart: {
-    left: 0,
-  },
-  fadeEnd: {
-    right: 0,
-  },
-  fadeStep: {
-    width: fadeStepWidth,
-    backgroundColor: colors.surface,
-  },
-  content: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingRight: spacing.m,
-  },
-  tab: {
-    minHeight: touchTarget,
-    minWidth: touchTarget,
-    paddingHorizontal: spacing.m,
-    justifyContent: "center",
-  },
-  pressed: {
-    backgroundColor: colors.pressed,
-    borderRadius: radius,
-  },
-  text: {
-    ...type.bodyLarge,
-    color: colors.inkMuted,
-    fontWeight: "500",
-  },
-  textActive: {
-    color: colors.accent,
-    fontWeight: "700",
-  },
-  rule: {
-    position: "absolute",
-    left: spacing.m,
-    right: spacing.m,
-    bottom: 0,
-    height: 2,
-    borderRadius: 1,
-  },
-  ruleActive: {
-    backgroundColor: colors.accent,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    strip: {
+      flexShrink: 1,
+    },
+    fade: {
+      position: "absolute",
+      top: 0,
+      bottom: 0,
+      flexDirection: "row",
+    },
+    fadeStart: {
+      left: 0,
+    },
+    fadeEnd: {
+      right: 0,
+    },
+    fadeStep: {
+      width: fadeStepWidth,
+      backgroundColor: colors.surface,
+    },
+    content: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingRight: spacing.m,
+    },
+    tab: {
+      minHeight: touchTarget,
+      minWidth: touchTarget,
+      paddingHorizontal: spacing.m,
+      justifyContent: "center",
+    },
+    pressed: {
+      backgroundColor: colors.pressed,
+      borderRadius: radius,
+    },
+    text: {
+      ...type.bodyLarge,
+      color: colors.inkMuted,
+      fontWeight: "500",
+    },
+    textActive: {
+      color: colors.accent,
+      fontWeight: "700",
+    },
+    rule: {
+      position: "absolute",
+      left: spacing.m,
+      right: spacing.m,
+      bottom: 0,
+      height: 2,
+      borderRadius: 1,
+    },
+    ruleActive: {
+      backgroundColor: colors.accent,
+    },
+  }),
 });

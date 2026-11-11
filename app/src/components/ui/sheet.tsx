@@ -7,14 +7,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useDismiss } from "@/hooks/use-dismiss";
 import type { Progress } from "@/lib/motion/progress";
-import {
-  colors,
-  measure,
-  radiusFloating,
-  shadows,
-  sheetGap,
-  spacing,
-} from "@/theme/tokens";
+import { measure, radiusFloating, shadows, sheetGap, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { Overlay } from "./overlay-host";
 import { Pressable } from "./pressable";
 
@@ -53,6 +47,7 @@ export function Sheet({
   scrim?: boolean;
   children: React.ReactNode;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   useDismiss(open, onDismiss);
 
   const window = useWindowDimensions();
@@ -173,39 +168,41 @@ function PanelFocus({ open }: { open: boolean }) {
   return <View ref={ref} />;
 }
 
-const styles = StyleSheet.create({
-  scrim: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.scrim,
-  },
-  lift: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  // The dock spans the window and centers the panel, which holds to
-  // the reading measure (ADR 0010).
-  dock: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: spacing.s,
-    paddingHorizontal: spacing.m,
-    alignItems: "center",
-  },
-  panel: {
-    width: "100%",
-    maxWidth: measure,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    borderRadius: radiusFloating,
-    padding: spacing.m,
-    gap: sheetGap,
-    ...shadows.floating,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    scrim: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.scrim,
+    },
+    lift: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    // The dock spans the window and centers the panel, which holds to
+    // the reading measure (ADR 0010).
+    dock: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: spacing.s,
+      paddingHorizontal: spacing.m,
+      alignItems: "center",
+    },
+    panel: {
+      width: "100%",
+      maxWidth: measure,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      borderRadius: radiusFloating,
+      padding: spacing.m,
+      gap: sheetGap,
+      ...shadows.floating,
+    },
+  }),
 });

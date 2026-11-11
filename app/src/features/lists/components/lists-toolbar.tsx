@@ -5,7 +5,8 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Menu, type MenuItem } from "@/components/ui/menu";
 import { TabStrip } from "@/components/ui/tab-strip";
 import type { SortMode } from "@/lib/settings";
-import { colors, measure, pageGutter, spacing } from "@/theme/tokens";
+import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 const sortOptions: { key: SortMode; label: string; hint: string }[] = [
   { key: "due", label: "Due date", hint: "Soonest first" },
@@ -32,6 +33,7 @@ export function ListsToolbar({
   sortMode: SortMode;
   onSortMode: (mode: SortMode) => void;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   // One menu at a time: opening one closes the other.
   const [open, setOpen] = React.useState<"sort" | "more" | null>(null);
   const sortAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
@@ -113,6 +115,7 @@ export function ListsToolbar({
 
 /** Three bars that shorten: the sort glyph. */
 function SortGlyph() {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View style={styles.sort}>
       {[16, 11, 6].map((width) => (
@@ -124,6 +127,7 @@ function SortGlyph() {
 
 /** Three dots: the overflow glyph. */
 function DotsGlyph() {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View style={styles.dots}>
       {[0, 1, 2].map((index) => (
@@ -133,44 +137,46 @@ function DotsGlyph() {
   );
 }
 
-const styles = StyleSheet.create({
-  // Fixed chrome above the scroller: a surface step above the paper,
-  // closed by a hairline that runs edge to edge.
-  band: {
-    backgroundColor: colors.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.hairline,
-  },
-  content: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    maxWidth: measure,
-    alignSelf: "center",
-    width: "100%",
-    paddingHorizontal: pageGutter,
-    paddingTop: spacing.s,
-  },
-  spacer: {
-    flex: 1,
-  },
-  sort: {
-    alignItems: "flex-end",
-    gap: 3,
-  },
-  sortBar: {
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.inkMuted,
-  },
-  dots: {
-    alignItems: "center",
-    gap: 2.5,
-  },
-  dot: {
-    width: 3.5,
-    height: 3.5,
-    borderRadius: 1.75,
-    backgroundColor: colors.inkMuted,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // Fixed chrome above the scroller: a surface step above the paper,
+    // closed by a hairline that runs edge to edge.
+    band: {
+      backgroundColor: colors.surface,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.hairline,
+    },
+    content: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+      maxWidth: measure,
+      alignSelf: "center",
+      width: "100%",
+      paddingHorizontal: pageGutter,
+      paddingTop: spacing.s,
+    },
+    spacer: {
+      flex: 1,
+    },
+    sort: {
+      alignItems: "flex-end",
+      gap: 3,
+    },
+    sortBar: {
+      height: 2,
+      borderRadius: 1,
+      backgroundColor: colors.inkMuted,
+    },
+    dots: {
+      alignItems: "center",
+      gap: 2.5,
+    },
+    dot: {
+      width: 3.5,
+      height: 3.5,
+      borderRadius: 1.75,
+      backgroundColor: colors.inkMuted,
+    },
+  }),
 });

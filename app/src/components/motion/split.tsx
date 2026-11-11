@@ -9,7 +9,8 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
-import { colors, touchTarget } from "@/theme/tokens";
+import { touchTarget, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
 import { useArrowKeys } from "./internal/keys";
@@ -44,6 +45,7 @@ export function Split({
   bottom,
   testID,
 }: SplitProps) {
+  const { styles, colors } = useThemedStyles(makeStyles);
   const self = useAnimatedRef<View>();
   const grow = useSharedValue(fraction);
   const box = useSharedValue(0);
@@ -54,24 +56,38 @@ export function Split({
   const pressCancel = usePressCancel();
   const gripRef = React.useRef<React.ComponentRef<typeof Animated.View>>(null);
   const height = React.useRef(0);
+  // A key press can land before the root's first layout report, when
+  // its height is still unknown. The step waits in this slot and runs
+  // on that report, so the press is not lost.
+  const pendingStep = React.useRef<1 | -1 | null>(null);
 
   // One hour row of the timeline is one touch target tall. Keyboard
   // arrows and TalkBack's increment and decrement move the split by
   // that row, so the grabber has a non-drag path.
-  const step = React.useCallback(
+  const applyStep = React.useCallback(
     (direction: 1 | -1) => {
       const usable = height.current - dividerHeight;
       if (usable <= 0) {
         return;
       }
-      const limit = Math.max(usable - minBottom, minTop);
       const top = Math.min(
         Math.max(fraction * usable + direction * touchTarget, minTop),
-        limit,
+        Math.max(usable - minBottom, minTop),
       );
       onResize(top / usable);
     },
     [fraction, minTop, minBottom, onResize],
+  );
+
+  const step = React.useCallback(
+    (direction: 1 | -1) => {
+      if (height.current - dividerHeight <= 0) {
+        pendingStep.current = direction;
+        return;
+      }
+      applyStep(direction);
+    },
+    [applyStep],
   );
 
   useArrowKeys(gripRef, step);
@@ -136,6 +152,11 @@ export function Split({
       style={styles.root}
       onLayout={(event) => {
         height.current = event.nativeEvent.layout.height;
+        if (pendingStep.current != null) {
+          const direction = pendingStep.current;
+          pendingStep.current = null;
+          applyStep(direction);
+        }
       }}
     >
       <Animated.View
@@ -198,6 +219,7 @@ export function Split({
 
 /** The same split held still: a preview of a day the swipe reveals. */
 export function SplitStill(props: Omit<SplitProps, "onResize">) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View testID={props.testID} style={styles.root}>
       <View
@@ -227,58 +249,60 @@ export function SplitStill(props: Omit<SplitProps, "onResize">) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    overflow: "hidden",
-  },
-  pane: {
-    flexBasis: 0,
-    overflow: "hidden",
-  },
-  divider: {
-    height: dividerHeight,
-    justifyContent: "center",
-  },
-  line: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 13,
-    borderTopWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: colors.hairline,
-  },
-  lineHot: {
-    borderTopColor: colors.accent,
-  },
-  // The divider keeps its 28pt height; the grabber's box is 44 tall,
-  // centered on it, so small fingers still reach it.
-  gripSlot: {
-    alignSelf: "center",
-    width: 72,
-    height: dividerHeight,
-    position: "relative",
-  },
-  grip: {
-    position: "absolute",
-    top: (dividerHeight - touchTarget) / 2,
-    left: 0,
-    width: 72,
-    height: touchTarget,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 6,
-  },
-  gripHot: {
-    backgroundColor: colors.pressed,
-  },
-  bar: {
-    width: 44,
-    height: 6,
-    borderRadius: 3,
-  },
-  barRest: {
-    backgroundColor: colors.inkFaint,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    root: {
+      flex: 1,
+      overflow: "hidden",
+    },
+    pane: {
+      flexBasis: 0,
+      overflow: "hidden",
+    },
+    divider: {
+      height: dividerHeight,
+      justifyContent: "center",
+    },
+    line: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 13,
+      borderTopWidth: 1.5,
+      borderStyle: "dashed",
+      borderColor: colors.hairline,
+    },
+    lineHot: {
+      borderTopColor: colors.accent,
+    },
+    // The divider keeps its 28pt height; the grabber's box is 44 tall,
+    // centered on it, so small fingers still reach it.
+    gripSlot: {
+      alignSelf: "center",
+      width: 72,
+      height: dividerHeight,
+      position: "relative",
+    },
+    grip: {
+      position: "absolute",
+      top: (dividerHeight - touchTarget) / 2,
+      left: 0,
+      width: 72,
+      height: touchTarget,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 6,
+    },
+    gripHot: {
+      backgroundColor: colors.pressed,
+    },
+    bar: {
+      width: 44,
+      height: 6,
+      borderRadius: 3,
+    },
+    barRest: {
+      backgroundColor: colors.inkFaint,
+    },
+  }),
 });

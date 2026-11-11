@@ -2,7 +2,8 @@ import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import type { TaskItem } from "@/types/task";
-import { colors, fonts, measure, pageGutter, spacing } from "@/theme/tokens";
+import { fonts, measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { frontmatterEntries } from "../lib/draft";
 import { EditorHeader } from "./editor-header";
 
@@ -12,6 +13,7 @@ import { EditorHeader } from "./editor-header";
  * with no Save to rewrite it.
  */
 export function NoteViewer({ task }: { task: TaskItem }) {
+  const { styles } = useThemedStyles(makeStyles);
   const entries = React.useMemo(
     () => frontmatterEntries(task.text),
     [task.text],
@@ -46,65 +48,67 @@ export function NoteViewer({ task }: { task: TaskItem }) {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  // The head and properties, then the body a step further.
-  content: {
-    maxWidth: measure,
-    alignSelf: "center",
-    width: "100%",
-    paddingHorizontal: pageGutter,
-    paddingTop: spacing.l,
-    paddingBottom: spacing.xxxl,
-    gap: spacing.xl,
-  },
-  top: {
-    gap: spacing.l,
-  },
-  head: {
-    gap: spacing.s,
-  },
-  title: {
-    fontSize: 22,
-    lineHeight: 28,
-    fontFamily: fonts.body,
-    fontWeight: "600",
-    color: colors.ink,
-  },
-  hint: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-  },
-  properties: {
-    gap: spacing.xs,
-  },
-  property: {
-    flexDirection: "row",
-    gap: spacing.s,
-  },
-  key: {
-    minWidth: 96,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: fonts.body,
-    fontWeight: "600",
-    color: colors.inkMuted,
-  },
-  value: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: fonts.body,
-    color: colors.ink,
-  },
-  body: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontFamily: fonts.body,
-    color: colors.ink,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    scroll: {
+      flex: 1,
+    },
+    // The head and properties, then the body a step further.
+    content: {
+      maxWidth: measure,
+      alignSelf: "center",
+      width: "100%",
+      paddingHorizontal: pageGutter,
+      paddingTop: spacing.l,
+      paddingBottom: spacing.xxxl,
+      gap: spacing.xl,
+    },
+    top: {
+      gap: spacing.l,
+    },
+    head: {
+      gap: spacing.s,
+    },
+    title: {
+      fontSize: 22,
+      lineHeight: 28,
+      fontFamily: fonts.body,
+      fontWeight: "600",
+      color: colors.ink,
+    },
+    hint: {
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+    },
+    properties: {
+      gap: spacing.xs,
+    },
+    property: {
+      flexDirection: "row",
+      gap: spacing.s,
+    },
+    key: {
+      minWidth: 96,
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: fonts.body,
+      fontWeight: "600",
+      color: colors.inkMuted,
+    },
+    value: {
+      flex: 1,
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: fonts.body,
+      color: colors.ink,
+    },
+    body: {
+      fontSize: 16,
+      lineHeight: 24,
+      fontFamily: fonts.body,
+      color: colors.ink,
+    },
+  }),
 });

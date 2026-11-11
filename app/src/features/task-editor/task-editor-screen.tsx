@@ -3,7 +3,8 @@ import { StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
-import { colors, fonts, pageGutter, spacing } from "@/theme/tokens";
+import { fonts, pageGutter, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { EditorHeader } from "./components/editor-header";
 import { NoteViewer } from "./components/note-viewer";
 import { TaskEditorForm } from "./components/task-editor-form";
@@ -15,6 +16,7 @@ import { findTask, isTaskNote } from "./lib/draft";
  * note.
  */
 export default function TaskEditorScreen() {
+  const { styles } = useThemedStyles(makeStyles);
   const params = useLocalSearchParams();
   const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
   const id = rawId ?? "";
@@ -25,7 +27,7 @@ export default function TaskEditorScreen() {
   const task = React.useMemo(() => findTask(tasks, id), [tasks, id]);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View testID="editor-screen" style={[styles.screen, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {task == null ? (
         <>
@@ -49,19 +51,21 @@ export default function TaskEditorScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.paper,
-  },
-  holder: {
-    paddingHorizontal: pageGutter,
-    paddingTop: spacing.xl,
-  },
-  empty: {
-    fontSize: 15,
-    lineHeight: 22,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.paper,
+    },
+    holder: {
+      paddingHorizontal: pageGutter,
+      paddingTop: spacing.xl,
+    },
+    empty: {
+      fontSize: 15,
+      lineHeight: 22,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+    },
+  }),
 });

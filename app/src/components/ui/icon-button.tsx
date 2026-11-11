@@ -1,7 +1,8 @@
 import * as React from "react";
 import { StyleSheet } from "react-native";
 import { Pressable } from "./pressable";
-import { colors, radius } from "@/theme/tokens";
+import { radius, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /** A quiet 44pt glyph button: hover, pressed, and active states. */
 export function IconButton({
@@ -18,6 +19,7 @@ export function IconButton({
   onPress?: () => void;
   children: React.ReactNode;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const [hover, setHover] = React.useState(false);
   return (
     <Pressable
@@ -39,19 +41,21 @@ export function IconButton({
   );
 }
 
-const styles = StyleSheet.create({
-  // Quiet top-right controls: sort glyph and the three-dot overflow.
-  iconButton: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius,
-  },
-  iconButtonHot: {
-    backgroundColor: colors.pressed,
-  },
-  iconButtonActive: {
-    backgroundColor: colors.accentSoft,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // Quiet top-right controls: sort glyph and the three-dot overflow.
+    iconButton: {
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: radius,
+    },
+    iconButtonHot: {
+      backgroundColor: colors.pressed,
+    },
+    iconButtonActive: {
+      backgroundColor: colors.accentSoft,
+    },
+  }),
 });

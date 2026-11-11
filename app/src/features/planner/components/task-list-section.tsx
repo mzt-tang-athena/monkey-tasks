@@ -13,7 +13,8 @@ import { renderMotionScroll } from "@/components/motion/scroll-view";
 import { TaskRow } from "@/components/task-row";
 import type { Mode } from "@/features/planner/model";
 import { PlanDrag } from "@/features/planner/lib/plan-drag";
-import { colors, fonts, spacing } from "@/theme/tokens";
+import { fonts, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { FormToggle } from "./form-toggle";
 import { usePlannerList } from "./planner-list-context";
 import { RowSeparator } from "./row-separator";
@@ -64,6 +65,7 @@ export const TaskListSection = React.memo(function TaskListSection({
   restorePage?: number;
   restoreTop?: number;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const { taskForm, toggle, open } = usePlannerList();
   const pills = taskForm === "pills" && tasks.length > 0;
   const list = React.useRef<FlatList<TaskItem>>(null);
@@ -148,38 +150,40 @@ function taskKey(task: TaskItem): string {
   return task.id;
 }
 
-const styles = StyleSheet.create({
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  spacer: {
-    flex: 1,
-  },
-  // The list's header slot: the section head, then a group header and
-  // the pills one step further apart.
-  listHead: {
-    gap: spacing.s,
-  },
-  listHeadBody: {
-    gap: spacing.l,
-  },
-  headRows: {
-    paddingBottom: spacing.s,
-  },
-  headGrouped: {
-    paddingBottom: spacing.l,
-  },
-  headFlush: {
-    paddingBottom: 0,
-  },
-  footer: {
-    paddingTop: spacing.s,
-  },
-  empty: {
-    fontSize: 15,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    textAlign: "center",
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    sectionHead: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    spacer: {
+      flex: 1,
+    },
+    // The list's header slot: the section head, then a group header and
+    // the pills one step further apart.
+    listHead: {
+      gap: spacing.s,
+    },
+    listHeadBody: {
+      gap: spacing.l,
+    },
+    headRows: {
+      paddingBottom: spacing.s,
+    },
+    headGrouped: {
+      paddingBottom: spacing.l,
+    },
+    headFlush: {
+      paddingBottom: 0,
+    },
+    footer: {
+      paddingTop: spacing.s,
+    },
+    empty: {
+      fontSize: 15,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+      textAlign: "center",
+    },
+  }),
 });

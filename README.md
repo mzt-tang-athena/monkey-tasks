@@ -257,8 +257,12 @@ documents its props, and each primitive has a component test.
 `PreviewRow` share. `hooks/use-dismiss` closes a surface on Android
 back and on Escape in the browser. `hooks/use-press-guard` blocks the
 click that ends a swipe or a drop. `hooks/use-stable-callback` gives a
-handler one identity for a memoized row (ADR 0043). `theme/tokens.ts`
-holds the type scale, the layer order and the shadows (ADR 0040).
+handler one identity for a memoized row (ADR 0043). `theme/palettes.ts`
+holds the named palettes. `theme/tokens.ts` holds the type scale, the
+layer order and the shadows (ADR 0040). `theme/theme-provider.tsx` owns
+the active palette (ADR 20261111-runtime-theme-provider). A component
+keeps its styles in a `makeStyles(palette)` factory. It reads them
+through `useThemedStyles`. A theme switch then repaints it in place.
 
 ### Planner
 

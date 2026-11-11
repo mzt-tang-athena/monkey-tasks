@@ -1,6 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { bottomBar, colors, radii, type Palette } from "@/theme/tokens";
+import { bottomBar, radii, type Palette } from "@/theme/tokens";
+import { useTheme } from "@/theme/theme-provider";
 
 export type IconName =
   | "list"
@@ -30,6 +31,7 @@ export function Icon({
   name: IconName;
   color?: keyof Palette;
 }) {
+  const { colors } = useTheme();
   const tint = colors[color];
   const fill = { backgroundColor: tint };
   const edge = { borderColor: tint };

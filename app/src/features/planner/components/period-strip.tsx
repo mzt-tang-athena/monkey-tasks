@@ -14,82 +14,78 @@ import {
   type Mode,
 } from "@/features/planner/model";
 import { MONTHS_SHORT, WEEKDAYS } from "@/features/planner/lib/labels";
-import {
-  colors,
-  fonts,
-  pageGutter,
-  periodStep,
-  radius,
-  spacing,
-} from "@/theme/tokens";
+import { fonts, pageGutter, periodStep, radius, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
-const styles = StyleSheet.create({
-  pressedFill: {
-    backgroundColor: colors.pressed,
-  },
-  // period strip: day cells, then the wider week and month cells
-  strip: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  stripScroll: {
-    flexDirection: "row",
-    gap: spacing.s,
-    alignItems: "flex-end",
-    // Page grid inside, screen edge outside: the rail sits in a frame
-    // with no gutter, so it cuts at the display, not the gutter.
-    paddingLeft: pageGutter,
-    paddingRight: pageGutter,
-  },
-  // The name over the number, a hair apart.
-  stripDay: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 2,
-    width: 44,
-    height: 44,
-    borderRadius: radius,
-  },
-  stripDayActive: {
-    // The selected tab hangs from the screen's top edge: square top,
-    // rounded bottom, standing taller than its resting neighbours.
-    height: 52,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    backgroundColor: colors.accent,
-  },
-  stripDayToday: {
-    backgroundColor: colors.accentSoft,
-  },
-  stripName: {
-    fontSize: 10,
-    lineHeight: 12,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    letterSpacing: 0.5,
-  },
-  stripNameActive: {
-    color: colors.onAccent,
-  },
-  stripNameToday: {
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  stripNum: {
-    fontSize: 16,
-    lineHeight: 20,
-    fontFamily: fonts.body,
-    color: colors.ink,
-  },
-  stripNumActive: {
-    color: colors.onAccent,
-    fontWeight: "600",
-  },
-  stripNumToday: {
-    color: colors.accent,
-    fontWeight: "700",
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    pressedFill: {
+      backgroundColor: colors.pressed,
+    },
+    // period strip: day cells, then the wider week and month cells
+    strip: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-end",
+    },
+    stripScroll: {
+      flexDirection: "row",
+      gap: spacing.s,
+      alignItems: "flex-end",
+      // Page grid inside, screen edge outside: the rail sits in a frame
+      // with no gutter, so it cuts at the display, not the gutter.
+      paddingLeft: pageGutter,
+      paddingRight: pageGutter,
+    },
+    // The name over the number, a hair apart.
+    stripDay: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 2,
+      width: 44,
+      height: 44,
+      borderRadius: radius,
+    },
+    stripDayActive: {
+      // The selected tab hangs from the screen's top edge: square top,
+      // rounded bottom, standing taller than its resting neighbours.
+      height: 52,
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
+      backgroundColor: colors.accent,
+    },
+    stripDayToday: {
+      backgroundColor: colors.accentSoft,
+    },
+    stripName: {
+      fontSize: 10,
+      lineHeight: 12,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+      letterSpacing: 0.5,
+    },
+    stripNameActive: {
+      color: colors.onAccent,
+    },
+    stripNameToday: {
+      color: colors.accent,
+      fontWeight: "600",
+    },
+    stripNum: {
+      fontSize: 16,
+      lineHeight: 20,
+      fontFamily: fonts.body,
+      color: colors.ink,
+    },
+    stripNumActive: {
+      color: colors.onAccent,
+      fontWeight: "600",
+    },
+    stripNumToday: {
+      color: colors.accent,
+      fontWeight: "700",
+    },
+  }),
 });
 
 
@@ -109,6 +105,7 @@ function PeriodRail({
   renderItem: (index: number) => React.ReactNode;
   label: string;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const scroller = React.useRef<MotionScrollRef | null>(null);
   const viewport = React.useRef(0);
   const railX = React.useRef(0);
@@ -184,6 +181,7 @@ export function PeriodStrip({
   today: Date;
   onSelect: (date: Date) => void;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const todayStart = startOfDay(today).getTime();
   const selStart = startOfDay(selected).getTime();
 

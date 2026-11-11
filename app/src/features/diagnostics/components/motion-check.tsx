@@ -1,7 +1,8 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { createDragSurface } from "@/components/motion/drag-surface";
-import { colors, radius, spacing } from "@/theme/tokens";
+import { radius, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /**
  * A drag on the motion surfaces for checks on a phone or an emulator:
@@ -26,6 +27,7 @@ export function MotionCheckRoot({ children }: { children: React.ReactNode }) {
 }
 
 export function MotionCheck() {
+  const { styles } = useThemedStyles(makeStyles);
   const result = React.useContext(Result);
   return (
     <View style={styles.section}>
@@ -49,6 +51,7 @@ export function MotionCheck() {
 }
 
 function Chip({ label }: { label: string }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View style={styles.chip}>
       <Text style={styles.chipText}>{label}</Text>
@@ -56,46 +59,48 @@ function Chip({ label }: { label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  section: {
-    gap: spacing.s,
-  },
-  label: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontFamily: "monospace",
-    color: colors.inkFaint,
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-  },
-  line: {
-    fontSize: 14,
-    fontFamily: "monospace",
-    color: colors.ink,
-  },
-  source: {
-    alignSelf: "flex-start",
-    borderRadius: radius,
-  },
-  chip: {
-    backgroundColor: colors.accent,
-    borderRadius: radius,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  chipText: {
-    color: colors.onAccent,
-    fontWeight: "600",
-  },
-  room: {
-    height: 900,
-  },
-  box: {
-    height: 72,
-    justifyContent: "center",
-    paddingHorizontal: spacing.m,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    borderRadius: radius,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    section: {
+      gap: spacing.s,
+    },
+    label: {
+      fontSize: 11,
+      lineHeight: 14,
+      fontFamily: "monospace",
+      color: colors.inkFaint,
+      textTransform: "uppercase",
+      letterSpacing: 1.2,
+    },
+    line: {
+      fontSize: 14,
+      fontFamily: "monospace",
+      color: colors.ink,
+    },
+    source: {
+      alignSelf: "flex-start",
+      borderRadius: radius,
+    },
+    chip: {
+      backgroundColor: colors.accent,
+      borderRadius: radius,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    chipText: {
+      color: colors.onAccent,
+      fontWeight: "600",
+    },
+    room: {
+      height: 900,
+    },
+    box: {
+      height: 72,
+      justifyContent: "center",
+      paddingHorizontal: spacing.m,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      borderRadius: radius,
+    },
+  }),
 });

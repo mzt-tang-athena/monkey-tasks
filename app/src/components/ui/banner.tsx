@@ -1,6 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing, type } from "@/theme/tokens";
+import { radius, spacing, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { Button } from "./button";
 
 export type BannerAction = {
@@ -9,11 +10,6 @@ export type BannerAction = {
   /** The name assistive tech reads, when the label alone is vague. */
   accessibilityLabel?: string;
 };
-
-const tones = {
-  danger: { fill: colors.dangerSoft, ink: colors.danger },
-  info: { fill: colors.accentSoft, ink: colors.accent },
-} as const;
 
 /**
  * A message on the page grid that leaves the screen usable: a failed
@@ -35,6 +31,7 @@ export function Banner({
   actions?: [BannerAction] | [BannerAction, BannerAction] | [];
   children?: React.ReactNode;
 }) {
+  const { styles, tones } = useThemedStyles(makeStyles);
   const { fill, ink } = tones[tone];
   return (
     <View
@@ -67,24 +64,30 @@ export function Banner({
   );
 }
 
-const styles = StyleSheet.create({
-  banner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    borderRadius: radius,
-    paddingVertical: spacing.s,
-    paddingHorizontal: spacing.m,
+const makeStyles = (colors: Palette) => ({
+  tones: {
+    danger: { fill: colors.dangerSoft, ink: colors.danger },
+    info: { fill: colors.accentSoft, ink: colors.accent },
   },
-  body: {
-    flex: 1,
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  title: {
-    ...type.eyebrow,
-  },
-  line: {
-    ...type.meta,
-  },
+  styles: StyleSheet.create({
+    banner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+      borderRadius: radius,
+      paddingVertical: spacing.s,
+      paddingHorizontal: spacing.m,
+    },
+    body: {
+      flex: 1,
+      gap: spacing.xs,
+      paddingVertical: spacing.xs,
+    },
+    title: {
+      ...type.eyebrow,
+    },
+    line: {
+      ...type.meta,
+    },
+}),
 });

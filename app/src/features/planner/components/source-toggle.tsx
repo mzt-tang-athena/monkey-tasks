@@ -3,7 +3,8 @@ import { StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
 import { motion } from "@/lib/motion/tokens";
-import { colors, fonts, radius, spacing } from "@/theme/tokens";
+import { fonts, radius, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import {
   nextSource,
   sourceLabel,
@@ -19,6 +20,7 @@ import { usePlannerList } from "./planner-list-context";
  * period on screen: "Due today", "Due 8 to 14 Nov", "Due November".
  */
 export function SourceToggle({ mode, day }: { mode: Mode; day: Date }) {
+  const { styles } = useThemedStyles(makeStyles);
   const { today, source, menuOpen, cycleSource, openSourceMenu } =
     usePlannerList();
   const wrapRef = React.useRef<React.ComponentRef<typeof View>>(null);
@@ -88,32 +90,34 @@ export function SourceToggle({ mode, day }: { mode: Mode; day: Date }) {
   );
 }
 
-const styles = StyleSheet.create({
-  toggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: spacing.xs,
-    minHeight: 44,
-    paddingLeft: spacing.s,
-    paddingRight: spacing.s,
-    borderRadius: radius,
-  },
-  hot: {
-    backgroundColor: colors.pressed,
-  },
-  // The label slot reserves the widest source's width, so the control
-  // never resizes mid-press: the pressed preview must not move the box
-  // out from under the pointer.
-  text: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    fontWeight: "600",
-    minWidth: 96,
-  },
-  textHot: {
-    color: colors.accent,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    toggle: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "flex-start",
+      gap: spacing.xs,
+      minHeight: 44,
+      paddingLeft: spacing.s,
+      paddingRight: spacing.s,
+      borderRadius: radius,
+    },
+    hot: {
+      backgroundColor: colors.pressed,
+    },
+    // The label slot reserves the widest source's width, so the control
+    // never resizes mid-press: the pressed preview must not move the box
+    // out from under the pointer.
+    text: {
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+      fontWeight: "600",
+      minWidth: 96,
+    },
+    textHot: {
+      color: colors.accent,
+    },
+  }),
 });

@@ -8,7 +8,8 @@ import { Pressable } from "@/components/ui/pressable";
 import { Sheet } from "@/components/ui/sheet";
 import { Toast } from "@/components/ui/toast";
 import { useCaptureSheet } from "@/features/capture/hooks/use-capture-sheet";
-import { bottomBar, colors, fonts, radii, spacing } from "@/theme/tokens";
+import { bottomBar, fonts, radii, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { CaptureForm } from "./capture-form";
 
 /**
@@ -19,6 +20,7 @@ import { CaptureForm } from "./capture-form";
  * day, and the dock sends through the capture mutation.
  */
 export function CaptureDock(slot: CaptureSlot) {
+  const { styles } = useThemedStyles(makeStyles);
   const bar = useBar();
   const focused = useIsFocused();
   const sheet = useCaptureSheet({ ...slot, bar, focused });
@@ -93,26 +95,28 @@ export function CaptureDock(slot: CaptureSlot) {
   );
 }
 
-const styles = StyleSheet.create({
-  // An unmistakable button: glyph and label optically centered on one
-  // line.
-  add: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    minHeight: bottomBar.add,
-    paddingHorizontal: spacing.l,
-    borderRadius: radii.pill,
-    backgroundColor: colors.accent,
-  },
-  addPressed: {
-    backgroundColor: colors.accentDeep,
-  },
-  addLabel: {
-    color: colors.onAccent,
-    fontSize: bottomBar.addLabelSize,
-    lineHeight: bottomBar.addLabelLine,
-    fontFamily: fonts.body,
-    fontWeight: "600",
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // An unmistakable button: glyph and label optically centered on one
+    // line.
+    add: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      minHeight: bottomBar.add,
+      paddingHorizontal: spacing.l,
+      borderRadius: radii.pill,
+      backgroundColor: colors.accent,
+    },
+    addPressed: {
+      backgroundColor: colors.accentDeep,
+    },
+    addLabel: {
+      color: colors.onAccent,
+      fontSize: bottomBar.addLabelSize,
+      lineHeight: bottomBar.addLabelLine,
+      fontFamily: fonts.body,
+      fontWeight: "600",
+    },
+  }),
 });
