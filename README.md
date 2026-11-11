@@ -334,7 +334,10 @@ After that:
 - 0091 reference notes on a task
 - 0092 optional quests and evergreen tasks, a discovery
 - 0093 the task editor rebuild, starting with a design
-- 0094 review the task note schema
+- 0094 review the task note schema, with three child tickets:
+  - `20261111-completed-takes-a-time`
+  - `20261111-kind-accepts-both-shapes`
+  - `20261111-a-timed-due-rings`
 - 0095 a Notes tab from Inbox, starting with a design
 - 20261111 reminder weight, a discussion
 - 20261111 one list or many, and order, a discussion

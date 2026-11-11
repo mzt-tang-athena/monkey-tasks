@@ -92,14 +92,28 @@ The operator answered on 2026-11-11.
 - `lists` and `order`. One list or many, and what order means, is in
   `20261111-list-membership-and-order`.
 
+The ADR is `docs/adr/20261111-task-note-schema.md`. The settled changes
+are child tickets:
+
+| Change | Ticket |
+|---|---|
+| `completed` takes a time | `20261111-completed-takes-a-time` |
+| `kind` accepts both shapes | `20261111-kind-accepts-both-shapes` |
+| A timed `due` rings | `20261111-a-timed-due-rings` |
+
+The other accepted changes need no code. `created` already accepts a
+time, `title` is already read, and no priority or `parent` field
+exists.
+
 ## Acceptance
 
-- [ ] Every field has a verdict: keep, change, remove or add.
-- [ ] An ADR records the accepted changes and the rejected ones.
-- [ ] The parser still reads every old shape, with a fixture for each.
-- [ ] Each accepted change is a child ticket with its own migration.
+- [x] Every field has a verdict: keep, change, remove or add.
+- [x] An ADR records the accepted changes and the rejected ones.
+- [x] The parser still reads every old shape, with a fixture for each.
+      A child ticket adds a fixture for every new shape.
+- [x] Each accepted change is a child ticket with its own migration.
 - [ ] The three discussion tickets are decided or dropped.
-- [ ] No bulk rewrite of the vault.
+- [x] No bulk rewrite of the vault.
 
 ## Outcome
 
