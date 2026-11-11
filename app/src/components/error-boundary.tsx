@@ -1,7 +1,8 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Pressable } from "@/components/ui/pressable";
-import { colors, fonts, radius, spacing } from "@/theme/tokens";
+import { fonts, radius, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 type Props = {
   children: React.ReactNode;
@@ -50,80 +51,100 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (error == null) {
       return this.props.children;
     }
-    const title = this.props.label
-      ? `${this.props.label} hit a problem`
-      : "Something broke";
     return (
-      <View style={styles.root}>
-        <View style={styles.panel}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message} selectable>
-            {error.message || String(error)}
-          </Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonPressed,
-            ]}
-            onPress={this.retry}
-            accessibilityRole="button"
-            accessibilityLabel="Retry"
-          >
-            <Text style={styles.buttonText}>Retry</Text>
-          </Pressable>
-        </View>
-      </View>
+      <CrashPanel
+        label={this.props.label}
+        message={error.message || String(error)}
+        onRetry={this.retry}
+      />
     );
   }
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.paper,
-    padding: spacing.xl,
-  },
-  panel: {
-    width: "100%",
-    maxWidth: 480,
-    gap: spacing.m,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    borderRadius: radius,
-    padding: spacing.xl,
-  },
-  title: {
-    fontSize: 17,
-    lineHeight: 22,
-    fontFamily: fonts.body,
-    fontWeight: "600",
-    color: colors.ink,
-  },
-  message: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-  },
-  button: {
-    alignSelf: "flex-start",
-    minHeight: 36,
-    justifyContent: "center",
-    paddingHorizontal: spacing.l,
-    borderRadius: radius,
-    backgroundColor: colors.accent,
-  },
-  buttonPressed: {
-    backgroundColor: colors.accentDeep,
-  },
-  buttonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    fontWeight: "600",
-    color: colors.onAccent,
-  },
+/** The panel itself, so it can read the active palette. */
+function CrashPanel({
+  label,
+  message,
+  onRetry,
+}: {
+  label?: string;
+  message: string;
+  onRetry: () => void;
+}) {
+  const { styles } = useThemedStyles(makeStyles);
+  const title = label ? `${label} hit a problem` : "Something broke";
+  return (
+    <View style={styles.root}>
+      <View style={styles.panel}>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.message} selectable>
+          {message}
+        </Text>
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.buttonPressed,
+          ]}
+          onPress={onRetry}
+          accessibilityRole="button"
+          accessibilityLabel="Retry"
+        >
+          <Text style={styles.buttonText}>Retry</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    root: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.paper,
+      padding: spacing.xl,
+    },
+    panel: {
+      width: "100%",
+      maxWidth: 480,
+      gap: spacing.m,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      borderRadius: radius,
+      padding: spacing.xl,
+    },
+    title: {
+      fontSize: 17,
+      lineHeight: 22,
+      fontFamily: fonts.body,
+      fontWeight: "600",
+      color: colors.ink,
+    },
+    message: {
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+    },
+    button: {
+      alignSelf: "flex-start",
+      minHeight: 36,
+      justifyContent: "center",
+      paddingHorizontal: spacing.l,
+      borderRadius: radius,
+      backgroundColor: colors.accent,
+    },
+    buttonPressed: {
+      backgroundColor: colors.accentDeep,
+    },
+    buttonText: {
+      fontSize: 14,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      fontWeight: "600",
+      color: colors.onAccent,
+    },
+}),
 });

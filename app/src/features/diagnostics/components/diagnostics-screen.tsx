@@ -11,14 +11,8 @@ import {
   scheduleAt,
 } from "@/lib/notifications";
 import { insightLines, useInsights } from "@/features/diagnostics/hooks/use-insights";
-import {
-  THEMES,
-  colors,
-  radius,
-  setDevTheme,
-  spacing,
-  type ThemeName,
-} from "@/theme/tokens";
+import { THEMES, radius, spacing, type ThemeName, type Palette } from "@/theme/tokens";
+import { useTheme, useThemedStyles } from "@/theme/theme-provider";
 
 function alarmLabel(exact: boolean): string {
   if (!alarmsSupported) {
@@ -32,6 +26,7 @@ function alarmLabel(exact: boolean): string {
  * notifications, and a quick folder peek.
  */
 export default function DevScreen() {
+  const { styles } = useThemedStyles(makeStyles);
   const [alarm, setAlarm] = React.useState("checking...");
   const [scheduled, setScheduled] = React.useState<
     { id: string; title?: string; when?: number }[]
@@ -137,19 +132,22 @@ export default function DevScreen() {
   );
 }
 
-/** Dev-only theme switcher: three swatches, one per named theme. */
+/** Dev-only theme switcher: one swatch per palette, applied at once. */
 function ThemeSwitcher() {
+  const { styles } = useThemedStyles(makeStyles);
+  const { name: active, setTheme } = useTheme();
   return (
     <View style={styles.switcher}>
-      <Text style={styles.switcherLabel}>theme (reload applies)</Text>
+      <Text style={styles.switcherLabel}>theme: {active}</Text>
       <View style={styles.swatchRow}>
         {(Object.keys(THEMES) as ThemeName[]).map((name) => (
           <Pressable
             key={name}
             style={[styles.swatch, { backgroundColor: THEMES[name].accent }]}
-            onPress={() => setDevTheme(name)}
+            onPress={() => setTheme(name)}
             accessibilityRole="button"
             accessibilityLabel={`theme ${name}`}
+            aria-pressed={name === active}
           />
         ))}
       </View>
@@ -157,67 +155,69 @@ function ThemeSwitcher() {
   );
 }
 
-const styles = StyleSheet.create({
-  // The page owns the space between its blocks; each block owns the
-  // space between its lines.
-  content: {
-    padding: spacing.l,
-    gap: spacing.l,
-  },
-  section: {
-    gap: spacing.s,
-  },
-  actions: {
-    gap: spacing.m,
-  },
-  label: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontFamily: "monospace",
-    color: colors.inkFaint,
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-  },
-  line: {
-    fontSize: 14,
-    fontFamily: "monospace",
-    color: colors.ink,
-  },
-  // A scheduled alarm, indented under the count.
-  sub: {
-    fontSize: 12,
-    fontFamily: "monospace",
-    color: colors.inkMuted,
-    paddingLeft: spacing.m,
-  },
-  button: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.accent,
-    borderRadius: radius,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  buttonText: {
-    color: colors.onAccent,
-    fontWeight: "600",
-  },
-  switcher: {
-    gap: spacing.s,
-  },
-  switcherLabel: {
-    fontSize: 12,
-    fontFamily: "monospace",
-    color: colors.inkMuted,
-  },
-  swatchRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  swatch: {
-    width: 32,
-    height: 32,
-    borderRadius: radius,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // The page owns the space between its blocks; each block owns the
+    // space between its lines.
+    content: {
+      padding: spacing.l,
+      gap: spacing.l,
+    },
+    section: {
+      gap: spacing.s,
+    },
+    actions: {
+      gap: spacing.m,
+    },
+    label: {
+      fontSize: 11,
+      lineHeight: 14,
+      fontFamily: "monospace",
+      color: colors.inkFaint,
+      textTransform: "uppercase",
+      letterSpacing: 1.2,
+    },
+    line: {
+      fontSize: 14,
+      fontFamily: "monospace",
+      color: colors.ink,
+    },
+    // A scheduled alarm, indented under the count.
+    sub: {
+      fontSize: 12,
+      fontFamily: "monospace",
+      color: colors.inkMuted,
+      paddingLeft: spacing.m,
+    },
+    button: {
+      alignSelf: "flex-start",
+      backgroundColor: colors.accent,
+      borderRadius: radius,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    buttonText: {
+      color: colors.onAccent,
+      fontWeight: "600",
+    },
+    switcher: {
+      gap: spacing.s,
+    },
+    switcherLabel: {
+      fontSize: 12,
+      fontFamily: "monospace",
+      color: colors.inkMuted,
+    },
+    swatchRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    swatch: {
+      width: 32,
+      height: 32,
+      borderRadius: radius,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+    },
+  }),
 });

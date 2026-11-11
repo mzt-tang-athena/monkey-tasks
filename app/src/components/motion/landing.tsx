@@ -9,7 +9,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { takeLanded } from "@/lib/motion/entrances";
 import { motion } from "@/lib/motion/tokens";
-import { colors } from "@/theme/tokens";
+import { type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /** How far a new row travels as it lands. */
 const landingPx = 12;
@@ -28,6 +29,7 @@ const landing = new Keyframe({
  * under the same id finds nothing.
  */
 export function Landing({ id, children }: { id: string; children: React.ReactNode }) {
+  const { styles } = useThemedStyles(makeStyles);
   const [landed] = React.useState(() => takeLanded(id));
   const wash = useSharedValue(landed ? 0.9 : 0);
   React.useEffect(() => {
@@ -49,13 +51,15 @@ export function Landing({ id, children }: { id: string; children: React.ReactNod
   );
 }
 
-const styles = StyleSheet.create({
-  wash: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: colors.accentSoft,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    wash: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      backgroundColor: colors.accentSoft,
+    },
+  }),
 });

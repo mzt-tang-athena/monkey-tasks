@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { File, Paths } from "expo-file-system";
+import { THEMES, type ThemeName } from "@/theme/tokens";
 
 /**
  * App settings. They live in app-internal storage - web local
@@ -14,13 +15,16 @@ export type Settings = {
   taskForm: TaskForm;
   /** The Lists screen's order: by due time, or the manual order. */
   sortMode: SortMode;
+  /** The active palette name. */
+  theme: ThemeName;
 };
 
-const DEFAULTS: Settings = { taskForm: "rows", sortMode: "due" };
+const DEFAULTS: Settings = { taskForm: "rows", sortMode: "due", theme: "budget" };
 
 const LOCAL_KEYS: Record<keyof Settings, string> = {
   taskForm: "monkey-tasks.task-form",
   sortMode: "monkey-tasks.sort-mode",
+  theme: "monkey-tasks.theme",
 };
 
 const FILE_NAME = "monkey-tasks-settings.json";
@@ -56,6 +60,7 @@ function pick<K extends keyof Settings>(
   const allowed: Record<keyof Settings, readonly string[]> = {
     taskForm: ["rows", "pills"],
     sortMode: ["due", "manual"],
+    theme: Object.keys(THEMES),
   };
   return typeof value === "string" && allowed[key].includes(value)
     ? (value as Settings[K])

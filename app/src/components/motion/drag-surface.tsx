@@ -9,7 +9,8 @@ import Animated, {
 import { Overlay } from "@/components/ui/overlay-host";
 import type { Hit } from "@/lib/motion/drag-math";
 import { motion, type HoldKind } from "@/lib/motion/tokens";
-import { colors, shadows } from "@/theme/tokens";
+import { shadows, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { createBridgeGuard } from "./internal/bridge";
 import {
   ClipContext,
@@ -113,6 +114,7 @@ export function createDragSurface<P, T>() {
     testID?: string;
     children?: React.ReactNode;
   }) {
+    const { styles } = useThemedStyles(makeStyles);
     const { id, ref, hover } = useZone(target, null);
     const tint = useAnimatedStyle(() => ({
       opacity: withTiming(hover.value?.id === id ? 1 : 0, {
@@ -148,6 +150,7 @@ export function createDragSurface<P, T>() {
     "aria-label"?: string;
     children?: React.ReactNode;
   }) {
+    const { styles } = useThemedStyles(makeStyles);
     const shape = React.useMemo(
       () => ({ columns, rows, cells: cells.map((cell, i) => (cell === null ? null : i)) }),
       [columns, rows, cells],
@@ -219,6 +222,7 @@ function targetOf(session: Session, hit: Hit | null): unknown {
 /** The ghost under the finger. It renders in the overlay, outside the
     screen's providers, so it takes the session as a prop. */
 function Ghost({ session, children }: { session: Session; children: React.ReactNode }) {
+  const { styles } = useThemedStyles(makeStyles);
   const { x, y, grab } = session.ui;
   const place = useAnimatedStyle(() => ({
     width: grab.value.width,
@@ -235,24 +239,26 @@ function Ghost({ session, children }: { session: Session; children: React.ReactN
   );
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-  cell: {
-    position: "absolute",
-  },
-  hover: {
-    backgroundColor: colors.accentSoft,
-  },
-  ghost: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    ...shadows.lifted,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    fill: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    },
+    cell: {
+      position: "absolute",
+    },
+    hover: {
+      backgroundColor: colors.accentSoft,
+    },
+    ghost: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      ...shadows.lifted,
+    },
+  }),
 });

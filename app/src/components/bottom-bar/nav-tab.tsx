@@ -1,14 +1,8 @@
 import * as React from "react";
 import { StyleSheet, Text } from "react-native";
 import { Pressable } from "@/components/ui/pressable";
-import {
-  bottomBar,
-  colors,
-  fonts,
-  radius,
-  spacing,
-  touchTarget,
-} from "@/theme/tokens";
+import { bottomBar, fonts, radius, spacing, touchTarget, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { Icon, type IconName } from "@/components/ui/icon";
 
 /**
@@ -26,6 +20,7 @@ export function NavTab({
   active: boolean;
   onPress: () => void;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <Pressable
       style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
@@ -40,28 +35,30 @@ export function NavTab({
   );
 }
 
-const styles = StyleSheet.create({
-  // The icon over its label, one small step apart.
-  tab: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 3,
-    minHeight: touchTarget,
-    minWidth: bottomBar.tabWidth,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius,
-  },
-  tabPressed: {
-    backgroundColor: colors.pressed,
-  },
-  label: {
-    fontSize: bottomBar.labelSize,
-    lineHeight: bottomBar.labelLine,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-  },
-  labelActive: {
-    color: colors.accent,
-    fontWeight: "600",
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // The icon over its label, one small step apart.
+    tab: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 3,
+      minHeight: touchTarget,
+      minWidth: bottomBar.tabWidth,
+      paddingHorizontal: spacing.xs,
+      borderRadius: radius,
+    },
+    tabPressed: {
+      backgroundColor: colors.pressed,
+    },
+    label: {
+      fontSize: bottomBar.labelSize,
+      lineHeight: bottomBar.labelLine,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+    },
+    labelActive: {
+      color: colors.accent,
+      fontWeight: "600",
+    },
+  }),
 });

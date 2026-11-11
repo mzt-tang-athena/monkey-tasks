@@ -2,15 +2,8 @@ import * as React from "react";
 import { StyleSheet, Text } from "react-native";
 import type { PressableProps } from "react-native-gesture-handler";
 import { Pressable } from "./pressable";
-import {
-  colors,
-  fonts,
-  spacing,
-  radius,
-  radii,
-  touchTarget,
-  type,
-} from "@/theme/tokens";
+import { fonts, spacing, radius, radii, touchTarget, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /**
  * The app's button shapes, copied from their first homes: the capture
@@ -46,6 +39,7 @@ export function Button({
   hitSlop?: PressableProps["hitSlop"];
   children?: React.ReactNode;
 }) {
+  const { styles, textTone } = useThemedStyles(makeStyles);
   const circle = shape === "circle";
   const quiet = variant === "quiet";
   if (variant === "text") {
@@ -120,84 +114,86 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
-  // The save control: an icon-only circle at the touch target floor,
-  // so the action row reads as two matching rounded forms.
-  circle: {
-    width: touchTarget,
-    height: touchTarget,
-    borderRadius: radii.pill,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  circleText: {
-    color: colors.onAccent,
-    fontSize: 17,
-    lineHeight: 22,
-    fontFamily: fonts.body,
-    fontWeight: "700",
-  },
-
-  // The planner's retry control: a padded label pill.
-  pill: {
-    minHeight: 44,
-    justifyContent: "center",
-    paddingHorizontal: spacing.l,
-    borderRadius: radius,
-  },
-  pillText: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    fontWeight: "600",
-    color: colors.onAccent,
-  },
-
-  solid: {
-    backgroundColor: colors.accent,
-  },
-  pressed: {
-    backgroundColor: colors.accentDeep,
-  },
-
-  // The quieter fill the sheet's chips and target pill share.
-  quiet: {
-    backgroundColor: colors.accentSoft,
-  },
-  quietPressed: {
-    backgroundColor: colors.pressed,
-  },
-  quietText: {
-    color: colors.accent,
-  },
-
-  // A label with no fill, on the touch target floor.
-  text: {
-    minHeight: touchTarget,
-    minWidth: touchTarget,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.s,
-    borderRadius: radius,
-  },
-  textPressed: {
-    backgroundColor: colors.pressed,
-  },
-  textLabel: {
-    ...type.control,
-    fontWeight: "600",
-  },
-
-  disabled: {
-    backgroundColor: colors.pressed,
-  },
-  disabledText: {
-    color: colors.inkFaint,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // The save control: an icon-only circle at the touch target floor,
+    // so the action row reads as two matching rounded forms.
+    circle: {
+      width: touchTarget,
+      height: touchTarget,
+      borderRadius: radii.pill,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    circleText: {
+      color: colors.onAccent,
+      fontSize: 17,
+      lineHeight: 22,
+      fontFamily: fonts.body,
+      fontWeight: "700",
+    },
+  
+    // The planner's retry control: a padded label pill.
+    pill: {
+      minHeight: 44,
+      justifyContent: "center",
+      paddingHorizontal: spacing.l,
+      borderRadius: radius,
+    },
+    pillText: {
+      fontSize: 14,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      fontWeight: "600",
+      color: colors.onAccent,
+    },
+  
+    solid: {
+      backgroundColor: colors.accent,
+    },
+    pressed: {
+      backgroundColor: colors.accentDeep,
+    },
+  
+    // The quieter fill the sheet's chips and target pill share.
+    quiet: {
+      backgroundColor: colors.accentSoft,
+    },
+    quietPressed: {
+      backgroundColor: colors.pressed,
+    },
+    quietText: {
+      color: colors.accent,
+    },
+  
+    // A label with no fill, on the touch target floor.
+    text: {
+      minHeight: touchTarget,
+      minWidth: touchTarget,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: spacing.s,
+      borderRadius: radius,
+    },
+    textPressed: {
+      backgroundColor: colors.pressed,
+    },
+    textLabel: {
+      ...type.control,
+      fontWeight: "600",
+    },
+  
+    disabled: {
+      backgroundColor: colors.pressed,
+    },
+    disabledText: {
+      color: colors.inkFaint,
+    },
+  }),
+  textTone: StyleSheet.create({
+    accent: { color: colors.accent },
+    muted: { color: colors.inkMuted, fontWeight: "400" },
+    danger: { color: colors.danger },
+  }),
 });
 
-const textTone = StyleSheet.create({
-  accent: { color: colors.accent },
-  muted: { color: colors.inkMuted, fontWeight: "400" },
-  danger: { color: colors.danger },
-});

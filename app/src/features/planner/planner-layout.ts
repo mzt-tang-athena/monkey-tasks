@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { colors, measure, pageGutter, spacing } from "@/theme/tokens";
+import { measure, pageGutter, spacing } from "@/theme/tokens";
 
 /**
  * The planner's shared frame and pane styles, and nothing else. Every
@@ -8,7 +8,8 @@ import { colors, measure, pageGutter, spacing } from "@/theme/tokens";
 export const layout = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.paper,
+    // The screen paints the active paper; this frame stays palette-free
+    // so every planner mode can share it as a module constant.
     // Drags must not start native text selection in the web preview.
     userSelect: "none",
   },

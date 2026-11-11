@@ -1,6 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text } from "react-native";
-import { colors, type } from "@/theme/tokens";
+import { type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 export type SectionTone = "accent" | "danger" | "muted" | "faint";
 
@@ -18,6 +19,7 @@ export function SectionHeader({
   count?: number;
   tone?: SectionTone;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <Text accessibilityRole="header" style={[styles.label, styles[tone]]}>
       {label}
@@ -26,22 +28,24 @@ export function SectionHeader({
   );
 }
 
-const styles = StyleSheet.create({
-  label: {
-    ...type.eyebrow,
-  },
-  accent: {
-    color: colors.accent,
-  },
-  danger: {
-    color: colors.danger,
-  },
-  muted: {
-    color: colors.inkMuted,
-  },
-  // Done work recedes: the faint ink, dimmed again.
-  faint: {
-    color: colors.inkFaint,
-    opacity: 0.55,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    label: {
+      ...type.eyebrow,
+    },
+    accent: {
+      color: colors.accent,
+    },
+    danger: {
+      color: colors.danger,
+    },
+    muted: {
+      color: colors.inkMuted,
+    },
+    // Done work recedes: the faint ink, dimmed again.
+    faint: {
+      color: colors.inkFaint,
+      opacity: 0.55,
+    },
+  }),
 });

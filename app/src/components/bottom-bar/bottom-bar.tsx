@@ -4,7 +4,8 @@ import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import type { Progress } from "@/lib/motion/progress";
-import { bottomBar, colors, measure, spacing } from "@/theme/tokens";
+import { bottomBar, measure, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { NavTab } from "./nav-tab";
 
 /** What the `action` slot reads from the bar. */
@@ -41,6 +42,7 @@ export function useBar(): BarState {
  * measure, so the nav and the action sit in the content column.
  */
 export function BottomBar({ action }: { action: React.ReactNode }) {
+  const { styles } = useThemedStyles(makeStyles);
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   // The sheet's clock, or null while no slot drives the bar.
@@ -103,36 +105,38 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
-  navBand: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.accentDeep,
-  },
-  bar: {
-    backgroundColor: colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.hairline,
-    paddingHorizontal: spacing.m,
-    paddingTop: spacing.s,
-  },
-  row: {
-    maxWidth: measure,
-    width: "100%",
-    alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    minHeight: bottomBar.row,
-  },
-  nav: {
-    flexDirection: "row",
-    gap: spacing.s,
-  },
-  spacer: {
-    flex: 1,
-    minWidth: spacing.xl,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    navBand: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.accentDeep,
+    },
+    bar: {
+      backgroundColor: colors.surface,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.hairline,
+      paddingHorizontal: spacing.m,
+      paddingTop: spacing.s,
+    },
+    row: {
+      maxWidth: measure,
+      width: "100%",
+      alignSelf: "center",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+      minHeight: bottomBar.row,
+    },
+    nav: {
+      flexDirection: "row",
+      gap: spacing.s,
+    },
+    spacer: {
+      flex: 1,
+      minWidth: spacing.xl,
+    },
+  }),
 });

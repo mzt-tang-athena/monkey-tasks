@@ -6,7 +6,8 @@ import {
   View,
   type TextInputProps,
 } from "react-native";
-import { colors, radius, spacing, type } from "@/theme/tokens";
+import { radius, spacing, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /**
  * A labelled text input: the label above, the input, then a hint or
@@ -26,6 +27,7 @@ export function TextField({
   error?: string | null;
   multiline?: boolean;
 } & Omit<TextInputProps, "multiline" | "style" | "accessibilityLabel">) {
+  const { styles, colors } = useThemedStyles(makeStyles);
   const id = React.useId();
   const note = error ?? hint;
   const noteId = `${id}-note`;
@@ -62,39 +64,41 @@ export function TextField({
   );
 }
 
-const styles = StyleSheet.create({
-  field: {
-    gap: spacing.xs,
-  },
-  label: {
-    ...type.eyebrow,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    color: colors.inkMuted,
-  },
-  input: {
-    minHeight: 44,
-    paddingHorizontal: spacing.m,
-    paddingVertical: spacing.s,
-    borderRadius: radius,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.surface,
-    ...type.body,
-    color: colors.ink,
-  },
-  multiline: {
-    minHeight: 96,
-  },
-  inputInvalid: {
-    borderColor: colors.danger,
-  },
-  hint: {
-    ...type.caption,
-    color: colors.inkMuted,
-  },
-  error: {
-    ...type.caption,
-    color: colors.danger,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    field: {
+      gap: spacing.xs,
+    },
+    label: {
+      ...type.eyebrow,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+      color: colors.inkMuted,
+    },
+    input: {
+      minHeight: 44,
+      paddingHorizontal: spacing.m,
+      paddingVertical: spacing.s,
+      borderRadius: radius,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      backgroundColor: colors.surface,
+      ...type.body,
+      color: colors.ink,
+    },
+    multiline: {
+      minHeight: 96,
+    },
+    inputInvalid: {
+      borderColor: colors.danger,
+    },
+    hint: {
+      ...type.caption,
+      color: colors.inkMuted,
+    },
+    error: {
+      ...type.caption,
+      color: colors.danger,
+    },
+  }),
 });

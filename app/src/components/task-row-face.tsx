@@ -2,7 +2,8 @@ import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { formatTime, parseStoredDate, startOfToday } from "@/utils/dates";
-import { colors, fonts, radii, spacing } from "@/theme/tokens";
+import { fonts, radii, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /** The toggle circle's size. */
 const circle = 24;
@@ -80,6 +81,7 @@ export function TaskRowFace({
       wrapper must carry `faceStyles.text`. */
   renderText?: (content: React.ReactNode) => React.ReactNode;
 }) {
+  const { faceStyles, styles } = useThemedStyles(makeStyles);
   const meta = taskMeta(task, done);
   const { badDate, recurring, overdue } = meta;
   const time = meta.time;
@@ -167,104 +169,111 @@ export function taskFaceHeight(
 }
 
 /** The parts a live row rebuilds with its own handlers and motion. */
-export const faceStyles = StyleSheet.create({
-  circle: {
-    width: taskRowFace.circle,
-    height: taskRowFace.circle,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.inkFaint,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  circleDone: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  check: {
-    color: colors.onAccent,
-    fontSize: 13,
-    lineHeight: 14,
-    fontWeight: "600",
-  },
-  // The text owns the gap between the name and the meta line.
-  text: {
-    flex: 1,
-    gap: 2,
-  },
+/** The face sheets for the active palette, shared with the live row. */
+export function useTaskRowFace() {
+  return useThemedStyles(makeStyles);
+}
+
+const makeStyles = (colors: Palette) => ({
+  faceStyles: StyleSheet.create({
+    circle: {
+      width: taskRowFace.circle,
+      height: taskRowFace.circle,
+      borderRadius: radii.pill,
+      borderWidth: 1.5,
+      borderColor: colors.inkFaint,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    circleDone: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    check: {
+      color: colors.onAccent,
+      fontSize: 13,
+      lineHeight: 14,
+      fontWeight: "600",
+    },
+    // The text owns the gap between the name and the meta line.
+    text: {
+      flex: 1,
+      gap: 2,
+    },
+  }),
+  styles: StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      // The circle top-anchors to the first text line; the block below
+      // may wrap or grow without moving it. The row hugs its content,
+      // so single-line tasks sit exactly centered.
+      alignItems: "flex-start",
+      gap: taskRowFace.gap,
+      paddingHorizontal: taskRowFace.padX,
+      paddingVertical: taskRowFace.padY,
+    },
+    // The press target inside a live row carries the vertical padding.
+    rowLive: {
+      paddingVertical: 0,
+    },
+    toggleLive: {
+      paddingTop: taskRowFace.padY,
+    },
+    name: {
+      fontSize: 17,
+      lineHeight: 24,
+      fontFamily: fonts.body,
+      color: colors.ink,
+    },
+    nameDone: {
+      color: colors.inkFaint,
+      textDecorationLine: "line-through",
+    },
+    metaRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+    },
+    badDate: {
+      fontSize: 12,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.danger,
+    },
+    time: {
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+    },
+    gutterTime: {
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+      width: taskRowFace.gutter,
+      fontVariant: ["tabular-nums"],
+      // Centered on the 24pt first-line box: (24 - 18) / 2 on each side.
+      paddingVertical: 3,
+    },
+    // Live rows lift the row's padding into the text target, so the
+    // gutter time centers on the same first line from the row's top.
+    gutterTimeLive: {
+      paddingVertical: 0,
+      paddingTop: 15,
+    },
+    recur: {
+      fontSize: 12,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.accent,
+    },
+    overdueText: {
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.danger,
+    },
+  }),
 });
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    // The circle top-anchors to the first text line; the block below
-    // may wrap or grow without moving it. The row hugs its content,
-    // so single-line tasks sit exactly centered.
-    alignItems: "flex-start",
-    gap: taskRowFace.gap,
-    paddingHorizontal: taskRowFace.padX,
-    paddingVertical: taskRowFace.padY,
-  },
-  // The press target inside a live row carries the vertical padding.
-  rowLive: {
-    paddingVertical: 0,
-  },
-  toggleLive: {
-    paddingTop: taskRowFace.padY,
-  },
-  name: {
-    fontSize: 17,
-    lineHeight: 24,
-    fontFamily: fonts.body,
-    color: colors.ink,
-  },
-  nameDone: {
-    color: colors.inkFaint,
-    textDecorationLine: "line-through",
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-  },
-  badDate: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.danger,
-  },
-  time: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-  },
-  gutterTime: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    width: taskRowFace.gutter,
-    fontVariant: ["tabular-nums"],
-    // Centered on the 24pt first-line box: (24 - 18) / 2 on each side.
-    paddingVertical: 3,
-  },
-  // Live rows lift the row's padding into the text target, so the
-  // gutter time centers on the same first line from the row's top.
-  gutterTimeLive: {
-    paddingVertical: 0,
-    paddingTop: 15,
-  },
-  recur: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.accent,
-  },
-  overdueText: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.danger,
-  },
-});

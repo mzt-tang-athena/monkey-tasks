@@ -14,7 +14,8 @@ import Animated, {
 import { scheduleOnUI } from "react-native-worklets";
 import { hitZone, type Hit } from "@/lib/motion/drag-math";
 import { holds, motion, type HoldKind } from "@/lib/motion/tokens";
-import { colors } from "@/theme/tokens";
+import { type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { toJS } from "./bridge";
 import { useSessionContext } from "./contexts";
 import { measureZones, send, type SessionUI } from "./session";
@@ -89,6 +90,7 @@ export function Source({
   testID?: string;
   children: React.ReactNode;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const session = useSessionContext("Source");
   const { ui, handlers, pressCancel } = session;
   const [id] = React.useState(session.nextId);
@@ -207,13 +209,15 @@ export function Source({
   );
 }
 
-const styles = StyleSheet.create({
-  tint: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: colors.accentSoft,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    tint: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      backgroundColor: colors.accentSoft,
+    },
+  }),
 });

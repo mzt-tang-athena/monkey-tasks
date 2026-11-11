@@ -1,13 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import {
-  colors,
-  measure,
-  radiusFloating,
-  shadows,
-  spacing,
-  type,
-} from "@/theme/tokens";
+import { measure, radiusFloating, shadows, spacing, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import type { BannerAction } from "./banner";
 import { Button } from "./button";
 import { Overlay } from "./overlay-host";
@@ -27,6 +21,7 @@ export function Toast({
   actions?: [BannerAction] | [BannerAction, BannerAction] | [];
   bottom: number;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <Overlay layer="toast">
       <View pointerEvents="box-none" style={[styles.dock, { bottom }]}>
@@ -50,33 +45,35 @@ export function Toast({
   );
 }
 
-const styles = StyleSheet.create({
-  // The dock spans the window and centers the toast, which holds to
-  // the reading measure (ADR 0010).
-  dock: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.m,
-    alignItems: "center",
-  },
-  toast: {
-    width: "100%",
-    maxWidth: measure,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    borderRadius: radiusFloating,
-    paddingHorizontal: spacing.m,
-    paddingVertical: spacing.s,
-    ...shadows.floating,
-  },
-  message: {
-    flex: 1,
-    ...type.meta,
-    color: colors.danger,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // The dock spans the window and centers the toast, which holds to
+    // the reading measure (ADR 0010).
+    dock: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      paddingHorizontal: spacing.m,
+      alignItems: "center",
+    },
+    toast: {
+      width: "100%",
+      maxWidth: measure,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      borderRadius: radiusFloating,
+      paddingHorizontal: spacing.m,
+      paddingVertical: spacing.s,
+      ...shadows.floating,
+    },
+    message: {
+      flex: 1,
+      ...type.meta,
+      color: colors.danger,
+    },
+  }),
 });

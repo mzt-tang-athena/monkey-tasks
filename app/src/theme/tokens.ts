@@ -1,110 +1,11 @@
 import { Platform, type TextStyle, type ViewStyle } from "react-native";
 import { motion } from "@/lib/motion/tokens";
 
-/**
- * Themes as config. Three named palettes from the round-2 verdicts;
- * screens read the active theme through `colors` and never declare a
- * raw color. Every palette shares the same key set, so a screen is
- * theme-agnostic by construction.
- */
-
-export const THEMES = {
-  /**
-   * Budget green on paper. Deep green accent, the soft green sibling,
-   * and a clean neutral warm white paper: the round-2 cream
-   * desaturated until it stopped reading as "green eggs and ham".
-   */
-  budget: {
-    paper: "#FAF7F0",
-    surface: "#FFFDF7",
-    pressed: "#F0EBDF",
-    ink: "#26251E",
-    inkMuted: "#686556",
-    inkFaint: "#B5B1A2",
-    hairline: "#E3DED1",
-    accent: "#0F4031",
-    accentDeep: "#0A3323",
-    accentSoft: "#E2E7CE",
-    danger: "#A8402F",
-    dangerSoft: "#F4E3DD",
-    onAccent: "#FAF7F0",
-    scrim: "rgba(38,37,30,0.4)",
-  },
-  /** Todoist warm: the red-orange accent on crisp white. */
-  todoist: {
-    paper: "#FBFAF8",
-    surface: "#FFFFFF",
-    pressed: "#F2F0EC",
-    ink: "#1F1E1C",
-    inkMuted: "#6B665F",
-    inkFaint: "#C4C0B9",
-    hairline: "#E7E4DE",
-    accent: "#DC4C3E",
-    accentDeep: "#C23A2D",
-    accentSoft: "#FBE9E5",
-    danger: "#8F2F21",
-    dangerSoft: "#F6E0DC",
-    onAccent: "#FFFFFF",
-    scrim: "rgba(31,30,28,0.4)",
-  },
-  /** Quiet clay: variant F untouched, the muted terracotta on cream. */
-  clay: {
-    paper: "#F7F4E4",
-    surface: "#FCFAF0",
-    pressed: "#EFEAD6",
-    ink: "#2E2A20",
-    inkMuted: "#6E6656",
-    inkFaint: "#B9B09C",
-    hairline: "#E6DFC9",
-    accent: "#A65B3B",
-    accentDeep: "#8F4A2F",
-    accentSoft: "#F1E3D7",
-    danger: "#8F3B2C",
-    dangerSoft: "#F2E0DA",
-    onAccent: "#FBF7ED",
-    scrim: "rgba(46,42,32,0.45)",
-  },
-} as const;
-
-export type ThemeName = keyof typeof THEMES;
-
-/** The palette shape every theme shares; screens type against this. */
-export type Palette = Record<keyof (typeof THEMES)["budget"], string>;
-
-/**
- * The active theme: registry default, or a dev-only override set from
- * the dev route's switcher (web storage, read once at module load).
- */
-function activeThemeName(): ThemeName {
-  const names = Object.keys(THEMES) as ThemeName[];
-  try {
-    const saved = globalThis.localStorage?.getItem("dev-theme");
-    if (saved != null && names.includes(saved as ThemeName)) {
-      return saved as ThemeName;
-    }
-  } catch {
-    // No storage (native or blocked): fall through to the default.
-  }
-  return "budget";
-}
-
-const activeTheme = THEMES[activeThemeName()];
-
-/** Switch the dev theme and reload, so module constants re-read. */
-export function setDevTheme(name: ThemeName): void {
-  try {
-    globalThis.localStorage?.setItem("dev-theme", name);
-  } catch {
-    // Ignore: the swatch is dev-only decoration without storage.
-  }
-  // Web reloads so the module constants re-read. Native has no
-  // location; the swatch stays a no-op there.
-  if (typeof window !== "undefined" && window.location?.reload) {
-    window.location.reload();
-  }
-}
-
-export const colors: Palette = activeTheme;
+export {
+  THEMES,
+  type Palette,
+  type ThemeName,
+} from "@/theme/palettes";
 
 export const fonts = {
   /** Serif display face: date headers only. */
@@ -123,7 +24,7 @@ export const fonts = {
  * The type scale, named by role (ADR 0040). Each step is a size and
  * the line height that goes with it. A style spreads a step and adds
  * its own color and, where it needs one, a weight:
- * `{ ...type.meta, color: colors.inkMuted }`. The eyebrow is a whole
+ * `{ ...type.meta, color: palette.inkMuted }`. The eyebrow is a whole
  * form, so it carries its weight, tracking and case too.
  */
 export const type = {
@@ -177,14 +78,16 @@ export type Layer = keyof typeof layers;
  */
 export const shadows = {
   floating: {
-    shadowColor: colors.ink,
+    // Black in every palette. On the dark ground the elevation is what
+    // reads, not the shadow tone.
+    shadowColor: "#000000",
     shadowOpacity: 0.14,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
   lifted: {
-    shadowColor: colors.ink,
+    shadowColor: "#000000",
     shadowOpacity: 0.18,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },

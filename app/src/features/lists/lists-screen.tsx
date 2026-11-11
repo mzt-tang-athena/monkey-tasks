@@ -18,7 +18,8 @@ import { useStoreMeta } from "@/stores/tasks/task-state";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useGrantFolder, useRefreshTasks } from "@/stores/tasks/use-vault-read";
-import { colors, measure, pageGutter, spacing } from "@/theme/tokens";
+import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { ListPagePreview } from "./components/list-page-preview";
 import { ListSectionHeader } from "./components/list-section-header";
 import {
@@ -46,6 +47,7 @@ import type { ReorderEvent } from "@/components/motion/reorder";
  * animation (ADR 0034, ADR 0046).
  */
 export default function ListsScreen({ dock }: { dock: DockSlot }) {
+  const { styles } = useThemedStyles(makeStyles);
   const { rootUri, status, readError } = useStoreMeta();
   const toggleTask = useToggleTask();
   const reorderSection = useReorderSection();
@@ -146,7 +148,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const previewHeight = pagerHeight > 0 ? pagerHeight : window.height;
 
   return (
-    <View style={styles.screen}>
+    <View testID="lists-screen" style={styles.screen}>
       {/* The status bar strip takes the header's surface, so the top
           chrome reads as one band instead of a paper gap. */}
       <View style={[styles.statusStrip, { height: insets.top }]} />
@@ -264,34 +266,36 @@ function ListPager(props: React.ComponentProps<typeof Pager>) {
 
 const keyExtractor = (item: TaskItem) => item.id;
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.paper,
-    // The lists screen shares the planner's no-selection rule: a
-    // row drag or tab swipe must not start text selection.
-    userSelect: "none",
-  },
-  statusStrip: {
-    backgroundColor: colors.surface,
-  },
-  // The body holds the pager under the fixed chrome.
-  body: {
-    flex: 1,
-  },
-  // The pager's slot: the page below the toolbar and the banners.
-  pageHost: {
-    flex: 1,
-  },
-  page: {
-    flex: 1,
-  },
-  content: {
-    maxWidth: measure,
-    alignSelf: "center",
-    width: "100%",
-    paddingHorizontal: pageGutter,
-    paddingTop: spacing.m,
-    paddingBottom: spacing.xl,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.paper,
+      // The lists screen shares the planner's no-selection rule: a
+      // row drag or tab swipe must not start text selection.
+      userSelect: "none",
+    },
+    statusStrip: {
+      backgroundColor: colors.surface,
+    },
+    // The body holds the pager under the fixed chrome.
+    body: {
+      flex: 1,
+    },
+    // The pager's slot: the page below the toolbar and the banners.
+    pageHost: {
+      flex: 1,
+    },
+    page: {
+      flex: 1,
+    },
+    content: {
+      maxWidth: measure,
+      alignSelf: "center",
+      width: "100%",
+      paddingHorizontal: pageGutter,
+      paddingTop: spacing.m,
+      paddingBottom: spacing.xl,
+    },
+  }),
 });
