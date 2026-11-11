@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/refs -- the worklet reads the animated
    ref when the gesture runs, not during render. */
 import * as React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import Animated, {
   measure,
@@ -12,6 +12,7 @@ import Animated, {
 import { colors, touchTarget } from "@/theme/tokens";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
+import { useArrowKeys } from "./internal/keys";
 import { usePressCancel } from "./internal/press-cancel";
 
 const dividerHeight = 28;
@@ -73,29 +74,7 @@ export function Split({
     [fraction, minTop, minBottom, onResize],
   );
 
-  React.useEffect(() => {
-    if (Platform.OS !== "web") {
-      return;
-    }
-    // The listener sits on the document. The grip's ref is not always
-    // attached when this effect runs, so the handler checks the focus
-    // at key time instead.
-    const onKeyDown = (event: KeyboardEvent) => {
-      const node = gripRef.current as unknown as HTMLElement | null;
-      if (node == null || document.activeElement !== node) {
-        return;
-      }
-      if (event.key === "ArrowUp" || event.key === "ArrowRight") {
-        event.preventDefault();
-        step(1);
-      } else if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
-        event.preventDefault();
-        step(-1);
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [step]);
+  useArrowKeys(gripRef, step);
 
   // A new fraction from the screen, before paint: the panes never show
   // a frame between the release and the state that carries it.

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskItem } from "@/types/task";
 import { ListReorder } from "../lib/list-reorder";
@@ -7,16 +7,13 @@ import { TaskCardRow, type TaskCardRowProps } from "./task-card-row";
 
 const spy = vi.hoisted(() => ({ renders: 0 }));
 
-// The row's actions menu reads the safe area, which node cannot load.
-vi.mock("react-native-safe-area-context", () => ({
-  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
-}));
-
 vi.mock("@/components/task-row", async () => {
   const React = await import("react");
-  const Row = React.memo(function Row() {
-    spy.renders += 1;
-    return null;
+  const Row = React.memo(function Row({ grip }: { grip?: React.ReactNode }) {
+    React.useEffect(() => {
+      spy.renders += 1;
+    });
+    return <>{grip}</>;
   });
   return { TaskRow: Row };
 });
@@ -40,7 +37,6 @@ const props: TaskCardRowProps = {
   count: 3,
   completed: false,
   canDrag: true,
-  onMove: none,
   onToggle: none,
   onOpen: none,
   onTickSettled: none,
@@ -86,5 +82,16 @@ describe("TaskCardRow", () => {
     rerender(<Screen {...props} index={0} />);
 
     expect(spy.renders).toBe(before);
+  });
+
+  it("hands its grip the task's name and the row's place", () => {
+    render(<Screen {...props} />);
+
+    const grip = screen.getByTestId("reorder-grip:Apple");
+    expect(grip.getAttribute("role")).toBe("slider");
+    expect(grip.getAttribute("aria-label")).toBe("reorder Apple");
+    expect(grip.getAttribute("aria-valuemin")).toBe("1");
+    expect(grip.getAttribute("aria-valuemax")).toBe("3");
+    expect(grip.getAttribute("aria-valuenow")).toBe("2");
   });
 });
