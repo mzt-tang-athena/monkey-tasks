@@ -204,7 +204,11 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
               fill
             >
               <View style={styles.page}>
+                {/* A tab is a different list, so its page starts at the
+                    top, as its preview draws it. The pager's page
+                    itself stays mounted (ticket 0087). */}
                 <SectionList<TaskItem, ListsSection>
+                  key={tab}
                   contentContainerStyle={styles.content}
                   onRefresh={reload}
                   refreshing={refreshing}

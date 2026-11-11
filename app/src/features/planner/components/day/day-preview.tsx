@@ -34,6 +34,7 @@ export function DayPreview({
   tasks,
   now,
   fraction,
+  scroll,
 }: {
   date: Date;
   today: Date;
@@ -42,6 +43,9 @@ export function DayPreview({
   now: Date;
   /** The split the live day shows, drawn still. */
   fraction: number;
+  /** The live panes' offsets. The still page draws at them, so the
+      landing jumps nowhere. */
+  scroll: { timeline: number; list: number };
 }) {
   const inert = useInertList();
   const { source, taskForm } = inert;
@@ -67,66 +71,71 @@ export function DayPreview({
               isToday={isSameDay(date, today)}
               now={now}
               copy
+              scrollTop={scroll.timeline}
             />
           }
           bottom={
             <View style={layout.paneList}>
-              <View
-                style={[
-                  styles.listHead,
-                  pills
-                    ? styles.headFlush
-                    : grouped
-                      ? styles.headGrouped
-                      : styles.headRows,
-                ]}
-              >
-                <View style={styles.sectionHead}>
-                  <SourceToggle mode="day" day={date} />
-                  <View style={styles.spacer} />
-                  <FormToggle />
-                </View>
-                {grouped ? (
-                  <View style={styles.listHeadBody}>
-                    <View style={styles.overdue}>
-                      <SectionHeader
-                        label="Overdue"
-                        count={rows.overdue.length}
-                        tone="danger"
-                      />
-                      <View>
-                        {rows.overdue.map((task, index) => (
-                          <React.Fragment key={task.id}>
-                            {index > 0 ? <RowSeparator /> : null}
-                            <PreviewRow
-                              task={task}
-                              done={task.data?.completed != null}
-                            />
-                          </React.Fragment>
-                        ))}
-                      </View>
+              <View style={styles.listClip}>
+                <View style={{ transform: [{ translateY: -scroll.list }] }}>
+                  <View
+                    style={[
+                      styles.listHead,
+                      pills
+                        ? styles.headFlush
+                        : grouped
+                          ? styles.headGrouped
+                          : styles.headRows,
+                    ]}
+                  >
+                    <View style={styles.sectionHead}>
+                      <SourceToggle mode="day" day={date} />
+                      <View style={styles.spacer} />
+                      <FormToggle />
                     </View>
+                    {grouped ? (
+                      <View style={styles.listHeadBody}>
+                        <View style={styles.overdue}>
+                          <SectionHeader
+                            label="Overdue"
+                            count={rows.overdue.length}
+                            tone="danger"
+                          />
+                          <View>
+                            {rows.overdue.map((task, index) => (
+                              <React.Fragment key={task.id}>
+                                {index > 0 ? <RowSeparator /> : null}
+                                <PreviewRow
+                                  task={task}
+                                  done={task.data?.completed != null}
+                                />
+                              </React.Fragment>
+                            ))}
+                          </View>
+                        </View>
+                      </View>
+                    ) : null}
+                    {pills ? (
+                      <View style={styles.listHeadBody}>
+                        <TaskPills tasks={rows.sectionTasks} copy />
+                      </View>
+                    ) : null}
                   </View>
-                ) : null}
-                {pills ? (
-                  <View style={styles.listHeadBody}>
-                    <TaskPills tasks={rows.sectionTasks} copy />
-                  </View>
-                ) : null}
-              </View>
-              {pills ? null : (
-                <View style={styles.rows}>
-                  {rows.sectionTasks.map((task, index) => (
-                    <React.Fragment key={task.id}>
-                      {index > 0 ? <RowSeparator /> : null}
-                      <PreviewRow
-                        task={task}
-                        done={task.data?.completed != null}
-                      />
-                    </React.Fragment>
-                  ))}
+                  {pills ? null : (
+                    <View style={styles.rows}>
+                      {rows.sectionTasks.map((task, index) => (
+                        <React.Fragment key={task.id}>
+                          {index > 0 ? <RowSeparator /> : null}
+                          <PreviewRow
+                            task={task}
+                            done={task.data?.completed != null}
+                          />
+                        </React.Fragment>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
+              </View>
             </View>
           }
         />
@@ -146,6 +155,10 @@ const styles = StyleSheet.create({
   // group header, then the rows.
   listHead: {
     gap: spacing.s,
+  },
+  listClip: {
+    flex: 1,
+    overflow: "hidden",
   },
   sectionHead: {
     flexDirection: "row",

@@ -26,10 +26,11 @@ function over(ms: number) {
 /**
  * A horizontal pager. The page under the finger follows it, and a
  * release past the threshold or a flick lands on the next page. The
- * live page renders `children` and keys on `index`. A neighbour on
- * screen renders `renderPreview(page)`. The screen only sets `index`:
- * one page away slides, and a longer jump cuts. A landing calls
- * `onPage(next)` once (ADR 0033, ADR 0046).
+ * live page renders `children` in one element for the pager's life, so
+ * a page keeps its state across a swipe. A neighbour on screen renders
+ * `renderPreview(page)`. The screen only sets `index`: one page away
+ * slides, and a longer jump cuts. A landing calls `onPage(next)` once
+ * (ADR 0033, ADR 0046).
  */
 export function Pager({
   index,
@@ -57,6 +58,10 @@ export function Pager({
   const pressCancel = usePressCancel();
   const reduced = useReducedMotion();
   const width = useSharedValue(0);
+  // The same width as React state, so the live page's own offset
+  // applies in the same render as its content. A shared value alone
+  // updates the track one frame later and shows a blank strip.
+  const [hostWidth, setHostWidth] = React.useState(0);
   const pos = useSharedValue(0);
   const landed = useSharedValue(0);
   // The page a settle is heading to, until it lands or a touch takes it.
@@ -175,17 +180,24 @@ export function Pager({
     .map(Number)
     .filter((rel) => rel !== live);
 
-  // The live page lays out at the track's origin. Only the track's
-  // transform carries the page position, so a page that is not the
-  // first one still lays out inside the host. Android's virtualized
-  // list clips a page's rows against its layout box, so an offscreen
-  // box would hide the rows from TalkBack (ticket 0079).
+  // The track moves through page space: a page `rel` sits at
+  // `rel * width`, so the live page's own offset plus the track's
+  // offset is always `(live - pos) * width`. The track reads only the
+  // animated position. The live page carries its `live` offset as a
+  // plain style, so a commit swaps its content and its place in one
+  // frame. It still lays out at the track's origin, which keeps every
+  // row inside the host for Android's virtualized list (ticket 0079).
   const track = useAnimatedStyle(() => ({
-    transform: [{ translateX: -(pos.value - live) * width.value }],
+    transform: [{ translateX: -pos.value * width.value }],
   }));
+  const liveShift = {
+    transform: [{ translateX: live * hostWidth }],
+  };
 
   const onLayout = (event: LayoutChangeEvent) => {
-    width.set(event.nativeEvent.layout.width);
+    const next = event.nativeEvent.layout.width;
+    width.set(next);
+    setHostWidth(next);
   };
 
   return (
@@ -196,12 +208,17 @@ export function Pager({
             <View
               key={`preview:${rel}`}
               testID={`preview:${origin + rel}`}
-              style={[styles.preview, { left: `${(rel - live) * 100}%` }]}
+              style={[styles.preview, { left: `${rel * 100}%` }]}
             >
               {renderPreview(origin + rel)}
             </View>
           ))}
-          <View key={`live:${index}`} testID="pager-live" style={fill && styles.fill}>
+          {/* One element for the pager's life. Keeping it mounted keeps
+              the page's scroll and rows across a swipe. */}
+          <View
+            testID="pager-live"
+            style={[fill && styles.fill, liveShift]}
+          >
             {children}
           </View>
         </Animated.View>
