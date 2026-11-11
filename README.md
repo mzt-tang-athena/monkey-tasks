@@ -322,6 +322,7 @@ After that:
 - 0091 reference notes on a task
 - 0092 optional quests and evergreen tasks, a discovery
 - 0093 the task editor rebuild, starting with a design
+- 0094 review the task note schema
 
 Open feature tickets:
 
