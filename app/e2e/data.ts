@@ -99,6 +99,12 @@ export const outsideNote = {
   text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-26T09:00\n---\n',
 } as const;
 
+/** A sample note whose kind is the bare value, not the link form. */
+export const bareKindNote = {
+  name: "Read the meter",
+  path: "Tasks/Read the meter.md",
+} as const;
+
 /** The editor rename. */
 export const rename = {
   from: "Call Mum",
