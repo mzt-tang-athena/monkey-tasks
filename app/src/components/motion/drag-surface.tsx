@@ -9,6 +9,7 @@ import Animated, {
 import { Overlay } from "@/components/ui/overlay-host";
 import type { Hit } from "@/lib/motion/drag-math";
 import { motion, type HoldKind } from "@/lib/motion/tokens";
+import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { shadows, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { createBridgeGuard } from "./internal/bridge";
@@ -56,6 +57,7 @@ export function createDragSurface<P, T>() {
         if (!guard.pickup(generation)) {
           return;
         }
+        recordBreadcrumb("drag-start");
         picked.current = source;
         setActive({ payload: self.payloads.get(source) as P });
       },
@@ -63,6 +65,7 @@ export function createDragSurface<P, T>() {
         if (!guard.settle(generation)) {
           return;
         }
+        recordBreadcrumb("drag-drop");
         const payload = self.payloads.get(picked.current) as P | undefined;
         setActive(null);
         const target = targetOf(self, hit);

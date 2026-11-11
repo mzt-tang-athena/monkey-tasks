@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { CaptureTarget } from "@/types/task";
+import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { useListTabs, type ListTab } from "@/stores/tasks/selectors";
 
 /**
@@ -42,10 +43,16 @@ export function useListTabState() {
     return found === -1 ? 1 : found;
   }, [targets, tab]);
 
+  const setTab = React.useCallback((next: ListTab) => {
+    recordBreadcrumb("tab", next);
+    setSelected(next);
+  }, []);
+
   const onPage = React.useCallback(
     (next: number) => {
       const name = tabs[next];
       if (name != null) {
+        recordBreadcrumb("tab", name);
         setSelected(name);
       }
     },
@@ -55,7 +62,7 @@ export function useListTabState() {
   return {
     tabs,
     tab,
-    setTab: setSelected,
+    setTab,
     targets,
     defaultTargetIndex,
     index,

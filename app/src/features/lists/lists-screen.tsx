@@ -14,6 +14,7 @@ import {
   LoadingState,
 } from "@/components/ui/list-states";
 import { useStableCallback } from "@/hooks/use-stable-callback";
+import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { useStoreMeta } from "@/stores/tasks/task-state";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
@@ -98,11 +99,13 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   // The row callbacks have one identity for the screen's life, so a
   // tick re-renders the ticked row and no other.
   const onToggle = useStableCallback((task: TaskItem) => {
+    recordBreadcrumb("tick", task.data?.title ?? task.name);
     tickHold.toggle(task, held);
   });
   // A row body press opens the task editor. The id is a SAF uri, so
   // it rides one encoded path segment.
   const onOpen = useStableCallback((task: TaskItem) => {
+    recordBreadcrumb("open", task.data?.title ?? task.name);
     router.push(`/task/${encodeURIComponent(task.id)}`);
   });
 

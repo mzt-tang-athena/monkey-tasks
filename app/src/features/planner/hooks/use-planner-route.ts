@@ -1,6 +1,7 @@
 import * as React from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useToday } from "@/hooks/use-today";
+import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import {
   parseMode,
   parsePlannerDay,
@@ -39,7 +40,10 @@ export function usePlannerRoute(): PlannerRoute {
   );
   // The writes keep their identity, so a screen can pass them down.
   const setMode = React.useCallback(
-    (next: Mode) => router.setParams({ mode: next }),
+    (next: Mode) => {
+      recordBreadcrumb("tab", `planner:${next}`);
+      router.setParams({ mode: next });
+    },
     [],
   );
   const setDay = React.useCallback(
@@ -47,8 +51,10 @@ export function usePlannerRoute(): PlannerRoute {
     [],
   );
   const openDay = React.useCallback(
-    (next: Date) =>
-      router.setParams({ day: plannerDayParam(next), mode: "day" }),
+    (next: Date) => {
+      recordBreadcrumb("tab", "planner:day");
+      router.setParams({ day: plannerDayParam(next), mode: "day" });
+    },
     [],
   );
   return { mode, day, today, setMode, setDay, openDay };
