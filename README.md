@@ -321,6 +321,7 @@ After that:
 - 0088 the journal tab, with 0089 and 0090
 - 0091 reference notes on a task
 - 0092 optional quests and evergreen tasks, a discovery
+- 0093 the task editor rebuild, starting with a design
 
 Open feature tickets:
 

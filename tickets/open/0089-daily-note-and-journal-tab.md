@@ -28,6 +28,11 @@ block or a non-bullet line. Everything else is preserved and shown
 read-only or not at all: the frontmatter, a `**To-do**` section, and
 the trailing `![[daily.base]]` embed.
 
+This format is v1. The operator expects to revise it after using it.
+Keep the parser tolerant. Unknown lines are preserved, extra inline
+tags are kept, and a block may hold any bullets. Never reject a note
+because a block has a shape the app did not write.
+
 The today view shows the blocks in file order, the newest last. A
 composer sits at the bottom with a multiline field and a send button.
 Send appends one block at the current time.
