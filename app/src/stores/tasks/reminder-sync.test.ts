@@ -5,7 +5,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 // alarm list, so a completed or deleted task cannot leave an alarm
 // behind, and a denied permission prompt cannot wipe the list.
 
-const scheduled: { when: Date; title: string }[] = [];
+const scheduled: { when: Date; title: string; body: string }[] = [];
 let permission = true;
 let cancelled = 0;
 let cancelledIds: string[] = [];
@@ -20,12 +20,12 @@ vi.mock("@/lib/notifications", () => ({
   cancelScheduled: async (id: string) => {
     cancelledIds.push(id);
   },
-  scheduleAt: async (when: Date, title: string) => {
+  scheduleAt: async (when: Date, title: string, body: string) => {
     if (failNext) {
       failNext = false;
       throw new Error("no channel");
     }
-    scheduled.push({ when, title });
+    scheduled.push({ when, title, body });
     return `id-${scheduled.length}`;
   },
 }));
@@ -37,6 +37,7 @@ function task(
   name: string,
   reminders: string[],
   completed?: string,
+  due?: string,
 ): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;
   return {
@@ -50,6 +51,7 @@ function task(
       kind: "[[tasks]]",
       created: "2026-10-20",
       reminders,
+      ...(due != null ? { due } : {}),
       ...(completed ? { completed } : {}),
     },
   };
@@ -147,5 +149,116 @@ describe("syncTaskReminders", () => {
     await expect(
       syncTaskReminders(null, task("Call Mum", [future])),
     ).resolves.toBeUndefined();
+  });
+});
+
+function at(iso: string): number {
+  const [date, time] = iso.split("T");
+  const [y, m, d] = date.split("-").map(Number);
+  const [hh, mm] = time.split(":").map(Number);
+  return new Date(y, m - 1, d, hh, mm).getTime();
+}
+
+describe("a timed due rings", () => {
+  it("schedules one alarm at the due time and says it is due", async () => {
+    const result = await syncReminders([task("Pay rent", [], undefined, future)]);
+    expect(result).toEqual({ scheduled: 1, skipped: false });
+    expect(scheduled).toHaveLength(1);
+    expect(scheduled[0].when.getTime()).toBe(at(future));
+    expect(scheduled[0].title).toBe("Pay rent");
+    expect(scheduled[0].body).toBe("Due");
+  });
+
+  it("leaves a date-only due silent", async () => {
+    const result = await syncReminders([
+      task("Pay rent", [], undefined, "2999-01-01"),
+    ]);
+    expect(result).toEqual({ scheduled: 0, skipped: true });
+    expect(scheduled).toHaveLength(0);
+  });
+
+  it("rings once when a reminder repeats the due minute", async () => {
+    await syncReminders([
+      task("Pay rent", [future], undefined, future),
+    ]);
+    expect(scheduled).toHaveLength(1);
+    expect(scheduled[0].body).toBe("Due");
+  });
+
+  it("rings a later reminder after the due, in time order", async () => {
+    const later = "2999-01-01T10:30";
+    await syncReminders([
+      task("Pay rent", [later], undefined, future),
+    ]);
+    expect(scheduled.map((alarm) => alarm.when.getTime())).toEqual([
+      at(future),
+      at(later),
+    ]);
+    expect(scheduled.map((alarm) => alarm.body)).toEqual([
+      "Due",
+      "Task reminder",
+    ]);
+  });
+
+  it("rings a reminder on a date-only due", async () => {
+    await syncReminders([
+      task("Pay rent", [future], undefined, "2999-01-01"),
+    ]);
+    expect(scheduled).toHaveLength(1);
+    expect(scheduled[0].body).toBe("Task reminder");
+  });
+
+  it("stays silent on a completed task and cancels its due alarm on a tick", async () => {
+    const open = task("Pay rent", [], undefined, future);
+    await syncReminders([open]);
+    expect(scheduled).toHaveLength(1);
+
+    const ticked: TaskItem = {
+      ...open,
+      data: { ...open.data!, completed: "2026-11-11" },
+    };
+    await syncTaskReminders(open, ticked);
+    expect(cancelledIds).toEqual(["id-1"]);
+
+    scheduled.length = 0;
+    const result = await syncReminders([ticked]);
+    expect(result).toEqual({ scheduled: 0, skipped: true });
+    expect(scheduled).toHaveLength(0);
+  });
+
+  it("reschedules the due alarm when an edit moves it", async () => {
+    const before = task("Pay rent", [], undefined, future);
+    await syncReminders([before]);
+    scheduled.length = 0;
+
+    const moved = "2999-01-01T11:00";
+    const after = task("Pay rent", [], undefined, moved);
+    await syncTaskReminders(before, after);
+
+    expect(cancelledIds).toEqual(["id-1"]);
+    expect(scheduled).toHaveLength(1);
+    expect(scheduled[0].when.getTime()).toBe(at(moved));
+    expect(scheduled[0].body).toBe("Due");
+  });
+
+  it("schedules nothing and writes no note when permission is denied", async () => {
+    permission = false;
+    const note = task("Pay rent", [], undefined, future);
+    const text = note.text;
+    const result = await syncReminders([note]);
+
+    expect(result).toEqual({ scheduled: 0, skipped: true });
+    expect(scheduled).toHaveLength(0);
+    expect(cancelled).toBe(0);
+    expect(note.text).toBe(text);
+    expect(note.data?.due).toBe(future);
+  });
+
+  it("schedules nothing for a past due", async () => {
+    const result = await syncReminders([
+      task("Pay rent", [], undefined, past),
+    ]);
+    expect(result.scheduled).toBe(0);
+    expect(scheduled).toHaveLength(0);
   });
 });

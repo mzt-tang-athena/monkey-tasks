@@ -548,7 +548,12 @@ describe("store races (ticket 0052)", () => {
     await flush();
     const successor = [...disk.keys()].find((uri) => uri.includes("2099-01-02"));
     expect(successor).toBeDefined();
-    expect(scheduledAt).toEqual([new Date(2099, 0, 2, 9, 0).getTime()]);
+    // The rollback leaves the parent open at its own timed due, which
+    // rings too; the kept successor is the second alarm.
+    expect(scheduledAt).toEqual([
+      new Date(2099, 0, 1, 9, 0).getTime(),
+      new Date(2099, 0, 2, 9, 0).getTime(),
+    ]);
   });
 
   // A Retry runs while another tap on the same row is still pending.

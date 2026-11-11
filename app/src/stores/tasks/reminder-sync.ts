@@ -12,7 +12,17 @@ import {
 } from "@/lib/notifications";
 import { TASKS_KEY, type TaskListData } from "./query";
 
-type PendingReminder = { uri: string; when: Date; title: string };
+type PendingAlarm = {
+  uri: string;
+  when: Date;
+  title: string;
+  body: string;
+};
+
+/** A moment the OS should ring, and whether it is the task's due time. */
+type AlarmTime = { when: number; due: boolean };
+
+const MINUTE_MS = 60_000;
 
 /**
  * Which alarm ids belong to which task note, so a tick can cancel that
@@ -34,37 +44,64 @@ function inTurn<T>(work: () => Promise<T>): Promise<T> {
   return next;
 }
 
-/** The future reminders on an open task, in order. */
-function reminderTimes(task: TaskItem | null): number[] {
+/**
+ * The alarms an open task should ring, in order: its timed due, then
+ * each reminder as an extra alert. A reminder in the due minute adds no
+ * second ring. A date-only due has no time of day, so it stays silent.
+ */
+function alarmTimes(task: TaskItem | null): AlarmTime[] {
   const data = task?.data;
-  // A completed task keeps its reminders in the note but rings no
-  // alarm; an unreadable note has no reminders to trust either.
+  // A completed task keeps its due and reminders in the note but rings
+  // no alarm; an unreadable note has nothing to trust either.
   if (data == null || taskIsDone(data)) {
     return [];
   }
   const now = Date.now();
-  return (data.reminders ?? [])
-    .map((value) => parseStoredDate(value))
-    .filter(
-      (parsed): parsed is NonNullable<typeof parsed> =>
-        parsed != null && parsed.date.getTime() > now,
-    )
-    .map((parsed) => parsed.date.getTime())
-    .sort((a, b) => a - b);
+  const alarms: AlarmTime[] = [];
+  const due = data.due == null ? null : parseStoredDate(data.due);
+  if (due != null && due.hasTime && due.date.getTime() > now) {
+    alarms.push({ when: due.date.getTime(), due: true });
+  }
+  for (const value of data.reminders ?? []) {
+    const parsed = parseStoredDate(value);
+    if (parsed != null && parsed.date.getTime() > now) {
+      alarms.push({ when: parsed.date.getTime(), due: false });
+    }
+  }
+  // Time order, and the due wins a shared minute.
+  alarms.sort((a, b) => a.when - b.when || Number(b.due) - Number(a.due));
+  const minutes = new Set<number>();
+  return alarms.filter((alarm) => {
+    const minute = Math.floor(alarm.when / MINUTE_MS);
+    if (minutes.has(minute)) {
+      return false;
+    }
+    minutes.add(minute);
+    return true;
+  });
 }
 
-function sameTimes(before: number[], after: number[]): boolean {
+/** A due alarm says it is due; a reminder keeps its own wording. */
+function alarmBody(alarm: AlarmTime): string {
+  return alarm.due ? "Due" : "Task reminder";
+}
+
+function sameAlarms(before: AlarmTime[], after: AlarmTime[]): boolean {
   return (
     before.length === after.length &&
-    before.every((value, index) => value === after[index])
+    before.every(
+      (alarm, index) =>
+        alarm.when === after[index].when && alarm.due === after[index].due,
+    )
   );
 }
 
 /**
  * Rebuild the OS alarm list from the task list: one exact alarm per
- * future reminder on an open task, nothing else. Reminders are absolute
- * datetimes, so the whole list can be recomputed from the notes after
- * every load instead of tracking alarms one by one.
+ * future alarm on an open task (a timed due, and each reminder), nothing
+ * else. All of them are absolute datetimes, so the whole list can be
+ * recomputed from the notes after every load instead of tracking alarms
+ * one by one.
  *
  * Alarms are best effort: the store calls this fire-and-forget, so it
  * reports what it managed and never throws.
@@ -83,10 +120,15 @@ async function rebuild(
     return { scheduled: 0, skipped: true };
   }
 
-  const pending: PendingReminder[] = [];
+  const pending: PendingAlarm[] = [];
   for (const task of tasks) {
-    for (const ms of reminderTimes(task)) {
-      pending.push({ uri: task.uri, when: new Date(ms), title: task.name });
+    for (const alarm of alarmTimes(task)) {
+      pending.push({
+        uri: task.uri,
+        when: new Date(alarm.when),
+        title: task.name,
+        body: alarmBody(alarm),
+      });
     }
   }
 
@@ -106,11 +148,11 @@ async function rebuild(
     }
     await cancelAllScheduled();
     alarmIds.clear();
-    for (const reminder of pending) {
-      const id = await scheduleAt(reminder.when, reminder.title, "Task reminder");
-      const ids = alarmIds.get(reminder.uri) ?? [];
+    for (const alarm of pending) {
+      const id = await scheduleAt(alarm.when, alarm.title, alarm.body);
+      const ids = alarmIds.get(alarm.uri) ?? [];
       ids.push(id);
-      alarmIds.set(reminder.uri, ids);
+      alarmIds.set(alarm.uri, ids);
       scheduled += 1;
     }
     return { scheduled, skipped: pending.length === 0 };
@@ -144,9 +186,9 @@ async function moveTaskAlarms(
   if (uri == null) {
     return;
   }
-  const was = reminderTimes(before);
-  const now = reminderTimes(after);
-  if (sameTimes(was, now)) {
+  const was = alarmTimes(before);
+  const now = alarmTimes(after);
+  if (sameAlarms(was, now)) {
     return;
   }
 
@@ -169,8 +211,10 @@ async function moveTaskAlarms(
       return;
     }
     const ids: string[] = [];
-    for (const ms of now) {
-      ids.push(await scheduleAt(new Date(ms), after.name, "Task reminder"));
+    for (const alarm of now) {
+      ids.push(
+        await scheduleAt(new Date(alarm.when), after.name, alarmBody(alarm)),
+      );
     }
     alarmIds.set(uri, ids);
   } catch {
