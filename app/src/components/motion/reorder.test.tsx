@@ -3,6 +3,7 @@ import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { placeBox } from "@/testing/layout";
+import { readBreadcrumbs, resetBreadcrumbs } from "@/lib/breadcrumbs";
 import { createReorderSurface, type ReorderEvent } from "./reorder";
 
 type Row = { name: string };
@@ -62,6 +63,7 @@ const wait = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout
 
 describe("createReorderSurface", () => {
   it("drops a row of a partly mounted group by its data index", async () => {
+    resetBreadcrumbs();
     const onReorder = vi.fn();
     const rows = [
       { name: "Delta", index: 3 },
@@ -107,6 +109,10 @@ describe("createReorderSurface", () => {
 
     expect(onReorder.mock.calls).toEqual([
       [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3 }],
+    ]);
+    expect(readBreadcrumbs().map((crumb) => [crumb.kind, crumb.detail])).toEqual([
+      ["drag-start", undefined],
+      ["drag-drop", "Today 4->3"],
     ]);
   });
 

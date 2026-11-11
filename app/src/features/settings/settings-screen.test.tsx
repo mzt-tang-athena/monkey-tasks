@@ -4,6 +4,7 @@ import { Linking, Text } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadSettings } from "@/lib/settings";
 import { useSetting } from "@/lib/settings-store";
+import { reportCrash } from "@/lib/crash-log";
 import { THEMES } from "@/theme/palettes";
 import { ThemeProvider } from "@/theme/theme-provider";
 import { touchTarget } from "@/theme/tokens";
@@ -159,6 +160,20 @@ describe("SettingsScreen", () => {
     expect(spy.push).toHaveBeenCalledWith("/dev");
     expect(open).toHaveBeenCalledWith(
       "https://github.com/mzt-tang-athena/monkey-tasks",
+    );
+  });
+
+  it("shows the crash log in Diagnostics", () => {
+    reportCrash({
+      kind: "js",
+      message: "settings boom",
+      stack: "Error: settings boom",
+    });
+    mount();
+
+    expect(screen.getByTestId("crash-log-summary").textContent).toContain("1 crash");
+    expect(screen.getByTestId("crash-log-entry").textContent).toContain(
+      "message: settings boom",
     );
   });
 

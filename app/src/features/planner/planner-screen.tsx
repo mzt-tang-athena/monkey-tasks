@@ -13,6 +13,7 @@ import { useTheme } from "@/theme/theme-provider";
 import { useTaskList, useStoreMeta } from "@/stores/tasks/task-state";
 import { usePatchTask } from "@/stores/tasks/mutations/use-patch-task";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
+import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { useRefreshTasks } from "@/stores/tasks/use-vault-read";
 import { useOpenTasks } from "@/stores/tasks/selectors";
 import { layout } from "./planner-layout";
@@ -82,8 +83,17 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   const [taskForm, changeForm] = useSetting("taskForm");
 
   const openTask = React.useCallback((task: TaskItem) => {
+    recordBreadcrumb("open", task.data?.title ?? task.name);
     router.push(`/task/${encodeURIComponent(task.id)}`);
   }, []);
+
+  const toggle = React.useCallback(
+    (task: TaskItem) => {
+      recordBreadcrumb("tick", task.data?.title ?? task.name);
+      void toggleTask(task);
+    },
+    [toggleTask],
+  );
 
   const { source, cycle, choose, anchor, openMenu, closeMenu } =
     usePlannerSource();
@@ -114,10 +124,10 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
       openSourceMenu: openMenu,
       taskForm,
       changeForm,
-      toggle: toggleTask,
+      toggle,
       open: openTask,
     }),
-    [today, source, cycle, anchor, openMenu, taskForm, changeForm, toggleTask, openTask],
+    [today, source, cycle, anchor, openMenu, taskForm, changeForm, toggle, openTask],
   );
 
   return (

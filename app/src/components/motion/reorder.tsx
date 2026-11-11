@@ -24,6 +24,7 @@ import {
   type RowSpan,
 } from "@/lib/motion/drag-math";
 import { holds, motion } from "@/lib/motion/tokens";
+import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { radius, shadows, touchTarget, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { createBridgeGuard, toJS } from "./internal/bridge";
@@ -228,6 +229,7 @@ export function createReorderSurface<P>() {
         if (!guard.pickup(generation)) {
           return;
         }
+        recordBreadcrumb("drag-start");
         const payload = self.payloads.get(source) as P | undefined;
         if (payload !== undefined) {
           setActive({ payload });
@@ -247,6 +249,7 @@ export function createReorderSurface<P>() {
         if (!guard.settle(generation)) {
           return;
         }
+        recordBreadcrumb("drag-drop", `${group} ${from}->${to}`);
         const payload = self.payloads.get(source) as P | undefined;
         setActive(null);
         if (payload !== undefined && from !== to) {

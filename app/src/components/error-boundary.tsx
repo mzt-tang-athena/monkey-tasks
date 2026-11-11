@@ -1,6 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Pressable } from "@/components/ui/pressable";
+import { reportCrash } from "@/lib/crash-log";
 import { fonts, radius, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 
@@ -33,8 +34,14 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    // Keep the report in the console too: the panel is for the user,
-    // the console is for whoever reads the crash next.
+    // The panel is for the user, the log is for whoever reads the
+    // crash next, and the console keeps the component stack.
+    reportCrash({
+      kind: "render",
+      label: this.props.label ?? "app",
+      message: error.message || String(error),
+      stack: error.stack,
+    });
     console.error(
       this.props.label ? `Render error in ${this.props.label}` : "Render error",
       error,

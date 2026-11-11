@@ -2,7 +2,6 @@ import * as React from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Constants from "expo-constants";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
@@ -11,6 +10,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { useVault } from "@/lib/vault/vault-provider";
 import { useSetting } from "@/lib/settings-store";
+import { appVersion, buildChannel } from "@/lib/build-info";
 import type { SortMode, TaskForm } from "@/lib/settings";
 import {
   measure,
@@ -23,6 +23,7 @@ import {
 } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { ThemePicker } from "./components/theme-picker";
+import { CrashLogCard } from "./components/crash-log-card";
 
 const REPO = "https://github.com/mzt-tang-athena/monkey-tasks";
 
@@ -35,12 +36,6 @@ const formOptions: Segment<TaskForm>[] = [
   { key: "rows", label: "Rows" },
   { key: "pills", label: "Chips" },
 ];
-
-/** The build channel. EAS does not put its channel on the manifest, so
-    the dev flag is the split the app can see. */
-function buildChannel(): string {
-  return typeof __DEV__ !== "undefined" && __DEV__ ? "development" : "production";
-}
 
 /**
  * The settings screen. It owns the palette picker and the two settings
@@ -56,7 +51,7 @@ export default function SettingsScreen() {
   const [taskForm, setTaskForm] = useSetting("taskForm");
   const vault = useVault();
 
-  const version = Constants.expoConfig?.version ?? "unknown";
+  const version = appVersion();
   const channel = buildChannel();
   const root = vault.root ?? "Not granted";
 
@@ -114,6 +109,8 @@ export default function SettingsScreen() {
         </Section>
 
         <Section label="Diagnostics">
+          <CrashLogCard />
+          <Divider />
           <Pressable
             role="button"
             accessibilityLabel="Open diagnostics"
