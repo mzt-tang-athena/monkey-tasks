@@ -3,7 +3,7 @@ id: 0080
 title: A drag right after a tick crashes the app
 created: 2026-11-11
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
