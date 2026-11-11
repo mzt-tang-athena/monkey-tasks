@@ -3,7 +3,7 @@ id: 0081
 title: Keep a crash report on the phone
 created: 2026-11-11
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: [0084]
 ---
@@ -35,16 +35,34 @@ reaches JS, record the limit here and rely on the 0080 fix plus a
 worklet precondition that reports through `runOnJS` before it throws.
 Do not claim a native crash is captured unless a run proves it.
 
+Investigated on 2026-11-11 against `react-native-worklets` 0.13.0, the
+runtime Reanimated 4.7.1 installs. The package exports no worklet error
+hook. `WorkletRuntime::invoke` catches a `jsi::JSError` only inside
+`#ifndef NDEBUG`, then bubbles it to the React Native runtime through
+`ErrorUtils.reportFatalError`. A release build compiles the catch out,
+so the exception crosses C++ and the process dies before any JS handler
+runs. That is the 0080 crash. So the global handler captures JS-thread
+and render errors only. The 0080 fix stays the guard on that path, and
+this ticket adds no broad worklet guard.
+
 ## Acceptance
 
-- [ ] A forced JS error writes one entry with time, version and stack.
-      The Diagnostics section shows it.
-- [ ] A forced render error writes one entry with its screen label.
-- [ ] The log caps at 200 KB and rotates.
-- [ ] Copy and Share work on Android. Nothing is uploaded.
+- [x] A forced JS error writes one entry with time, version and stack.
+      The Diagnostics section shows it. Proven by
+      `src/lib/errors.test.ts` and `e2e/specs/crash-log.spec.ts`.
+- [x] A forced render error writes one entry with its screen label.
+      Proven by `src/components/error-boundary.test.tsx`.
+- [x] The log caps at 200 KB and rotates. Proven by
+      `src/lib/crash-log.test.ts`.
+- [ ] Copy and Share work on Android. Nothing is uploaded. Copy and
+      Share are wired and pass on the web preview and in component
+      tests. No Android run: no device was up, and the new
+      `expo-clipboard` module needs a rebuilt APK.
 - [ ] A run of the 0080 native crash records what is and is not
-      captured.
-- [ ] No vault writes.
+      captured. Not run on a device. The limit above comes from the
+      worklet runtime source, and PR 113 holds the 0080 run.
+- [x] No vault writes. Proven by `src/lib/crash-log.test.ts` and the
+      vault comparison in `e2e/specs/crash-log.spec.ts`.
 
 ## Outcome
 
