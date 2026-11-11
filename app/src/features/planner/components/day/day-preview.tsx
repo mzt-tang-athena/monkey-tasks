@@ -62,6 +62,7 @@ export function DayPreview({
       <View style={[layout.dayPage, styles.preview]} pointerEvents="none">
         <DayHeading date={date} />
         <SplitStill
+          testID="day-preview-split"
           fraction={fraction}
           minTop={motion.split.minPane}
           minBottom={motion.split.minPane}

@@ -199,7 +199,10 @@ export function Split({
                 onHoverOut: () => setHot(false),
               } as object)}
             >
-            <Animated.View style={[styles.bar, barStyle]} />
+            <Animated.View
+              testID={testID == null ? undefined : `${testID}:bar`}
+              style={[styles.bar, barStyle]}
+            />
             </Animated.View>
           </GestureDetector>
         </View>
@@ -226,8 +229,13 @@ export function SplitStill(props: Omit<SplitProps, "onResize">) {
       </View>
       <View style={styles.divider}>
         <View style={styles.line} />
-        <View style={styles.grip}>
-          <View style={[styles.bar, styles.barRest]} />
+        <View style={styles.gripSlot}>
+          <View style={styles.grip}>
+            <View
+              testID={props.testID == null ? undefined : `${props.testID}:bar`}
+              style={[styles.bar, styles.barRest]}
+            />
+          </View>
         </View>
       </View>
       <View
