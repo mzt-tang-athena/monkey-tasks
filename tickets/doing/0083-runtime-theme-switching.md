@@ -3,7 +3,7 @@ id: 0083
 title: Switch themes at runtime on the phone
 created: 2026-11-11
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
