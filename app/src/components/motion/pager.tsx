@@ -26,10 +26,11 @@ function over(ms: number) {
 /**
  * A horizontal pager. The page under the finger follows it, and a
  * release past the threshold or a flick lands on the next page. The
- * live page renders `children` and keys on `index`. A neighbour on
- * screen renders `renderPreview(page)`. The screen only sets `index`:
- * one page away slides, and a longer jump cuts. A landing calls
- * `onPage(next)` once (ADR 0033, ADR 0046).
+ * live page renders `children` in one element for the pager's life, so
+ * a page keeps its state across a swipe. A neighbour on screen renders
+ * `renderPreview(page)`. The screen only sets `index`: one page away
+ * slides, and a longer jump cuts. A landing calls `onPage(next)` once
+ * (ADR 0033, ADR 0046).
  */
 export function Pager({
   index,
@@ -201,7 +202,11 @@ export function Pager({
               {renderPreview(origin + rel)}
             </View>
           ))}
-          <View key={`live:${index}`} testID="pager-live" style={fill && styles.fill}>
+          {/* One element for the pager's life. Keeping it mounted keeps
+              the page's scroll and rows across a swipe. The content
+              swaps in the same commit as the track rest, because the
+              live page lays out at the track's origin (ticket 0079). */}
+          <View testID="pager-live" style={fill && styles.fill}>
             {children}
           </View>
         </Animated.View>
