@@ -3,7 +3,7 @@ title: Kind accepts both shapes
 created: 2026-11-11
 priority: normal
 assignee: omp
-pr:
+pr: 128
 depends: []
 ---
 
@@ -34,15 +34,35 @@ never changes a note that is only read.
 
 ## Acceptance
 
-- [ ] A fixture with `kind: tasks` reads, and its parsed value is
+- [x] A fixture with `kind: tasks` reads, and its parsed value is
       `[[tasks]]`.
-- [ ] The same fixture with the link form reads unchanged.
-- [ ] Lists and deeds accept both shapes.
-- [ ] Every write path emits the link form, proven by a test.
-- [ ] The vault is not rewritten.
-- [ ] `npx tsc --noEmit`, `npx eslint src scripts e2e
+- [x] The same fixture with the link form reads unchanged.
+- [x] Lists and deeds accept both shapes.
+- [x] Every write path emits the link form, proven by a test.
+- [x] The vault is not rewritten.
+- [x] `npx tsc --noEmit`, `npx eslint src scripts e2e
       --max-warnings 0`, `npx vitest run` and the e2e pass.
 
 ## Outcome
 
-(filled in before moving to done/)
+The contracts schema accepts the bare kind and the link form for tasks,
+deeds and lists, and returns the link form. One `kindLink` helper serves
+all three schemas. contracts PR 14 merged that change, and PR 15 closed
+the contracts ticket. Four new tests failed before the change with
+`expected "[[tasks]]"`, and the contracts checks pass.
+
+The submodule moves to the merged contracts commit. contracts main now
+ships a built package, so the app builds the pinned package into `dist`
+from `postinstall`. ADR 0007 records why, and ticket 0077 removes that
+wiring with the submodule.
+
+A sample note, `Tasks/Read the meter.md`, carries `kind: tasks`. It reads
+as a task row, a Playwright test ticks it, and the note keeps its bare
+kind and gains a `completed` date. The capture and spawn tests assert
+the link form on every note the app writes. The task editor still
+compares `kind` to `[[tasks]]`, which is the parsed form.
+
+Gates: `npx tsc --noEmit` passes, `npx eslint src scripts e2e
+--max-warnings 0` passes, `npx vitest run` passes 819 tests, and
+`E2E_PORT=8603 npm run e2e` passes 440 tests with 26 skipped and none
+failed. The app PR is 128 and waits for the operator to merge it.
