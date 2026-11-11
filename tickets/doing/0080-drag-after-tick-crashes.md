@@ -103,10 +103,12 @@ still needs mount-order geometry. No ADR.
 The head APK crashes on the recipe above. The fixed APK, commit
 `030a267`, runs the same recipe at the same tail and keeps its process.
 
-The tick then drag sequence ran 23 times on the fixed APK, across two
-campaigns on the 405-task group and a nested run on the sample vault,
-plus 5 rapid tick and untick pairs followed by a drag. No crash, no
-fatal log line.
+The tick then drag sequence ran 15 times on the fixed APK, at the tail
+of a 30-task group. Every tick is proven by the Completed count, which
+rose from 2 to 17 one run at a time. One process throughout, no fatal
+log line. Five rapid tick and untick pairs, 60 ms apart and each
+followed by a drag, also ran with no crash and left their row open. The
+same tail recipe on the 405-task group kept its process.
 
 A drop after a tick writes the order. After ticking `Groceries`, a drag
 of `Supplements` gave `order: 1` on `Supplements`, `order: 2` on `Plan
