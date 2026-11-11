@@ -33,7 +33,7 @@ The active palette flows through a React context.
 - A style sheet becomes a factory. `const styles = StyleSheet.create`
   turns into `const makeStyles = (colors: Palette) => ({ styles:
   StyleSheet.create })`, and the component calls the hook. A codemod
-  does the rewrite for all 45 files, so the pattern is uniform and a
+  does the rewrite for all 43 files, so the pattern is uniform and a
   reviewer can rerun it.
 - Lint fails an import of `colors` from `@/theme/tokens`. The module
   constant is gone, so nothing can bake a palette in again.
