@@ -25,22 +25,24 @@ for motion in on off; do
   "$drive" shot "swipe-motion-$motion-after" >/dev/null
 done
 "$drive" motion on >/dev/null
+# The restart lands on Main with no row yet; wait before reading one.
+"$drive" wait "task-row:$task" 20 >/dev/null
 
 "$drive" note "Tasks/$task.md" before >/dev/null
 if completed before; then
   echo "$task is already done. Relaunch for a fresh vault." >&2
   exit 1
 fi
-read -r x y _ < <("$drive" bounds "task-row:$task>>mark done")
+read -r x y _ < <("$drive" bounds "task-row:$task>>$task")
 "$drive" shot tick-before >/dev/null
 "$drive" record tick 4 tap "@$x,$y" >/dev/null
-"$drive" scroll-to "task-row:$task>>mark not done" >/dev/null
+"$drive" scroll-to "task-row:$task>>$task" >/dev/null
 "$drive" shot tick-after >/dev/null
 "$drive" note "Tasks/$task.md" ticked >/dev/null
 completed ticked || { echo "the note did not gain completed:" >&2; exit 1; }
 
-"$drive" tap "task-row:$task>>mark not done" >/dev/null
-"$drive" scroll-to "task-row:$task>>mark done" up >/dev/null
+"$drive" tap "task-row:$task>>$task" >/dev/null
+"$drive" scroll-to "task-row:$task>>$task" up >/dev/null
 "$drive" shot untick-after >/dev/null
 "$drive" note "Tasks/$task.md" unticked >/dev/null
 if completed unticked; then

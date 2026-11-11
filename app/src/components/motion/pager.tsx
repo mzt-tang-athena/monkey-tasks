@@ -169,19 +169,24 @@ export function Pager({
     }),
   );
 
-  const track = useAnimatedStyle(() => ({
-    transform: [{ translateX: -pos.value * width.value }],
-  }));
-
-  const onLayout = (event: LayoutChangeEvent) => {
-    width.set(event.nativeEvent.layout.width);
-  };
-
   const live = index - origin;
   const previews = visible
     .split(",")
     .map(Number)
     .filter((rel) => rel !== live);
+
+  // The live page lays out at the track's origin. Only the track's
+  // transform carries the page position, so a page that is not the
+  // first one still lays out inside the host. Android's virtualized
+  // list clips a page's rows against its layout box, so an offscreen
+  // box would hide the rows from TalkBack (ticket 0079).
+  const track = useAnimatedStyle(() => ({
+    transform: [{ translateX: -(pos.value - live) * width.value }],
+  }));
+
+  const onLayout = (event: LayoutChangeEvent) => {
+    width.set(event.nativeEvent.layout.width);
+  };
 
   return (
     <GestureDetector gesture={gesture}>
@@ -191,12 +196,12 @@ export function Pager({
             <View
               key={`preview:${rel}`}
               testID={`preview:${origin + rel}`}
-              style={[styles.preview, { left: `${rel * 100}%` }]}
+              style={[styles.preview, { left: `${(rel - live) * 100}%` }]}
             >
               {renderPreview(origin + rel)}
             </View>
           ))}
-          <View key={`live:${index}`} style={[fill && styles.fill, { left: `${live * 100}%` }]}>
+          <View key={`live:${index}`} testID="pager-live" style={fill && styles.fill}>
             {children}
           </View>
         </Animated.View>
