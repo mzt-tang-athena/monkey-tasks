@@ -252,6 +252,14 @@ test.describe("touch targets", () => {
     await expectTargets(page);
   });
 
+  test("Settings", async ({ page }) => {
+    await openLists(page);
+    await press(page, page.getByRole("button", { name: "list menu" }));
+    await press(page, page.getByRole("menuitem", { name: "Settings" }));
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    await expectTargets(page);
+  });
+
   test("the month cell reaches 44 by 44 at 360pt", async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 640 });
     await openPlanner(page, "month");
