@@ -44,7 +44,7 @@ export function ThemePicker() {
             onPress={() => setTheme(name)}
             style={({ pressed }) => [
               styles.row,
-              index === 0 ? styles.first : styles.divider,
+              index > 0 && styles.divider,
               checked && styles.checked,
               pressed && styles.pressed,
             ]}
