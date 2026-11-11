@@ -3,7 +3,7 @@ id: 0085
 title: A command pane that slides down
 created: 2026-11-11
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: [0084]
 ---
