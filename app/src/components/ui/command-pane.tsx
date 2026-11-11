@@ -111,20 +111,6 @@ export function CommandPane({
     ],
   }));
 
-  React.useEffect(() => {
-    if (!open || !present) {
-      return;
-    }
-    input.current?.focus?.();
-  }, [open, present]);
-
-  React.useEffect(() => {
-    if (!open || !present) {
-      return;
-    }
-    input.current?.focus?.();
-  }, [open, present]);
-
   if (!present) {
     return null;
   }
