@@ -4,7 +4,7 @@ title: A settings screen
 created: 2026-11-11
 priority: normal
 assignee: opencode
-pr:
+pr: 119
 depends: [0083]
 ---
 
