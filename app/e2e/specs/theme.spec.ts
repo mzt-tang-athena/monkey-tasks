@@ -48,15 +48,23 @@ async function expectColor(page: Page, testId: string, hex: string, where: strin
     .toBe(rgb(hex));
 }
 
-async function scan(page: Page, where: string) {
-  const result = await new AxeBuilder({ page }).analyze();
+async function scan(page: Page, where: string, include?: string) {
+  const builder = new AxeBuilder({ page });
+  if (include != null) {
+    builder.include(include);
+  }
+  const result = await builder.analyze();
   const bad = result.violations.filter(
     (finding) => finding.impact === "serious" || finding.impact === "critical",
   );
   expect(
     bad.map((finding) => ({
       id: finding.id,
-      nodes: finding.nodes.map((node) => node.target.join(" ")),
+      nodes: finding.nodes.map((node) => ({
+        target: node.target.join(" "),
+        html: node.html,
+        why: node.any.map((check) => check.message),
+      })),
     })),
     where,
   ).toEqual([]);
@@ -165,7 +173,9 @@ test.describe("every palette", () => {
       await expect(
         page.getByRole("dialog", { name: "Add a task" }),
       ).toBeVisible();
-      await scan(page, `${name} capture sheet`);
+      // The page behind a modal is inert and dimmed on purpose, so the
+      // sheet is the surface under test.
+      await scan(page, `${name} capture sheet`, '[role="dialog"]');
     });
   }
 });
