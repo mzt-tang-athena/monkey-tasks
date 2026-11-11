@@ -652,6 +652,36 @@ test.describe("with the mouse", () => {
     );
   });
 
+  test("the still split grip sits where the live one does", async ({ page }, testInfo) => {
+    test.skip(!isMotion(testInfo), "reduce motion never mounts a preview");
+    await page.goto("/planner");
+    await expect(page.getByTestId("day-heading")).toBeVisible();
+    const pager = await pagerBox(page, "day-pager");
+
+    await pauseClock(page);
+    await mouseHold(
+      page,
+      page.getByTestId("day-pager"),
+      -Math.round(pager.width * holdShare),
+      async () => {
+        await frame(page);
+        await expect(page.getByTestId("preview:1")).toBeVisible();
+        const centre = async (root: string, bar: string) => {
+          const box = await page.getByTestId(root).boundingBox();
+          const mark = await page.getByTestId(bar).boundingBox();
+          if (box == null || mark == null) {
+            throw new Error(`${bar} has no box`);
+          }
+          return mark.x + mark.width / 2 - box.x;
+        };
+        const still = await centre("day-preview-split", "day-preview-split:bar");
+        const live = await centre("day-split", "day-split:bar");
+        expect(Math.abs(still - live), "the preview and the live grip share a centre").toBeLessThanOrEqual(1);
+      },
+    );
+    await page.clock.resume();
+  });
+
   test("the day preview matches the landed page", async ({ page }, testInfo) => {
     test.skip(!isMotion(testInfo), "reduce motion never mounts a preview");
     await dayScreenshots(page, testInfo, (target, dx, side, during) =>
