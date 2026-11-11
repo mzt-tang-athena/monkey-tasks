@@ -48,6 +48,10 @@ export default defineConfig({
         find: "expo-file-system/legacy",
         replacement: `${src}/testing/expo-file-system-stub.ts`,
       },
+      {
+        find: /^expo-clipboard$/,
+        replacement: `${src}/testing/expo-clipboard-stub.ts`,
+      },
     ],
   },
   test: {

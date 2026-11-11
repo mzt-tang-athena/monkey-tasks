@@ -11,10 +11,12 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { OverlayHost } from "@/components/ui/overlay-host";
 import { ThemeProvider } from "@/theme/theme-provider";
 import { installErrorAlert } from "@/lib/errors";
+import { installCrashTestHooks } from "@/lib/crash-test-hooks";
 
 // Before anything renders: a release build closes on the first
 // uncaught error, and a closed app cannot report what broke.
 installErrorAlert();
+installCrashTestHooks();
 
 export default function RootLayout() {
   // One client per app instance. Building it during render would throw the
