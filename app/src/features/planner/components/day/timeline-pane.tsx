@@ -1,7 +1,10 @@
 import * as React from "react";
 import { StyleSheet, View } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { MotionScrollView } from "@/components/motion/scroll-view";
+import {
+  MotionScrollView,
+  type MotionScrollRef,
+} from "@/components/motion/scroll-view";
 import { SectionHeader } from "@/components/ui/section-header";
 import { layout } from "../../planner-layout";
 import { Timeline } from "../timeline";
@@ -19,6 +22,8 @@ export const TimelinePane = React.memo(function TimelinePane({
   copy = false,
   onScrollTop,
   scrollTop,
+  restorePage,
+  restoreTop,
 }: {
   /** The day's tasks that carry a time. */
   tasks: TaskItem[];
@@ -30,7 +35,21 @@ export const TimelinePane = React.memo(function TimelinePane({
   onScrollTop?: (y: number) => void;
   /** The live offset the still copy draws at. */
   scrollTop?: number;
+  /** The page whose saved offset the live scroller restores. */
+  restorePage?: number;
+  restoreTop?: number;
 }) {
+  const live = React.useRef<MotionScrollRef>(null);
+  // A page change swaps the content and restores that page's offset
+  // before paint, so the landing matches the preview.
+  React.useLayoutEffect(() => {
+    if (restoreTop === undefined) {
+      return;
+    }
+    live.current?.scrollTo({ y: restoreTop, animated: false });
+    onScrollTop?.(restoreTop);
+  }, [restorePage, restoreTop, onScrollTop]);
+
   const ruler = (
     <Timeline
       tasks={tasks}
@@ -52,6 +71,7 @@ export const TimelinePane = React.memo(function TimelinePane({
         </View>
       ) : (
         <MotionScrollView
+          ref={live}
           testID="timeline-scroller"
           style={layout.paneScroll}
           showsVerticalScrollIndicator={false}

@@ -47,6 +47,8 @@ export const TaskListSection = React.memo(function TaskListSection({
   footer,
   style,
   onScrollTop,
+  restorePage,
+  restoreTop,
 }: {
   /** The mode and the day the source toggle names its period from. */
   mode: Mode;
@@ -58,9 +60,23 @@ export const TaskListSection = React.memo(function TaskListSection({
   style?: StyleProp<ViewStyle>;
   /** The scroller's offset, so a preview can draw where it lands. */
   onScrollTop?: (y: number) => void;
+  /** The page whose saved offset the list restores. */
+  restorePage?: number;
+  restoreTop?: number;
 }) {
   const { taskForm, toggle, open } = usePlannerList();
   const pills = taskForm === "pills" && tasks.length > 0;
+  const list = React.useRef<FlatList<TaskItem>>(null);
+
+  // A page change swaps the rows and restores that page's offset
+  // before paint, so the landing matches the preview.
+  React.useLayoutEffect(() => {
+    if (restoreTop === undefined) {
+      return;
+    }
+    list.current?.scrollToOffset({ offset: restoreTop, animated: false });
+    onScrollTop?.(restoreTop);
+  }, [restorePage, restoreTop, onScrollTop]);
 
   const renderItem = React.useCallback<ListRenderItem<TaskItem>>(
     ({ item }) => (
@@ -80,6 +96,7 @@ export const TaskListSection = React.memo(function TaskListSection({
 
   return (
     <FlatList
+      ref={list}
       style={style}
       data={taskForm === "rows" ? tasks : noTasks}
       keyExtractor={taskKey}

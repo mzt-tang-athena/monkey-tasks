@@ -24,6 +24,9 @@ export const DayPage = React.memo(function DayPage({
   onResize,
   onTimelineScroll,
   onListScroll,
+  restorePage,
+  restoreTimeline,
+  restoreList,
 }: {
   date: Date;
   today: Date;
@@ -38,6 +41,10 @@ export const DayPage = React.memo(function DayPage({
       landed page will stand. */
   onTimelineScroll?: (y: number) => void;
   onListScroll?: (y: number) => void;
+  /** The page whose saved offsets the panes restore on the commit. */
+  restorePage?: number;
+  restoreTimeline?: number;
+  restoreList?: number;
 }) {
   return (
     <View style={layout.dayPage}>
@@ -54,6 +61,8 @@ export const DayPage = React.memo(function DayPage({
             isToday={isSameDay(date, today)}
             now={now}
             onScrollTop={onTimelineScroll}
+            restorePage={restorePage}
+            restoreTop={restoreTimeline}
           />
         }
         bottom={
@@ -62,6 +71,8 @@ export const DayPage = React.memo(function DayPage({
             tasks={rows.sectionTasks}
             overdue={rows.overdue}
             onScrollTop={onListScroll}
+            restorePage={restorePage}
+            restoreTop={restoreList}
           />
         }
       />

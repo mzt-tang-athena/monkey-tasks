@@ -70,16 +70,31 @@ export function DaySpread({
     [tasks, date, today, source, taskForm],
   );
 
-  // The live panes' scroll offsets. A swipe keeps the same page, so
-  // the neighbour preview draws at these offsets and the landing
-  // moves nothing vertically.
-  const scroll = React.useRef({ timeline: 0, list: 0 });
-  const onTimelineScroll = React.useCallback((y: number) => {
-    scroll.current.timeline = y;
-  }, []);
-  const onListScroll = React.useCallback((y: number) => {
-    scroll.current.list = y;
-  }, []);
+  // Each day keeps its own scroll. A page starts at the top the first
+  // time it shows, and returns to its saved offset on a later visit.
+  // The neighbour preview draws at the saved offset of the page it
+  // becomes, so the landing moves nothing vertically.
+  // The map mutates in place. A scroll must not re-render the day: it
+  // only records where the page stands for its next visit.
+  const [offsets] = React.useState(
+    () => new Map<number, { timeline: number; list: number }>(),
+  );
+  const saved = React.useCallback(
+    (page: number) => offsets.get(page) ?? { timeline: 0, list: 0 },
+    [offsets],
+  );
+  const restore = saved(index);
+  const store = React.useCallback(
+    (pane: "timeline" | "list", y: number) => {
+      offsets.set(index, { ...saved(index), [pane]: y });
+    },
+    [index, offsets, saved],
+  );
+  const onTimelineScroll = React.useCallback(
+    (y: number) => store("timeline", y),
+    [store],
+  );
+  const onListScroll = React.useCallback((y: number) => store("list", y), [store]);
 
   const onPage = React.useCallback(
     (next: number) => onSelectDay(addDays(origin, next)),
@@ -109,7 +124,7 @@ export function DaySpread({
               tasks={tasks}
               now={now}
               fraction={fraction}
-              scroll={scroll.current}
+              scroll={saved(page)}
             />
           )}
           fill
@@ -123,6 +138,9 @@ export function DaySpread({
             onResize={onResize}
             onTimelineScroll={onTimelineScroll}
             onListScroll={onListScroll}
+            restorePage={index}
+            restoreTimeline={restore.timeline}
+            restoreList={restore.list}
           />
         </Pager>
       </View>
