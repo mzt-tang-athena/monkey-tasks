@@ -122,3 +122,20 @@ needs its own.
 
 Web gates: `tsc` clean, `eslint` clean, `vitest` 81 files and 727 tests
 passed, `e2e` 365 passed and 25 skipped in 11.6m.
+
+### Evidence limits
+
+The verifier of PR #113 found that the saved folder does not carry
+every claim above. It has the checkpoints `run5`, `run10`, `run15` and
+`pairs`, the screenshots, and the note read-back under
+`app/build/verify/evidence/android-20261111-114932` and
+`.../android-20261111-101318`. It has no logcat file, so the crash
+stack and the "no fatal line" result come from the run's terminal and
+were not saved. The Completed count in the saved dumps stays at 12, so
+the rise from 2 to 17 was observed live but is not in the folder.
+One-process continuity is observed, not recorded.
+
+The repeatable proof is the component test. It mounts two of five rows
+and fails on `b3acdb1` with the same `slotTops` throw, then passes on
+the fix. The emulator run is supporting evidence. The phone pass stays
+with the operator.
