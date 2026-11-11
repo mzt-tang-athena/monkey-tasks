@@ -4,7 +4,7 @@ title: A day or month swipe remounts the page
 created: 2026-11-11
 priority: high
 assignee: omp
-pr:
+pr: 110
 depends: []
 ---
 
@@ -53,7 +53,7 @@ and keep the day and month fix.
 
 ## Outcome
 
-Fixed on 2026-11-11 on `perf/0087-pager-remount`. Pull request #NN.
+Fixed on 2026-11-11 on `perf/0087-pager-remount`. Pull request #110.
 
 The live page remounted because its View keyed on `index`. A test child
 counted 2 mounts across one swipe on head. It counts 1 after the fix.
