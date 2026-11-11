@@ -3,7 +3,7 @@ id: 0086
 title: Reorder from the grip only, with screen reader steps
 created: 2026-11-11
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
