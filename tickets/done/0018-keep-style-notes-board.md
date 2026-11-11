@@ -27,3 +27,10 @@ only.
 - [ ] a masonry board renders vault notes as cards
 - [ ] plus creates an inbox note with timestamp title, body first
 - [ ] an explicitly named title wins over the timestamp
+
+## Outcome
+
+Superseded by `0095-notes-tab-from-inbox` on 2026-11-11. The idea is
+the same. The newer ticket carries the current spec, the title rule and
+the design questions. No code shipped from this ticket, and its
+acceptance items moved to 0095.

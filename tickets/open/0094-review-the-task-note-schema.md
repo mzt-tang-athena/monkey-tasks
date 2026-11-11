@@ -68,12 +68,37 @@ Decisions to settle:
 Deliverable: an ADR with the accepted changes and a migration note.
 Split the code into child tickets. Never rewrite the vault in bulk.
 
+## Decisions
+
+The operator answered on 2026-11-11.
+
+- `completed` gets a time. Accept a datetime, write a local timestamp,
+  and keep old dates valid. `created` gets the same treatment. The app
+  already writes a datetime for `created`; keep old dates valid.
+- A timed `due` rings. `reminders` holds extra alerts. The weight of a
+  reminder is in `20261111-reminder-weight`.
+- `kind`. Accept both shapes in the parser, and always write the link
+  form from the app. No new wikilink kinds.
+- `title`. Keep it and document why it exists.
+- Deeds. Do not leave them out. They should integrate with tasks, and
+  perhaps dissolve into them. Spike `20261111-deeds-into-tasks`.
+- Priority. No vague low, medium or high. The need versus dismissible
+  idea is not that field. It is discussed in
+  `20261111-reminder-weight`.
+- Subtasks. No `parent` now. If they appear later, build them from
+  lists and references, not a new field today.
+- References. No extra rules for a proper reference yet. Revisit when
+  a case needs detection.
+- `lists` and `order`. One list or many, and what order means, is in
+  `20261111-list-membership-and-order`.
+
 ## Acceptance
 
 - [ ] Every field has a verdict: keep, change, remove or add.
 - [ ] An ADR records the accepted changes and the rejected ones.
 - [ ] The parser still reads every old shape, with a fixture for each.
 - [ ] Each accepted change is a child ticket with its own migration.
+- [ ] The three discussion tickets are decided or dropped.
 - [ ] No bulk rewrite of the vault.
 
 ## Outcome
