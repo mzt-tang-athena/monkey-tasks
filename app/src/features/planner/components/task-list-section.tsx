@@ -46,6 +46,7 @@ export const TaskListSection = React.memo(function TaskListSection({
   header,
   footer,
   style,
+  onScrollTop,
 }: {
   /** The mode and the day the source toggle names its period from. */
   mode: Mode;
@@ -55,6 +56,8 @@ export const TaskListSection = React.memo(function TaskListSection({
   header?: React.ReactNode;
   footer?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  /** The scroller's offset, so a preview can draw where it lands. */
+  onScrollTop?: (y: number) => void;
 }) {
   const { taskForm, toggle, open } = usePlannerList();
   const pills = taskForm === "pills" && tasks.length > 0;
@@ -82,6 +85,12 @@ export const TaskListSection = React.memo(function TaskListSection({
       keyExtractor={taskKey}
       renderItem={renderItem}
       renderScrollComponent={renderMotionScroll}
+      scrollEventThrottle={16}
+      onScroll={
+        onScrollTop == null
+          ? undefined
+          : (event) => onScrollTop(event.nativeEvent.contentOffset.y)
+      }
       ItemSeparatorComponent={RowSeparator}
       ListHeaderComponentStyle={headStyle}
       ListHeaderComponent={

@@ -70,6 +70,17 @@ export function DaySpread({
     [tasks, date, today, source, taskForm],
   );
 
+  // The live panes' scroll offsets. A swipe keeps the same page, so
+  // the neighbour preview draws at these offsets and the landing
+  // moves nothing vertically.
+  const scroll = React.useRef({ timeline: 0, list: 0 });
+  const onTimelineScroll = React.useCallback((y: number) => {
+    scroll.current.timeline = y;
+  }, []);
+  const onListScroll = React.useCallback((y: number) => {
+    scroll.current.list = y;
+  }, []);
+
   const onPage = React.useCallback(
     (next: number) => onSelectDay(addDays(origin, next)),
     [onSelectDay, origin],
@@ -98,6 +109,7 @@ export function DaySpread({
               tasks={tasks}
               now={now}
               fraction={fraction}
+              scroll={scroll.current}
             />
           )}
           fill
@@ -109,6 +121,8 @@ export function DaySpread({
             now={now}
             fraction={fraction}
             onResize={onResize}
+            onTimelineScroll={onTimelineScroll}
+            onListScroll={onListScroll}
           />
         </Pager>
       </View>

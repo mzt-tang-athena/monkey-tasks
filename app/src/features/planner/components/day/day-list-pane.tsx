@@ -18,10 +18,13 @@ export const DayListPane = React.memo(function DayListPane({
   date,
   tasks,
   overdue,
+  onScrollTop,
 }: {
   date: Date;
   tasks: TaskItem[];
   overdue: TaskItem[];
+  /** The list's scroll offset, for the surface's preview. */
+  onScrollTop?: (y: number) => void;
 }) {
   const { today, source, taskForm } = usePlannerList();
   const header = React.useMemo(
@@ -39,6 +42,7 @@ export const DayListPane = React.memo(function DayListPane({
         day={date}
         tasks={tasks}
         header={header}
+        onScrollTop={onScrollTop}
         emptyLabel={
           source === "due-period"
             ? isSameDay(date, today)

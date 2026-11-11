@@ -22,6 +22,8 @@ export const DayPage = React.memo(function DayPage({
   now,
   fraction,
   onResize,
+  onTimelineScroll,
+  onListScroll,
 }: {
   date: Date;
   today: Date;
@@ -32,6 +34,10 @@ export const DayPage = React.memo(function DayPage({
   /** The top pane's share of the split. */
   fraction: number;
   onResize: (fraction: number) => void;
+  /** The panes' scroll offsets, so the preview can draw where the
+      landed page will stand. */
+  onTimelineScroll?: (y: number) => void;
+  onListScroll?: (y: number) => void;
 }) {
   return (
     <View style={layout.dayPage}>
@@ -47,6 +53,7 @@ export const DayPage = React.memo(function DayPage({
             tasks={rows.timed}
             isToday={isSameDay(date, today)}
             now={now}
+            onScrollTop={onTimelineScroll}
           />
         }
         bottom={
@@ -54,6 +61,7 @@ export const DayPage = React.memo(function DayPage({
             date={date}
             tasks={rows.sectionTasks}
             overdue={rows.overdue}
+            onScrollTop={onListScroll}
           />
         }
       />

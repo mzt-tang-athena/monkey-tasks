@@ -1,5 +1,5 @@
 import * as React from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -17,6 +17,8 @@ export const TimelinePane = React.memo(function TimelinePane({
   isToday,
   now,
   copy = false,
+  onScrollTop,
+  scrollTop,
 }: {
   /** The day's tasks that carry a time. */
   tasks: TaskItem[];
@@ -24,23 +26,51 @@ export const TimelinePane = React.memo(function TimelinePane({
   now: Date;
   /** A still copy: no drop zones and no drag sources. */
   copy?: boolean;
+  /** The live scroller's offset, for the surface. */
+  onScrollTop?: (y: number) => void;
+  /** The live offset the still copy draws at. */
+  scrollTop?: number;
 }) {
+  const ruler = (
+    <Timeline
+      tasks={tasks}
+      isToday={isToday}
+      now={now}
+      copy={copy}
+      testID={copy ? undefined : "timeline-hour"}
+    />
+  );
+
   return (
     <View style={layout.pane}>
       <SectionHeader label="Timeline" count={tasks.length} />
-      <MotionScrollView
-        testID={copy ? undefined : "timeline-scroller"}
-        style={layout.paneScroll}
-        showsVerticalScrollIndicator={false}
-      >
-        <Timeline
-          tasks={tasks}
-          isToday={isToday}
-          now={now}
-          copy={copy}
-          testID={copy ? undefined : "timeline-hour"}
-        />
-      </MotionScrollView>
+      {copy ? (
+        <View style={[layout.paneScroll, styles.clip]}>
+          <View style={{ transform: [{ translateY: -(scrollTop ?? 0) }] }}>
+            {ruler}
+          </View>
+        </View>
+      ) : (
+        <MotionScrollView
+          testID="timeline-scroller"
+          style={layout.paneScroll}
+          showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+          onScroll={
+            onScrollTop == null
+              ? undefined
+              : (event) => onScrollTop(event.nativeEvent.contentOffset.y)
+          }
+        >
+          {ruler}
+        </MotionScrollView>
+      )}
     </View>
   );
+});
+
+const styles = StyleSheet.create({
+  clip: {
+    overflow: "hidden",
+  },
 });
