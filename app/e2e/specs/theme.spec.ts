@@ -170,9 +170,11 @@ test.describe("every palette", () => {
       await page.goto("/");
       await expect(row(page, undated.second)).toBeVisible();
       await press(page, page.getByRole("button", { name: "add task" }));
-      await expect(
-        page.getByRole("dialog", { name: "Add a task" }),
-      ).toBeVisible();
+      const sheet = page.getByRole("dialog", { name: "Add a task" });
+      await expect(sheet).toBeVisible();
+      // The panel fades in. Mid-fade its text and ground are blended
+      // with the page, so scan the sheet at rest.
+      await expect(sheet).toHaveCSS("opacity", "1");
       // The page behind a modal is inert and dimmed on purpose, so the
       // sheet is the surface under test.
       await scan(page, `${name} capture sheet`, '[role="dialog"]');
