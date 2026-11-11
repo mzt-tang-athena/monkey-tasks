@@ -100,14 +100,15 @@ describe("Pager", () => {
     expect(getComputedStyle(host).touchAction).toBe("pan-y");
   });
 
-  it("keys the live cell on index", async () => {
+  it("keeps the live cell mounted when a swipe lands", async () => {
     mounts = 0;
     const { host } = await mountScreen();
     expect(screen.getByTestId("live").textContent).toBe("page 0, mount 1");
     await swipe(host, 300, 120);
     await waitFor(() =>
-      expect(screen.getByTestId("live").textContent).toBe("page 1, mount 2"),
+      expect(screen.getByTestId("live").textContent).toBe("page 1, mount 1"),
     );
+    expect(mounts, "the live page mounts once per pager").toBe(1);
   });
 
   it("commits a swipe once and renders the screen once for it", async () => {
