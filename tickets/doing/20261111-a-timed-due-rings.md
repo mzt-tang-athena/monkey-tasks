@@ -2,7 +2,7 @@
 title: A timed due rings
 created: 2026-11-11
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
