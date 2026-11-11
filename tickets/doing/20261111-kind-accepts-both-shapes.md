@@ -2,7 +2,7 @@
 title: Kind accepts both shapes
 created: 2026-11-11
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
