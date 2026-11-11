@@ -331,22 +331,25 @@ month (ADR 0042).
 
 ## Next
 
-The phase 4 rebuild merged in `b3acdb1`. The current round is tickets
-0080 to 0087. It covers the crash after a tick, the pager remount and
-the selected state recipe. It added runtime themes, a settings screen
-and a crash log. The command pane and the move of reorder to the grip
-are still open.
+The phase 4 rebuild merged in `b3acdb1`. The round of tickets 0080 to
+0087 finished. It fixed the crash after a tick and the pager remount.
+It added runtime themes, a settings screen, a crash log and a command
+pane. It also moved reorder to the grip only. One ticket waits on the
+operator: 0082, the selected state recipe, with three mockups.
 
-After that:
+The operator decided the schema review, 0094. Its remaining work is
+three child tickets:
+
+- `20261111-a-timed-due-rings`, in review
+- `20261111-completed-takes-a-time`
+- `20261111-kind-accepts-both-shapes`
+
+The feature queue:
 
 - 0088 the journal tab, with 0089 and 0090
 - 0091 reference notes on a task
 - 0092 optional quests and evergreen tasks, a discovery
 - 0093 the task editor rebuild, starting with a design
-- 0094 review the task note schema, with three child tickets:
-  - `20261111-completed-takes-a-time`
-  - `20261111-kind-accepts-both-shapes`
-  - `20261111-a-timed-due-rings`
 - 0095 a Notes tab from Inbox, starting with a design
 - 20261111 reminder weight, a discussion
 - 20261111 one list or many, and order, a discussion

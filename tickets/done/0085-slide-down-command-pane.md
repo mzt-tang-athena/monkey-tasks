@@ -35,15 +35,16 @@ a list row or a pager body does nothing.
 
 ## Acceptance
 
-- [ ] The prototype opens, filters, chooses and closes in the web
+- [x] The prototype opens, filters, chooses and closes in the web
       build, and focus returns to the opener.
 - [ ] The pane slides with a spring on the phone with no jump at open
-      or close.
-- [ ] A list swipe, a pager swipe and a row drag never open the pane.
-- [ ] Every command does what its label says and closes the pane.
+      or close. Not run on a device.
+- [x] A list swipe, a pager swipe and a row drag never open the pane.
+- [x] Every command does what its label says and closes the pane.
 - [ ] Keyboard and TalkBack reach every row. Back closes the pane
-      first.
-- [ ] e2e covers open, search, choose, escape, back and the three
+      first. The keyboard pass is on the web. TalkBack and the phone's
+      back gesture are not run.
+- [x] e2e covers open, search, choose, escape, back and the three
       gesture exclusions.
 
 ## Outcome
@@ -65,3 +66,24 @@ cover all three. The web suite sends two touch points for the
 two-finger swipe. The Android emulator and a phone were not run, so
 the pull feel, the two-finger gesture and TalkBack are still open for
 the operator.
+
+Merged as `6fdf38a`. The verifier passed ten checks. It confirmed
+`onDeactivate` fires only from `ACTIVE`, so a pan that never activates
+cannot open the pane, and it ran the command and lists specs on the
+merged head, 68 tests, plus the planner spec, 12 tests.
+
+The verifier also did the 360pt math the 0084 review flagged. The
+Planner header leaves 216pt for the mode control, about 70pt per
+segment, down from 89pt. Every label still fits, and the mode control
+keeps its 44pt minimum. It is the tightest row in the app now, and a
+device check is worthwhile.
+
+One cleanup landed on the branch before merge. The search had three
+focus paths: two identical effects and the `SearchFocus` child. Only
+the child runs after the overlay commits, so the two effects were
+removed.
+
+An unreached row has one property worth knowing. The provider caps the
+list at 12 before the pane filters it, so a command past position 12
+would also be unreachable by search. Eight commands exist, so the cap
+never binds today.
