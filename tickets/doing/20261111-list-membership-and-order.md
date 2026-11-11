@@ -2,7 +2,7 @@
 title: One list or many, and what order means
 created: 2026-11-11
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: ["0094-review-the-task-note-schema"]
 ---
@@ -43,12 +43,29 @@ ticket.
 
 ## Acceptance
 
-- [ ] The operator picks one list or many, and what Main means.
-- [ ] The meaning of `order` is written down, with its scope.
-- [ ] The migration for a note with two links is stated.
-- [ ] An ADR records the decision and the rejected option.
-- [ ] The build is split into child tickets.
+- [x] The operator picks one list or many, and what Main means.
+- [x] The meaning of `order` is written down, with its scope.
+- [x] The migration for a note with two links is stated.
+- [x] An ADR records the decision and the rejected option.
+- [x] The build is split into child tickets.
 
 ## Outcome
 
-(filled in before moving to done/)
+Decided 2026-11-11.
+
+- One list per task. The note carries `list`, one wikilink. The parser
+  takes the first link of an old `lists`.
+- Main holds the unfiled tasks. It is no longer a catch-all.
+- `order` is the whole tab in My order. Due order keeps its date
+  sections, and `order` does not apply there.
+- Migration: no bulk write. A two-link note resolves to its first link,
+  and the next save of that task drops the rest.
+- Rejected: many lists. Each tab would need its own rank, and the only
+  use case, subtasks built from lists, can wait.
+
+ADR: `docs/adr/20261111-one-list-and-tab-order.md`. ADR 0015 and ADR
+0031 carry dated amendments.
+
+Child tickets: `20261111-one-list-field`,
+`20261111-main-holds-unfiled-tasks`, `20261111-order-the-whole-tab`
+and `20261111-single-list-picker`.
