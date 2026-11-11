@@ -4,7 +4,7 @@ title: A command pane that slides down
 created: 2026-11-11
 priority: normal
 assignee: opencode
-pr:
+pr: 124
 depends: [0084]
 ---
 
