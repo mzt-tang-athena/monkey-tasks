@@ -499,12 +499,9 @@ async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
   await expect(page.getByTestId("day-heading")).toContainText(tomorrow.heading);
   await expect(row(page, tomorrow.task)).toBeVisible();
   await page.waitForTimeout(500);
-  // The landed day keeps the live scroll, as its preview drew it. The
-  // browser's scroll anchor may move it by the height of a row whose
-  // content changed; it never returns to the top.
-  const landed = await pagerScrollTop(page, "day-pager");
-  expect(landed, "the day keeps its scroll").toBeGreaterThan(0);
-  expect(Math.abs(landed - kept), "the anchor moves it less than a row").toBeLessThanOrEqual(32);
+  // A day starts at its top the first time it shows, as its preview
+  // drew it.
+  expect(await pagerScrollTop(page, "day-pager"), "the new day starts at its top").toBe(0);
   await expectSamePicture(
     page,
     testInfo,
@@ -515,12 +512,11 @@ async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
   );
 
   // Swipe back onto today: the preview draws the overdue block and the
-  // now line from the same `now` as the live day. This scroll stays
-  // under both days' content, so the offset survives the round trip.
+  // now line from the same `now` as the live day, at today's saved
+  // scroll. Tomorrow scrolls on its own and does not move today.
   await page.mouse.move(pager.x + pager.width / 2, pager.y + 120);
   await page.mouse.wheel(0, 80);
   await expect.poll(() => scrollTop(page)).toBeGreaterThan(0);
-  const keptBack = await pagerScrollTop(page, "day-pager");
   await pauseClock(page);
   let back: Buffer | null = null;
   let backX = Number.NaN;
@@ -547,12 +543,8 @@ async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
   await expect(page.getByTestId("day-heading")).toContainText("Monday 26");
   await expect(row(page, supplements)).toBeVisible();
   await page.waitForTimeout(500);
-  const backKept = await pagerScrollTop(page, "day-pager");
-  expect(backKept, "the day keeps its scroll").toBeGreaterThan(0);
-  expect(
-    Math.abs(backKept - keptBack),
-    "the anchor moves it less than a row",
-  ).toBeLessThanOrEqual(32);
+  // Today returns to the offset it had before the swipe.
+  expect(await pagerScrollTop(page, "day-pager"), "today keeps its scroll").toBe(kept);
   await expectSamePicture(
     page,
     testInfo,
@@ -851,35 +843,37 @@ test.describe("with a touch screen", () => {
 });
 
 /** What one frame of a settle shows. */
-type FrameState = { preview: number; x: number; text: string | null };
+type FrameState = { preview: number; x: number; text: string | null; scroll: number };
 
 /** Steps 20 frames of the settle and reads each one. */
 async function settleFrames(
   page: Page,
   testID: string,
   headingID: string,
+  previewID: string,
 ): Promise<FrameState[]> {
   const frames: FrameState[] = [];
   for (let i = 0; i < 20; i++) {
     await frame(page);
-    const [preview, offset, text] = await Promise.all([
-      page.getByTestId("preview:1").count(),
+    const [preview, offset, text, scroll] = await Promise.all([
+      page.getByTestId(previewID).count(),
       liveOffset(page, testID),
       page.getByTestId(headingID).textContent(),
+      pagerScrollTop(page, testID),
     ]);
-    frames.push({ preview, x: offset.x, text });
+    frames.push({ preview, x: offset.x, text, scroll });
   }
   return frames;
 }
 
 /**
- * The commit swaps the content and the page's place in one frame: from
- * the first frame that shows `next`, the live page sits at the pager's
- * origin, no preview covers it, and the old page never comes back. No
- * frame is blank: each one shows the neighbour or the live page in
- * place.
+ * The commit swaps the content, the place and the scroll in one frame:
+ * from the first frame that shows `next`, the live page sits at the
+ * pager's origin, no preview covers it, the saved scroll stands, and
+ * the old page never comes back. No frame is blank: each one shows the
+ * neighbour or the live page in place.
  */
-function expectOneFrameCommit(frames: FrameState[], next: string) {
+function expectOneFrameCommit(frames: FrameState[], next: string, scroll?: number) {
   const commit = frames.findIndex((frame) => frame.text?.includes(next) ?? false);
   expect(commit, `a frame shows ${next}`).toBeGreaterThanOrEqual(0);
   for (const [index, frame] of frames.entries()) {
@@ -893,13 +887,23 @@ function expectOneFrameCommit(frames: FrameState[], next: string) {
     expect(frame.text, `frame ${index} shows the new page`).toContain(next);
     expect(frame.x, `frame ${index} sits at the pager's origin`).toBe(0);
     expect(frame.preview, `frame ${index} holds no preview`).toBe(0);
+    if (scroll !== undefined) {
+      expect(frame.scroll, `frame ${index} holds the page's scroll`).toBe(scroll);
+    }
   }
 }
 
-test("a day swipe swaps the page and its place in one frame", async ({ page }) => {
+test("a day swipe swaps the page, its place and its scroll in one frame", async ({ page }) => {
   await page.goto("/planner");
   await expect(page.getByTestId("day-heading")).toBeVisible();
   const box = await pagerBox(page, "day-pager");
+  const atTop = { x: box.x + box.width / 2, y: box.y + 120 };
+
+  // Today to tomorrow, from a scrolled today.
+  await page.mouse.move(atTop.x, atTop.y);
+  await page.mouse.wheel(0, 300);
+  await expect.poll(() => pagerScrollTop(page, "day-pager")).toBeGreaterThan(0);
+  const kept = await pagerScrollTop(page, "day-pager");
 
   await pauseClock(page);
   await mouseHold(
@@ -910,11 +914,28 @@ test("a day swipe swaps the page and its place in one frame", async ({ page }) =
       await frame(page);
     },
   );
-  const frames = await settleFrames(page, "day-pager", "day-heading");
+  const forward = await settleFrames(page, "day-pager", "day-heading", "preview:1");
   await page.clock.resume();
+  expectOneFrameCommit(forward, tomorrow.heading, 0);
 
-  expectOneFrameCommit(frames, tomorrow.heading);
-  await expect(page.getByTestId("day-heading")).toContainText(tomorrow.heading);
+  // Tomorrow to today. Today's saved scroll returns with the content.
+  await page.mouse.move(atTop.x, atTop.y);
+  await page.mouse.wheel(0, 80);
+  await expect.poll(() => pagerScrollTop(page, "day-pager")).toBeGreaterThan(0);
+
+  await pauseClock(page);
+  await mouseHold(
+    page,
+    page.getByTestId("day-pager"),
+    Math.round(box.width * holdShare),
+    async () => {
+      await frame(page);
+    },
+  );
+  const back = await settleFrames(page, "day-pager", "day-heading", "preview:0");
+  await page.clock.resume();
+  expectOneFrameCommit(back, "Monday 26", kept);
+  await expect(page.getByTestId("day-heading")).toContainText("Monday 26");
 });
 
 test("a month swipe swaps the page and its place in one frame", async ({ page }) => {
@@ -932,7 +953,7 @@ test("a month swipe swaps the page and its place in one frame", async ({ page })
       await frame(page);
     },
   );
-  const frames = await settleFrames(page, "month-pager", "month-title");
+  const frames = await settleFrames(page, "month-pager", "month-title", "preview:1");
   await page.clock.resume();
 
   expectOneFrameCommit(frames, months.next);
