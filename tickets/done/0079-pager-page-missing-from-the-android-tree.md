@@ -4,7 +4,7 @@ title: A non-first pager page is missing from the Android accessibility tree
 created: 2026-11-10
 priority: high
 assignee: omp
-pr:
+pr: 106
 depends: [0059]
 ---
 
@@ -52,4 +52,35 @@ box) on a non-first tab. The painted box is already 0 and hid this.
 
 ## Outcome
 
-(filled in before moving to done/)
+Fixed on 2026-11-11 on `fix/0079-pager-page-a11y`. Pull request #106.
+
+The live page now lays out at the track's origin. The track's transform
+carries the page position against the live page, and a preview sits at
+`(rel - live) * 100%`. The painted result is unchanged.
+
+`pagers.spec.ts` reads the live page's layout offset on a non-first
+tab. It read 1200 px before the fix and reads 0 after. The painted box
+read 0 before the fix too, which is why the web suite never saw it.
+
+The emulator proves the fix, on the release APK of `bd15a24`:
+
+| Screen | Task row nodes | Repair banner | Empty text |
+|---|---|---|---|
+| Main, before | 6 | yes | n/a |
+| Errands, before | 0 | no | no |
+| Errands, after | 0 (empty list) | yes | yes |
+| Focus, after | 3 | yes | n/a |
+
+`journeys/android-list-swipe.sh` now passes end to end: it swipes to
+Errands with motion on and off, waits on the empty state, ticks and
+unticks `Plan weekend hike`, and the note comes back byte for byte.
+The journey also needed two harness fixes, both recorded in its diff:
+a wait for the first row after the motion restart, and the row
+circle's new accessible name from ticket 0063, which replaced
+`mark done` with the task name.
+
+A day swipe on the planner was recorded frame by frame:
+`planner-swipe` slides Wednesday 11 to Thursday 12 with no blank
+strip, and the date strip and mode switch stay still.
+
+The phone and TalkBack checks stay with the operator.

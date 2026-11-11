@@ -328,3 +328,31 @@ gone. The press no longer needs either.
 A device would still prove the native half: gesture handler's press
 cancels under a pan with no click tail, and Enter and Space press on a
 hardware keyboard. No emulator ran here.
+
+## Amendment, 2026-11-11: the live page lays out at the track's origin
+
+On Android, every list tab except the first was missing from the
+accessibility tree. The rows, the repair banner and the empty state
+painted, but uiautomator and TalkBack read nothing. Ticket 0079 records
+the evidence.
+
+`Pager` had put the live page at `left: live * 100%` and carried the
+page position in the track's transform. With `live` above 0 the page
+laid out outside the host's clip. Android's virtualized list clips its
+rows against that box, so the rows left the native view tree. The
+browser paints the translated page at the same pixels, so the web
+suite and axe could not see it.
+
+The live page now lays out at the track's origin. Only the transform
+carries the position, measured against the live page, and a preview
+sits at `(rel - live) * 100%`. A page's layout stays inside the host at
+rest, and the painted motion does not change.
+
+Alternative: keep the layout and accept the loss on Android. A screen
+reader user could not read any list but the first, so that was not
+available.
+
+Proof: `pagers.spec.ts` reads the live page's layout offset on a
+non-first tab, 1200 px before the fix and 0 after. The emulator, with
+the release APK of `bd15a24`, reads the rows and banners on Errands
+and Focus, and the lists swipe journey passes end to end.
