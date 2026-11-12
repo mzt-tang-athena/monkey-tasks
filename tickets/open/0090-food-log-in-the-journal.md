@@ -15,7 +15,9 @@ the daily note, in the same interstitial blocks as the rest of the
 journal. No new folder and no new note type.
 
 Proposal: a food entry is a bullet that starts with `Ate: ` and ends
-with the tag `#food` inside the same timestamp block.
+with the tag `#food` inside the same timestamp block. This marker is
+provisional. We picked it without full confidence and will revisit it
+after using the journal. Only the parser and the writer depend on it.
 
 ```markdown
 12:40
@@ -34,16 +36,16 @@ parses it for today's Food line. Any dashboard added later reads the
 vault tags, not app state. The same tag convention can carry other
 trackers later, such as mood or energy, without a new note type.
 
-The composer gets a Food toggle. With it on, the composer prefixes
-the bullet with `Ate: ` and ends it with `#food`. The field then offers
-the reference picker from ticket 0091 when that exists. With it off, the bullet is plain
-text.
+The entry composer gets a Food chip. With it on, the bullet starts with
+`Ate: ` and ends with `#food`. The field then offers the reference
+picker from ticket 0091 when that exists. With it off, the bullet is
+plain text.
 
-The journal screen gains a Food line for today, quiet, under the
-composer. It lists the `Ate:` bullets from today's blocks, newest
-last, and counts them. The line reads the note instead of keeping a
-second store.
-Do not build calories, macros or portions yet.
+The journal screen gains a quiet Food line under the composer. It lists
+the `Ate:` bullets from today's blocks, newest last, and counts them.
+The line reads the note instead of keeping a second store. The line is
+where calories and other stats go later, once the vault holds food
+amounts. Do not build calories, macros or portions yet.
 
 A `[[name]]` inside a food line is a reference link. Tapping it opens a
 read-only preview of `References/<name>.md`, or says the note is
@@ -60,7 +62,7 @@ missing. The link is the same convention Obsidian uses.
 - [ ] The Food line lists today's entries and updates after a send.
 - [ ] A `[[reference]]` in a food line opens the reference preview. A
       missing note says so and does not crash.
-- [ ] The toggle keeps the last choice for the day and does not change
+- [ ] The Food chip keeps the last choice for the day and does not change
       the plain composer.
 - [ ] No new folder, no new note type, no nutrition totals.
 - [ ] 44pt targets, named controls, TalkBack reads the entries, axe

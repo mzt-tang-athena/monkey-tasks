@@ -33,9 +33,17 @@ Keep the parser tolerant. The parser preserves unknown lines and keeps
 extra inline tags. A block may hold any bullets. Never reject a note
 because a block has a shape the app did not write.
 
-The today view shows the blocks in file order, the newest last. A
-composer sits at the bottom with a multiline field and a send button.
-Send appends one block at the current time.
+The today view shows the blocks in file order, the newest last. The screen
+reads as a lined journal. The time sits on the left of each entry. On this
+tab the add button opens the entry composer instead of creating a task; we
+may change that later. The composer is a multiline field and a send button.
+Send appends one block at the current time, and the sent entry slides up to
+sit below the latest entry.
+
+One add is one block. Each line the operator typed becomes a `- ` bullet
+under that time.
+
+The format is in `docs/adr/20261112-journal-format.md`.
 
 ### What the app writes
 
@@ -45,9 +53,9 @@ task edits use. That way an Obsidian edit between the read and the write
 is not lost. Insert the new block at the end of the body and before a
 trailing embed line.
 
-If the note does not exist, create it. Proposal: create an empty body
-with no frontmatter and no embed. Do not copy a banner from another
-note and do not run Templater. Record the choice in the ADR.
+If the note does not exist, create it. We decided to create an empty body
+with no frontmatter and no embed. Do not copy a banner from another note and
+do not run Templater. The ADR records this choice.
 
 ### The tab
 
