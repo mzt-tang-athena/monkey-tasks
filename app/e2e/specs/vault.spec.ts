@@ -59,7 +59,7 @@ test("a tick on a repeating task makes its next occurrence a note", async ({
     `due: ${supplementsTick.nextDue}`,
   );
   expect(await noteText(page, supplementsTick.note)).toContain(
-    `completed: ${supplementsTick.completed}`,
+    supplementsTick.completedPrefix,
   );
   // Today's row moves to Completed. The next one waits for its day, so
   // the list shows it tomorrow, not now.

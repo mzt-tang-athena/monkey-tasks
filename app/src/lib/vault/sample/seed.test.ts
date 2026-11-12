@@ -51,11 +51,15 @@ describe("sampleSeed", () => {
   it("holds the preview's sample with no move on the sample day", () => {
     const seed = sampleSeed(PREVIEW_SEEDS, SAMPLE_DAY);
 
-    expect(Object.keys(seed)).toHaveLength(28);
+    expect(Object.keys(seed)).toHaveLength(29);
     expect(seed["Tasks/Supplements.md"]).toContain("recurrence: FREQ=DAILY");
     expect(seed["Tasks/Supplements.md"]).toContain("due: 2026-10-26T19:00");
     expect(seed["Tasks/Read the meter.md"]).toContain("kind: tasks");
     expect(seed["Tasks/Read the meter.md"]).not.toContain('kind: "[[tasks]]"');
+    expect(seed["Tasks/Water the fern.md"]).toContain(
+      "completed: 2026-10-26T18:08",
+    );
+    expect(seed["Tasks/Buy stamps.md"]).toContain("completed: 2026-10-26");
     expect(seed["Tasks/Broken note.md"]).toBeDefined();
     expect(seed["Tasks/Lists/Garden.md"]).toBeDefined();
   });
@@ -72,6 +76,9 @@ describe("sampleSeed", () => {
     const seed = sampleSeed(["default"], "2026-12-01");
 
     expect(seed["Tasks/Supplements.md"]).toContain("due: 2026-12-01T19:00");
+    expect(seed["Tasks/Water the fern.md"]).toContain(
+      "completed: 2026-12-01T18:08",
+    );
     expect(seed["Tasks/Return library books.md"]).toContain("due: 2026-11-30");
   });
 

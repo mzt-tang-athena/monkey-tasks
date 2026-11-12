@@ -53,6 +53,8 @@ export const sampleNotes: Record<string, Record<string, string>> = {
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ndue: 2026-10-26T19:00\nrecurrence: FREQ=DAILY\n---\n",
     "Tasks/Water heater maintenance request.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ndue: 2026-10-23\n---\n",
+    "Tasks/Water the fern.md":
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ncompleted: 2026-10-26T18:08\n---\n",
     "Tasks/Water the plants.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\n---\n",
   },

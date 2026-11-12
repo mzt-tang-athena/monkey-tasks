@@ -37,9 +37,16 @@ export const supplements = "Supplements";
     the one it makes for the next date. */
 export const supplementsTick = {
   note: "Tasks/Supplements.md",
-  completed: "2026-10-26",
+  /** A tick writes the moment, so the minute follows the date. */
+  completedPrefix: "completed: 2026-10-26T",
   next: "Tasks/Supplements 2026-10-27.md",
   nextDue: "2026-10-27T19:00",
+} as const;
+
+/** Sample notes already done, one with a time and one with a date. */
+export const completedNotes = {
+  timed: "Water the fern",
+  dated: "Buy stamps",
 } as const;
 
 /** A task note that fails validation. It never renders as a row. */

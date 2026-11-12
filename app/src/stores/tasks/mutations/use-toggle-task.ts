@@ -4,7 +4,7 @@ import { taskIsDone } from "@monkey-tasks/schemas";
 import { monthEndRule, nextAfter } from "@/lib/recurrence";
 import { createNote } from "@/lib/vault/notes";
 import { useVault } from "@/lib/vault/vault-provider";
-import { nowStamp, todayIso } from "@/utils/dates";
+import { nowStamp } from "@/utils/dates";
 import type { TaskItem } from "@/types/task";
 import { applyPatch } from "../patch";
 import { cachedRows } from "../query";
@@ -148,7 +148,7 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
       return { rows, context: { previous, text: previous.text } };
     }
     const updated = applyPatch(previous, {
-      completed: to === "done" ? todayIso() : null,
+      completed: to === "done" ? nowStamp() : null,
     });
     let next = patchRow(rows, id, () => updated);
     const due = nextDue(previous);
@@ -186,7 +186,7 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
     if (to === "open") {
       return reopen(before, io);
     }
-    const after = applyPatch(before, { completed: todayIso() });
+    const after = applyPatch(before, { completed: nowStamp() });
     const due = successorId == null ? null : nextDue(before);
     if (successorId == null || due == null) {
       await io.adapter.write(before.uri, after.text);

@@ -1,5 +1,11 @@
 import { expect, test } from "../fixtures";
-import { bareKindNote, rename, sections, undated } from "../data";
+import {
+  bareKindNote,
+  completedNotes,
+  rename,
+  sections,
+  undated,
+} from "../data";
 import { expectInSection, press, row, sectionHeader } from "../locators";
 import { noteText } from "../vault";
 
@@ -20,8 +26,29 @@ test("a note with a bare kind reads as a task and keeps that kind", async ({ pag
   );
   await expect
     .poll(() => noteText(page, bareKindNote.path))
-    .toContain("completed: 2026-10-26");
+    .toContain("completed: 2026-10-26T");
   expect(await noteText(page, bareKindNote.path)).toContain("kind: tasks");
+});
+
+test("a tick writes the minute it landed", async ({ page }) => {
+  const target = row(page, undated.second);
+
+  await press(page, target.getByRole("checkbox"));
+
+  await expect
+    .poll(() => noteText(page, `Tasks/${undated.second}.md`))
+    .toMatch(/^completed: 2026-10-26T\d{2}:\d{2}/m);
+});
+
+test("a completion with a time and one with a date alone both read as done", async ({
+  page,
+}) => {
+  for (const name of [completedNotes.timed, completedNotes.dated]) {
+    await expectInSection(
+      row(page, name),
+      sectionHeader(page, sections.completed),
+    );
+  }
 });
 
 test("a tick marks the task done and moves it to Completed", async ({ page }) => {

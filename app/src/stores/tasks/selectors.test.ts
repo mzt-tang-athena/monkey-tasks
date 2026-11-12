@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "@/types/task";
 import {
+  groupByDue,
   isHiddenOccurrence,
   selectOpenTasks,
   selectSections,
@@ -72,10 +73,30 @@ describe("selectOpenTasks", () => {
   it("drops completed tasks from the open pool", () => {
     const tasks = [
       task("Done", { due: "2026-10-20", completed: "2026-10-21" }),
+      task("Done late", {
+        due: "2026-10-20",
+        completed: "2026-10-21T18:08",
+      }),
       task("Open", { due: "2026-10-20" }),
     ];
 
     expect(names(selectOpenTasks(tasks, NOW))).toEqual(["Open"]);
+  });
+
+  it("files both completion shapes under completed", () => {
+    const tasks = [
+      task("Done", { due: "2026-10-20", completed: "2026-10-21" }),
+      task("Done late", {
+        due: "2026-10-20",
+        completed: "2026-10-21T18:08",
+      }),
+      task("Open", { due: "2026-10-20" }),
+    ];
+
+    const groups = groupByDue(tasks, NOW);
+
+    expect(names(groups.completed).sort()).toEqual(["Done", "Done late"]);
+    expect(names(groups.overdue)).toEqual(["Open"]);
   });
 
   it("returns an empty pool for no tasks", () => {

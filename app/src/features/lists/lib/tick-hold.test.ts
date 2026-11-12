@@ -80,6 +80,19 @@ describe("applyTickHold", () => {
     expect(names(next)).toEqual(["Today:A,B,C"]);
   });
 
+  it("holds a row completed with a date alone", () => {
+    const b = task("B", "2026-10-26");
+    const sections = [
+      group("Today", [task("A")]),
+      group("Completed", [b], "faint"),
+    ];
+    const held = hold(b, "Today", 0, 1);
+
+    expect(names(applyTickHold(sections, [held], [b]))).toEqual([
+      "Today:A,B",
+    ]);
+  });
+
   it("brings back a group that left, at the place it held", () => {
     const a = task("A", done);
     // A was the only row in Today. The tick emptied the group and made
