@@ -87,3 +87,20 @@ Gates:
 - `E2E_PORT=8604 npm run e2e`: 444 passed, 26 skipped, none failed
 
 The app PR is 130, and it waits for the operator to merge.
+
+Merged as `20ae213`. The verifier passed seven checks and ran 825 app
+tests plus 89 contracts tests. It confirmed the rewritten acceptance is
+honest: a grep found no reader that does date math on `completed`, so
+nothing was built and then hidden. It also read every changed test.
+Four e2e specs tightened a date match to a datetime prefix, and no
+assertion was removed.
+
+Evidence note. The branch commit order puts the feature commit before
+the tests, so the red run quoted above is not reproducible from the
+branch history. The behavior is pinned now by the tick test and by
+`tasks-provider.test.tsx`.
+
+One cosmetic point. The optimistic patch and the persisted write each
+call `nowStamp()`, so they can differ by seconds until the row settles.
+The settled row carries the written value, and no screen shows a
+completion time today.
