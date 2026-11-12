@@ -134,12 +134,15 @@ export default function GalleryScreen() {
     ),
 
     "segmented-control:selected": (
-      <SegmentedControl
-        segments={plannerModes}
-        selected="week"
-        onSelect={noop}
-        label="planner modes"
-      />
+      <View style={styles.wide}>
+        <SegmentedControl
+          segments={plannerModes}
+          selected="week"
+          onSelect={noop}
+          label="planner modes"
+          stretch
+        />
+      </View>
     ),
 
     "tab-strip:selected": (
@@ -158,40 +161,62 @@ export default function GalleryScreen() {
       </Pill>
     ),
 
-    "text-field:rest": <TextField label="Task name" defaultValue="Buy milk" />,
-    "text-field:focused": (
-      <Focused>
+    "text-field:rest": (
+      <View style={styles.wide}>
         <TextField label="Task name" defaultValue="Buy milk" />
-      </Focused>
+      </View>
+    ),
+    "text-field:focused": (
+      <View style={styles.wide}>
+        <Focused>
+          <TextField label="Task name" defaultValue="Buy milk" />
+        </Focused>
+      </View>
     ),
     "text-field:error": (
-      <TextField
-        label="Task name"
-        error="A task needs a name."
-        defaultValue=""
-      />
+      <View style={styles.wide}>
+        <TextField
+          label="Task name"
+          error="A task needs a name."
+          defaultValue=""
+        />
+      </View>
     ),
 
     "banner:danger": (
-      <Banner
-        tone="danger"
-        title="Write failed"
-        lines={["The note could not be saved."]}
-        actions={[{ label: "Retry", onPress: noop }]}
-      />
+      <View style={styles.wide}>
+        <Banner
+          tone="danger"
+          title="Write failed"
+          lines={["The note could not be saved."]}
+          actions={[{ label: "Retry", onPress: noop }]}
+        />
+      </View>
     ),
     "banner:info": (
-      <Banner
-        tone="info"
-        title="Synced"
-        lines={["Every note is up to date."]}
-      />
+      <View style={styles.wide}>
+        <Banner
+          tone="info"
+          title="Synced"
+          lines={["Every note is up to date."]}
+        />
+      </View>
     ),
 
-    "list-states:loading": <LoadingState />,
-    "list-states:empty": <EmptyState label="No tasks here yet." />,
+    "list-states:loading": (
+      <View style={styles.wide}>
+        <LoadingState />
+      </View>
+    ),
+    "list-states:empty": (
+      <View style={styles.wide}>
+        <EmptyState label="No tasks here yet." />
+      </View>
+    ),
     "list-states:error": (
-      <ErrorState message="The list could not load." onRetry={noop} />
+      <View style={styles.wide}>
+        <ErrorState message="The list could not load." onRetry={noop} />
+      </View>
     ),
 
     "section-header:accent": <SectionHeader label="Today" count={3} />,
