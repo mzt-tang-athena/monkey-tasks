@@ -2,7 +2,7 @@
 title: A menu hint belongs in the item's name
 created: 2026-11-12
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
