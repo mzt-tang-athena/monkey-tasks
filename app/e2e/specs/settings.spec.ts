@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { supplements, tabs, tomorrow, undated } from "../data";
 import { listTab, press, row } from "../locators";
+import { rgb } from "../theme";
 import { THEMES, type ThemeName } from "../../src/theme/palettes";
 
 /**
@@ -12,12 +13,6 @@ import { THEMES, type ThemeName } from "../../src/theme/palettes";
  */
 
 const palettes = Object.keys(THEMES) as ThemeName[];
-
-/** jsdom and the browser report colors as rgb(); the palettes hold hex. */
-function rgb(hex: string): string {
-  const [r, g, b] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
-  return `rgb(${r}, ${g}, ${b})`;
-}
 
 async function expectColor(page: Page, testId: string, hex: string, where: string) {
   await expect

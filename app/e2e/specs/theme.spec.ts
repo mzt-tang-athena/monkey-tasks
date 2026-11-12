@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { tomorrow, undated } from "../data";
 import { press, row } from "../locators";
+import { rgb, setTheme } from "../theme";
 import { THEMES, type ThemeName } from "../../src/theme/palettes";
 
 /**
@@ -13,28 +14,6 @@ import { THEMES, type ThemeName } from "../../src/theme/palettes";
  */
 
 const names = Object.keys(THEMES) as ThemeName[];
-
-/** jsdom and the browser report colors as rgb(); the palettes hold hex. */
-function rgb(hex: string): string {
-  const [r, g, b] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
-  return `rgb(${r}, ${g}, ${b})`;
-}
-
-async function setTheme(page: Page, name: ThemeName) {
-  // The provider installs the hook on its first effect.
-  await expect
-    .poll(() =>
-      page.evaluate(() => typeof (globalThis as { __setTheme?: unknown }).__setTheme),
-    )
-    .toBe("function");
-  await page.evaluate((theme) => {
-    const set = (globalThis as { __setTheme?: (next: string) => void }).__setTheme;
-    if (set == null) {
-      throw new Error("the build has no theme test hook: run npm run web:export");
-    }
-    set(theme);
-  }, name);
-}
 
 async function expectColor(page: Page, testId: string, hex: string, where: string) {
   await expect
