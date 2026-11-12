@@ -3,7 +3,7 @@ title: Name the spacing and radius scale, and guard it
 created: 2026-11-12
 priority: normal
 assignee: omp
-pr:
+pr: 132
 depends: []
 ---
 
@@ -31,15 +31,43 @@ The guard runs inside the existing vitest job. Do not add a CI job.
 
 ## Acceptance
 
-- [ ] Every raw layout value at or above 4 in features and components is
+- [x] Every raw layout value at or above 4 in features and components is
       a token or an allowlisted exception with a reason.
-- [ ] The test fails when a new raw value is added.
-- [ ] The token comments separate layout steps from marks.
-- [ ] Screenshots of the affected screens before and after.
-- [ ] `npx tsc --noEmit`, `npx eslint src scripts e2e --max-warnings 0`,
+- [x] The test fails when a new raw value is added.
+- [x] The token comments separate layout steps from marks.
+- [x] Screenshots of the affected screens before and after.
+- [x] `npx tsc --noEmit`, `npx eslint src scripts e2e --max-warnings 0`,
       `npx vitest run` and the e2e pass.
-- [ ] No new CI job.
+- [x] No new CI job.
 
 ## Outcome
 
-(filled in before moving to done/)
+The scale is named in `app/src/theme/tokens.ts`. The comments separate
+layout steps from marks and record why 6 rounds to 8 instead of growing
+the scale. No new numeric step was needed.
+
+The measured tree differed from the ticket's 2026-11-12 sample. The
+actual strays were `gap: 6`, `gap: 4`, `gap: 8`, `borderRadius: 6`,
+`borderRadius: 4.5`, `borderRadius: 5`, `paddingVertical: 12`,
+`paddingTop: 15`, `paddingHorizontal: 14` and `paddingVertical: 10`.
+There was no `gap: 24` or `borderRadius: 36`.
+
+Fifteen raw values moved onto existing tokens. Fully round shapes use
+`radii.pill`. The 15pt top pad reads `taskRowFace.padY + 3`. Two drawn
+glyph values stay literal with a reason in
+`app/scripts/lint/layout-numbers.allowlist.ts`.
+
+The guard is `app/scripts/lint/layout-numbers.test.ts`. It uses the
+TypeScript AST, so computed values, variables and
+`StyleSheet.hairlineWidth` are skipped. It fails a raw value at or above
+4 with the file and line. It runs in the existing vitest job.
+
+Visual proof is in `app/build/verify/evidence/design-scale/`, with 24
+before and after pairs at 360 and 412 in Budget and Midnight. Capture
+and Settings are pixel-identical. Lists and Planner differ only in the
+Add button, which widens 2pt. Diagnostics buttons and the motion chip
+grow 2pt per side.
+
+Gates: `npx tsc --noEmit`, `npx eslint src scripts e2e
+--max-warnings 0`, `npx vitest run` with 94 files and 829 tests, and
+`E2E_PORT=8606 npm run e2e` with 444 passed and 26 skipped. PR 132.
