@@ -3,7 +3,7 @@ title: Component gallery and visual baselines
 created: 2026-11-12
 priority: high
 assignee: omp
-pr:
+pr: 134
 depends: []
 ---
 
@@ -51,18 +51,60 @@ production entry point.
 
 ## Acceptance
 
-- [ ] `/gallery` renders every primitive, state and palette at 360 and
+- [x] `/gallery` renders every primitive, state and palette at 360 and
       412.
-- [ ] It is reachable from Diagnostics only.
-- [ ] The spec covers presence, names, 44pt targets and axe in four
+- [x] It is reachable from Diagnostics only.
+- [x] The spec covers presence, names, 44pt targets and axe in four
       palettes.
-- [ ] A visual check exists and is stable in CI, or the reason it cannot
+- [x] A visual check exists and is stable in CI, or the reason it cannot
       be is recorded.
-- [ ] No production screen changes.
-- [ ] `npx tsc --noEmit`, `npx eslint src scripts e2e --max-warnings 0`,
+- [x] No production screen changes.
+- [x] `npx tsc --noEmit`, `npx eslint src scripts e2e --max-warnings 0`,
       `npx vitest run` and the e2e pass.
-- [ ] No new CI job.
+- [x] No new CI job.
 
 ## Outcome
 
-(filled in before moving to done/)
+`/gallery` draws 17 sections and 35 states from
+`features/gallery/model.ts`. The screen maps every state id to a node, so
+a state without a node fails `tsc`. The spec walks the same list. The
+route opens from one button on the diagnostics screen, which Settings >
+Diagnostics opens. Nothing else links to it, and the spec asserts a
+`/` page holds no gallery link.
+
+The spec checks all four palettes at 360 and 412 wide:
+
+- every state's cell and its label,
+- every control's accessible name,
+- every target at 44pt or more,
+- axe at serious or critical impact, with two named cells exempt from
+  contrast: disabled text and the faint done mark,
+- the palette's ground, fills and ink, the page width, every cell inside
+  the page, and the section order,
+- the menu, sheet, command pane and toast one at a time: names, targets
+  and axe.
+
+Visual check: the fallback path. The pixel baselines failed on CI in the
+first run. All four 360 shots differed by 106 to 112 pixels, inside a 7
+by 3 box at (62, 3694), which holds the check glyph of a done row. The
+runner draws that glyph two pixels from this machine's. Every other pixel
+matched. The spec keeps no baselines. It still takes 8 shots, keeps them
+in `app/build/verify/evidence/component-gallery/` (gitignored) and
+attaches them to the report. CI is green on the head that carries this
+path.
+
+The only production screen change is the "Open gallery" button on the
+diagnostics screen. No primitive is restyled, no dependency is added, and
+no CI job is added.
+
+Gates: `npx tsc --noEmit` clean. `npx eslint src scripts e2e
+--max-warnings 0` clean. `npx vitest run` 95 files and 833 tests.
+`E2E_PORT=8607 npm run e2e` 456 passed and 26 skipped. CI: code, docs and
+e2e-web all pass.
+
+The gallery found one defect and leaves it to its own ticket. A visible
+hint on a menu item breaks WCAG 2.5.3, because `Menu` names the item by
+its label alone. The gallery's menu carries no hint. Ticket
+`20261112-menu-hint-name` owns the fix.
+
+PR: #134.
