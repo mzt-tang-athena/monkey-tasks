@@ -13,9 +13,10 @@ export function todayIso(): string {
 }
 
 /**
- * The current local moment to the second: a new note's `created`.
- * Obsidian's Date & time property uses ISO 8601 at second resolution,
- * local time, so a note opens with the type it expects.
+ * The current local moment to the second: a new note's `created` and a
+ * tick's `completed`. Obsidian's Date & time property uses ISO 8601 at
+ * second resolution, local time, so a note opens with the type it
+ * expects.
  */
 export function nowStamp(): string {
   const now = new Date();

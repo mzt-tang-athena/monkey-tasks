@@ -341,6 +341,23 @@ describe("TasksProvider", () => {
     expect(last.text).toContain("completed:");
   });
 
+  it("writes the local day and minute a task was ticked", async () => {
+    await mount();
+    const before = todayIso();
+
+    await act(async () => {
+      await store().toggle(row());
+    });
+    await flush();
+
+    // A tick that crosses midnight in this process may land either day.
+    const after = todayIso();
+    const stamped = row().data?.completed;
+    expect(stamped).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
+    expect([before, after]).toContain(stamped?.slice(0, 10));
+    expect(writes.at(-1)?.text).toContain(`completed: ${stamped}`);
+  });
+
   it("ticks the row before the write lands, and does not read the vault", async () => {
     await mount();
     expect(loadCalls).toBe(1);
