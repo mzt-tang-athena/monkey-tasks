@@ -31,7 +31,7 @@ export const GALLERY_SECTIONS = [
     states: [
       { id: "pressable:rest", label: "rest" },
       { id: "pressable:pressed", label: "pressed" },
-      { id: "pressable:focused", label: "focused, no ring" },
+      { id: "pressable:focused", label: "focused" },
     ],
   },
   {
@@ -40,7 +40,7 @@ export const GALLERY_SECTIONS = [
     states: [
       { id: "icon-button:rest", label: "rest" },
       { id: "icon-button:active", label: "active" },
-      { id: "icon-button:focused", label: "focused, no ring" },
+      { id: "icon-button:focused", label: "focused" },
     ],
   },
   {
