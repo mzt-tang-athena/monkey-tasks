@@ -61,3 +61,7 @@ The first CI run failed the gallery's menu check: every row measured
 computed opacity of 1 in the frame before the fade started. The target
 scan now reads the box a widget lays out, and the menu check waits two
 painted frames, so the target and axe scans read the menu at rest.
+
+That changes the floor's meaning: it measures the layout box, not the
+box on screen. A control scaled down after layout would pass. No such
+control exists today, because every entrance ends at scale 1.

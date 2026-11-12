@@ -31,6 +31,11 @@ pushes the hint about 3 px right, which changes the layout.
 We rejected a name with no space. It would match the document's text,
 but a screen reader then says "Move to listPick a list".
 
+We also tried hiding the hint from assistive tech with `aria-hidden` and
+naming the item by its label. Axe still reports the mismatch at serious
+impact, and a screen reader user would lose text the row shows. So that
+path does not work.
+
 ## Consequences
 
 Every hinted menu item reads as one name, and a new caller gets that
