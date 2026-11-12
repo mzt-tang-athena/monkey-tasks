@@ -218,7 +218,9 @@ for (const input of inputs) {
         .getByRole("checkbox")
         .click();
 
-      await expect.poll(() => noteText(page, overdueNote)).toContain("completed: 2026-10-26");
+      await expect
+        .poll(() => noteText(page, overdueNote))
+        .toContain("completed: 2026-10-26T");
     });
 
     test("a drop back on its own row opens no editor", async ({ page }) => {
