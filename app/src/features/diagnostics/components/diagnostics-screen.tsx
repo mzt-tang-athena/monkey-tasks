@@ -1,5 +1,6 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
 import { Pressable } from "@/components/ui/pressable";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { MotionCheck, MotionCheckRoot } from "./motion-check";
@@ -125,6 +126,14 @@ export default function DevScreen() {
             <Text style={styles.buttonText}>Grant vault folder</Text>
           </Pressable>
           <Text style={styles.line}>{message}</Text>
+          <Pressable
+            style={styles.button}
+            onPress={() => router.push("/gallery")}
+            accessibilityRole="button"
+            accessibilityLabel="Open gallery"
+          >
+            <Text style={styles.buttonText}>Open gallery</Text>
+          </Pressable>
         </View>
         <ThemeSwitcher />
       </MotionScrollView>
