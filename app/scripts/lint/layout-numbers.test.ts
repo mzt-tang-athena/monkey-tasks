@@ -10,11 +10,12 @@ import {
 /**
  * A layout step is a spacing or radius value at or above 4. Marks under
  * 4 stay literal, and a component may not write a raw layout number.
- * Every exception lives in layout-numbers.allowlist.ts with a reason.
+ * A negative value is a step too. Every exception lives in
+ * layout-numbers.allowlist.ts with a reason.
  */
 
 const app = path.resolve(import.meta.dirname, "../..");
-const roots = ["src/features", "src/components"];
+const roots = ["src/features", "src/components", "src/app"];
 const tokenFile = "src/theme/tokens.ts";
 
 const layoutProperties = new Set([
@@ -57,8 +58,9 @@ function keyName(name: ts.PropertyName): string | null {
   return null;
 }
 
-/** A literal number, including a typed one such as `4 as const`. A
-    variable, a call or arithmetic counts as computed and is skipped. */
+/** A literal number, including a typed one such as `4 as const` and a
+    negated one such as `-8`. A variable, a call or arithmetic counts as
+    computed and is skipped. */
 function literalNumber(node: ts.Expression): number | null {
   let value = node;
   while (
@@ -68,6 +70,15 @@ function literalNumber(node: ts.Expression): number | null {
     ts.isNonNullExpression(value)
   ) {
     value = value.expression;
+  }
+  if (
+    ts.isPrefixUnaryExpression(value) &&
+    (value.operator === ts.SyntaxKind.MinusToken ||
+      value.operator === ts.SyntaxKind.PlusToken) &&
+    ts.isNumericLiteral(value.operand)
+  ) {
+    const size = Number(value.operand.text);
+    return value.operator === ts.SyntaxKind.MinusToken ? -size : size;
   }
   return ts.isNumericLiteral(value) ? Number(value.text) : null;
 }
@@ -95,7 +106,7 @@ function findRaw(source: string, file: string): Finding[] {
         property != null &&
         layoutProperties.has(property) &&
         value != null &&
-        value >= 4
+        Math.abs(value) >= 4
       ) {
         const start = parsed.getLineAndCharacterOfPosition(
           node.getStart(parsed),
@@ -190,6 +201,7 @@ describe("layout number guard", () => {
       "  fine: { padding: 3, gap: 2.5 },",
       "  computed: { padding: 2 * 4, gap: spacing.s, margin: StyleSheet.hairlineWidth },",
       "  typed: { gap: 4 as number },",
+      "  negative: { margin: -8 },",
       "};",
     ].join("\n");
     expect(findRaw(fixture, "fixture.tsx").map(valueOf)).toEqual([
@@ -197,6 +209,7 @@ describe("layout number guard", () => {
       "2:gap=6",
       "2:borderRadius=4.5",
       "5:gap=4",
+      "6:margin=-8",
     ]);
   });
 

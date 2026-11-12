@@ -60,7 +60,13 @@ glyph values stay literal with a reason in
 The guard is `app/scripts/lint/layout-numbers.test.ts`. It uses the
 TypeScript AST, so computed values, variables and
 `StyleSheet.hairlineWidth` are skipped. It fails a raw value at or above
-4 with the file and line. It runs in the existing vitest job.
+4, positive or negative, with the file and line. It scans features,
+components and the `src/app` routes. It runs in the existing vitest job.
+
+An independent verifier on another model found the original scope
+stopped at features and components, so a screen style in `src/app`
+would escape. The roots now include `src/app`, and the fixture proves a
+negative step is flagged.
 
 Visual proof is in `app/build/verify/evidence/design-scale/`, with 24
 before and after pairs at 360 and 412 in Budget and Midnight. Capture

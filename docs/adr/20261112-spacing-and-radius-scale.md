@@ -21,11 +21,12 @@ A 15 top pad becomes the row pad plus a 3pt mark.
 Marks under 4 stay literal. They trace a glyph, a rule or a swatch, not
 a rhythm. A shape that must read as fully round uses `radii.pill`.
 
-A vitest guard scans `app/src/features` and `app/src/components`. It
-fails a raw `padding`, `margin`, `gap` or `borderRadius` literal at or
-above 4. A list beside the test holds exceptions, each with a reason.
-Computed values, variables, `StyleSheet.hairlineWidth` and the token
-file are skipped.
+A vitest guard scans `app/src/features`, `app/src/components` and
+`app/src/app`, where Expo Router keeps the screens. It fails a raw
+`padding`, `margin`, `gap` or `borderRadius` literal whose size is 4 or
+more, whether positive or negative. A list beside the test holds
+exceptions, each with a reason. Computed values, variables,
+`StyleSheet.hairlineWidth` and the token file are skipped.
 
 We rejected a token for 6, 10 and 14. Each screen would then add its own
 number, and the scale would stop guiding a choice. We rejected a runtime
