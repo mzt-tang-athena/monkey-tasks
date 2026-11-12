@@ -332,6 +332,13 @@ month (ADR 0042).
 
 ## Next
 
+The design direction round started. `20261112-design-scale-guard`
+merged in `d26fcae`. It names the spacing and radius scale, moves
+fifteen stray values onto it, and adds a vitest guard. The guard fails a
+raw padding, margin, gap or radius of 4 or more in features, components
+and app routes. Next is the component gallery with visual baselines,
+ticket `20261112-component-gallery`.
+
 The phase 4 rebuild merged in `b3acdb1`. The round of tickets 0080 to
 0087 finished. It fixed the crash after a tick and the pager remount.
 It added runtime themes, a settings screen, a crash log and a command
