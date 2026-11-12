@@ -342,12 +342,14 @@ The design direction round started. `20261112-design-scale-guard`
 merged in `d26fcae`. It names the spacing and radius scale, moves
 fifteen stray values onto it, and adds a vitest guard. The guard fails a
 raw padding, margin, gap or radius of 4 or more in features, components
-and app routes. The component gallery, ticket
-`20261112-component-gallery`, followed. It draws every primitive in
-every state, in all four palettes, at 360 and 412 wide. A Playwright spec
-checks names, the 44pt floor and axe in each palette. It keeps one
-screenshot per palette and width. Next is ticket 0082, the selected
-state recipe, which waits on the operator's pick.
+and app routes. The component gallery merged in `68fb1a4`, ticket
+`20261112-component-gallery`. It draws every primitive in every state,
+in all four palettes, at 360 and 412 wide. A Playwright spec checks
+names, the 44pt floor and axe in each palette. It keeps one review
+screenshot per palette and width. The gallery found two defects, now
+open tickets: `20261112-menu-hint-name` and
+`20261112-control-focus-ring`. Next is ticket 0082, the selected state
+recipe, which waits on the operator's pick.
 
 The phase 4 rebuild merged in `b3acdb1`. The round of tickets 0080 to
 0087 finished. It fixed the crash after a tick and the pager remount.
