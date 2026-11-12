@@ -4,7 +4,7 @@
 // 0053 moved the contracts submodule to the parser fix.
 
 import { describe, expect, it } from "vitest";
-import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
+import { taskFrontmatter, taskIsDone, validateNote } from "@monkey-tasks/schemas";
 import { MEMORY_ROOT, createMemoryVault } from "@/lib/vault/adapters/memory";
 import { createNote } from "@/lib/vault/notes";
 import { updateProperty } from "@/lib/vault/frontmatter";
@@ -138,5 +138,40 @@ describe("a hand-written kind (monkey-tasks ticket 20261111-kind-accepts-both-sh
     const row = rows.find((item) => item.fileName === "Read the meter.md");
     expect(row?.errors).toBeUndefined();
     expect(row?.data?.kind).toBe("[[tasks]]");
+  });
+});
+
+describe("a completion takes a time (monkey-tasks ticket 20261111-completed-takes-a-time)", () => {
+  const base = { id: URI, uri: URI, fileName: "Call.md", name: "Call" };
+
+  it("reads a completion with a time and keeps it", () => {
+    const row = taskFromText(
+      base,
+      '---\nkind: "[[tasks]]"\ncreated: 2026-11-11\ncompleted: 2026-11-11T18:08\n---\n',
+    );
+    expect(row.errors).toBeUndefined();
+    expect(row.data?.completed).toBe("2026-11-11T18:08");
+    expect(taskIsDone(row.data!)).toBe(true);
+  });
+
+  it("reads a completion with a date alone", () => {
+    const row = taskFromText(
+      base,
+      '---\nkind: "[[tasks]]"\ncreated: 2026-11-11\ncompleted: 2026-11-11\n---\n',
+    );
+    expect(row.errors).toBeUndefined();
+    expect(row.data?.completed).toBe("2026-11-11");
+    expect(taskIsDone(row.data!)).toBe(true);
+  });
+
+  it("loads the sample notes with both shapes", async () => {
+    const vault = createMemoryVault(sampleSeed(["default"], SAMPLE_DAY));
+    const rows = await loadTasks(vault, TASKS);
+    const timed = rows.find((item) => item.fileName === "Water the fern.md");
+    const dated = rows.find((item) => item.fileName === "Buy stamps.md");
+    expect(timed?.errors).toBeUndefined();
+    expect(timed?.data?.completed).toBe("2026-10-26T18:08");
+    expect(dated?.errors).toBeUndefined();
+    expect(dated?.data?.completed).toBe("2026-10-26");
   });
 });
