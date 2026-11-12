@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { months, supplements, tabs, tomorrow, undated } from "../data";
 import { expectAbove, press, row } from "../locators";
+import { smallTargets } from "../targets";
 import {
   failNextCreate,
   failNextWrite,
@@ -15,23 +16,6 @@ import {
  * Ticket 0063: names, states, touch targets, alerts, the non-drag
  * reorder and focus. The axe scan sits at the end.
  */
-
-const minTarget = 44;
-/** Layout boxes land on fractions of a pixel; a hair under is a pass. */
-const slack = 0.5;
-const widgetRoles = [
-  "button",
-  "tab",
-  "checkbox",
-  "radio",
-  "option",
-  "gridcell",
-  "menuitem",
-  "menuitemradio",
-  "link",
-  "switch",
-  "slider",
-];
 
 async function openLists(page: Page) {
   await page.goto("/");
@@ -53,41 +37,6 @@ async function openPlanner(page: Page, mode: "day" | "week" | "month") {
   if (mode === "month") {
     await expect(page.getByTestId("month-title")).toBeVisible();
   }
-}
-
-/** Every visible widget smaller than 44 by 44, from its layout box. */
-async function smallTargets(page: Page) {
-  return page.evaluate(
-    ({ roles, min, slack }) => {
-      const small: { role: string; name: string; width: number; height: number }[] = [];
-      for (const role of roles) {
-        for (const element of document.querySelectorAll(`[role="${role}"]`)) {
-          const box = element.getBoundingClientRect();
-          const style = getComputedStyle(element);
-          if (
-            box.width === 0 ||
-            box.height === 0 ||
-            style.visibility === "hidden" ||
-            style.display === "none"
-          ) {
-            continue;
-          }
-          if (box.width < min - slack || box.height < min - slack) {
-            small.push({
-              role,
-              name:
-                element.getAttribute("aria-label") ??
-                (element.textContent ?? "").trim().slice(0, 40),
-              width: Math.round(box.width * 10) / 10,
-              height: Math.round(box.height * 10) / 10,
-            });
-          }
-        }
-      }
-      return small;
-    },
-    { roles: widgetRoles, min: minTarget, slack },
-  );
 }
 
 async function expectTargets(page: Page) {

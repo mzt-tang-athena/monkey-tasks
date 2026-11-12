@@ -256,8 +256,8 @@ documents its props, and each primitive has a component test.
 | `TextField` | A labelled input, with a hint or an error. |
 
 `components/task-row-face` draws the still task row that `TaskRow` and
-`PreviewRow` share. `hooks/use-dismiss` closes a surface on Android
-back and on Escape in the browser. `hooks/use-press-guard` blocks the
+`PreviewRow` share. `hooks/use-dismiss` closes a surface on Android back
+and on Escape in the browser. `hooks/use-press-guard` blocks the
 click that ends a swipe or a drop. `hooks/use-stable-callback` gives a
 handler one identity for a memoized row (ADR 0043). `theme/palettes.ts`
 holds the named palettes. `theme/tokens.ts` holds the type scale, the
@@ -271,7 +271,13 @@ screen that writes the palette and both settings (ADR
 20261111-settings-screen). Lists opens it from the list menu and Planner
 opens it from the gear beside the mode switch. Its Diagnostics section
 reads the crash log from app storage and offers Copy and Share (ticket
-0081).
+0081). It opens the diagnostics screen, which holds the one link to the
+gallery.
+
+`features/gallery` draws every primitive in every state, in the active
+palette (ADR 20261112-component-gallery). Its route is `/gallery`. A
+reviewer reaches it from Diagnostics only. `model.ts` holds the state
+matrix, and the Playwright spec walks the same list.
 
 `features/command` holds the command pane that ticket 0085 adds
 (ADR 20261111-command-pane). A downward pull on a header band, or the
@@ -336,8 +342,12 @@ The design direction round started. `20261112-design-scale-guard`
 merged in `d26fcae`. It names the spacing and radius scale, moves
 fifteen stray values onto it, and adds a vitest guard. The guard fails a
 raw padding, margin, gap or radius of 4 or more in features, components
-and app routes. Next is the component gallery with visual baselines,
-ticket `20261112-component-gallery`.
+and app routes. The component gallery, ticket
+`20261112-component-gallery`, followed. It draws every primitive in
+every state, in all four palettes, at 360 and 412 wide. A Playwright spec
+checks names, the 44pt floor and axe in each palette. It keeps one
+screenshot per palette and width. Next is ticket 0082, the selected
+state recipe, which waits on the operator's pick.
 
 The phase 4 rebuild merged in `b3acdb1`. The round of tickets 0080 to
 0087 finished. It fixed the crash after a tick and the pager remount.
