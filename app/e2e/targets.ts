@@ -1,9 +1,9 @@
 import type { Page } from "@playwright/test";
 
 /**
- * Every role the app gives a press or a keyboard step. A target counts
- * only when it takes a real box on screen: a hidden copy or an unmounted
- * surface is skipped.
+ * Every role the app gives a press, a field or a keyboard step. A
+ * target counts only when it takes a real box on screen: a hidden copy
+ * or an unmounted surface is skipped.
  */
 const widgetRoles = [
   "button",
@@ -17,6 +17,8 @@ const widgetRoles = [
   "link",
   "switch",
   "slider",
+  "textbox",
+  "searchbox",
 ];
 
 /** WCAG 2.2 asks for 24; the app's own floor is 44. */

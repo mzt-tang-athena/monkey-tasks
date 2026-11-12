@@ -326,8 +326,9 @@ export default function GalleryScreen() {
             {`${THEME_NAMES[name]} at ${window.width} wide`}
           </Text>
           <Text style={styles.note}>
-            A browser focuses one control at a time, so the focused cells ring
-            in Tab order.
+            Only the text field shows a focus ring today. Pressable and
+            IconButton paint none, so their focused cells look like rest.
+            Ticket 20261112-control-focus-ring covers the missing mark.
           </Text>
         </View>
 

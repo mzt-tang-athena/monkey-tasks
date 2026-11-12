@@ -62,18 +62,21 @@ and the faint step is the receding mark for done work. Both sit below 4.5
 to 1 by design. The spec names the two cells, so no other cell escapes
 the rule.
 
-Only one control can hold focus at a time, so the focused cells ring in
-Tab order. A reviewer presses Tab to see each one.
+Pressable, IconButton and Button paint no focus style on web. Only the
+text field shows the browser's own input ring. So the gallery's focused
+cells for pressable and icon button show no change, and focus drift on
+those primitives cannot appear here. The cells are labelled "focused, no
+ring" and ticket 20261112-control-focus-ring covers the missing style.
 
 The gallery ships in the bundle. It has no production entry point.
 
 ## Amendment, 2026-11-12: the runner draws one glyph differently
 
-The first CI run of the spec failed on all four 360 wide shots. Each
-image differed in 106 to 112 pixels, all inside a 7 by 3 box at
-(62, 3694) to (68, 3696). That box holds the check glyph in a done row.
-The runner draws that glyph two pixels from where this machine draws it.
-Every other pixel matched.
+The first CI run of the spec failed on all four 360 wide shots. The 360
+budget image differed in 112 pixels, in two 11 by 10 boxes. One starts
+at x 58, y 3694, the other at x 58, y 3998. Each box holds the check
+glyph in a done row. The runner draws that glyph two pixels from where
+this machine draws it. Every other pixel matched.
 
 So we take the fallback in the decision above. The spec keeps no pixel
 baselines. It asserts the palette's ground, fills and ink, the page's
@@ -85,3 +88,8 @@ report, so a reviewer sees every state.
 We rejected a tolerance of a few hundred pixels. That would have passed
 the run, but it would call a baseline stable while a font shift moves
 pixels inside it. The ticket asks for the same pixels or the fallback.
+
+We also rejected a masked baseline, which hides the two glyph boxes and
+compares the rest of the page. It would keep a real pixel check, but the
+mask would follow a glyph whose position changes with content. The
+fallback already asserts the paint and geometry a reviewer checks.

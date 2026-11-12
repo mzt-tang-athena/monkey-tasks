@@ -85,13 +85,13 @@ The spec checks all four palettes at 360 and 412 wide:
   and axe.
 
 Visual check: the fallback path. The pixel baselines failed on CI in the
-first run. All four 360 shots differed by 106 to 112 pixels, inside a 7
-by 3 box at (62, 3694), which holds the check glyph of a done row. The
-runner draws that glyph two pixels from this machine's. Every other pixel
-matched. The spec keeps no baselines. It still takes 8 shots, keeps them
-in `app/build/verify/evidence/component-gallery/` (gitignored) and
-attaches them to the report. CI is green on the head that carries this
-path.
+first run. The 360 budget shot differed in 112 pixels, in two 11 by 10
+boxes at x 58, y 3694 and x 58, y 3998. Each box holds the check glyph
+of a done row. The runner draws that glyph two pixels from this
+machine's. Every other pixel matched. The spec keeps no baselines. It
+still takes 8 shots, keeps them in
+`app/build/verify/evidence/component-gallery/` (gitignored) and attaches
+them to the report. CI is green on the head that carries this path.
 
 The only production screen change is the "Open gallery" button on the
 diagnostics screen. No primitive is restyled, no dependency is added, and
@@ -106,5 +106,14 @@ The gallery found one defect and leaves it to its own ticket. A visible
 hint on a menu item breaks WCAG 2.5.3, because `Menu` names the item by
 its label alone. The gallery's menu carries no hint. Ticket
 `20261112-menu-hint-name` owns the fix.
+
+It found a second gap in the primitives it reviews. `Pressable`,
+`IconButton` and `Button` paint no focus style on web, so two focused
+cells look like rest. They are labelled "focused, no ring", and ticket
+`20261112-control-focus-ring` owns the missing mark.
+
+The independent verifier also found the 44pt scan skipped `textbox` and
+`searchbox`, so an input could shrink and pass. Both roles are in the
+scan now.
 
 PR: #134.
