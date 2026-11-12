@@ -68,5 +68,26 @@ Gates: `npx tsc --noEmit` passes, `npx eslint src scripts e2e
 failed. The app PR is 128 and waits for the operator to merge it.
 
 CI ran the same 440 tests in 8.1 minutes, then its 10 minute job limit
-cancelled the run one second later. The `e2e-web` limit is now 20
-minutes. A main run in PR 124 was cancelled the same way.
+cancelled the run one second later. A main run after PR 124 merged was
+cancelled at 10m05s, mid-suite. The `e2e-web` limit is now 20 minutes,
+twice the worst observed job.
+
+Merged as `1e87632`. The verifier passed eight checks. It ran the built
+`dist` directly: bare and link normalize, whitespace trims, and a wrong
+kind fails loudly rather than normalizing. It confirmed the app reads
+only tasks and lists, both covered, and that a tick or an edit never
+rewrites `kind`. It also found the run that printed `440 passed (8.1m)`
+and was cancelled one second later.
+
+The pin bump brings 14 contracts commits. Only two touch the schemas
+package: the rename and the built package. The `src` diff is the kind
+rule plus comments.
+
+Risks that stay open. A clean machine that skips the submodule sees
+`error TS5058`, which does not name it; the README now states the order
+and that every platform needs the submodule. The app builds `dist` with
+TypeScript 6, while contracts publishes with 5.9, and nobody has
+compared the two artifacts. The Android bundle now loads prebuilt
+ES2022 instead of Metro-compiled source, and no device runs it. Zod
+could exist twice if the two lockfiles diverge; they agree today. A pin
+bump without a fresh install tests the old `dist` silently.
