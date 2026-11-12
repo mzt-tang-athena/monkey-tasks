@@ -25,7 +25,7 @@ import {
 } from "@/lib/motion/drag-math";
 import { holds, motion } from "@/lib/motion/tokens";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
-import { radius, shadows, touchTarget, type Palette } from "@/theme/tokens";
+import { radius, shadows, spacing, touchTarget, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { createBridgeGuard, toJS } from "./internal/bridge";
 import { useArrowKeys } from "./internal/keys";
@@ -701,7 +701,7 @@ const makeStyles = (colors: Palette) => ({
     },
     gripRow: {
       flexDirection: "row",
-      gap: 4,
+      gap: spacing.xs,
     },
     gripDot: {
       width: 3,

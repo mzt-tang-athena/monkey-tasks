@@ -193,8 +193,8 @@ const makeStyles = (colors: Palette) => ({
       alignSelf: "flex-start",
       backgroundColor: colors.accent,
       borderRadius: radius,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      paddingHorizontal: spacing.l,
+      paddingVertical: spacing.m,
     },
     buttonText: {
       color: colors.onAccent,
@@ -210,7 +210,7 @@ const makeStyles = (colors: Palette) => ({
     },
     swatchRow: {
       flexDirection: "row",
-      gap: 8,
+      gap: spacing.s,
     },
     swatch: {
       width: 32,

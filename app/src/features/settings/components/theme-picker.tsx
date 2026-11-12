@@ -4,6 +4,7 @@ import { Pressable } from "@/components/ui/pressable";
 import {
   THEME_NAMES,
   THEMES,
+  radii,
   radius,
   spacing,
   touchTarget,
@@ -106,7 +107,7 @@ const makeStyles = (colors: Palette) => ({
     swatchDot: {
       width: 12,
       height: 12,
-      borderRadius: 6,
+      borderRadius: radii.pill,
     },
     label: {
       ...type.body,

@@ -8,7 +8,7 @@ import type { TaskItem } from "@/types/task";
 import { useProgress } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { type Palette } from "@/theme/tokens";
+import { spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { Pressable } from "./ui/pressable";
 import { TaskRowFace, taskRowLabel, useTaskRowFace } from "./task-row-face";
@@ -232,7 +232,7 @@ const makeStyles = (colors: Palette) => ({
     // for a one-line name and the row keeps its height.
     bodyTarget: {
       minHeight: 44,
-      paddingVertical: 12,
+      paddingVertical: spacing.m,
       justifyContent: "center",
     },
     bodyPressed: {

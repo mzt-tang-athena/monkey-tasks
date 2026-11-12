@@ -96,7 +96,15 @@ export const shadows = {
   },
 } as const satisfies Record<string, ViewStyle>;
 
-/** 8pt scale, with the half steps 4pt and 12pt. */
+/**
+ * Layout steps on a 4pt grid. A container spaces its children with one
+ * step (ADR 0012), and a layout value at or above 4 belongs on the
+ * scale, so a button pads with `m`, not 10.
+ *
+ * Marks under 4 stay literal: a tick, a hairline gap or a glyph stroke
+ * traces a shape, not a rhythm. No step exists between 4 and 8, so 6
+ * rounds to one of them rather than growing the scale.
+ */
 export const spacing = {
   xs: 4,
   s: 8,
@@ -108,9 +116,13 @@ export const spacing = {
 } as const;
 
 /**
- * The one shared corner radius for every surface: cards, cells,
- * buttons, the composer panel. Round 5 shaved it a step. The fully
- * rounded capture pill is the only exception.
+ * The one shared corner radius for every laid-out surface: cards,
+ * cells, buttons, the composer panel. Round 5 shaved it a step.
+ *
+ * Marks under 4 stay literal: they trace a glyph or a swatch, not a
+ * panel. A shape that must read as fully round uses `radii.pill`,
+ * whatever its size. A drawn glyph may also carry its own curve, and
+ * the layout guard allowlists each one.
  */
 export const radius = 6;
 /** Floating surfaces (the capture sheet) sit a step larger. */

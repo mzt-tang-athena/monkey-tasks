@@ -109,7 +109,7 @@ const makeStyles = (colors: Palette) => ({
     add: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 6,
+      gap: spacing.s,
       minHeight: bottomBar.add,
       paddingHorizontal: spacing.l,
       borderRadius: radii.pill,

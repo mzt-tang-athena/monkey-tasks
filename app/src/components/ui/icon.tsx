@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   pill: {
     width: 16,
     height: 9,
-    borderRadius: 4.5,
+    borderRadius: radii.pill,
     borderWidth: 1.5,
   },
 
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   settingsRing: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: radii.pill,
     borderWidth: 2,
   },
   settingsToothTop: {
