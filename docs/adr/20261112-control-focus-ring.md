@@ -32,8 +32,8 @@ native press keeps its current behaviour and paints no ring.
 
 The mark is two colors, both inside the target:
 
-- a 2 px ring in the palette's new `focusRing`, offset 2 px inside the
-  edge;
+- a 2 px ring in the palette's new `focusRing`, at the target's edge,
+  held inside the box by `outlineOffset: -2`;
 - a 2 px band of `onAccent` inside the ring, an inset box shadow.
 
 One of the two always reads. On `paper`, `surface` and `accentSoft` the
@@ -88,8 +88,9 @@ Native keeps its touch behaviour. A phone has no keyboard focus, so no
 ring.
 
 The browser's own outline is off on a press target on the web. The
-shared mark is the only focus indicator there, so a browser without
-`:focus-visible` would show none. Every current browser supports it.
+shared mark is the only focus indicator there. A browser without
+`:focus-visible` gets the mark on every focus, so a keyboard user never
+loses it. No current browser takes that path.
 
 A gallery cell can show a real mark only while it holds focus, because a
 browser holds focus on one control (ADR 20261112-component-gallery, the

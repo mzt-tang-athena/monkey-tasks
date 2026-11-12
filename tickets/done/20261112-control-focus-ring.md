@@ -81,7 +81,8 @@ Modality is the browser's own test. The press reads
 `pointerdown` clears the mark. The press also sets `outline-style: none`
 when the mark is off, because Chrome keeps its focus-visible verdict
 after a press on an already focused control. A disabled target never
-draws it.
+draws it. If the selector is unknown, the handler draws the mark instead
+of throwing, and a test holds that path.
 
 The gallery's two focused cells drop "no ring" and follow the keyboard.
 The auto-focus wrapper is gone. A browser holds focus on one control, so

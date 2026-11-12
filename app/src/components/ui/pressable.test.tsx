@@ -113,6 +113,24 @@ describe("the focus mark", () => {
     }
   });
 
+  it("shows the mark where the browser lacks the selector", () => {
+    const verdict = Element.prototype.matches;
+    vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+      this: Element,
+      selector: string,
+    ) {
+      if (selector === ":focus-visible") {
+        throw new SyntaxError("unsupported selector");
+      }
+      return verdict.call(this, selector);
+    });
+    const target = renderTarget();
+
+    expect(() => act(() => target.focus())).not.toThrow();
+
+    expect(mark(target).style).toBe("solid");
+  });
+
   it("never marks a disabled target", () => {
     render(<Button label="Save task" disabled />);
     const target = screen.getByRole("button", { name: "Save task" });

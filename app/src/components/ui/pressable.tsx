@@ -125,10 +125,15 @@ const WebPress = React.forwardRef<
       onFocus={(event) => {
         // The browser's own test, so a mouse press keeps the ring off.
         const target = event.target as unknown as HTMLElement | null;
-        setKeyboardFocus(
-          props.disabled !== true &&
-            (target?.matches(":focus-visible") ?? false),
-        );
+        let visible = false;
+        try {
+          visible = target?.matches(":focus-visible") ?? false;
+        } catch {
+          // An older browser lacks the selector. Show the mark rather
+          // than leave a keyboard user with no indicator.
+          visible = true;
+        }
+        setKeyboardFocus(props.disabled !== true && visible);
         props.onFocus?.(event);
       }}
       onBlur={(event) => {
