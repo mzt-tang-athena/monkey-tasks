@@ -255,6 +255,16 @@ async function capture(
   await page.setViewportSize({ width, height: 915 });
 }
 
+/** Lets the browser paint two frames, so an entrance has started. */
+async function painted(page: Page) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+}
+
 async function checkMenu(page: Page, where: string) {
   await press(
     page,
@@ -264,6 +274,11 @@ async function checkMenu(page: Page, where: string) {
   );
   const menu = page.getByRole("menu", { name: "Row actions" });
   await expect(menu, where).toBeVisible();
+  // The menu fades and grows in. A computed opacity can read 1 in the
+  // frame before the fade starts, so wait for a paint first, then for
+  // the fade to land. The target floor and the axe scan read the menu
+  // at rest.
+  await painted(page);
   await expect(menu).toHaveCSS("opacity", "1");
 
   for (const name of ["Open task", "Move to list Pick a list", "Delete task"]) {
