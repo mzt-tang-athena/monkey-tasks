@@ -260,7 +260,7 @@ const makeStyles = (colors: Palette) => ({
     // gutter time centers on the same first line from the row's top.
     gutterTimeLive: {
       paddingVertical: 0,
-      paddingTop: 15,
+      paddingTop: taskRowFace.padY + 3,
     },
     recur: {
       fontSize: 12,

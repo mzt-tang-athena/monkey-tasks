@@ -84,8 +84,8 @@ const makeStyles = (colors: Palette) => ({
     chip: {
       backgroundColor: colors.accent,
       borderRadius: radius,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      paddingHorizontal: spacing.l,
+      paddingVertical: spacing.m,
     },
     chipText: {
       color: colors.onAccent,

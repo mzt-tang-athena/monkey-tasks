@@ -57,7 +57,7 @@ const makeStyles = (colors: Palette) => ({
     control: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 6,
+      gap: spacing.s,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.hairline,
       backgroundColor: colors.accentSoft,
@@ -79,7 +79,7 @@ const makeStyles = (colors: Palette) => ({
     chip: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 6,
+      gap: spacing.s,
       backgroundColor: colors.accentSoft,
       borderRadius: radius,
       paddingHorizontal: spacing.s,

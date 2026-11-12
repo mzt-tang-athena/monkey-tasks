@@ -9,7 +9,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
-import { touchTarget, type Palette } from "@/theme/tokens";
+import { radius, touchTarget, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
@@ -291,7 +291,7 @@ const makeStyles = (colors: Palette) => ({
       height: touchTarget,
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: 6,
+      borderRadius: radius,
     },
     gripHot: {
       backgroundColor: colors.pressed,
