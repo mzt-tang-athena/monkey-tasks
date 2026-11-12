@@ -123,7 +123,10 @@ jobs:
   # code job.
   e2e-web:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Two projects of about 220 tests each take 8 to 10 minutes with the
+    # install and the export. The old 10 minute limit cancelled a run
+    # one second after its last test passed.
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: read
