@@ -91,21 +91,19 @@ test.describe("row names and states", () => {
 test.describe("My order", () => {
   test.beforeEach(async ({ page }) => {
     await page.getByRole("button", { name: "sort list" }).click();
-    await page.getByRole("radio", { name: "My order" }).click();
+    await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
     await expectAbove(row(page, undated.first), row(page, undated.second));
   });
 
   test("the sort sheet marks the order in use", async ({ page }) => {
     await page.getByRole("button", { name: "sort list" }).click();
 
-    await expect(page.getByRole("radio", { name: "My order" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    await expect(page.getByRole("radio", { name: "Due date" })).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
+    await expect(
+      page.getByRole("radio", { name: "My order Drag rows to sort" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(
+      page.getByRole("radio", { name: "Due date Soonest first" }),
+    ).toHaveAttribute("aria-checked", "false");
   });
 
   test("each grip is a slider named by its task at its place", async ({ page }) => {

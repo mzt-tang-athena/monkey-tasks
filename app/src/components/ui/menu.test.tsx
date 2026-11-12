@@ -235,7 +235,7 @@ describe("Menu", () => {
     expect(item.getAttribute("aria-disabled")).toBe("true");
   });
 
-  it("checks the selected item and shows its hint", async () => {
+  it("checks the selected item and names it by its label and hint", async () => {
     render(
       <Harness
         items={[
@@ -247,11 +247,15 @@ describe("Menu", () => {
     placeAnchor({ x: 326, y: 20, width: 44, height: 44 });
     await openMenu();
 
-    const chosen = screen.getByRole("menuitemradio", { name: "My order" });
+    const chosen = screen.getByRole("menuitemradio", {
+      name: "My order Drag rows to sort",
+    });
     expect(chosen.getAttribute("aria-checked")).toBe("true");
     expect(chosen.textContent).toContain("Drag rows to sort");
     expect(
-      screen.getByRole("menuitemradio", { name: "Due date" }).getAttribute("aria-checked"),
+      screen
+        .getByRole("menuitemradio", { name: "Due date Soonest first" })
+        .getAttribute("aria-checked"),
     ).toBe("false");
   });
 

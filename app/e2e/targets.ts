@@ -37,6 +37,10 @@ export type SmallTarget = {
  * Every visible widget smaller than 44 by 44, from its layout box.
  * `root` is a CSS selector: the whole page by default, or one surface
  * such as an open dialog.
+ *
+ * A surface that plays an entrance grows from a smaller scale, so its
+ * rows take less room on screen while it plays. The floor is about the
+ * box a widget lays out, so the scale comes out of the answer.
  */
 export async function smallTargets(
   page: Page,
@@ -44,28 +48,46 @@ export async function smallTargets(
 ): Promise<SmallTarget[]> {
   return page.evaluate(
     ({ roles, min, slack, selector }) => {
+      const scaleOf = (element: Element) => {
+        let scale = 1;
+        for (
+          let node: Element | null = element;
+          node != null;
+          node = node.parentElement
+        ) {
+          const transform = getComputedStyle(node).transform;
+          if (transform !== "none") {
+            const matrix = new DOMMatrixReadOnly(transform);
+            scale *= Math.hypot(matrix.a, matrix.b);
+          }
+        }
+        return scale;
+      };
       const scope = document.querySelector(selector) ?? document.body;
       const small: SmallTarget[] = [];
       for (const role of roles) {
         for (const element of scope.querySelectorAll(`[role="${role}"]`)) {
           const box = element.getBoundingClientRect();
+          const scale = scaleOf(element);
+          const width = box.width / scale;
+          const height = box.height / scale;
           const style = getComputedStyle(element);
           if (
-            box.width === 0 ||
-            box.height === 0 ||
+            width === 0 ||
+            height === 0 ||
             style.visibility === "hidden" ||
             style.display === "none"
           ) {
             continue;
           }
-          if (box.width < min - slack || box.height < min - slack) {
+          if (width < min - slack || height < min - slack) {
             small.push({
               role,
               name:
                 element.getAttribute("aria-label") ??
                 (element.textContent ?? "").trim().slice(0, 40),
-              width: Math.round(box.width * 10) / 10,
-              height: Math.round(box.height * 10) / 10,
+              width: Math.round(width * 10) / 10,
+              height: Math.round(height * 10) / 10,
             });
           }
         }

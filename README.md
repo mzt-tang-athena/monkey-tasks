@@ -346,8 +346,9 @@ and app routes. The component gallery merged in `68fb1a4`, ticket
 `20261112-component-gallery`. It draws every primitive in every state,
 in all four palettes, at 360 and 412 wide. A Playwright spec checks
 names, the 44pt floor and axe in each palette. It keeps one review
-screenshot per palette and width. The gallery found two defects, now
-open tickets: `20261112-menu-hint-name` and
+screenshot per palette and width. The gallery found two defects.
+`20261112-menu-hint-name` fixes the first: a hinted menu item now reads
+as one name, and the gallery draws a hint again. One open ticket remains:
 `20261112-control-focus-ring`. Next is ticket 0082, the selected state
 recipe, which waits on the operator's pick.
 

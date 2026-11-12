@@ -70,7 +70,7 @@ export function OverlayStage({
 function menuItems(onClose: () => void): MenuItem[] {
   return [
     { key: "open", label: "Open task", onPress: onClose },
-    { key: "move", label: "Move to list", onPress: onClose },
+    { key: "move", label: "Move to list", hint: "Pick a list", onPress: onClose },
     { key: "done", label: "Mark done", selected: true, onPress: onClose },
     { key: "delete", label: "Delete task", tone: "danger", onPress: onClose },
   ];

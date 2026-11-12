@@ -14,7 +14,8 @@ import { Pressable } from "./pressable";
 export type MenuItem = {
   key: string;
   label: string;
-  /** A second, quieter line under the label. */
+  /** A second, quieter line under the label. It joins the item's
+      accessible name, so the name holds every word the row shows. */
   hint?: string;
   /** Draws a check: the item is the current choice. Leave it out for
       an action, which has no checked state. */
@@ -241,7 +242,9 @@ function MenuRow({ item, radio }: { item: MenuItem; radio: boolean }) {
       onPress={item.onPress}
       disabled={item.disabled}
       role={check}
-      accessibilityLabel={item.label}
+      accessibilityLabel={
+        item.hint == null ? item.label : `${item.label} ${item.hint}`
+      }
       aria-disabled={item.disabled ?? false}
       aria-checked={item.selected === undefined ? undefined : item.selected ?? false}
       tabIndex={0}
@@ -256,6 +259,11 @@ function MenuRow({ item, radio }: { item: MenuItem; radio: boolean }) {
           ]}
         >
           {item.label}
+          {/* The two lines are separate blocks, and the DOM joins their
+              text with nothing between them. The name above has a space,
+              and axe compares the two, so the label carries it too. It
+              hangs at the line end and moves nothing. */}
+          {item.hint == null ? null : " "}
         </Text>
         {item.hint != null ? <Text style={styles.hint}>{item.hint}</Text> : null}
       </View>

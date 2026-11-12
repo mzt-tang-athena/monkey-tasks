@@ -133,10 +133,9 @@ test.describe("the settings persist", () => {
     // The Lists screen was mounted the whole time: its own sort menu
     // already reads the new order.
     await press(page, page.getByRole("button", { name: "sort list" }));
-    await expect(page.getByRole("radio", { name: "My order" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    await expect(
+      page.getByRole("radio", { name: "My order Drag rows to sort" }),
+    ).toHaveAttribute("aria-checked", "true");
     await page.keyboard.press("Escape");
 
     // The Planner was mounted too, and its day view now draws chips.
@@ -157,10 +156,9 @@ test.describe("the settings persist", () => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await press(page, page.getByRole("button", { name: "sort list" }));
-    await expect(page.getByRole("radio", { name: "My order" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    await expect(
+      page.getByRole("radio", { name: "My order Drag rows to sort" }),
+    ).toHaveAttribute("aria-checked", "true");
   });
 });
 

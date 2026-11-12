@@ -32,7 +32,7 @@ async function openMain(page: Page) {
 async function openMyOrder(page: Page) {
   await openMain(page);
   await page.getByRole("button", { name: "sort list" }).click();
-  await page.getByRole("radio", { name: "My order" }).click();
+  await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
   await expectAbove(row(page, undated.first), row(page, undated.second));
 }
 
@@ -513,7 +513,7 @@ test("the capture entrance never replays within the freshness window", async ({
   // My order: the drag's own copy is a still preview, so no task row
   // mounts during it. The row then pages away and back.
   await page.getByRole("button", { name: "sort list" }).click();
-  await page.getByRole("radio", { name: "My order" }).click();
+  await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
   await expectAbove(row(page, undated.first), row(page, undated.second));
   await row(page, captured).scrollIntoViewIfNeeded();
   const previous = await page.evaluate((name) => {
