@@ -120,14 +120,15 @@ test.describe("states", () => {
     await press(page, page.getByRole("button", { name: "sort list" }));
 
     const group = page.getByRole("radiogroup", { name: "Sort list" });
-    await expect(group.getByRole("radio", { name: "Due date" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    await expect(group.getByRole("radio", { name: "My order" })).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
+    await expect(
+      group.getByRole("radio", { name: "Due date Soonest first", exact: true }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(
+      group.getByRole("radio", {
+        name: "My order Drag rows to sort",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-checked", "false");
   });
 
   test("each tab group sits in a tablist", async ({ page }) => {
@@ -279,7 +280,10 @@ test.describe("non-drag paths", () => {
   }) => {
     await openLists(page);
     await press(page, page.getByRole("button", { name: "sort list" }));
-    await press(page, page.getByRole("radio", { name: "My order" }));
+    await press(
+      page,
+      page.getByRole("radio", { name: "My order Drag rows to sort" }),
+    );
     await expectAbove(row(page, undated.first), row(page, undated.second));
 
     const grip = page.getByRole("slider", {

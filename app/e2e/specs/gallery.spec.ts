@@ -266,7 +266,7 @@ async function checkMenu(page: Page, where: string) {
   await expect(menu, where).toBeVisible();
   await expect(menu).toHaveCSS("opacity", "1");
 
-  for (const name of ["Open task", "Move to list", "Delete task"]) {
+  for (const name of ["Open task", "Move to list Pick a list", "Delete task"]) {
     await expect(menu.getByRole("menuitem", { name }), where).toBeVisible();
   }
   await expect(

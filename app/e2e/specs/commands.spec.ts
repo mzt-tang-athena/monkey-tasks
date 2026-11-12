@@ -279,7 +279,7 @@ test.describe("the three exclusions", () => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await page.getByRole("button", { name: "sort list" }).click();
-    await page.getByRole("radio", { name: "My order" }).click();
+    await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
 
     await holdDrag(
       page,
