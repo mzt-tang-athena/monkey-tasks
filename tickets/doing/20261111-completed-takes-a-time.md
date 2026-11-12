@@ -2,7 +2,7 @@
 title: Completed takes a time
 created: 2026-11-11
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
