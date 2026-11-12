@@ -81,3 +81,20 @@ export async function expectBefore(first: Locator, second: Locator) {
 export async function press(page: Page, target: Locator) {
   await target.click();
 }
+
+/**
+ * Press Tab until the control holds focus. A browser holds focus on one
+ * control, so a keyboard walk is the only way to see a real focus ring,
+ * and it keeps the input modality the browser reports.
+ */
+export async function tabTo(page: Page, target: Locator, limit = 40) {
+  for (let step = 0; step < limit; step++) {
+    await page.keyboard.press("Tab");
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
+      return;
+    }
+  }
+  throw new Error("the tab walk never reached the control");
+}

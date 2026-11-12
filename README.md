@@ -252,7 +252,7 @@ documents its props, and each primitive has a component test.
 | `SectionHeader` | An eyebrow label over a group, with a count and a tone. |
 | `CardGroupRow` | One row of a group card, with its edges and an inset divider. |
 | `TabStrip`, `SegmentedControl` | Tabs that scroll, with a fade over an edge that hides more tabs, and segments. Every target is at least 44 by 44. |
-| `Pressable` | Every press target. React Native's press on the web, because it takes the browser click. A row that mounts or re-renders under the finger still presses. It needs no layout report. Gesture handler's on native, where a pan cancels it. A surface swallows the one click a pan activation leaves behind. |
+| `Pressable` | Every press target. React Native's press on the web, because it takes the browser click. A row that mounts or re-renders under the finger still presses. It needs no layout report. Gesture handler's on native, where a pan cancels it. A surface swallows the one click a pan activation leaves behind. A web keyboard focus draws the shared focus mark, in the active palette. |
 | `TextField` | A labelled input, with a hint or an error. |
 
 `components/task-row-face` draws the still task row that `TaskRow` and
@@ -348,9 +348,11 @@ in all four palettes, at 360 and 412 wide. A Playwright spec checks
 names, the 44pt floor and axe in each palette. It keeps one review
 screenshot per palette and width. The gallery found two defects.
 `20261112-menu-hint-name` fixes the first: a hinted menu item now reads
-as one name, and the gallery draws a hint again. One open ticket remains:
-`20261112-control-focus-ring`. Next is ticket 0082, the selected state
-recipe, which waits on the operator's pick.
+as one name, and the gallery draws a hint again. `20261112-control-focus-ring`
+fixes the second. The shared press draws one focus mark for a keyboard
+focus, in every palette. The gallery's focus cells follow the keyboard
+(ADR 20261112-control-focus-ring). Next is ticket 0082, the selected
+state recipe, which waits on the operator's pick.
 
 The phase 4 rebuild merged in `b3acdb1`. The round of tickets 0080 to
 0087 finished. It fixed the crash after a tick and the pager remount.

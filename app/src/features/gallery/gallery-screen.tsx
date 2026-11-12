@@ -32,7 +32,6 @@ import {
 } from "@/theme/tokens";
 import { useTheme, useThemedStyles } from "@/theme/theme-provider";
 import type { TaskItem } from "@/types/task";
-import { Focused } from "./components/focused";
 import { OverlayStage, type OverlayName } from "./components/overlay-stage";
 import { PressTarget } from "./components/press-target";
 import {
@@ -110,9 +109,7 @@ export default function GalleryScreen() {
       <PressTarget paint="pressed" testID="gallery-press-pressed" />
     ),
     "pressable:focused": (
-      <Focused>
-        <PressTarget paint="rest" testID="gallery-press-focused" />
-      </Focused>
+      <PressTarget paint="rest" testID="gallery-press-focused" />
     ),
 
     "icon-button:rest": (
@@ -126,11 +123,9 @@ export default function GalleryScreen() {
       </IconButton>
     ),
     "icon-button:focused": (
-      <Focused>
-        <IconButton label="sort tasks, focused">
-          <Icon name="sort" />
-        </IconButton>
-      </Focused>
+      <IconButton label="sort tasks, focused">
+        <Icon name="sort" />
+      </IconButton>
     ),
 
     "segmented-control:selected": (
@@ -168,9 +163,7 @@ export default function GalleryScreen() {
     ),
     "text-field:focused": (
       <View style={styles.wide}>
-        <Focused>
-          <TextField label="Task name" defaultValue="Buy milk" />
-        </Focused>
+        <TextField label="Task name" defaultValue="Buy milk" />
       </View>
     ),
     "text-field:error": (
@@ -326,9 +319,10 @@ export default function GalleryScreen() {
             {`${THEME_NAMES[name]} at ${window.width} wide`}
           </Text>
           <Text style={styles.note}>
-            Only the text field shows a focus ring today. Pressable and
-            IconButton paint none, so their focused cells look like rest.
-            Ticket 20261112-control-focus-ring covers the missing mark.
+            Pressable, IconButton and Button draw the same focus mark for a
+            keyboard focus. A browser holds focus on one control, so a
+            focused cell shows its mark only while it holds focus. Tab to a
+            cell and it draws the mark; a mouse press takes it away.
           </Text>
         </View>
 

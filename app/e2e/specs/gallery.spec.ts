@@ -1,9 +1,9 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import type { Page, TestInfo } from "@playwright/test";
+import type { Locator, Page, TestInfo } from "@playwright/test";
 import { expect, test } from "../fixtures";
-import { press } from "../locators";
+import { press, tabTo } from "../locators";
 import { smallTargets } from "../targets";
 import { rgb, setTheme } from "../theme";
 import { THEMES, THEME_NAMES, type ThemeName } from "../../src/theme/palettes";
@@ -255,6 +255,31 @@ async function capture(
   await page.setViewportSize({ width, height: 915 });
 }
 
+/**
+ * One shot of a focused control for review. The page shot at rest holds
+ * no focus, so this is the image that shows the mark.
+ */
+async function captureFocus(
+  name: string,
+  target: Locator,
+  testInfo: TestInfo,
+) {
+  const dir = path.join(
+    process.cwd(),
+    "build",
+    "verify",
+    "evidence",
+    "component-gallery",
+  );
+  mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `focus-${name}.png`);
+  await target.screenshot({ path: file, animations: "disabled" });
+  await testInfo.attach(`focus-${name}`, {
+    path: file,
+    contentType: "image/png",
+  });
+}
+
 /** Lets the browser paint two frames, so an entrance has started. */
 async function painted(page: Page) {
   await page.evaluate(
@@ -436,16 +461,48 @@ test.describe("the gallery", () => {
     });
   }
 
-  test("the focused state holds focus and the press paints its ground", async ({
+  test("the focus cells follow the keyboard and drop for the pointer", async ({
     page,
-  }) => {
+  }, testInfo) => {
     await openGallery(page, "budget", 412);
 
-    await expect(
-      page
-        .getByTestId(stateTestId("text-field:focused"))
-        .getByRole("textbox", { name: "Task name" }),
-    ).toBeFocused();
+    const press = page.getByTestId("gallery-press-focused");
+    await tabTo(page, press);
+    await expect(press).toBeFocused();
+    await expect(press).toHaveCSS("outline-style", "solid");
+    await expect(press).toHaveCSS("outline-width", "2px");
+    await expect(press).toHaveCSS("outline-color", rgb(THEMES.budget.focusRing));
+    if (testInfo.project.name === "motion") {
+      await captureFocus("pressable-budget", press, testInfo);
+    }
+
+    const icon = page
+      .getByTestId(stateTestId("icon-button:focused"))
+      .getByRole("button", { name: "sort tasks, focused" });
+    await tabTo(page, icon);
+    await expect(icon).toHaveCSS("outline-color", rgb(THEMES.budget.focusRing));
+    if (testInfo.project.name === "motion") {
+      await captureFocus("icon-button-budget", icon, testInfo);
+    }
+
+    // The control keeps focus through the press, so only the pointer's
+    // own verdict can drop the mark.
+    await icon.hover();
+    await page.mouse.down();
+    await expect(icon).toHaveCSS("outline-style", "none");
+    await page.mouse.up();
+    await expect(icon).toBeFocused();
+    await expect(icon).toHaveCSS("outline-style", "none");
+
+    const field = page
+      .getByTestId(stateTestId("text-field:focused"))
+      .getByRole("textbox", { name: "Task name" });
+    await tabTo(page, field);
+    await expect(field).toBeFocused();
+  });
+
+  test("the press paints its ground", async ({ page }) => {
+    await openGallery(page, "budget", 412);
 
     const target = page.getByTestId("gallery-press-rest");
     await expect(target).toHaveCSS(

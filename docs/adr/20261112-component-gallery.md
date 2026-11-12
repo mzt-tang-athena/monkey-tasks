@@ -62,11 +62,11 @@ and the faint step is the receding mark for done work. Both sit below 4.5
 to 1 by design. The spec names the two cells, so no other cell escapes
 the rule.
 
-Pressable, IconButton and Button paint no focus style on web. Only the
-text field shows the browser's own input ring. So the gallery's focused
-cells for pressable and icon button show no change, and focus drift on
-those primitives cannot appear here. The cells are labelled "focused, no
-ring" and ticket 20261112-control-focus-ring covers the missing style.
+Pressable, IconButton and Button draw one focus mark on the web, in the
+active palette (ADR 20261112-control-focus-ring). The text field keeps
+the browser's own input ring. A browser holds focus on one control, so a
+focused cell shows the mark only while the keyboard is on it. See the
+second amendment below.
 
 The gallery ships in the bundle. It has no production entry point.
 
@@ -93,3 +93,25 @@ We also rejected a masked baseline, which hides the two glyph boxes and
 compares the rest of the page. It would keep a real pixel check, but the
 mask would follow a glyph whose position changes with content. The
 fallback already asserts the paint and geometry a reviewer checks.
+
+## Amendment, 2026-11-12: the focus cells draw the real mark
+
+`Pressable` now draws a focus mark on the web, so every press target
+inherits it (ADR 20261112-control-focus-ring). The paragraph above used
+to say the focused cells showed no change and were labelled "focused,
+no ring". That was true before the mark existed.
+
+The cells no longer paint a copy of the mark. A browser holds focus on
+one control, so two cells cannot both show a real ring at once. The
+auto-focus wrapper is gone: it focused three cells in turn, only the
+last one kept focus, and the page then called the other two "focused"
+while they were not. A reviewer tabs to a focused cell and the mark
+appears. The spec walks the same keyboard path, asserts the mark's
+colour and 2 px width, presses one control with the pointer and asserts
+the mark drops while the control keeps focus. It also keeps one close
+shot of each focused press target as review evidence, because the page
+shot at rest holds no focus.
+
+We rejected keeping one cell focused on load. It would show one real
+mark, but the other cells would still be unfocused under a label that
+says "focused", and the page would take focus from a reviewer.

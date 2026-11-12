@@ -4,6 +4,9 @@ import { THEMES, type Palette } from "./palettes";
 /** WCAG AA for text. */
 const MIN = 4.5;
 
+/** WCAG 2.2 non-text contrast: a focus indicator is a UI component. */
+const MARK_MIN = 3;
+
 /**
  * Every text pair the screens draw: foreground over ground. The pairs
  * name real style combinations in `src/components` and `src/features`,
@@ -31,6 +34,18 @@ const PAIRS: { foreground: keyof Palette; background: keyof Palette }[] = [
   { foreground: "danger", background: "dangerSoft" },
   { foreground: "onAccent", background: "accent" },
   { foreground: "onAccent", background: "accentDeep" },
+];
+
+/**
+ * The focus ring, over every ground a press target can sit on. A solid
+ * accent button hides the ring color, and its `onAccent` inner band
+ * carries the mark there; that pair is already in the text set above.
+ */
+const MARK_PAIRS: { foreground: keyof Palette; background: keyof Palette }[] = [
+  { foreground: "focusRing", background: "paper" },
+  { foreground: "focusRing", background: "surface" },
+  { foreground: "focusRing", background: "accentSoft" },
+  { foreground: "focusRing", background: "pressed" },
 ];
 
 function channel(value: number): number {
@@ -68,6 +83,17 @@ describe("theme contrast", () => {
       const failures = PAIRS.flatMap(({ foreground, background }) => {
         const got = ratio(palette[foreground], palette[background]);
         return got < MIN
+          ? [`${foreground} on ${background}: ${got.toFixed(2)}`]
+          : [];
+      });
+      expect(failures).toEqual([]);
+    });
+
+    it(`${name} holds the focus ring at ${MARK_MIN} to 1`, () => {
+      const palette = THEMES[name];
+      const failures = MARK_PAIRS.flatMap(({ foreground, background }) => {
+        const got = ratio(palette[foreground], palette[background]);
+        return got < MARK_MIN
           ? [`${foreground} on ${background}: ${got.toFixed(2)}`]
           : [];
       });
