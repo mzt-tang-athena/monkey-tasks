@@ -3,7 +3,7 @@ title: Completed takes a time
 created: 2026-11-11
 priority: normal
 assignee: omp
-pr:
+pr: 130
 depends: []
 ---
 
@@ -86,4 +86,4 @@ Gates:
 - `npx vitest run`: 825 passed, 93 files
 - `E2E_PORT=8604 npm run e2e`: 444 passed, 26 skipped, none failed
 
-The app PR is <filled by the PR>.
+The app PR is 130, and it waits for the operator to merge.
