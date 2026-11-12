@@ -2,7 +2,7 @@
 title: Component gallery and visual baselines
 created: 2026-11-12
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
