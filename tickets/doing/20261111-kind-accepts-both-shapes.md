@@ -66,3 +66,7 @@ Gates: `npx tsc --noEmit` passes, `npx eslint src scripts e2e
 --max-warnings 0` passes, `npx vitest run` passes 819 tests, and
 `E2E_PORT=8603 npm run e2e` passes 440 tests with 26 skipped and none
 failed. The app PR is 128 and waits for the operator to merge it.
+
+CI ran the same 440 tests in 8.1 minutes, then its 10 minute job limit
+cancelled the run one second later. The `e2e-web` limit is now 20
+minutes. A main run in PR 124 was cancelled the same way.
