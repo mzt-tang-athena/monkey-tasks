@@ -11,6 +11,7 @@ import { updateProperty } from "@/lib/vault/frontmatter";
 import { loadTasks, taskFromText } from "@/stores/tasks/task-notes";
 import { saveTaskEdit } from "@/lib/vault/save-task-edit";
 import { captureDraft } from "@/stores/tasks/capture-draft";
+import { SAMPLE_DAY, sampleSeed } from "@/lib/vault/sample/seed";
 
 const TASKS = `${MEMORY_ROOT}/Tasks`;
 const URI = `${TASKS}/Call.md`;
@@ -112,5 +113,30 @@ describe("typed name survives a safe file name (ticket 0053, finding 15)", () =>
     const rows = await loadTasks(vault, TASKS);
     const row = rows.find((item) => item.fileName === "Pay bill water.md");
     expect(row?.name).toBe("Pay bill: water");
+  });
+});
+
+describe("a hand-written kind (monkey-tasks ticket 20261111-kind-accepts-both-shapes)", () => {
+  const base = { id: URI, uri: URI, fileName: "Call.md", name: "Call" };
+  const bare = "---\nkind: tasks\ncreated: 2026-10-20\n---\n";
+  const link = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n';
+
+  it("reads a bare kind and returns the link form", () => {
+    const row = taskFromText(base, bare);
+    expect(row.errors).toBeUndefined();
+    expect(row.data?.kind).toBe("[[tasks]]");
+  });
+
+  it("reads the link form unchanged", () => {
+    const row = taskFromText(base, link);
+    expect(row.data?.kind).toBe("[[tasks]]");
+  });
+
+  it("loads the sample note another tool wrote", async () => {
+    const vault = createMemoryVault(sampleSeed(["default"], SAMPLE_DAY));
+    const rows = await loadTasks(vault, TASKS);
+    const row = rows.find((item) => item.fileName === "Read the meter.md");
+    expect(row?.errors).toBeUndefined();
+    expect(row?.data?.kind).toBe("[[tasks]]");
   });
 });

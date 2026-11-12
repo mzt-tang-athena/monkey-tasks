@@ -51,9 +51,11 @@ describe("sampleSeed", () => {
   it("holds the preview's sample with no move on the sample day", () => {
     const seed = sampleSeed(PREVIEW_SEEDS, SAMPLE_DAY);
 
-    expect(Object.keys(seed)).toHaveLength(27);
+    expect(Object.keys(seed)).toHaveLength(28);
     expect(seed["Tasks/Supplements.md"]).toContain("recurrence: FREQ=DAILY");
     expect(seed["Tasks/Supplements.md"]).toContain("due: 2026-10-26T19:00");
+    expect(seed["Tasks/Read the meter.md"]).toContain("kind: tasks");
+    expect(seed["Tasks/Read the meter.md"]).not.toContain('kind: "[[tasks]]"');
     expect(seed["Tasks/Broken note.md"]).toBeDefined();
     expect(seed["Tasks/Lists/Garden.md"]).toBeDefined();
   });

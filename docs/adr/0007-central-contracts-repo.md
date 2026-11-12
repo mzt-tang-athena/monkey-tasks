@@ -32,3 +32,17 @@ org project template. It was retrofitted with the template the same
 day (agent rules, ADR record, ticket queue, docs CI), and the CI runs
 green. Contracts records its own decisions from now on; its ADR 0001
 mirrors this one.
+
+Amendment 2026-11-11: contracts main now publishes the schemas as a
+built package (`@mzt-tang-athena/schemas`, `main` is `dist/index.js`).
+monkey-tasks still pins the submodule, because ticket 0077 owns the
+move to the registry. The app now builds the pinned package into `dist`
+from its `postinstall` script, so a fresh `npm ci` resolves the package
+the same way a registry install would. We rejected moving the app to
+the registry here, because 0077 owns that change. We rejected pinning
+an older contracts commit, because the kind change lives on main. 0077
+deletes the build step along with the submodule.
+
+A pin bump needs a fresh install. The `postinstall` is the only thing
+that builds `dist`, so a contributor who moves the submodule pointer
+without running `npm ci` again tests the old schema without a warning.

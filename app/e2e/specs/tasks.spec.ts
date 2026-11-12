@@ -1,10 +1,27 @@
 import { expect, test } from "../fixtures";
-import { rename, sections, undated } from "../data";
+import { bareKindNote, rename, sections, undated } from "../data";
 import { expectInSection, press, row, sectionHeader } from "../locators";
+import { noteText } from "../vault";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(row(page, undated.second)).toBeVisible();
+});
+
+test("a note with a bare kind reads as a task and keeps that kind", async ({ page }) => {
+  const target = row(page, bareKindNote.name);
+  await expect(target).toBeVisible();
+
+  await press(page, target.getByRole("checkbox"));
+
+  await expect(target.getByRole("checkbox")).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await expect
+    .poll(() => noteText(page, bareKindNote.path))
+    .toContain("completed: 2026-10-26");
+  expect(await noteText(page, bareKindNote.path)).toContain("kind: tasks");
 });
 
 test("a tick marks the task done and moves it to Completed", async ({ page }) => {

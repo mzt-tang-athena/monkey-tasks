@@ -41,6 +41,8 @@ export const sampleNotes: Record<string, Record<string, string>> = {
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ndue: 2026-10-28\n---\n",
     "Tasks/Plan weekend hike.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\nlists:\n  - \"[[Focus]]\"\ndue: 2026-10-26\n---\n",
+    "Tasks/Read the meter.md":
+      "---\nkind: tasks\ncreated: 2026-10-26T09:00\n---\n",
     "Tasks/Renew bike insurance.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ndue: 2026-10-30\n---\n",
     "Tasks/Return library books.md":
