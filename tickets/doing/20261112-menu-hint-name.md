@@ -55,3 +55,9 @@ Gates: `npx tsc --noEmit` and
 `npx eslint src scripts e2e --max-warnings 0` are clean.
 `npx vitest run` passes 95 files and 833 tests. The Playwright suite
 passes 456 tests with 26 skipped and no failures.
+
+The first CI run failed the gallery's menu check: every row measured
+40.9, the menu's size at 11 percent of its entrance. The check read a
+computed opacity of 1 in the frame before the fade started. The target
+scan now reads the box a widget lays out, and the menu check waits two
+painted frames, so the target and axe scans read the menu at rest.
