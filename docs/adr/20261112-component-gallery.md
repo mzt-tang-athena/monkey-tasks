@@ -66,3 +66,22 @@ Only one control can hold focus at a time, so the focused cells ring in
 Tab order. A reviewer presses Tab to see each one.
 
 The gallery ships in the bundle. It has no production entry point.
+
+## Amendment, 2026-11-12: the runner draws one glyph differently
+
+The first CI run of the spec failed on all four 360 wide shots. Each
+image differed in 106 to 112 pixels, all inside a 7 by 3 box at
+(62, 3694) to (68, 3696). That box holds the check glyph in a done row.
+The runner draws that glyph two pixels from where this machine draws it.
+Every other pixel matched.
+
+So we take the fallback in the decision above. The spec keeps no pixel
+baselines. It asserts the palette's ground, fills and ink, the page's
+width, every cell inside the page, and the section order. It still takes
+one shot per palette and width. It writes the file to
+`app/build/verify/evidence/component-gallery/` and attaches it to the
+report, so a reviewer sees every state.
+
+We rejected a tolerance of a few hundred pixels. That would have passed
+the run, but it would call a baseline stable while a font shift moves
+pixels inside it. The ticket asks for the same pixels or the fallback.

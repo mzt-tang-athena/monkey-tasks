@@ -1,5 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import type { Page } from "@playwright/test";
+import { mkdirSync } from "node:fs";
+import path from "node:path";
+import type { Page, TestInfo } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { press } from "../locators";
 import { smallTargets } from "../targets";
@@ -117,8 +119,108 @@ async function unnamedControls(page: Page): Promise<string[]> {
   });
 }
 
-/** One screenshot holds the whole page: grow the window, then prove it fits. */
-async function shoot(page: Page, palette: ThemeName, width: number) {
+/**
+ * The page draws what the palette and the layout fix, not the pixels.
+ * The CI runner renders the check glyph in a done row 2 px from where
+ * this machine draws it, so a pixel baseline cannot be green on both.
+ * The shot below is review evidence; these assertions carry the check
+ * (ADR 20261112-component-gallery).
+ */
+async function checkPaint(
+  page: Page,
+  palette: ThemeName,
+  width: number,
+  where: string,
+) {
+  const p = THEMES[palette];
+  const cell = (id: GalleryStateId) => page.getByTestId(stateTestId(id));
+  const heading = (id: GalleryStateId) => cell(id).getByRole("heading");
+
+  await expect(page.getByTestId("gallery"), `${where} ground`).toHaveCSS(
+    "background-color",
+    rgb(p.paper),
+  );
+  await expect(
+    cell("button:primary").getByRole("button"),
+    `${where} primary fill`,
+  ).toHaveCSS("background-color", rgb(p.accent));
+  await expect(
+    cell("button:secondary").getByRole("button"),
+    `${where} secondary fill`,
+  ).toHaveCSS("background-color", rgb(p.accentSoft));
+  await expect(
+    cell("button:disabled").getByRole("button"),
+    `${where} disabled fill`,
+  ).toHaveCSS("background-color", rgb(p.pressed));
+  await expect(
+    cell("segmented-control:selected").getByRole("tab", { name: "Week" }),
+    `${where} selected segment`,
+  ).toHaveCSS("background-color", rgb(p.accent));
+  await expect(heading("section-header:accent"), `${where} accent ink`).toHaveCSS(
+    "color",
+    rgb(p.accent),
+  );
+  await expect(heading("section-header:danger"), `${where} danger ink`).toHaveCSS(
+    "color",
+    rgb(p.danger),
+  );
+  await expect(heading("section-header:muted"), `${where} muted ink`).toHaveCSS(
+    "color",
+    rgb(p.inkMuted),
+  );
+  await expect(
+    cell("banner:danger").getByRole("alert"),
+    `${where} danger banner`,
+  ).toHaveCSS("background-color", rgb(p.dangerSoft));
+  await expect(
+    cell("banner:info").getByRole("alert"),
+    `${where} info banner`,
+  ).toHaveCSS("background-color", rgb(p.accentSoft));
+  await expect(
+    cell("text-field:error").getByRole("textbox"),
+    `${where} error edge`,
+  ).toHaveCSS("border-top-color", rgb(p.danger));
+
+  const box = await page.getByTestId("gallery-scroll").evaluate((element) => ({
+    scroll: element.scrollWidth,
+    client: element.clientWidth,
+  }));
+  expect(box.scroll, `${where} no sideways scroll`).toBe(box.client);
+  expect(box.client, `${where} the page holds the window width`).toBe(width);
+
+  const layout = await page.getByTestId("gallery").evaluate((root) => {
+    const edge = window.innerWidth + 0.5;
+    const outside: string[] = [];
+    for (const element of root.querySelectorAll('[data-testid^="gallery-state:"]')) {
+      const rect = element.getBoundingClientRect();
+      if (rect.left < -0.5 || rect.right > edge) {
+        outside.push(element.getAttribute("data-testid") ?? "");
+      }
+    }
+    const order = Array.from(
+      root.querySelectorAll('[data-testid^="gallery-section:"]'),
+    ).map((element) =>
+      (element.getAttribute("data-testid") ?? "").replace("gallery-section:", ""),
+    );
+    return { outside, order };
+  });
+  expect(layout.outside, `${where} cells inside the page`).toEqual([]);
+  expect(layout.order, `${where} section order`).toEqual(
+    GALLERY_SECTIONS.map((section) => section.id),
+  );
+}
+
+/**
+ * One shot per palette and width for review. It grows the window to the
+ * page's full height and asserts that nothing is clipped, then attaches
+ * the file to the report and keeps it under `build/` (gitignored).
+ */
+async function capture(
+  page: Page,
+  palette: ThemeName,
+  width: number,
+  testInfo: TestInfo,
+) {
   const scroller = page.getByTestId("gallery-scroll");
   await scroller.evaluate((element) => {
     element.scrollTop = 0;
@@ -128,18 +230,29 @@ async function shoot(page: Page, palette: ThemeName, width: number) {
   const height = await scroller.evaluate((element) =>
     Math.ceil(element.scrollHeight + (window.innerHeight - element.clientHeight)),
   );
-  expect(height, `${palette} ${width}: the page fits one screenshot`).toBeLessThan(
-    12000,
-  );
+  expect(height, `${palette} ${width}: the page fits one shot`).toBeLessThan(12000);
   await page.setViewportSize({ width, height });
   expect(
     await scroller.evaluate((element) => element.scrollHeight <= element.clientHeight),
     `${palette} ${width}: nothing is clipped`,
   ).toBe(true);
-  await expect(page).toHaveScreenshot(`gallery-${palette}-${width}.png`, {
-    animations: "disabled",
-    caret: "hide",
+
+  const dir = path.join(
+    process.cwd(),
+    "build",
+    "verify",
+    "evidence",
+    "component-gallery",
+  );
+  mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `gallery-${palette}-${width}.png`);
+  await page.screenshot({ path: file, animations: "disabled", caret: "hide" });
+  await testInfo.attach(`gallery-${palette}-${width}`, {
+    path: file,
+    contentType: "image/png",
   });
+
+  await page.setViewportSize({ width, height: 915 });
 }
 
 async function checkMenu(page: Page, where: string) {
@@ -231,14 +344,19 @@ async function checkToast(page: Page, where: string) {
     .locator('[role="alert"]')
     .filter({ hasText: "Could not save the task" });
   await expect(toast, where).toBeVisible();
-  await expect(toast.getByRole("button", { name: "Retry" }), where).toBeVisible();
-  await expect(
-    toast.getByRole("button", { name: "Dismiss" }),
-    where,
-  ).toBeVisible();
+  const retry = toast.getByRole("button", { name: "Retry" });
+  const dismiss = toast.getByRole("button", { name: "Dismiss" });
+  await expect(retry, where).toBeVisible();
+  await expect(dismiss, where).toBeVisible();
 
-  const box = await toast.boundingBox();
-  expect(box?.height ?? 0, `${where} toast target`).toBeGreaterThanOrEqual(44);
+  for (const [name, target] of [
+    ["Retry", retry],
+    ["Dismiss", dismiss],
+  ] as const) {
+    const box = await target.boundingBox();
+    expect(box?.width ?? 0, `${where} toast ${name} width`).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0, `${where} toast ${name} height`).toBeGreaterThanOrEqual(44);
+  }
 
   // The page's two banners are alerts too, and the open overlay leaves
   // them inert, so axe skips them.
@@ -289,15 +407,16 @@ test.describe("the gallery", () => {
         );
 
         await scan(page, `${where} gallery`, { exclude: exemptFromContrast });
+        await checkPaint(page, palette, width, where);
+
+        if (testInfo.project.name === "motion") {
+          await capture(page, palette, width, testInfo);
+        }
 
         await checkMenu(page, where);
         await checkSheet(page, where);
         await checkCommandPane(page, where);
         await checkToast(page, where);
-
-        if (testInfo.project.name === "motion") {
-          await shoot(page, palette, width);
-        }
       }
     });
   }
