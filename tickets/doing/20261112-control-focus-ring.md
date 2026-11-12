@@ -2,7 +2,7 @@
 title: Give press targets a visible focus ring
 created: 2026-11-12
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
