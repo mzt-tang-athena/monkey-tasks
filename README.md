@@ -13,7 +13,8 @@ Install the root dependencies from the repo root:
 npm ci
 ```
 
-Android needs the `contracts` submodule checked out. If the folder is
+Every install needs the `contracts` submodule checked out, because the
+app builds the pinned schemas package during `npm ci`. If the folder is
 empty, run `git submodule update --init` at the repo root first.
 
 Install the app dependencies from `app`:

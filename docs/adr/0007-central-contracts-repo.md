@@ -42,3 +42,7 @@ the same way a registry install would. We rejected moving the app to
 the registry here, because 0077 owns that change. We rejected pinning
 an older contracts commit, because the kind change lives on main. 0077
 deletes the build step along with the submodule.
+
+A pin bump needs a fresh install. The `postinstall` is the only thing
+that builds `dist`, so a contributor who moves the submodule pointer
+without running `npm ci` again tests the old schema without a warning.
