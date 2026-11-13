@@ -30,5 +30,5 @@ fresh clone must run `npm ci` and `npx vale-rules sync` before Vale.
 
 ## Amendment, 2026-11-07
 
-This ADR was 0035 on main. The epic branch already had an ADR 0035, so
-this one took 0044 when main merged into the epic (ticket 0071).
+This ADR was 0035 on main. The epic branch already had an ADR 0035.
+This one took 0044 when main merged into the epic (ticket 0071).

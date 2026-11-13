@@ -8,7 +8,7 @@
 The app has three light palettes in `app/src/theme/tokens.ts`. Each one
 is a plain object with the same 14 keys. Every screen reads the module
 constant `colors`, and every style sheet runs `StyleSheet.create` once,
-at module load. So the palette is baked in before the first frame.
+at module load. The palette is then baked in before the first frame.
 
 `setDevTheme` writes a web storage key and reloads the page. That is the
 only switch, and it lives on the diagnostics route. It cannot work on
@@ -36,7 +36,7 @@ The active palette flows through a React context.
   does the rewrite for all 43 files, so the pattern is uniform and a
   reviewer can rerun it.
 - Lint fails an import of `colors` from `@/theme/tokens`. The module
-  constant is gone, so nothing can bake a palette in again.
+  constant no longer exists, so nothing can bake a palette in again.
 - The palettes gain one dark entry, `midnight`, ported from
   monkey-budget's `midnight` theme and mapped onto the existing keys.
   No screen branches on light or dark.
@@ -59,12 +59,12 @@ sheet per palette it has visited. A palette that is never used creates
 no sheet.
 
 Text colors must stay at 4.5 to 1 or better against their ground. The
-contrast test lists every text pair for every palette and fails below
-4.5. `inkFaint` is the disabled and placeholder step, and WCAG exempts
-disabled text, so it is not in the 4.5 set. Hairlines are decoration,
-and they are not either. The test names both exclusions.
+contrast test lists every text pair for every palette. It fails any pair
+below 4.5. `inkFaint` is the disabled and placeholder step. WCAG exempts
+disabled text, so the 4.5 set leaves it out. Hairlines are decoration,
+and the set leaves them out too. The test names both exclusions.
 
 The light palettes change two accent values. Todoist's red was 4.08 to
-1 against white, and clay's terracotta was 4.00 to 1 on its soft fill,
-so both failed AA as button and quiet-button text. We darkened each one
+1 against white. The clay palette's terracotta was 4.00 to 1 on its soft
+fill. Both failed AA as button and quiet-button text. We darkened each one
 step. The test now holds all four palettes to the same rule.

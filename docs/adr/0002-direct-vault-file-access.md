@@ -20,5 +20,5 @@ LiveSync stay the sync path to the desktop and to athena.
 No sync protocol work, and the app needs no server at all. Edits reach
 other devices only when Obsidian next syncs, so propagation waits if
 Obsidian stays closed. If that delay ever hurts, the app can gain its own
-CouchDB replication without a rewrite, because the note format does not
+CouchDB replication without a rewrite. The note format does not
 change.

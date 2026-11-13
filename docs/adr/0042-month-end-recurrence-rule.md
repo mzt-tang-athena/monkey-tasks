@@ -42,7 +42,8 @@ calls it in four places:
 
 We chose to read and write. A bare `FREQ=MONTHLY` note due after the 28th
 reads as the month-end rule. The app writes the explicit rule into the
-next note at a tick, and into the note at the next editor save. The app
+next note at a tick. It also writes it into the note at the next editor
+save. The app
 does not rewrite a note on load. The user's files stay as they are until
 the user acts on them.
 
@@ -54,18 +55,18 @@ due day of 28 February. That rule means the 28th, so the series would
 drift to the 28th for good.
 
 The function changes only the bare forms and the forms it wrote. A rule
-with `COUNT`, `BYDAY` or a user `BYMONTHDAY` stays as it is.
+with `COUNT`, `BYDAY` or a user `BYMONTHDAY` stays unchanged.
 
 ## Consequences
 
 A monthly task on the 29th to 31st has a due date in every month.
 
-A reader that does not know this ADR, such as Obsidian Tasks, sees a
-valid RRULE and gets the same dates.
+Take a reader that does not know this ADR, such as Obsidian Tasks. It
+sees a valid RRULE and gets the same dates.
 
 A bare `FREQ=MONTHLY` note due on the 28th or earlier stays bare. A bare
-rule on a note due on 28 February cannot tell a month-end series from a
-series on the 28th. The app reads it as the 28th.
+rule on a note due on 28 February is ambiguous. It cannot tell a
+month-end series from a series on the 28th. The app reads it as the 28th.
 
 The editor shows the explicit rule text after a save. The recurrence
 field is free text, and a longer rule is harder to read there.

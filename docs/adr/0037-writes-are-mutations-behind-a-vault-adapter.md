@@ -6,19 +6,19 @@
 ## Context
 
 ADR 0017 made every write local first. The row changes in the same
-frame as the tap, and the note is written behind it. ADR 0023 moved the
-vault read into TanStack Query. It kept the write path by hand: a
-promise queue per note, a ref that mirrors the cache, a counter that
-makes a read retry when a write overlaps it, one error string for every
-action, and a context of actions.
+frame as the tap, and the app writes the note behind it. ADR 0023 moved the
+vault read into TanStack Query. It kept the write path by hand. That
+path had a promise queue per note and a ref that mirrors the cache. It
+had a counter that makes a read retry when a write overlaps it. It had
+one error string for every action, and a context of actions.
 
 An audit on 2026-10-26 reproduced a dozen write-path bugs with tests.
 A capture made during a read vanishes. A third overlapping read lands
-old text. An earlier write's result flickers over a later tap. A read
-that lands just before a tap is lost. A recurring double tap spawns a
+old text. An earlier write's result flickers over a later tap. The app
+loses a read that lands just before a tap. A recurring double tap spawns a
 second note. Every tap rebuilds every alarm, and two rebuilds can ring
-one reminder twice. One failure's message is wiped by the next success.
-Each of these comes from a rule the hand-made parts depend on: bump
+one reminder twice. The next success wipes one failure's message.
+Each comes from a rule the hand-made parts depend on: bump
 the counter, read the ref, clear the string. A new write path has to
 remember all three.
 
@@ -30,7 +30,7 @@ never runs the real write path, and the rebuild's Playwright suite
 ## Decision
 
 Every vault write is a TanStack `useMutation` hook, one per use case,
-in `src/stores/tasks/mutations/`. All of them share one scope,
+in `src/stores/tasks/mutations/`. They all share one scope,
 `{ id: "vault" }`, so writes run one at a time in call order.
 
 The hooks keep ADR 0017's rules:
@@ -55,7 +55,7 @@ Each one has its own label, dismiss and retry.
 Every file call goes through a `VaultAdapter` port in
 `src/lib/vault/`. Android uses the SAF adapter, which wraps today's
 code. The web preview, component tests and Playwright use a memory
-adapter. It is seeded from `.md` sample notes, takes injected latency
+adapter. Its seed comes from `.md` sample notes. It takes injected latency
 and failures, and exposes `globalThis.__vault` in dev and test builds
 only. The store has no mock branch.
 
@@ -69,7 +69,7 @@ We considered three other paths and rejected them:
 - **One scope per note.** Writes to different notes could run in
   parallel. `useMutation` fixes the scope per hook, so each call would
   need its own observer. A recurring tick, a reorder drop and a capture
-  each touch several notes, and per-note scopes would not order them.
+  each touch more than one note. Per-note scopes would not order them.
   Rows are optimistic either way, so parallel writes buy little.
 - **Keep the mock branches and add a store for the preview later.** Two
   write paths stay, and the preview keeps testing the wrong one.
@@ -101,7 +101,7 @@ Tickets 0051 (the adapter) and 0052 (the mutations) carry the work. ADR
 
 Ticket 0064 runs the 0051 contract suite against the SAF adapter on an
 Android emulator. The suite needs the test hooks in an APK that the
-emulator installs. So one build may set
+emulator installs. One build may then set
 `EXPO_PUBLIC_VAULT_TEST_HOOKS=1`: the x86_64 APK that
 `android-e2e.yml` builds when its `saf-contract` input is on. That APK
 never leaves the job. The workflow uploads no artifact of it, and
@@ -143,20 +143,20 @@ steps run before `mutate()` returns. Only then does it await the
 cancel. A cancel takes effect at once, so no read result can land over
 the change. We rejected an `await` on the cancel before the change.
 Two taps in one frame would then apply in the order their cancels
-resolve, and that order rests on promise timing, not on call order.
+resolve. That order rests on promise timing, not on call order.
 
 A finished write leaves the mutation cache when it reaches its
 `success` state, unless its result carries a notice. A subscription on
 the cache does this. We rejected the `MutationCache` `onSuccess`
 option. It runs while the write still counts as pending. A remove
 there would let a waiting read start before the write lands its
-result, and the last write would miss its turn to run a cancelled
+result. The last write would also miss its turn to run a cancelled
 read.
 
 The capture bar and the editor show their own failures. Their
 mutations still reject, but the failure list leaves them out. We
 rejected a second entry in the banner. The capture bar has its own
-Retry, so one failure would carry two Retry buttons, and one of them
+Retry. One failure would then carry two Retry buttons, and one of them
 would stay after the other ran.
 
 Each hook returns a command, such as `toggle(task)`, not the
@@ -169,8 +169,8 @@ logic, and a stale render would pick the wrong direction.
 A toggle that finds its note already in the asked state writes
 nothing. A Retry runs the variables of an old tap, and a later tap can
 have landed that state since. A second tick would then make a second
-next occurrence. When the first try made the next note and could not
-delete it, a retry keeps that note and makes no other. We rejected a
+next occurrence. The first try may make the next note and fail to
+delete it. A retry then keeps that note and makes no other. We rejected a
 Retry that picks its direction again from the row. It would then undo
 a tick that the user made by hand.
 

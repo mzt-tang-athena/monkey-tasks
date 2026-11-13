@@ -41,22 +41,22 @@ reachable by a keyboard or TalkBack, so the button is the accessible
 opener. The pull stays as the fast path.
 
 The switch-list row moves one tab along and wraps. A row per list did
-not fit: the sample vault has nine list notes, and the 12-row cap hid
+not fit. The sample vault has nine list notes, and the 12-row cap hid
 Settings and Diagnostics. One row always fits, and its hint names the
 tab it goes to.
 
 Theme and Sort mode open the Settings screen rather than repeat its
-pickers. The pane is an index of actions, not a settings drawer.
+pickers. The pane is an index of actions rather than a settings drawer.
 
-The recent list is per session. It is not persisted: the list is small,
-and a stale recent row after a restart is worse than a short session
-memory.
+The recent list is per session. The app does not persist it. The list is
+small, and a stale recent row after a restart is worse than a short
+session memory.
 
 ## Consequences
 
 The pane opens on Lists and Planner. Another screen can have it by
-adding its own header band or calling `useCommandPane().show`, because
-the provider sits above the whole stack.
+adding its own header band or calling `useCommandPane().show`. That works
+because the provider sits above the whole stack.
 
 A command that opens a sheet runs after the pane closes. The pane still
 plays its exit over the new screen for a few frames. The two overlays
@@ -71,5 +71,5 @@ two touch points and opens the pane. The Android emulator has not run
 that gesture, so a phone check is still open.
 
 Alternative: open the pane from a per-screen drawer. We rejected it. It
-would duplicate the row list on every screen and put the pane below the
-overlay host, outside the one focus system.
+would duplicate the row list on every screen. It would also put the pane
+below the overlay host, outside the one focus system.

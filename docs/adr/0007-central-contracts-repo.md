@@ -6,10 +6,10 @@
 ## Context
 
 The notes vocabulary started as `packages/schemas` inside monkey-tasks
-(ADR 0005). The plan grew beyond one project: every home-server project
+(ADR 0005). The plan grew beyond one project. Every home-server project
 (monkey-tasks, monkey budget, athena services) wants one shared home
-for schemas, where a project contributes its own and consumes shared
-ones. Multiple repos will read the notes vocabulary.
+for schemas. A project contributes its own schemas and consumes shared
+ones. More than one repo will read the notes vocabulary.
 
 ## Decision
 
@@ -22,14 +22,14 @@ moved out of monkey-tasks.
 ## Consequences
 
 A schema change is a PR in contracts, then consumers update the
-submodule. There is one more repo to maintain. The vocabulary stays
+submodule. We maintain one more repo. The vocabulary stays
 hand-written Zod (ADR 0005); only its home changed. Moving to a
 registry later (GitHub Packages) changes only the install path, never
 the schemas.
 
-Amendment 2026-10-19: the repo was first created by hand, missing the
-org project template. It was retrofitted with the template the same
-day (agent rules, ADR record, ticket queue, docs CI), and the CI runs
+Amendment 2026-10-19: we first created the repo by hand. It missed the
+org project template. We added the template the same
+day (agent rules, ADR record, ticket queue, docs CI). The CI runs
 green. Contracts records its own decisions from now on; its ADR 0001
 mirrors this one.
 
@@ -37,12 +37,12 @@ Amendment 2026-11-11: contracts main now publishes the schemas as a
 built package (`@mzt-tang-athena/schemas`, `main` is `dist/index.js`).
 monkey-tasks still pins the submodule, because ticket 0077 owns the
 move to the registry. The app now builds the pinned package into `dist`
-from its `postinstall` script, so a fresh `npm ci` resolves the package
+from its `postinstall` script. A fresh `npm ci` then resolves the package
 the same way a registry install would. We rejected moving the app to
 the registry here, because 0077 owns that change. We rejected pinning
 an older contracts commit, because the kind change lives on main. 0077
 deletes the build step along with the submodule.
 
-A pin bump needs a fresh install. The `postinstall` is the only thing
-that builds `dist`, so a contributor who moves the submodule pointer
+A pin bump needs a fresh install. Only the `postinstall` builds
+`dist`. A contributor who moves the submodule pointer
 without running `npm ci` again tests the old schema without a warning.
