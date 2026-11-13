@@ -42,7 +42,7 @@ also fails, two open occurrences remain, and the repair block shows
 them. A failure can leave a visible duplicate, never a lost series.
 
 Unticking clears `completed` first. If the new note is still the text
-we created, we delete it. If someone edited or completed it, we leave both
+we created, we delete it. If an edit or a completion changed it, we leave both
 and say so.
 
 The editor shows `title` when present. Renaming a titled note changes

@@ -23,7 +23,7 @@ Three facts limit the shape:
 - Most of the 21 bugs that tickets 0059 to 0062 list start at a call
   site. A callback reads stale state, or a layout effect resets an
   offset. A timer runs beside an animation, or a `touchAction` is
-  missing. A React Native `Pressable` can also ignore the pan that
+  missing. Or a React Native `Pressable` ignores the pan that
   should cancel it.
 
 On 2026-11-08 an architect run built two candidates against the 0059 to

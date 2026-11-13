@@ -25,7 +25,7 @@ inside a section.
 
 ## Consequences
 
-A drop writes one note per moved row. A section is small,
+A drop can write more than one note, one per moved row. A section is small,
 and the writes run in sequence. The numbers stay short and readable,
 and a hand edit in Obsidian can set one without arithmetic.
 

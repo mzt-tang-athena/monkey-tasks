@@ -11,7 +11,7 @@ stay small enough to review. But the app is only worth a phone pass once
 a batch of them has landed together.
 
 We tried stacked PRs into main for ticket 0046. GitHub closed the upper
-PR when its base branch merged and disappeared. We had to open the work
+PR when its base branch merged and then got deleted. We had to open the work
 again as a new PR. A squash merge also rewrites the base, so
 every PR above it needs a rebase.
 

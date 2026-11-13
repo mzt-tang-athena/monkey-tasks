@@ -169,7 +169,7 @@ logic, and a stale render would pick the wrong direction.
 A toggle that finds its note already in the asked state writes
 nothing. A Retry runs the variables of an old tap, and a later tap can
 have landed that state since. A second tick would then make a second
-next occurrence. The first try may make the next note and fail to
+next occurrence. Suppose the first try made the next note and could not
 delete it. A retry then keeps that note and makes no other. We rejected a
 Retry that picks its direction again from the row. It would then undo
 a tick that the user made by hand.

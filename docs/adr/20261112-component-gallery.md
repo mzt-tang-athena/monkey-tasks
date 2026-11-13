@@ -42,8 +42,8 @@ Palette comes from the provider. The spec switches it through
 reviewer can also open `/gallery?palette=clay`.
 
 The spec takes one screenshot per palette at 360 and 412 wide. It grows
-the window to the page's full height first and asserts that the window
-clips nothing. It scans axe in every palette, checks the 44pt floor and walks
+the window to the page's full height first and asserts that every
+element shows in full. It scans axe in every palette, checks the 44pt floor and walks
 every state id.
 
 ## Consequences

@@ -7,7 +7,7 @@
 
 Ticking a task writes the note and regroups the list in the same
 frame. A done task leaves its date group and moves to Completed, which
-often sits below the fold. The row vanished under the finger and
+in most cases sits below the fold. The row vanished under the finger and
 the tick effect never ran: the only visible change was a row
 disappearing.
 
