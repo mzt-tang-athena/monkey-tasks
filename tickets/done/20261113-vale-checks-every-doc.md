@@ -3,7 +3,7 @@ title: Let Vale check every doc, and clear the backlog it finds
 created: 2026-11-13
 priority: normal
 assignee: claude-code
-pr:
+pr: 138
 depends: []
 ---
 
