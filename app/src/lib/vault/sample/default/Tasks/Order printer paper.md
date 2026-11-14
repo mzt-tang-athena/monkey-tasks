@@ -1,7 +1,6 @@
 ---
 kind: "[[tasks]]"
 created: 2026-10-26T09:00
-lists:
-  - "[[Focus]]"
+list: "[[Focus]]"
 due: 2026-10-29
 ---

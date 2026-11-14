@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useEditTask } from "@/stores/tasks/mutations/use-edit-task";
 import type { TaskEdit, TaskItem } from "@/types/task";
 import { safeFileName } from "@/lib/vault/file-name";
-import { draftOf, parseLists, parseReminders } from "../lib/draft";
+import { draftOf, listName, parseReminders } from "../lib/draft";
 
 /**
  * SAF has no rename call: a rename writes the new file, copies the
@@ -28,9 +28,9 @@ function warnRename(): void {
 export type TaskEditorDraft = {
   draft: TaskEdit;
   change: (patch: Partial<TaskEdit>) => void;
-  /** The lists as typed, one per line. The draft holds the parsed names. */
-  listsText: string;
-  setListsText: (text: string) => void;
+  /** The one list as typed. The draft holds the plain name or null. */
+  listText: string;
+  setListText: (text: string) => void;
   /** The reminders as typed, one per line. */
   remindersText: string;
   setRemindersText: (text: string) => void;
@@ -52,8 +52,8 @@ export function useTaskEditorDraft(task: TaskItem): TaskEditorDraft {
   // The text this draft was seeded from. The store may refresh while
   // the editor is open; a save still belongs to the text the user saw.
   const [openedText] = React.useState(task.text);
-  const [listsText, setListsText] = React.useState(() =>
-    draftOf(task).lists.join("\n"),
+  const [listText, setListText] = React.useState(() =>
+    draftOf(task).list ?? "",
   );
   const [remindersText, setRemindersText] = React.useState(() =>
     draftOf(task).reminders.join("\n"),
@@ -77,7 +77,7 @@ export function useTaskEditorDraft(task: TaskItem): TaskEditorDraft {
     const edit: TaskEdit = {
       ...draft,
       name,
-      lists: parseLists(listsText),
+      list: listText.trim() === "" ? null : listName(listText),
       reminders: parseReminders(remindersText),
     };
     // The rename warning follows the file name the write will use,
@@ -105,10 +105,10 @@ export function useTaskEditorDraft(task: TaskItem): TaskEditorDraft {
   return {
     draft,
     change,
-    listsText,
-    setListsText: (text) => {
-      setListsText(text);
-      change({ lists: parseLists(text) });
+    listText,
+    setListText: (text) => {
+      setListText(text);
+      change({ list: text.trim() === "" ? null : listName(text) });
     },
     remindersText,
     setRemindersText: (text) => {

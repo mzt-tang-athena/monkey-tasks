@@ -93,7 +93,7 @@ function spawnInput(task: TaskItem, due: string): SpawnInput {
       data?.recurrence == null || data.due == null
         ? (data?.recurrence ?? "")
         : monthEndRule(data.recurrence, data.due),
-    lists: data?.lists ?? [],
+    list: data?.list ?? null,
     // A date-only due carries no time of day, so no alarm.
     reminders: due.includes("T") ? [due] : [],
     body: task.body,

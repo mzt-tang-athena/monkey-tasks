@@ -33,7 +33,7 @@ export type ListTab = string;
 
 export function inList(items: TaskItem[], listName: string): TaskItem[] {
   const link = `[[${listName}]]`;
-  return items.filter((item) => item.data?.lists?.includes(link));
+  return items.filter((item) => item.data?.list === link);
 }
 
 export type DateGroups = {
@@ -121,7 +121,7 @@ export function selectOpenTasks(tasks: TaskItem[], now: Date): TaskItem[] {
 
 /**
  * Main is the catch-all: every task, whatever list it carries. Any
- * other tab is a list note, so it shows the tasks whose lists property
+ * other tab is a list note, so it shows the tasks whose list property
  * carries [[that name]]. Focus is a list note like the rest. See ADR
  * 0015 and its 2026-10-24 amendment.
  */

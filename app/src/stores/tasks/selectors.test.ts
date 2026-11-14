@@ -17,7 +17,7 @@ type TaskFields = {
   due?: string;
   order?: number;
   created?: string;
-  lists?: string[];
+  list?: string;
   completed?: string;
   recurrence?: string;
   "recurrence previous"?: string;
@@ -106,25 +106,24 @@ describe("selectOpenTasks", () => {
 
 describe("selectTabTasks", () => {
   const tasks = [
-    task("Plan week", { lists: ["[[Focus]]"] }),
-    task("Buy milk", { lists: ["[[Work]]"] }),
+    task("Plan week", { list: "[[Focus]]" }),
+    task("Buy milk", { list: "[[Work]]" }),
     task("Call bank", {}),
-    task("Errand", { lists: ["[[Errands]]"] }),
-    task("Deep work", { lists: ["[[Work]]", "[[Focus]]"] }),
-    task("Second focus", { lists: ["[[Focus]]"] }),
+    task("Errand", { list: "[[Errands]]" }),
+    task("Deep work", { list: "[[Work]]" }),
+    task("Second focus", { list: "[[Focus]]" }),
   ];
 
   it("shows only Focus list tasks on the Focus tab", () => {
     expect(names(selectTabTasks(tasks, "Focus", NOW))).toEqual([
       "Plan week",
-      "Deep work",
       "Second focus",
     ]);
   });
 
   it("shows every task on Main, ADR 0015", () => {
-    // Main is the catch-all, so Focus and Work tasks show here too. A
-    // task on both lists appears once.
+    // Main is the catch-all in this ticket, so Focus and Work tasks
+    // show here too, once each.
     expect(names(selectTabTasks(tasks, "Main", NOW))).toEqual([
       "Plan week",
       "Buy milk",

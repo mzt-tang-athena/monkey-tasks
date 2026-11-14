@@ -22,7 +22,7 @@ export function useListTabState() {
 
   // The capture targets follow the tab order: Main, then one list
   // target per list note. Main stores nothing; a list target writes
-  // its name into the captured task's lists property.
+  // its name into the captured task's list property.
   const targets = React.useMemo<CaptureTarget[]>(
     () =>
       tabs.map((name) =>

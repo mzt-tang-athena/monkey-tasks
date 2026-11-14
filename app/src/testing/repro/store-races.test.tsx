@@ -650,7 +650,7 @@ describe("preview and empty folder (ticket 0051)", () => {
         name: "Supplements",
         due: sample.data?.due ?? null,
         recurrence: sample.data?.recurrence ?? null,
-        lists: [],
+        list: null,
         reminders: [],
         body: "",
       });

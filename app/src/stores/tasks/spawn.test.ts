@@ -32,7 +32,7 @@ const sample: SpawnInput = {
   previous: "Call Mum 2026-10-18",
   due: "2026-10-25",
   recurrence: "FREQ=WEEKLY",
-  lists: ["[[Focus]]", "[[Home]]"],
+  list: "[[Focus]]",
   reminders: ["2026-10-25T09:00", "2026-10-25T18:30"],
   body: "Ring her about the weekend.\n",
 };
@@ -96,7 +96,7 @@ describe("spawnContent", () => {
       title: "Call Mum",
       due: "2026-10-25",
       recurrence: "FREQ=WEEKLY",
-      lists: ["[[Focus]]", "[[Home]]"],
+      list: "[[Focus]]",
       reminders: ["2026-10-25T09:00", "2026-10-25T18:30"],
       "recurrence previous": "[[Call Mum 2026-10-18]]",
     });
@@ -110,7 +110,7 @@ describe("spawnContent", () => {
       "title:",
       "due:",
       "recurrence:",
-      "lists:",
+      "list:",
       "reminders:",
       "recurrence previous:",
     ];
@@ -129,7 +129,7 @@ describe("spawnContent", () => {
       title: "Call Mum",
       due: "2026-10-25",
       recurrence: "FREQ=WEEKLY",
-      lists: ["[[Focus]]", "[[Home]]"],
+      list: "[[Focus]]",
       reminders: ["2026-10-25T09:00", "2026-10-25T18:30"],
       "recurrence previous": "[[Call Mum 2026-10-18]]",
     });
@@ -162,27 +162,30 @@ describe("isUntouchedSpawn", () => {
     ).toBe(false);
   });
 
-  it("rejects changed lists", () => {
+  it("rejects a changed list", () => {
     const item = spawnItem(sample);
     expect(
       isUntouchedSpawn(
-        { ...item, data: { ...item.data!, lists: ["[[Later]]"] } },
+        { ...item, data: { ...item.data!, list: "[[Later]]" } },
         sample,
       ),
     ).toBe(false);
   });
 
-  it("rejects lists in another order", () => {
+  it("rejects a cleared list", () => {
     const item = spawnItem(sample);
+    const cleared = { ...item.data! };
+    delete cleared.list;
     expect(
-      isUntouchedSpawn(
-        {
-          ...item,
-          data: { ...item.data!, lists: ["[[Home]]", "[[Focus]]"] },
-        },
-        sample,
-      ),
+      isUntouchedSpawn({ ...item, data: cleared }, sample),
     ).toBe(false);
+  });
+
+  it("accepts an absent list when the spawn wrote none", () => {
+    const unlisted = { ...sample, list: null };
+    const item = spawnItem(unlisted);
+    expect(item.data?.list).toBeUndefined();
+    expect(isUntouchedSpawn(item, unlisted)).toBe(true);
   });
 
   it("rejects a changed due date", () => {

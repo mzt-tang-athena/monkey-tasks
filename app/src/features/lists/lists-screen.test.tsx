@@ -155,7 +155,7 @@ function listedTask(name: string): TaskItem {
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
-      lists: ["[[Errands]]"],
+      list: "[[Errands]]",
     },
     body: "",
   };

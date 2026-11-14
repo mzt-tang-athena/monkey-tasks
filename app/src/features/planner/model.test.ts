@@ -169,7 +169,7 @@ describe("inSourceList", () => {
   const focused = task("Alpha", {
     kind: "[[tasks]]",
     created: "2026-10-20",
-    lists: ["[[Focus]]"],
+    list: "[[Focus]]",
   });
 
   it("matches a list wikilink only for its own name", () => {

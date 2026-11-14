@@ -255,7 +255,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
       {/* One bottom bar: nav left, capture button right. The target
           pill follows the active list tab: the bar re-reads the
           default target when the tab changes, so the bar itself never
-          remounts and never jumps. Main captures write no lists
+          remounts and never jumps. Main captures write no list
           property; every other tab preselects its own list. */}
       <BottomBar
         action={dock({

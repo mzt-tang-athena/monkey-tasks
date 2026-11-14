@@ -8,7 +8,7 @@ import { loadTasks } from "./task-notes";
 const dir = `${MEMORY_ROOT}/Tasks`;
 
 const valid =
-  '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n  - "[[Focus]]"\n---\n\nBody.\n';
+  '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlist: "[[Focus]]"\n---\n\nBody.\n';
 const broken = '---\nkind: "[[tasks]]"\n---\n\nNo created date.\n';
 
 describe("loadTasks", () => {
@@ -29,7 +29,7 @@ describe("loadTasks", () => {
     expect(brokenRow?.body).toBe("\nNo created date.\n");
 
     const validRow = tasks.find((task) => task.name === "Valid");
-    expect(validRow?.data?.lists).toEqual(["[[Focus]]"]);
+    expect(validRow?.data?.list).toBe("[[Focus]]");
     expect(validRow?.errors).toBeUndefined();
   });
 
