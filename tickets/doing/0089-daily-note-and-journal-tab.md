@@ -3,8 +3,8 @@ id: 0089
 title: The daily note and the journal tab
 created: 2026-11-11
 priority: high
-assignee:
-pr:
+assignee: claude-opus-5-5
+pr: 143
 depends: [0082, 0083]
 ---
 
@@ -33,9 +33,17 @@ Keep the parser tolerant. The parser preserves unknown lines and keeps
 extra inline tags. A block may hold any bullets. Never reject a note
 because a block has a shape the app did not write.
 
-The today view shows the blocks in file order, the newest last. A
-composer sits at the bottom with a multiline field and a send button.
-Send appends one block at the current time.
+The today view shows the blocks in file order, the newest last. The screen
+reads as a lined journal. The time sits on the left of each entry. On this
+tab the add button opens the entry composer instead of creating a task; we
+may change that later. The composer is a multiline field and a send button.
+Send appends one block at the current time, and the sent entry slides up to
+sit below the latest entry.
+
+One add is one block. Each line the operator typed becomes a `- ` bullet
+under that time.
+
+The format is in `docs/adr/20261112-journal-format.md`.
 
 ### What the app writes
 
@@ -45,9 +53,11 @@ task edits use. That way an Obsidian edit between the read and the write
 is not lost. Insert the new block at the end of the body and before a
 trailing embed line.
 
-If the note does not exist, create it. Proposal: create an empty body
-with no frontmatter and no embed. Do not copy a banner from another
-note and do not run Templater. Record the choice in the ADR.
+If the note does not exist, the first send creates it. The app writes an
+empty body with no frontmatter and no embed. Opening the tab never creates
+a note. An empty file made on open can race Obsidian's own daily note
+through sync. Do not copy a banner from another note and do not run
+Templater. The ADR records this choice.
 
 ### The tab
 
@@ -66,22 +76,31 @@ shows a retry. The screen does not use the task store.
 
 ## Acceptance
 
-- [ ] The tab opens today's note. A day with no note creates one, and
-      the second open reuses it.
-- [ ] A sent entry appears as `HH:MM` then the bullets, above the
+- [x] The tab opens today's note. A day with no note shows an empty page,
+      and the first send creates the note.
+- [x] A sent entry appears as `HH:MM` then the bullets, above the
       embed, with local time.
-- [ ] The note opens in Obsidian unchanged apart from the new block.
+- [x] The note opens in Obsidian unchanged apart from the new block.
       No existing line moves, and the embed stays last.
-- [ ] An Obsidian edit between the read and the write is not
+- [x] An Obsidian edit between the read and the write is not
       clobbered. The app reports it.
-- [ ] The composer keeps its draft across a failed write and retries.
-- [ ] 44pt targets, named controls, a screen reader can read every
+- [x] The composer keeps its draft across a failed write and retries.
+- [x] 44pt targets, named controls, a screen reader can read every
       entry, and the composer reports its state.
-- [ ] axe clean. e2e covers open, send, create, the failed write and
+- [x] axe clean. e2e covers open, send, create, the failed write and
       the reduced motion project.
-- [ ] An ADR records the path, the block grammar, append-only and the
+- [x] An ADR records the path, the block grammar, append-only and the
       create choice.
 
 ## Outcome
 
-(filled in before moving to done/)
+Shipped in #143. A third tab opens today's note as a ruled page, and the
+tab's add button opens a sheet composer. One send writes one block and
+appends it before the trailing embed. The first send creates the note.
+Opening the tab only reads. The journal store has its own query and shares
+the vault read gate and `VAULT_SCOPE` with the task writes. The sent block
+rises after the sheet leaves, and reduced motion keeps no travel.
+
+Verified with 876 unit and component tests, and the journal e2e in both
+motion projects. Axe passes on the page and the open composer. The web
+preview holds at 412 and 360 in light and midnight.

@@ -3,6 +3,12 @@
 
 export const sampleNotes: Record<string, Record<string, string>> = {
   "default": {
+    "Journal/Daily/2026-10-26.md":
+      "---\nbanner_image: Attachments/Banners/office.jpg\nbanner_position: 20\n---\n\n**To-do**\n\n- [ ] Reply to the plumber\n- [ ] Send the meter reading\n\n8:05\n- Woke up early, before the alarm\n- Walked to the bakery and back\n\n12:40\n- Ate: [[oatmeal]] with milk and brown sugar #food\n- Ate: [[chinese-steamed-eggs]] #food #protein\n\n16:20\n- Paid the water bill\n- Fixed the monkey-budget category and groups issues\n\n19:52\n- Went out for dessert with others\n- Plan the weekend hike\n\n![[daily.base]]\n",
+    "References/chinese-steamed-eggs.md":
+      "---\nkind: \"[[foods]]\"\n---\n\nSteamed eggs with a splash of soy.\n",
+    "References/oatmeal.md":
+      "---\nkind: \"[[foods]]\"\n---\n\nRolled oats with milk and brown sugar. The usual breakfast on a\nworking day.\n",
     "Tasks/Book train tickets home.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\n---\n",
     "Tasks/Buy stamps.md":

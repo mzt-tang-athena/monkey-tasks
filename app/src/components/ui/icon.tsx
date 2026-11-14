@@ -6,6 +6,7 @@ import { useTheme } from "@/theme/theme-provider";
 export type IconName =
   | "list"
   | "calendar"
+  | "journal"
   | "calendar-mini"
   | "clock-mini"
   | "plus"
@@ -71,6 +72,16 @@ function glyph(
         <View style={[styles.calendar, edge]}>
           <View style={[styles.calendarTop, fill]} />
           <View style={[styles.calendarDot, fill]} />
+        </View>
+      );
+    // The Journal tab: a ruled page with a margin line.
+    case "journal":
+      return (
+        <View style={[styles.journal, edge]}>
+          <View style={[styles.journalMargin, fill]} />
+          <View style={[styles.journalLine, { top: 3.5 }, fill]} />
+          <View style={[styles.journalLine, { top: 7.5 }, fill]} />
+          <View style={[styles.journalLine, styles.journalLineShort, { top: 11.5 }, fill]} />
         </View>
       );
     // The date chip in the capture sheet.
@@ -208,6 +219,30 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
+  },
+
+  journal: {
+    width: bottomBar.glyph,
+    height: bottomBar.glyph,
+    borderWidth: 1.5,
+    borderRadius: 3,
+  },
+  journalMargin: {
+    position: "absolute",
+    left: 3.5,
+    top: 0,
+    bottom: 0,
+    width: 1.5,
+  },
+  journalLine: {
+    position: "absolute",
+    left: 7,
+    right: 2.5,
+    height: 1.5,
+    borderRadius: 0.75,
+  },
+  journalLineShort: {
+    right: 6,
   },
 
   calendarMini: {

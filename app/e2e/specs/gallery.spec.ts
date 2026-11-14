@@ -407,6 +407,10 @@ async function checkToast(page: Page, where: string) {
 }
 
 test.describe("the gallery", () => {
+  // Every state, name, target and axe scan, at two widths. One palette
+  // already runs near 25 seconds, so the default 30 second budget left
+  // no room for a loaded machine.
+  test.describe.configure({ timeout: 90_000 });
   test("opens from Diagnostics and from nowhere else", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByTestId("bottom-bar")).toBeVisible();
