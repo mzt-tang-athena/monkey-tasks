@@ -135,6 +135,10 @@ test.describe("every palette", () => {
       await expect(page.getByTestId("month-title")).toBeVisible();
       await scan(page, `${name} planner month`);
 
+      await page.goto("/journal");
+      await expect(page.getByText("Woke up early, before the alarm")).toBeVisible();
+      await scan(page, `${name} journal`);
+
       await page.goto("/");
       await expect(row(page, undated.second)).toBeVisible();
       await press(
