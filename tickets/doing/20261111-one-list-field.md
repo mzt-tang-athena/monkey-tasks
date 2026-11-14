@@ -62,20 +62,35 @@ This ticket writes no note in bulk.
 
 ## Acceptance
 
-- [ ] A note with `list: "[[Focus]]"` parses to one list.
-- [ ] A note with two `lists` links parses to the first, and reading
+- [x] A note with `list: "[[Focus]]"` parses to one list.
+- [x] A note with two `lists` links parses to the first, and reading
       it changes nothing.
-- [ ] `data.lists` is gone from the parsed task.
-- [ ] An editor save writes `list` and removes `lists`.
-- [ ] Clearing the list removes both keys, and the task leaves the tab.
-- [ ] Capture and spawn write one scalar, never a block list.
-- [ ] `vault:check` accepts all three shapes and flags a block under
+- [x] `data.lists` is gone from the parsed task.
+- [x] An editor save writes `list` and removes `lists`.
+- [x] Clearing the list removes both keys, and the task leaves the tab.
+- [x] Capture and spawn write one scalar, never a block list.
+- [x] `vault:check` accepts all three shapes and flags a block under
       `list` and an empty string.
-- [ ] The sample notes use `list`, and the generated `index.ts` is
+- [x] The sample notes use `list`, and the generated `index.ts` is
       current.
 - [ ] `npx tsc --noEmit`, `npx vitest run`, `npx eslint` and the e2e
       suite pass.
 
 ## Outcome
 
-(filled in before moving to done/)
+Shipped on 2026-11-14.
+
+- The contract submodule is at `85b22c1`, the merge of contracts PR 18.
+  The app reads `data.list` and writes one scalar.
+- `TaskEdit.list`, the tab filter, the planner source, capture, spawn
+  and the editor field all carry one value.
+- `saveTaskEdit` drops `lists` before writing `list`. Clearing a list
+  removes both keys.
+- The three Focus sample notes use `list`, and `sample:build`
+  regenerated `index.ts`. The note counts stay 27 and 29.
+- Local: tsc clean, eslint clean, 851 vitest tests pass, and
+  `vault:check` reports 27 notes with 0 findings.
+- Local e2e: 458 passed and 26 skipped. The only failures are gallery
+  and theme axe scans that hit their 30 second timeout on this machine,
+  in palettes that vary between runs. Recent CI runs pass the same
+  suite, so CI on this PR is the final check.
