@@ -18,7 +18,7 @@ and promotes the first link. Merge that PR first.
 
 The app pins the contract by submodule at
 `file:../contracts/packages/schemas`. Bump the gitlink to the contracts
-merge commit. Do not point at a PR head. No package publish is needed
+merge commit. Do not point at a PR head. Skip the package publish
 until 0077 lands.
 
 The app reads:
@@ -48,13 +48,13 @@ The app writes:
 
 Tests and samples:
 
-- Update every `lists` fixture the map names, including selectors,
-  spawn, capture, editor draft, planner, tasks provider, repro tests and
-  the three Focus sample notes.
+- Update every `lists` fixture the map names. That covers selectors,
+  spawn, capture, the editor draft and the planner. It also covers the
+  tasks provider, the repro tests and the three Focus sample notes.
 - Keep one legacy two-link fixture in the parser and save tests.
 - Run `npm run sample:build` in `app` and commit the generated
-  `index.ts`. The note counts stay the same because the three notes are
-  converted, not added.
+  `index.ts`. The note counts stay the same. We convert the three notes
+  in place.
 - e2e needs no change in this ticket. Main is still the catch-all until
   the sibling ticket.
 
@@ -65,7 +65,7 @@ This ticket writes no note in bulk.
 - [x] A note with `list: "[[Focus]]"` parses to one list.
 - [x] A note with two `lists` links parses to the first, and reading
       it changes nothing.
-- [x] `data.lists` is gone from the parsed task.
+- [x] The parsed task no longer carries `data.lists`.
 - [x] An editor save writes `list` and removes `lists`.
 - [x] Clearing the list removes both keys, and the task leaves the tab.
 - [x] Capture and spawn write one scalar, never a block list.
@@ -91,7 +91,7 @@ Shipped on 2026-11-14.
 - Local: tsc clean, eslint clean, 851 vitest tests pass, and
   `vault:check` reports 27 notes with 0 findings.
 - Local e2e: 458 passed and 26 skipped. The only failures are gallery
-  and theme axe scans that hit their 30 second timeout on this machine,
+  and theme axe scans. They hit their 30 second timeout on this machine,
   in palettes that vary between runs.
 - CI e2e passed after one rerun. The first run hit a planner day-swipe
   frame flake; the rerun passed the same suite with 465 tests.
