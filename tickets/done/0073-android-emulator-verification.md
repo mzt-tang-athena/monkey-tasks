@@ -10,22 +10,23 @@ depends: [0069]
 
 ## Spec
 
-Phase 4 of epic 0047 moves every gesture and animation to the UI
-thread, on Reanimated 4 and gesture handler 3. The web preview runs
-worklets on the JS thread, so it cannot prove that work. Today only
-the owner's phone can.
+Epic 0047 phase 4 moves every gesture and animation to the UI thread,
+on Reanimated 4 and gesture handler 3. The web preview runs worklets on
+the JS thread, so it cannot prove that work. Today only the owner's phone
+can prove it.
 
 This machine now has the Android SDK, an x86_64 system image for API
 35, and a usable KVM. Add an Android path to the project verification
 skill, `.claude/skills/verify-monkey-tasks/`, so an agent can prove
 native behavior itself:
 
-- Launch boots one named AVD on its own port, creates it when it is
-  missing, installs a given APK, seeds the sample vault, grants the
-  folder through the system picker, and waits for the first task row.
+- Launch boots one named AVD on its own port, and creates it when
+  missing. Launch installs a given APK and seeds the sample
+  vault. It then grants the folder through the system picker, and waits
+  for the first task row.
 - Doctor checks the instance in one read-only pass.
-- Drive taps by accessibility label or text from `uiautomator dump`,
-  and keeps screenshots, short recordings, the screen tree, the app
+- Drive taps by accessibility label or text from `uiautomator dump`.
+  It keeps screenshots, short recordings, the screen tree, the app
   log and the note files.
 - Cleanup stops only the emulator it started. The evidence stays.
 
@@ -47,11 +48,11 @@ The verification skill has an Android section and seven helpers under
 `scripts/android-*`. One journey, `journeys/android-list-swipe.sh`,
 covers the Lists recipe on the emulator.
 
-Proof, from a cold emulator on the CI release APK of `4828d9c`: launch
-reached a task row in 372 s on a host that another agent's Playwright
-run loaded (boot 165 s, install 46 s, first app start 112 s). Doctor
-exited 0. The journey turned the page with motion on and off, and the
-frame grids show the slide and the jump. The tick wrote `completed:`
+Proof came from a cold emulator on the CI release APK of `4828d9c`.
+Launch reached a task row in 372 s (boot 165 s, install 46 s, first app
+start 112 s). Another agent's Playwright run was loading that host at
+the time. Doctor exited 0. The journey turned the page with motion on
+and off. The frame grids show the slide and the jump. The tick wrote `completed:`
 to the note. Cleanup stopped only our pid, Doctor then exited 1, and
 the evidence stayed in `app/build/verify/evidence/android-20261108-052424/`.
 

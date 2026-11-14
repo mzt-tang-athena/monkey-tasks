@@ -11,18 +11,18 @@ depends: [0048, 0049]
 ## Spec
 
 Phase 1 of the rebuild (0047). ADR 0039 records the decision. This
-ticket moves the code into the Bulletproof layout, renames files to
-kebab-case and turns on the import boundary rule.
+ticket moves the code into the Bulletproof layout and renames files to
+kebab-case. It also turns on the import boundary rule.
 
-The change keeps behaviour as it is. We move files, rename them, merge
+The change keeps behaviour unchanged. We move files, rename them, merge
 copies of the same helper and delete dead code. No logic changes. Tests
 change only in import paths, imported names, `vi.mock` paths and file
 location. The one exception: the 8 tests of the dead `nextDue` go with
 it.
 
 Paths and line numbers cite commit `b2c0b10`. Tickets 0048 and 0049 land
-first and touch some test files, so take a fresh baseline before the
-first move (step 1).
+first and touch some test files. Take a fresh baseline before the
+first move for that reason (step 1).
 
 ### Baseline at `b2c0b10`
 
@@ -115,16 +115,16 @@ Each PR keeps the app working and passes typecheck, lint, Vitest and the
 2. Check the `@/` alias from 0048 in tsconfig, Vitest and Metro. If
    0048 landed without it, add it here:
    - `app/tsconfig.json`: `"paths": { "@/*": ["./src/*"] }`. Add no
-     `baseUrl`, because TypeScript 6 deprecates it.
+     `baseUrl`, because TypeScript 6 drops support for it.
    - Vitest: `{ find: /^@\//, replacement: `${src}/` }` in the alias
      list.
    - Metro: Expo reads tsconfig `paths` on its own.
      `experiments.tsconfigPaths` defaults to true
      (`@expo/cli/build/src/start/server/metro/instantiateMetro.js:310`).
 3. Add the TypeScript resolver to the ESLint settings, as in ADR 0039.
-   `eslint-config-expo` sets the node resolver only, and that resolver
-   cannot read `@/`. The zones rule then skips every aliased import with
-   no error. A probe on 2026-10-26 showed it: one `@/` import that broke
+   `eslint-config-expo` sets the node resolver only. That resolver
+   cannot read `@/`, so the zones rule skips every aliased import with
+   no error. A probe on 2026-10-26 showed it. One `@/` import that broke
    a zone gave an error under the TypeScript resolver and nothing under
    the node resolver. `eslint-import-resolver-typescript` 3.10.1 already
    comes with `eslint-config-expo`.
@@ -390,10 +390,11 @@ Object.keys(graph).forEach((v) => idx[v] === undefined && scc(v));
 console.log("layer cycles", JSON.stringify(cycles));
 ```
 
-At `b2c0b10` the graph script prints 15 shared-to-feature type imports,
-14 shared-to-feature runtime imports, 20 feature-to-feature type imports
-and 17 feature-to-feature runtime imports in source files. It prints the
-two folder cycles from the baseline.
+At `b2c0b10` the graph script prints these source-file imports. It finds
+15 shared-to-feature type imports and 14 shared-to-feature runtime
+imports. It finds 20 feature-to-feature type imports and 17
+feature-to-feature runtime imports. It prints the two folder cycles from
+the baseline.
 
 ## Acceptance
 
@@ -426,9 +427,9 @@ the boundary count after each stage.
 
 ### What landed
 
-- Stage 1: `types/task.ts`, `utils/`, one copy of each helper, the dead
-  code gone, the TypeScript resolver, and `@/` for every import that
-  leaves its folder.
+- Stage 1: `types/task.ts`, `utils/`, one copy of each helper and the
+  removed dead code. Also the TypeScript resolver and `@/` for every
+  import that leaves its folder.
 - Stage 2: `lib/vault/`, `stores/tasks/`, the other moves in the map,
   and the ADR 0039 zones at `error` with four named exceptions.
 - Stage 3: the 43 kebab-case renames, `eslint-plugin-check-file` 3.3.2

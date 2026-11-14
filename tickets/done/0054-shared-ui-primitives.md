@@ -18,7 +18,7 @@ no feature call site except the shared task rows. The screen tickets
 adopt the primitives.
 
 Paths and line numbers cite commit `b2c0b10`. Ticket 0050 renames files
-to kebab-case and moves the tree, so look for the same code under its
+to kebab-case and moves the tree. Look for the same code under its
 new name. New files take kebab-case names in `src/components/ui/`.
 
 ### Tokens
@@ -27,8 +27,8 @@ Add three groups to `src/theme/tokens.ts`.
 
 - `layers`: one z scale for every surface that floats. Today the drag
   ghosts, menus, toast and sheet stack in tree order. One ghost sets
-  `zIndex: 20` (`plannerStyles.ts:401`), and `elevation` values reorder
-  the rest on Android only. Order, low to high: content, bottom bar,
+  `zIndex: 20` (`plannerStyles.ts:401`). On Android only, `elevation`
+  values reorder the rest. Order, low to high: content, bottom bar,
   drag ghost, menu backdrop, menu, sheet scrim, sheet, toast.
 - `type`: a type scale. The screens hold 86 `fontSize` literals in 11
   sizes. The eyebrow label exists in five forms (`index.tsx:1404`,
@@ -65,8 +65,8 @@ alternatives that a later agent could reopen.
 
 `TaskRow.tsx` and `PreviewRow.tsx` hold two copies of the same markup,
 styles, `formatTime` and `startOfToday`. The planner model holds a third
-`formatTime`. Extract `TaskRowFace` (the still markup and its layout
-constants) into `src/components/`. `TaskRow` wraps the face with the
+`formatTime`. Extract `TaskRowFace` into `src/components/`. It holds the still markup
+and its layout constants. `TaskRow` wraps the face with the
 toggle, the open press and today's motion. `PreviewRow` renders the face
 with no handlers. One `formatTime` lives in `src/utils`.
 
@@ -83,47 +83,48 @@ copies it. Point `CaptureChips` at `Pill`.
 
 ADR 0012 says a child never declares spacing outside itself. Ticket
 0048 turns the `marginBottom` and `marginRight` rule into an error. Its
-step 9 records a wider rule in an amendment to ADR 0012, and that rule
+step 9 records a wider rule in an amendment to ADR 0012. That rule
 lands as an error here.
 
 Extend the `no-restricted-syntax` selector in `app/eslint.config.js` to
 `marginTop`, `marginLeft`, `marginVertical` and `marginHorizontal`, at
-`error`. After 0048 the wider selector matches 32 sites in 10 files:
-30 top, left and vertical margins (`plannerStyles.ts`,
+`error`. After 0048 the wider selector matches 32 sites in 10 files.
+30 are top, left and vertical margins (`plannerStyles.ts`,
 `TaskEditorScreen.tsx`, `src/app/(tabs)/index.tsx`, `src/app/dev.tsx`,
 `BottomBar.tsx`, `CaptureChips.tsx`, `TaskRow.tsx`, `PreviewRow.tsx`,
-`PeriodStrip.tsx`, `ListPagePreview.tsx`), plus two `marginHorizontal`
-bleeds (`weekScroller` in `plannerStyles.ts`, `railBleed` in
-`PeriodStrip.tsx`). 0048 removed the third bleed with a dead style.
+`PeriodStrip.tsx`, `ListPagePreview.tsx`). The other two are
+`marginHorizontal` bleeds (`weekScroller` in `plannerStyles.ts`,
+`railBleed` in `PeriodStrip.tsx`). 0048 removed the third bleed with a
+dead style.
 
-Fix each site by moving the gap to its parent: a `gap` on the
-container, or symmetric padding inside the child. For a bleed, the
+Fix each site by moving the gap to its parent. Add a `gap` on the
+container, or add symmetric padding inside the child. For a bleed, the
 parent drops its gutter for that child, or the scroller sits outside the
 padded frame. The TaskRow meta row above is one of these sites. Other
-tickets rebuild some of these files later; fix the sites as they stand
+tickets rebuild some of these files later. Fix the sites as they stand
 now, so the rule can run as an error from this ticket on.
 
 ## Acceptance
 
 - [x] `tokens.ts` exports `layers`, `type` and `shadows`.
 - [x] An ADR records the type scale and the layer order.
-- [x] Each primitive in the table lives in `src/components/ui/` with a component test for its roles, names and states.
-- [x] The `Menu` test opens a menu from an anchor near the bottom edge and finds it above the anchor, inside the window.
-- [x] The `Menu` test opens a menu from an anchor at the right edge and finds its right side inside the page gutter.
+- [x] Each primitive in the table lives in `src/components/ui/`, with a component test for its roles, names and states.
+- [x] The `Menu` test opens a menu from an anchor near the bottom edge. It finds the menu above the anchor, inside the window.
+- [x] The `Menu` test opens a menu from an anchor at the right edge. It finds the menu's right side inside the page gutter.
 - [x] A press on the backdrop, Android back and web Escape each close an open `Menu`.
 - [x] A disabled menu item ignores a press and reports `aria-disabled`.
 - [x] Android back closes an open `Sheet`.
 - [x] While a `Sheet` shows, the test finds the screen content hidden from assistive tech.
 - [x] `Banner` and `Toast` report role `alert`.
 - [x] `TabStrip` and `SegmentedControl` targets measure at least 44 by 44.
-- [x] A test reproduces the meta row gap first. Afterwards a single-line row has equal space above and below its text.
+- [x] A test reproduces the meta row gap first. After the fix, a single-line row has equal space above and below its text.
 - [x] `TaskRow` and `PreviewRow` render through `TaskRowFace`.
 - [x] The source holds one `formatTime`.
 - [x] `CaptureChips` renders `Pill` chips and holds no chip styles of its own.
 - [x] The spacing rule in `app/eslint.config.js` covers `marginTop`, `marginLeft`, `marginVertical` and `marginHorizontal` at `error`.
 - [x] No style in `app/src` declares one of those margins, and each former site takes its gap from its parent.
-- [x] Lists, Planner (day, week and month), the editor and the capture sheet show the same spacing as before at 390 by 800, apart from the meta row fix.
-- [x] `npx eslint src --max-warnings 0`, `npx tsc --noEmit` and the test suite pass.
+- [x] At 390 by 800, Lists, Planner (day, week and month), the editor and the capture sheet keep their old spacing. Only the meta row changes.
+- [x] `npx eslint src --max-warnings 0`, `npx tsc --noEmit` and the test suite all pass.
 
 ## Outcome
 
@@ -131,8 +132,8 @@ PR #77 landed the ticket on `epic/0047-rebuild`.
 
 - `tokens.ts` exports `type`, `layers`, `shadows` and `menuWidth`.
   ADR 0040 records the type scale and the layer order. It also records
-  why the primitives use no headless UI kit: `@rn-primitives` 1.5 and
-  `@gluestack-ui/core` 5.0 were checked on 2026-10-31.
+  why the primitives use no headless UI kit. The team checked
+  `@rn-primitives` 1.5 and `@gluestack-ui/core` 5.0 on 2026-10-31.
 - `components/ui` holds every primitive in the table, each with a
   component test. `hooks/use-dismiss` closes the newest surface on
   Android back or Escape. `lib/motion` keeps the menu entrance and the
@@ -140,18 +141,20 @@ PR #77 landed the ticket on `epic/0047-rebuild`.
   and 0062. The README lists the primitives under Layout.
 - `TaskRowFace` draws both task rows, and one `formatTime` lives in
   `utils/dates.ts`. The meta row renders only with content. A
-  Playwright test fails on the old build with 12 px above the name and
-  14 px below, and passes now.
+  Playwright test fails on the old build, with 12 px above the name and
+  14 px below. It passes now.
 - `CaptureChips` renders `Pill` chips with `Icon` glyphs. The bottom
   bar draws its glyphs through `Icon` too.
 - ESLint bans every margin property at `error`. The 32 sites take
   their gap from their parent. The ADR 0012 amendment of 2026-10-28
   lists the three ways.
 
-Screens at 390 by 800, before and after, in both Playwright projects:
-Lists (Main, a list, an empty list, both menus, the swipe preview),
-Planner (day, the source menu, week, month, a picked day), the editor
-(task, note, missing task), the capture sheet and diagnostics. Three
+Screens at 390 by 800, before and after, in both Playwright projects.
+They cover Lists (Main, a list, an empty list, both menus, the swipe
+preview). They cover Planner (day, the source menu, week, month, a picked
+day).
+They also cover the editor (task, note, missing task), the capture sheet
+and diagnostics. Three
 changes show:
 
 - Each single-line row is 2 px shorter. This is the meta row fix.
@@ -161,10 +164,10 @@ changes show:
   stray label margin made its top 24 px before.
 
 The loading, error and toast states did not show in the web preview.
-Their gaps were checked by arithmetic instead: each moved margin
+Arithmetic checked their gaps instead. Each moved margin
 became a `gap` or a padding of the same size.
 
-Left for the screen tickets, as the spec planned: 0055, 0056 and 0057
+Left for the screen tickets, as the spec planned. 0055, 0056 and 0057
 adopt `Menu`, `Banner`, the list states, `SectionHeader`,
 `CardGroupRow`, `TabStrip`, `SegmentedControl`, `Sheet`, `TextField`
 and `Icon`, and move their `fontSize` literals onto `type`. The text

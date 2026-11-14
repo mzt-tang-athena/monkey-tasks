@@ -20,34 +20,35 @@ The cause is `app/src/components/motion/pager.tsx:204`:
 <View key={`live:${index}`} testID="pager-live" style={fill && styles.fill}>
 ```
 
-`live` equals `index - origin`, so the key changes on every commit.
-React unmounts the whole live subtree and mounts a new one. Ticket
-0079 put the live page at the track's origin and left the track at 0 at
-rest, so the key is no longer needed to avoid a flash.
+`live` equals `index - origin`, so the key changes on every commit. On
+each commit, React unmounts the whole live subtree and mounts a new
+one. Ticket 0079 put the live page at the track's origin and left the
+track at 0 at rest. As a result, avoiding a flash no longer needs the key.
 
 Measure first. Count mounts of `DayPage` and `MonthGrid` across a
-swipe on head, for example with a mount counter in a test harness. The
+swipe on head. One way is a mount counter in a test harness. The
 test asserts one mount for the first page and no new mount for a swipe
 to a neighbour. It fails on head and passes after the fix.
 
 The commit must swap the page content and the track position in one
-frame. A removed key must not show the previous page for a frame, a
-blank strip, or a vertical shift. Prove it with a frame grid from the
+frame. With the key removed, no frame may show the previous page, a blank
+strip, or a vertical shift. Prove it with a frame grid from the
 verify skill, motion on and reduced motion.
 
 Check the Lists pager too. It shares the surface, so a tab tap should
-keep each page's scroll position when the user returns to it. If
-keeping state across tabs is not wanted there, say so in the ticket
-and keep the day and month fix.
+keep each page's scroll position when the user returns to it. If tabs
+there should not keep state, say so in the ticket and keep the day and
+month fix.
 
 ## Acceptance
 
 - [x] A mount counter shows the live page mounting once per commit on
-      head and not remounting on a swipe after the fix.
-- [x] The day list keeps its scroll position across a swipe and back.
-- [x] A frame grid shows the neighbour sliding in, the commit at 0, no
-      flash, no blank strip and no vertical shift, motion on and
-      reduced motion.
+      head. After the fix, it does not remount on a swipe.
+- [x] The day list keeps its scroll position across a swipe and a
+      return.
+- [x] A frame grid shows the neighbour sliding in, then the commit at
+      0. It shows no flash, no blank strip and no vertical shift, with
+      motion on and with reduced motion.
 - [x] The pager scenarios and the full e2e suite pass. No retries.
 - [x] No stale page content after the commit.
 
@@ -59,20 +60,20 @@ The live page remounted because its View keyed on `index`. A test child
 counted 2 mounts across one swipe on head. It counts 1 after the fix.
 
 The same probe found a second fault at the commit. Since ticket 0079
-the live page lays out at the track's origin, and the track's transform
-carries the whole page position. That transform came from a shared
-value, so it updated one frame after React swapped the content. On head
-the commit frame showed Tuesday 27 at an offset of -352 px with no
-preview, which is a blank strip. Now the live page carries its own
-`live × width` as a plain style, and the track moves through page
-space. The content and the place change in one React render. No frame
-shows the old page in place or a blank strip.
+the live page lays out at the track's origin. The track's transform
+then carries the whole page position. That transform came from a
+shared value. As a result, it updated one frame after React swapped
+the content. On head the commit frame showed Tuesday 27 at an offset of
+-352 px with no preview, a blank strip. Now the live page
+carries its own `live × width` as a plain style. The track moves
+through page space. The content and the place change in one React
+render. No frame shows the old page in place or a blank strip.
 
 Each day keeps its own scroll. A day starts at the top the first time
 it shows. A later visit restores its saved offset in the same frame as
-the content, and the neighbour preview draws at that same offset. A
-swipe and back therefore returns to the exact position, with no
-vertical jump at the commit.
+the content. The neighbour preview draws at that same offset. A
+swipe and a return come back to the exact position, with no vertical
+jump at the commit.
 
 A list tab is a different list. Its inner list still starts at the top,
 as its preview draws it. A tab tap does not restore the previous tab's
@@ -90,8 +91,8 @@ scroll. Per-tab memory is a separate change.
 Frame evidence in `/tmp/opencode/0087/`:
 
 - `day-motion-hold.png`, `day-motion-frame-00..23.png` and
-  `day-motion-landed.png` show the neighbour sliding in, then the
-  commit at frame 14 with Tuesday 27 at the pager's origin and a
+  `day-motion-landed.png` show the neighbour sliding in. They then show
+  the commit at frame 14, with Tuesday 27 at the pager's origin and a
   scroll of 0.
 - `day-back-motion-*.png` shows the return. Today's saved scroll of
   300 returns in the commit frame, alongside the content.
@@ -103,10 +104,11 @@ Frame evidence in `/tmp/opencode/0087/`:
   scroll and heading per frame. No frame has no preview and a live
   page off its origin.
 
-`pagers.spec.ts` asserts the one-frame commit in "a day swipe swaps the
-page and its place in one frame" and its month twin. The day scroll
-and the preview match are asserted by "the day preview matches the
-landed page" with the mouse and touch.
+The one-frame commit has two checks in `pagers.spec.ts`. One is "a day
+swipe swaps the page and its place in one frame". The other is its month
+twin. The test "the
+day preview matches the landed page" covers the day scroll, and that
+the preview matches. It runs with the mouse and with touch.
 
 The full run also caught a flaky capture-sheet test. It sampled the
 220 ms fade in real time and could miss every fade frame on a loaded

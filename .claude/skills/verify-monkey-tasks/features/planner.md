@@ -2,8 +2,8 @@
 
 The Planner tab shows the tasks by time in day, week or month mode. Day
 mode splits into an hour timeline and a day list with a grabber between
-them. The user drags a task onto an hour, a week column or a month cell
-to schedule it, and swipes to move between days or months.
+them. To schedule a task, the user drags it onto an hour, a week column
+or a month cell. The user swipes to move between days or months.
 
 ## Sub-features
 

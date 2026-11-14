@@ -13,8 +13,8 @@ depends: [0010]
 The hand-ordered sort from the 2026-10-20 brainstorm (the Focus-list
 habit). Tasks gain an optional `order` number property; the sort
 sheet gains "My order"; rows reorder by drag within a list. Manual
-order is meaningful per list; the property is a single number, and
-tasks usually live in one list.
+order is meaningful per list. The property is a single number, and
+tasks in most cases live in one list.
 
 ## Acceptance
 

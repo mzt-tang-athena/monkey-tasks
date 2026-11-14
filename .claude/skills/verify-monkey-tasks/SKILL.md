@@ -14,11 +14,11 @@ The user surface is an Android app. This skill drives two surfaces:
 - An Android emulator running a release APK, for native behavior. The
   Android section covers it.
 
-What the web preview cannot prove: UI-thread motion (Reanimated
-worklets run on the JS thread in a browser), native gesture handler
-arbitration, keyboard insets, SAF folder access, notifications, and
-touch-action behavior on a real touchscreen. Check those on the
-emulator. The Android section lists what still needs the phone.
+The web preview cannot prove UI-thread motion, because Reanimated
+worklets run on the JS thread in a browser. It also cannot prove native
+gesture handler arbitration, keyboard insets or SAF folder access. Nor
+can it prove notifications, or touch-action behavior on a real
+touchscreen. Check those on the emulator. The Android section lists what still needs the phone.
 
 All commands run from the repo root of the checkout under test. Each
 checkout uses its own port. Set `VERIFY_PORT` when another instance or
@@ -34,8 +34,9 @@ review agents use 8200 to 8221. This skill defaults to 8300.
 VERIFY_PORT=8310 .claude/skills/verify-monkey-tasks/scripts/launch.sh
 ```
 
-It runs `npm run web:export` in `app/` (20 to 45 s, longer on a busy
-machine; the export sets `EXPO_PUBLIC_VAULT_TEST_HOOKS=1`), stamps `app/dist` with `HEAD`, starts
+It runs `npm run web:export` in `app/`, which takes 20 to 45 s, longer
+on a busy machine. The export sets `EXPO_PUBLIC_VAULT_TEST_HOOKS=1`.
+It then stamps `app/dist` with `HEAD`, starts
 `app/serve.py` in the background and runs Doctor. Ready means Doctor
 prints four `ok` lines. `SKIP_EXPORT=1` reuses the current `dist`.
 
@@ -48,10 +49,10 @@ Setup a fresh checkout needs first: `git -c url."https://github.com/".insteadOf=
 .claude/skills/verify-monkey-tasks/scripts/doctor.sh
 ```
 
-Read-only. It checks that the server pid is alive, that the port is
-owned by that pid, that `dist` was built from the current tree, including
-edits made after the launch (a `WARN` line means you are testing old
-code), and that a
+Read-only. It checks that the server pid is alive and owns the port.
+It checks that `dist` came from the current tree, including edits made
+after the launch. A `WARN` line means you are testing old code. Last,
+it checks that a
 headless page renders sample rows and exposes `globalThis.__vault`.
 Run it first whenever anything looks off. Exit code 0 means drivable.
 
@@ -97,7 +98,7 @@ Proof standards:
 
 - Drive the user path: buttons, gestures and typing. Use `__vault` hooks only to read notes, or to act as another app writing the vault (`putNote` then `returnToTab`). Never set app state through them.
 - Screenshot the action and the result. Scroll the target into view first (`locator.scrollIntoViewIfNeeded()`), or the shot proves nothing.
-- Check the side effect. A write is proved when `noteText` shows the note changed, and the row survives `returnToTab` (a fresh vault read).
+- Check the side effect. A write has proof when `noteText` shows the note changed, and the row survives `returnToTab` (a fresh vault read).
 - Compare against the base for a regression claim. Launch the base branch in a second worktree on another port and drive the same journey.
 - Name what the web cannot prove. See the list at the top.
 
@@ -130,7 +131,7 @@ The emulator runs a release APK on the `monkey-tasks-verify` AVD (API
 system folder grant (SAF), and Reanimated runs on the UI thread. One
 instance runs per console port. The default is 5580. Set
 `ANDROID_VERIFY_PORT` to run a second one. Every Android script sources
-`scripts/android-env.sh` for the SDK paths, so no shell setup is needed.
+`scripts/android-env.sh` for the SDK paths, so each works with no shell setup.
 
 ### Get an APK
 
@@ -142,12 +143,12 @@ gh run list --workflow android --branch epic/0047-rebuild --limit 3
 gh run download <run id> --name monkey-tasks-apk -D <new empty dir>
 ```
 
-A release APK cannot load code from Metro, so it tests what was pushed.
+A release APK cannot load code from Metro, so it tests the pushed code.
 To test local edits without a build, install the dev client once
-(`gh workflow run android -f dev=true`, artifact `monkey-tasks-dev-apk`),
-then run `adb reverse tcp:8081 tcp:8081` and `npx expo start --dev-client`
+(`gh workflow run android -f dev=true`, artifact `monkey-tasks-dev-apk`).
+Then run `adb reverse tcp:8081 tcp:8081` and `npx expo start --dev-client`
 in `app/`. The dev client opens the bundle from the host. That path is
-not proven yet, and it bundles the dev build, which has the vault test
+not proven yet. It also bundles the dev build, which has the vault test
 hooks and slower JavaScript.
 
 ### Launch
@@ -157,7 +158,7 @@ hooks and slower JavaScript.
 .claude/skills/verify-monkey-tasks/scripts/android-launch.sh         # keep the installed APK
 ```
 
-It runs the host checks, creates the AVD when it is missing, and boots
+It runs the host checks, creates the AVD when missing, and boots
 it cold (`-no-snapshot`, 2 cores, 2 GB). It then sets the zone to
 Pacific/Auckland and hides ANR dialogs. It installs the APK when its
 hash changed. It writes the sample vault for the device's today with
@@ -167,17 +168,18 @@ shows`. It saves `launch.png` and `launch.xml` in a new run folder and
 prints that folder.
 
 The folder grant lives in the AVD's data. It survives a cold boot, a
-reinstall and a reseed, because the folder keeps its path. So launch
-walks the system picker only when the app shows `connect vault folder`:
-on a new AVD, or with `FRESH=1`, which clears the app data first. The
+reinstall and a reseed, because the folder keeps its path. As a result, launch
+walks the system picker only when the app shows `connect vault folder`.
+That happens on a new AVD, or with `FRESH=1`, which clears the app data
+first. The
 walk reads the picker's header (`Files on ...`, `Files in Documents`,
 `Files in obsidian-vault`), takes one step, and waits for the header to
 change. It ends on `USE THIS FOLDER` and `ALLOW`. App settings such as
 the sort order also persist between launches. Use `FRESH=1` when a
 check needs them at their defaults.
 
-Timings on this host (4 cores): a cold boot took 99 to 150 s and the
-install 19 to 45 s, slower when other work loads the host. The picker
+Timings on this host (4 cores) follow. A cold boot took 99 to 150 s and
+the install 19 to 45 s. They run slower when other work loads the host. The picker
 walk took 37 to 76 s. A rerun on a running emulator skips the boot and
 an unchanged APK. `MOTION=off` starts with the three animation scales
 at 0.
@@ -191,8 +193,9 @@ at 0.
 
 Read-only. It checks the SDK, the system image, KVM, the headless qemu
 libraries and free memory. Then it checks that the emulator pid is
-ours, booted and the right AVD, that the package is installed, that the
-vault holds notes, that the app is in front, and that a task row shows.
+ours, booted and the right AVD. Next it checks that the device has the
+package installed and the vault holds notes. Last, it checks that the app is in
+front and a task row shows.
 It prints the animation scales and the run folder. Exit code 0 means
 drivable. Each `FAIL` line names the fix.
 
@@ -215,8 +218,8 @@ $D list                                          # every labelled node on screen
 ```
 
 A handle matches `content-desc` (the accessibility label), then
-`resource-id` (the `testID`), then text. It is exact, or a substring
-with a leading `~`. `outer>>inner` finds inner within outer's bounds.
+`resource-id` (the `testID`), then text. A handle matches exactly, or as a
+substring with a leading `~`. `outer>>inner` finds inner within outer's bounds.
 Use it for `mark done` and `open task`, which every row has. `@x,y` is
 a known point. Read it with `bounds` first when a recording must start
 on the gesture. Handles in this app: the tab names, `add task`,
@@ -225,8 +228,8 @@ on the gesture. Handles in this app: the tab names, `add task`,
 `task-row:<name>`, `list-pager`, `repair-notice`, `reorder-grip:<name>`.
 
 Proven on the emulator so far: `tap`, `wait`, `scroll-to`, `swipe`,
-`frames`, `record`, `note` and `log`. `hold-drag`, `drag` and `type` are
-written but not yet run on an APK. Check them before you rely on them.
+`frames`, `record`, `note` and `log`. `hold-drag`, `drag` and `type`
+exist but have not yet run on an APK. Check them before you rely on them.
 
 Make a journey safe to run again: `journeys/android-list-swipe.sh` is
 the model, since it undoes its own change. The feature map says which
@@ -239,7 +242,7 @@ made, under `app/build/verify/evidence/android-<stamp>/`.
 `$D new-run` starts another. `$D run` prints the current one.
 
 - `$D shot <name>` saves a screenshot.
-- `$D frames <name> <secs> <step...>` records every frame while one step runs and for secs after. It writes `NN.png` and `sheet.png`, a grid in order, to `<name>-frames/`. Read the grid to see motion. There is no ffmpeg on the host, so this is how an agent watches a gesture.
+- `$D frames <name> <secs> <step...>` records every frame while one step runs and for secs after. It writes `NN.png` and `sheet.png`, a grid in order, to `<name>-frames/`. Read the grid to see motion. The host has no ffmpeg, so this is how an agent watches a gesture.
 - `$D record <name> <secs> <step...>` saves an mp4 for a human.
 - `$D dump <name>` saves the screen tree as `.xml` and a readable `.txt`.
 - `$D note "Tasks/<name>.md" <tag>` prints a note from the device and keeps it as `note-<tag>.md`.
@@ -264,17 +267,19 @@ Doctor exits nonzero after cleanup.
 
 ### What the emulator proves, and what needs the phone
 
-The emulator proves: UI-thread motion, frame by frame (the frames carry
-no timestamps), native gesture arbitration under `adb input` touches,
-the release JavaScript bundle, the SAF grant and real file writes, app
-restart, and that the app runs on API 35. The emulator also has a soft
-keyboard, but no run has driven the capture sheet with it yet.
+The emulator proves UI-thread motion, frame by frame. The frames carry
+no timestamps. It proves native gesture arbitration under `adb input`
+touches, and the release JavaScript bundle. It also proves the SAF grant
+and real file writes, app restart, and that the app runs on API 35. The
+emulator also has a soft keyboard, but no run has driven the capture
+sheet with it yet.
 
-It does not prove: feel and frame rate on real hardware (the emulator
-renders in software, on a shared host), multi-touch and finger size,
-haptics, notifications and their timing, the owner's keyboard app and
-its insets, the owner's file provider and Obsidian sync, and battery or
-doze behavior. Leave those to the phone pass, and say so in the report.
+It does not prove feel and frame rate on real hardware. The emulator
+renders in software, on a shared host. It also does not prove
+multi-touch and finger size, haptics, and notifications and their
+timing. Nor does it prove the owner's keyboard app and its insets, or
+the owner's file provider and Obsidian sync. Battery or doze behavior
+also stays unproven. Leave those to the phone pass, and say so in the report.
 
 ### Android gotchas
 

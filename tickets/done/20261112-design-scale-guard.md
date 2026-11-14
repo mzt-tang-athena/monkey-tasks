@@ -20,20 +20,21 @@ Measured on 2026-11-12 in `app/src/features` and `app/src/components`:
 
 Name the missing steps. Replace off-scale layout values with tokens. Add
 a test that fails a raw `padding`, `margin`, `gap` or `borderRadius` value
-at or above 4, with an allowlist for exceptions that carry a reason.
+at or above 4. Give it an allowlist for exceptions that carry a reason.
 
 Fine marks under 4 may stay literal. A repeated one gets a named token.
 
 This is not a restyle. The diff should read as rounding a stray value onto
-the scale that already exists, and the screenshots should show only that.
+the scale that already exists. The screenshots should show only that.
 
 The guard runs inside the existing vitest job. Do not add a CI job.
 
 ## Acceptance
 
 - [x] Every raw layout value at or above 4 in features and components is
-      a token or an allowlisted exception with a reason.
-- [x] The test fails when a new raw value is added.
+      a token or an exception. Each exception is on the allowlist with a
+      reason.
+- [x] The test fails when a new raw value appears.
 - [x] The token comments separate layout steps from marks.
 - [x] Screenshots of the affected screens before and after.
 - [x] `npx tsc --noEmit`, `npx eslint src scripts e2e --max-warnings 0`,
@@ -42,9 +43,9 @@ The guard runs inside the existing vitest job. Do not add a CI job.
 
 ## Outcome
 
-The scale is named in `app/src/theme/tokens.ts`. The comments separate
+`app/src/theme/tokens.ts` names the scale. The comments separate
 layout steps from marks and record why 6 rounds to 8 instead of growing
-the scale. No new numeric step was needed.
+the scale. The scale needed no new numeric step.
 
 The measured tree differed from the ticket's 2026-11-12 sample. The
 actual strays were `gap: 6`, `gap: 4`, `gap: 8`, `borderRadius: 6`,
@@ -58,15 +59,15 @@ glyph values stay literal with a reason in
 `app/scripts/lint/layout-numbers.allowlist.ts`.
 
 The guard is `app/scripts/lint/layout-numbers.test.ts`. It uses the
-TypeScript AST, so computed values, variables and
-`StyleSheet.hairlineWidth` are skipped. It fails a raw value at or above
+TypeScript AST, so it skips computed values, variables and
+`StyleSheet.hairlineWidth`. It fails a raw value at or above
 4, positive or negative, with the file and line. It scans features,
 components and the `src/app` routes. It runs in the existing vitest job.
 
 An independent verifier on another model found the original scope
-stopped at features and components, so a screen style in `src/app`
-would escape. The roots now include `src/app`, and the fixture proves a
-negative step is flagged.
+stopped at features and components. As a result, a screen style in
+`src/app` would escape. The roots now include `src/app`, and the
+fixture proves the guard flags a negative step.
 
 Visual proof is in `app/build/verify/evidence/design-scale/`, with 24
 before and after pairs at 360 and 412 in Budget and Midnight. Capture

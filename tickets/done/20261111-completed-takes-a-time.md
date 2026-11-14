@@ -9,8 +9,8 @@ depends: []
 
 ## Spec
 
-Ticket 0094 decided that `completed` takes a time as well as a date,
-and that a new tick writes a local timestamp. Today the contracts
+Ticket 0094 decided that `completed` takes a time as well as a date.
+It also decided that a new tick writes a local timestamp. Today the contracts
 schema accepts a date only:
 
 ```
@@ -59,8 +59,8 @@ Readers of `completed` in the app, and the rule each uses:
 | `task-row-face`, planner `day-preview`, `list-page-preview` | presence, for the done look |
 
 No reader compares completion to a day. The Completed section and the
-tick hold are presence checks, so a timestamp leaves both correct, and
-a grep for `completed` with any date math found no other reader. The
+tick hold are presence checks, so a timestamp leaves both correct. A
+grep for `completed` with any date math found no other reader. The
 ADR 20261111 date-part rule binds the first reader that groups
 completion by day. None exists in this tree.
 
@@ -88,17 +88,17 @@ Gates:
 
 The app PR is 130, and it waits for the operator to merge.
 
-Merged as `20ae213`. The verifier passed seven checks and ran 825 app
+Merged as `20ae213`. The verifier passed seven checks. It ran 825 app
 tests plus 89 contracts tests. It confirmed the rewritten acceptance is
-honest: a grep found no reader that does date math on `completed`, so
-nothing was built and then hidden. It also read every changed test.
-Four e2e specs tightened a date match to a datetime prefix, and no
-assertion was removed.
+honest. A grep found no reader that does date math on `completed`, so
+no change covers a gap. It also read every changed test.
+Four e2e specs tightened a date match to a datetime prefix. No
+assertion went missing.
 
 Evidence note. The branch commit order puts the feature commit before
-the tests, so the red run quoted above is not reproducible from the
-branch history. The behavior is pinned now by the tick test and by
-`tasks-provider.test.tsx`.
+the tests. As a result, the red run quoted above is not reproducible
+from the branch history. The tick test and `tasks-provider.test.tsx`
+now pin the behavior.
 
 One cosmetic point. The optimistic patch and the persisted write each
 call `nowStamp()`, so they can differ by seconds until the row settles.

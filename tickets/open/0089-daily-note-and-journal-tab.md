@@ -17,20 +17,20 @@ append-only composer.
 
 `Journal/Daily/YYYY-MM-DD.md`, two folders under the granted vault
 root. The app already has a `VaultAdapter` that lists and reads any
-folder, so this needs a new module, not a new adapter. Local time
+folder. This work needs a new module, not a new adapter. Local time
 decides the date and the entry time.
 
 ### What the app reads
 
 The body has blocks. A block starts at a line that is only a time,
-`^\\d{1,2}:\\d{2}$`, and owns the bullet lines under it until the next
-block or a non-bullet line. Everything else is preserved and shown
+`^\\d{1,2}:\\d{2}$`. It owns the bullet lines under it until the next
+block or a non-bullet line. Everything else stays intact, shown
 read-only or not at all: the frontmatter, a `**To-do**` section, and
 the trailing `![[daily.base]]` embed.
 
 This format is v1. The operator expects to revise it after using it.
-Keep the parser tolerant. Unknown lines are preserved, extra inline
-tags are kept, and a block may hold any bullets. Never reject a note
+Keep the parser tolerant. The parser preserves unknown lines and keeps
+extra inline tags. A block may hold any bullets. Never reject a note
 because a block has a shape the app did not write.
 
 The today view shows the blocks in file order, the newest last. A
@@ -39,10 +39,10 @@ Send appends one block at the current time.
 
 ### What the app writes
 
-Append only. Never rewrite an existing line. Read the whole note, build
-the next text, and write it through the same read-check-write path the
-task edits use, so an Obsidian edit between the read and the write is
-not lost. Insert the new block at the end of the body and before a
+Append only. Never rewrite an existing line. Read the whole note and
+build the next text. Write it through the same read-check-write path the
+task edits use. That way an Obsidian edit between the read and the write
+is not lost. Insert the new block at the end of the body and before a
 trailing embed line.
 
 If the note does not exist, create it. Proposal: create an empty body
@@ -59,8 +59,8 @@ before hardcoding a fourth tab. Keep every target 44pt.
 
 ### State
 
-A read runs on mount, on folder grant, on pull to refresh and when the
-app returns to the foreground, like the task store. A failed read shows
+A read runs on mount, on folder grant, on pull to refresh and on return
+to the foreground. The task store reads at the same moments. A failed read shows
 the same repair banner pattern. A failed append keeps the draft and
 shows a retry. The screen does not use the task store.
 

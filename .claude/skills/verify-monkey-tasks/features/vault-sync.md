@@ -9,7 +9,7 @@ schema shows in the `Needs repair` banner, never as a row.
 
 - `vault-reread` shows notes written by another app after a return to the app.
 - `vault-repair` lists invalid notes in the repair banner.
-- `vault-recurring` writes the next occurrence of a repeating task when it is ticked.
+- `vault-recurring` writes the next occurrence of a repeating task when ticked.
 - `vault-failure` keeps a failed write on screen with Retry.
 
 ## How to get to it (user POV)

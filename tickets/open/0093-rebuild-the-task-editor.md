@@ -10,16 +10,17 @@ depends: [0082, 0091]
 
 ## Spec
 
-The operator says the task editor "absolutely sucks" and wants it
-rebuilt. They named Todoist's task view as the reference. The exact
-parts they like are for the design session to settle.
+The operator says the task editor <!-- vale off -->"absolutely sucks"<!-- vale on -->.
+They want it rebuilt, and they named Todoist's task view as the
+reference.
+The design session will settle which exact parts they like.
 
 Today the editor is six text fields in a column, from
 `app/src/features/task-editor/components/task-editor-form.tsx`: Name,
 Due, Recurrence, Lists, Reminders and Body. Due and reminders ask for
 ISO text. Recurrence asks for an RRULE string such as `FREQ=WEEKLY`.
-Lists ask for newline-separated names. There is no picker, no preview
-of what the value means, and no way to change a property in one tap.
+Lists ask for newline-separated names. The screen has no picker and no
+preview of what a value means. No property changes in one tap.
 
 This is a discovery and design ticket. No app code ships from it.
 
@@ -40,23 +41,24 @@ Questions the session must answer:
    separate edit step?
 8. Delete and undo. Where do they live, and what does undo restore?
 
-Deliver a spec in this ticket, three mockups of the same task (a due
-date, a list, a reminder, a reference and a note), and a web prototype
-of the chosen direction. Then split the build into child tickets. Write
-an ADR if a real alternative remains.
+Deliver a spec in this ticket. Add three mockups of the same task: a
+due date, a list, a reminder, a reference and a note. Add a web
+prototype of the chosen direction. Then split the build into child tickets. Write
+an ADR if a real alternative stays open.
 
 ## Acceptance
 
 - [ ] The spec names every property, its control and the save model.
-- [ ] Three directions show the same task, and the operator picks one.
-- [ ] The prototype opens, changes a date, changes a list, adds a
-      reference, edits the note and closes, with no raw syntax in the
+- [ ] Three directions show the same task, and the operator chooses
+      one.
+- [ ] The prototype opens and closes. It changes a date and a list,
+      adds a reference and edits the note. No raw syntax shows on the
       main path.
 - [ ] A failed write keeps the draft and reports it.
 - [ ] 44pt targets, named controls, keyboard and TalkBack reach every
       control. axe clean.
-- [ ] The build is split into child tickets. No app code ships from
-      this ticket.
+- [ ] Child tickets cover the build. No app code ships from this
+      ticket.
 
 ## Outcome
 

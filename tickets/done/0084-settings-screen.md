@@ -57,9 +57,9 @@ without a remount. The sort mode and task form use `settings-store.ts`,
 a live copy of the settings record. A mounted Lists or Planner screen
 updates on return, which a focus refresh cannot guarantee.
 
-The stack header is hidden and the screen draws its own 44pt Back,
-because the native header's back link is 30pt and does not follow the
-palette. The About facts use `expo-constants`. The vault folder is the
+The stack header stays hidden, and the screen draws its own 44pt Back.
+The reason is that the native header's back link is 30pt and does not
+follow the palette. The About facts use `expo-constants`. The vault folder is the
 saved root string, and the screen never calls the adapter.
 
 | Check | Result |

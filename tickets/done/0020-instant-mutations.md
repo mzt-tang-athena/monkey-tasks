@@ -11,9 +11,10 @@ depends: []
 ## Spec
 
 Creating, completing, and uncompleting a task feels slow on the phone. The
-cause is not the write. Every mutation awaits a full vault reload: list the
-vault root, list the Tasks folder, read every note, parse it, replace the
-whole list, then cancel every alarm and schedule every alarm again. The cost
+cause is not the write. Every mutation awaits a full vault reload. The
+reload lists the vault root, lists the Tasks folder, reads every note and
+parses it. Then it replaces the whole list, cancels every alarm and
+schedules every alarm again. The cost
 grows with the vault, so it gets worse as the user adds tasks.
 
 Make the local list the truth for the session and write the note behind it.
@@ -22,9 +23,9 @@ Make the local list the truth for the session and write the note behind it.
 - Write the note in the background. Do not reload the vault afterwards.
 - Keep the reload for boot, pull to refresh, a new grant, and a return to
   the foreground.
-- Chain consecutive taps on one note: the optimistic patch advances the
-  note text with the same `updateProperty` the write uses, so the second
-  tap builds on the first instead of overwriting it.
+- Chain consecutive taps on one note. The optimistic patch advances the
+  note text with the same `updateProperty` the write uses. That way, the
+  second tap builds on the first instead of overwriting it.
 - Serialize writes per note uri. Two writes to one file must not interleave.
 - Update only the touched task's alarms. The full rebuild stays on load.
 - Revert the optimistic change and report `lastError` when the write fails.
@@ -45,13 +46,13 @@ Make the local list the truth for the session and write the note behind it.
 
 ## Outcome
 
-The row changes in the tap's frame and the note is written behind it
-through a per-note queue. A tick reads no note and rebuilds only the
-touched task's alarms. A read waits for in-flight writes before it
-scans, so a reload cannot read old text back over the row. The query
+The row changes in the tap's frame, and a per-note queue writes the note
+behind it. A tick reads no note and rebuilds only the touched task's
+alarms. A read waits for in-flight writes before it scans. As a result,
+a reload cannot read old text back over the row. The query
 cache is the single source of truth (ADR 0023).
 
 Verified: store tests cover the optimistic row, the serialized writes,
-the rollback, the capture row before its file, and that a mutation never
-re-reads the vault. Device: ticks feel instant and two fast taps on one
+the rollback and the capture row before its file. They also cover that a
+mutation never re-reads the vault. Device: ticks feel instant and two fast taps on one
 circle end unticked.

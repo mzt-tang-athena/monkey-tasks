@@ -32,8 +32,8 @@ and a config plugin. That is the main cost.
 
 - [ ] A calendar widget shows today's tasks with their times, and the
       next few days in a compact form.
-- [ ] A list widget shows the open tasks of the list chosen when the
-      widget is added.
+- [ ] A list widget shows the open tasks of the list chosen when
+      adding the widget.
 - [ ] A row opens the app at that task; the header opens the tab.
 - [ ] The widget refreshes after an app write and when the day rolls.
 - [ ] The widget reads the cache, never the vault, and the cache holds

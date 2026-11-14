@@ -25,9 +25,9 @@ Read first: ADR 0036, ADR 0046, then ADR 0033 (pager) and ADR 0032
 ### Design, 2026-11-08
 
 This spec comes from the design package of the 2026-11-08 architect
-run: two candidates (hooks and surfaces), a synthesis, two owner
-decisions and a web prototype. The package was a scratch folder and is
-gone. ADR 0046 keeps the decision and the prototype facts. This ticket
+run. The package held two candidates (hooks and surfaces), a synthesis,
+two owner decisions and a web prototype. That package was a scratch
+folder that no longer exists. ADR 0046 keeps the decision and the prototype facts. This ticket
 keeps what a builder needs:
 
 - Surfaces won over hooks. A feature passes data and plain functions,
@@ -59,18 +59,18 @@ test.
 | V10, B1 | Every press target is gesture handler's `Pressable`, so a pan cancels it. Lint bans the other one. | 0059, 0060 |
 | V11 | The hold cue is a shared value that starts after 80 ms. | 0061 |
 | V12 | Gesture handler captures the pointer. Only an uncancelled end commits. | 0059, 0061 |
-| J2 | The ghost, hover, slots, radii and split height are shared values. | 0060, 0061 |
+| J2 | The ghost, hover, slots, radii and split height live in shared values. | 0060, 0061 |
 | J3 | Lint bans `AccessibilityInfo` motion reads. A source shakes once. | 0060, 0061 |
 | L2 | Worklets pass ids. The root reads the newest payload and callback. | 0061 |
-| L3 | No hold timer. Only mounted rows are measured. A generation drops stale measures. | 0060 |
+| L3 | No hold timer. Only mounted rows get measured. A generation drops stale measures. | 0060 |
 | B2 | The surface sets `touchAction` in the gesture config. | 0059 |
 | Split first frame | `Split` lays out by fraction with `flex`. | 0061 |
 
 These stay half or whole feature work: V4 (the previews draw from the
-top), V5 (the day preview), V6 (done in 0055), V7 (the capture mutation
-calls `markLanded`), V9 (the hold placement), J1 (the list preview's
-row count), J4 (the `Sheet` on `useProgress`) and L1 (the tab strip's
-`scrollTo`).
+top) and V5 (the day preview). This group also holds V6 (done in 0055),
+V7 (the capture mutation calls `markLanded`) and V9 (the hold
+placement). It also holds J1 (the list preview's row count), J4 (the
+`Sheet` on `useProgress`) and L1 (the tab strip's `scrollTo`).
 
 ### 1. Move `src/lib/motion.ts` first
 
@@ -132,8 +132,8 @@ build or a later one.
 
 No file here imports `src/components`. Every function in a pure file
 starts with `'worklet';` and imports nothing from React, react-native
-or Reanimated. Under Vitest the directive is a plain string, so one
-function runs on the UI thread and in a unit test. Each pure file has a
+or Reanimated. Under Vitest the directive is a plain string. One
+function then runs on the UI thread and in a unit test. Each pure file has a
 Vitest file beside it.
 
 | File | Contents |
@@ -147,7 +147,7 @@ Vitest file beside it.
 
 `src/theme/tokens.ts` keeps `drag` for today's callers, but it reads
 each value from `motion`, so one number lives in one place.
-`drag.holdMs` (450) is the source toggle's long press, not a drag hold.
+`drag.holdMs` (450) is the source toggle's long press rather than a drag hold.
 It becomes `motion.ms.longPress`, so it no longer reads like
 `hold.row`. The port that removes the last `drag` user deletes `drag`.
 
@@ -253,8 +253,8 @@ time, so the first source to activate claims `owner`.
   returns.
 - A new `index` one page away slides from where `pos` stands. A jump of
   more than one page cuts. Either way, the old page's preview stays
-  drawn until `pos` lands, so a late write shows the old picture, never
-  a blank.
+  drawn until `pos` lands. A late write then shows the old picture,
+  never a blank.
 - With reduced motion, the page does not follow the finger. A release
   past the threshold commits through the internal bridge. Its
   `scheduleOnRN` call is a microtask on the web, so the `reduced-motion`
@@ -277,12 +277,12 @@ time, so the first source to activate claims `owner`.
   `pageY`, `width` and `height`. Only `pageX` and `pageY` share space
   with the gesture's `absoluteX` and `absoluteY`. Each rect clips to
   its nearest `MotionScrollView` viewport. The registry is a shared
-  value, because a worklet captures a closure array at creation and
-  would miss a zone that mounts later.
+  value, because of closure capture. A worklet captures a closure array
+  at creation and would miss a zone that mounts later.
 - `onUpdate` writes the finger to shared values and runs `hitZone`.
 - Exactly one of drop or cancel runs per pickup. The bridge's
   `{ token, generation }` guard covers an unmount that races the
-  finalize, and drops a stale measure.
+  `finalize` event, and drops a stale measure.
 - The ghost renders in `Overlay` at layer `dragGhost` (ADR 0040). It
   gets the session through props, because the overlay renders outside
   the screen's providers. Its animated style reads `x` and `y`.
@@ -317,8 +317,9 @@ time, so the first source to activate claims `owner`.
 Add these rules to `app/eslint.config.js`, next to the ADR 0039
 boundary rules. Each message names ADR 0046.
 
-In flat config, a later block that sets a rule replaces an earlier
-block's options for every file that both blocks match. The config
+In flat config, a later block that sets a rule overrides an earlier
+block. It replaces that block's options for every file that both
+blocks match. The config
 already sets `no-restricted-syntax` for every file, with the ADR 0012
 margin rule. It sets `no-restricted-imports` for `src/**`, with the
 ADR 0037 `expo-file-system/legacy` rule, which
@@ -352,8 +353,8 @@ Everywhere in `src/**`:
 - `no-restricted-imports`: `swipeProps` from `@/lib/swipe`.
 - `no-restricted-syntax`: JSX attributes and object literal keys that
   match `/^onPointer(Down|Move|Up|Cancel)$/`. A JSX rule alone misses a
-  spread handler object. The key rule catches the object where it is
-  built, as in `use-drag-session.ts`.
+  spread handler object. The key rule catches the object at the line that
+  builds it, as in `use-drag-session.ts`.
   Use the selectors `JSXAttribute[name.name=/^onPointer(Down|Move|Up|Cancel)$/]`
   and `ObjectExpression > Property[key.name=/^onPointer(Down|Move|Up|Cancel)$/]`.
   A bare `Property[...]` selector, as in the margin rule, also matches
@@ -364,13 +365,13 @@ Everywhere in `src/**`:
 - `no-restricted-syntax`: a `SectionList` or `FlatList` without
   `renderScrollComponent`.
 
-Add a lint fixture test: one file that uses each banned import and
-pattern, and a test that expects one error per line. The banned list
+Add a lint fixture test. One file uses each banned import and
+pattern, and a test expects one error per line. The banned list
 and the surfaces then cannot drift apart. The fixture also sets a
-margin in a style and imports `expo-file-system/legacy`, and the test
+margin in a style and imports `expo-file-system/legacy`. The test
 expects both of those errors as well. The test lints the fixture text
-with `ESLint.lintText` and its `filePath` option, once as a feature
-file and once as a file on the allowlist below. On the allowlisted
+with `ESLint.lintText` and its `filePath` option. It lints once as a
+feature file and once as a file on the allowlist below. On the allowlisted
 path the motion errors go away, and the two old errors stay. A merge
 that drops an old rule then fails the test.
 
@@ -412,7 +413,7 @@ entry, because this ticket swaps those files.
 
 `lists-screen.tsx` and `day-spread.tsx` stay listed after 0059. 0059
 keeps the reorder's web handlers and the split's web resize on plain
-views there, and 0060 and 0061 remove them.
+views there. 0060 and 0061 remove them.
 
 No port touches the files in the last row, but each imports a banned
 `Pressable` or `ScrollView`. Swap them in this ticket, with no change
@@ -438,32 +439,33 @@ that `lib/motion` holds tokens, pure math and clocks.
 
 Vitest, in node:
 
-- `pager-math`: the commit threshold, a flick under the threshold, the
-  rubber band and its cap, a closed end on each side, open `bounds`,
-  and `visiblePages` at rest and mid-swipe.
-- `drag-math`: a slot at each boundary, a zone outside its clip, a grid
-  cell at each edge, a `null` grid cell, and `cardPosition` for first,
-  middle, last and only.
+- `pager-math` covers the commit threshold, a flick under the
+  threshold, and the rubber band and its cap. It also covers a closed
+  end on each side, open `bounds`, and `visiblePages` at rest and
+  mid-swipe.
+- `drag-math` covers a slot at each boundary, a zone outside its clip
+  and a grid cell at each edge. It also covers a `null` grid cell, and
+  `cardPosition` for first, middle, last and only.
 - Landed mark: a second `takeLanded` of the same id finds nothing.
 - `drag-machine` exactly once, in `src/lib/motion/drag-machine.test.ts`:
   - A `begin` during `settling` emits `flush`, then a new `pending`.
   - A `release` with `canceled: true` emits `cancel` and never `drop`.
   - Two sources begin. The first to `activate` owns the drag, and the
-    second source's events are ignored until `settled`.
-  - Every `pickup` is followed by exactly one `drop` or `cancel`.
+    second source's events have no effect until `settled`.
+  - Exactly one `drop` or `cancel` follows every `pickup`.
   - A `finalize` from `pending` emits nothing.
 - The bridge guard, in `src/components/motion/internal/bridge.test.ts`.
   Keep the guard pure, with no React import, so it runs in node:
   - A drop and an unmount race. `onDrop` or the cancel runs once.
-  - A drop that carries an old generation is ignored.
-  - A measure that lands after a newer pickup is dropped.
+  - The guard ignores a drop that carries an old generation.
+  - The guard drops a measure that lands after a newer pickup.
 
 Component tests through the 0048 harness:
 
 - `Pager` with three pages: a commit renders the screen at most once,
   and the live cell keys on `index`.
 - `createDragSurface` with two zones: a pickup renders the root once,
-  moves render nothing, and a drop calls `onDrop` once with the
+  and moves render nothing. A drop calls `onDrop` once with the
   target's value.
 - Computed `touch-action` on each host: `pan-y` on a `Pager` and on a
   `row` or `pill` source, `none` on a `grip` source. If gesture
@@ -509,8 +511,8 @@ Outcome. Do these before 0059 starts, because the ports build on them:
 
 - [x] `src/lib/motion.ts` moved to `src/lib/motion/legacy.ts` in its own
       first commit, and its five importers build.
-- [ ] `package.json` lists `react-native-reanimated` 4.7.1 and
-      `react-native-worklets` 0.13.0, and `npx expo install --check`
+- [ ] `package.json` names `react-native-reanimated` 4.7.1 and
+      `react-native-worklets` 0.13.0. `npx expo install --check`
       passes. The repo has no `babel.config.js`.
 - [x] `src/lib/motion` holds `tokens.ts`, `progress.ts`, `entrances.ts`,
       `pager-math.ts`, `drag-math.ts` and `drag-machine.ts`, each pure
@@ -518,9 +520,10 @@ Outcome. Do these before 0059 starts, because the ports build on them:
 - [x] `src/components/motion` holds `pager.tsx`, `drag-surface.tsx`,
       `landing.tsx`, `scroll-view.tsx` and `internal/`, with the public
       signatures above.
-- [x] The `drag-machine` and bridge Vitest cases above pass: a begin
-      during a settle, a cancel that never commits, two sources that
-      claim once, a drop and unmount race, and a stale generation.
+- [x] The `drag-machine` and bridge Vitest cases above pass. They cover a begin
+      during a settle, a cancel that never commits, and two sources that
+      claim once. They also cover a drop and unmount race, and a stale
+      generation.
 - [x] Each surface host computes the `touch-action` from its hold
       table. `touchAction` appears only in the internal config helper,
       never on a `GestureDetector`.
@@ -533,7 +536,7 @@ Outcome. Do these before 0059 starts, because the ports build on them:
       and passes on the branch. The `ignores` list names only files that
       0059 to 0062 port. The ADR 0012 margin rule and the ADR 0037
       `expo-file-system/legacy` rule still fire on the feature path and
-      on the allowlisted path.
+      the allowlisted path.
 - [x] With reduced motion, `timing` lands at once and runs `done`, and
       `useProgress` runs `onSettled` with no clock time.
 - [x] The `Menu` entrance runs on Reanimated. In the `reduced-motion`
@@ -545,7 +548,7 @@ Outcome. Do these before 0059 starts, because the ports build on them:
 ## Outcome
 
 Done on 2026-11-08 in the PR above. The surfaces, the clocks and the
-lint bans are in. No screen is ported.
+lint bans are in. The PR ports no screen.
 
 **What shipped.** `src/lib/motion` holds `tokens.ts`, `progress.ts`,
 `entrances.ts`, `pager-math.ts`, `drag-math.ts`, `drag-machine.ts` and
@@ -594,12 +597,12 @@ checks the row source too (`e2e/specs/motion-surfaces.spec.ts`).
   session waits on a gesture that never finalizes.
 - The dev screen gains a motion check: a chip and two boxes in a
   `MotionScrollView`. The web suite and the emulator drive it.
-- `drag.holdMs` is gone. The source toggle reads `motion.ms.longPress`.
+- `drag.holdMs` no longer exists. The source toggle reads `motion.ms.longPress`.
 
 **Test harness.** The unit project aliases `react-native-reanimated` to
 its easing module and stubs `react-native-worklets`, because node loads
 neither. The component project runs the worklets Babel plugin, as Metro
-does, and swaps gesture handler's `Pressable` for React Native Web's,
+does. It also swaps gesture handler's `Pressable` for React Native Web's,
 because the real one never fires under jsdom. `placeBox` sets the
 offset size that `onLayout` reads. `src/testing/reduced-motion.ts` sets
 the flag before Reanimated loads.

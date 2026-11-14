@@ -21,7 +21,7 @@ the calendar shows it. We copy that split: the Lists screen hides it,
 the planner shows it.
 
 The vault has one file per task, so the new note needs a unique name.
-It is `<title> <YYYY-MM-DD>.md`, with `title` holding the display name
+The name is `<title> <YYYY-MM-DD>.md`, with `title` holding the display name
 and `recurrence previous` linking the completed note.
 
 ## Acceptance
@@ -36,20 +36,20 @@ and `recurrence previous` linking the completed note.
 - [ ] The Lists screen hides the new note until the start of its due
       day. The planner shows it on that day.
 - [ ] A next date already in the past shows immediately.
-- [ ] A rule with UNTIL or COUNT creates no note once it is exhausted.
+- [ ] A rule with UNTIL or COUNT creates no note once the rule runs out.
 - [ ] A failed create leaves the old note untouched and reports it.
 - [ ] A failed completion deletes the new note and reports it.
 - [ ] Unticking clears `completed`. If the new note is still the text
-      we created, it is deleted. If it was edited or completed, both
-      notes stay and the app says so.
+      we created, unticking deletes it. If the new note has edits or a
+      completion, both notes stay and the app says so.
 - [ ] The editor shows `title` when present. Renaming a titled note
       updates `title`, not the file.
 
 ## Outcome
 
 A tick on a recurring task now completes the occurrence and creates
-the successor as its own note (ADR 0027). The successor is named
-`<title> <date>.md`, carries `title` and `recurrence previous`, and
+the successor as its own note (ADR 0027). The successor's name is
+`<title> <date>.md`. It carries `title` and `recurrence previous`, and
 copies the body, lists and reminders. The next date comes from the
 schedule, so a late completion can produce a past date, which shows
 immediately.
@@ -63,8 +63,8 @@ The Lists screen hides a successor until its due day; the planner
 shows it. The editor shows and edits `title` instead of renaming a
 titled note.
 
-Verified on the phone: the tick completes the note, the successor
-appears with its properties, the Lists screen hides it and the planner
-shows it. The reappearance on the due day was not observed before the
-ticket closed; the rule is derived on read and covered by tests, and
-the ticket reopens if it misbehaves.
+Verified on the phone. The tick completes the note, and the successor
+appears with its properties. The Lists screen hides it and the planner
+shows it. The reappearance on the due day went unobserved before the
+ticket closed. The read path derives the rule, and tests cover it. The
+ticket reopens if it misbehaves.

@@ -23,9 +23,9 @@ on Android` section also runs on the emulator.
 ## Proof and skip reporting
 
 - Capture a screenshot of the action and of the result, with the target scrolled into view.
-- A change to a task is proved by its note text and by the row after `returnToTab`.
+- Prove a change to a task by its note text and by the row after `returnToTab`.
 - Run both projects, `motion` and `reduced-motion`, for anything that moves.
-- Report a check the web cannot make (UI-thread motion, native gestures, keyboard, SAF, notifications) as not verified, with the reason. Never pass it off as verified through the web.
+- Report a check the web cannot make (UI-thread motion, native gestures, keyboard, SAF, notifications) as not verified. Give the reason. Never pass it off as verified through the web.
 
 ## Feature entry contract
 
