@@ -158,7 +158,7 @@ The grip reports `adjustable` on native and `slider` on the web. Its
 name is `reorder <task>`. Its value is the row's one-based place in My
 order, from 1 to the group's size. Increment moves the row one place
 later and decrement one place earlier. Each step writes the same
-data-index `ReorderEvent` as a drop. Arrow keys run the same step
+data-index `ReorderEvent` that a drop writes. Arrow keys run the same step
 on the web. The menu's four moves left with the menu.
 
 The trade-off stays the same in kind: a user must find the grip. The grip

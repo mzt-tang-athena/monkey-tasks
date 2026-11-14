@@ -16,8 +16,8 @@ doc without paying off old debt first. Change wording only.
 
 ## Acceptance
 - [x] `make lint` reports 0 errors and 0 warnings.
-- [x] Vale prints nothing for every tracked doc outside
-      `tickets/doing/` and the sample vault.
+- [x] Vale prints nothing for every tracked doc, except the sample
+      vault fixtures.
 - [x] No code span, number, link, heading, or checkbox changes in
       meaning. One table in ADR 0036 gains backticks around package
       names.

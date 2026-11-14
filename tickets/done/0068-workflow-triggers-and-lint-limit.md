@@ -192,5 +192,5 @@ The `code`, `e2e-web` and `android` jobs still need the
 2026-10-27. `.gitmodules` uses the SSH URL, the runner has no SSH key,
 and only the secret's `insteadOf` line turns the URL into HTTPS. A
 switch of `.gitmodules` to the HTTPS URL would let a later change drop
-the secret. That change could then drop the "or make that repository
-public" error text too.
+the secret. It would also drop the "or make that repository public"
+error text.

@@ -65,8 +65,7 @@ build.
       along with the toggles. They also show an evergreen item dragged
       into a day.
 - [ ] The operator picks a direction.
-- [ ] The operator splits the build into child tickets, or drops the
-      idea.
+- [ ] Split the build into child tickets, or drop the idea.
       No app code ships from this ticket.
 
 ## Outcome

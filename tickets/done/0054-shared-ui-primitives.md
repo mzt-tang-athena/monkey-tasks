@@ -132,7 +132,7 @@ PR #77 landed the ticket on `epic/0047-rebuild`.
 
 - `tokens.ts` exports `type`, `layers`, `shadows` and `menuWidth`.
   ADR 0040 records the type scale and the layer order. It also records
-  why the primitives use no headless UI kit. Both got a check
+  why the primitives use no headless UI kit. We checked
   `@rn-primitives` 1.5 and `@gluestack-ui/core` 5.0 on 2026-10-31.
 - `components/ui` holds every primitive in the table, each with a
   component test. `hooks/use-dismiss` closes the newest surface on

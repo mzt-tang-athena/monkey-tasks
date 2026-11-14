@@ -63,7 +63,7 @@ Decisions to settle:
    them out of the app.
 10. The app sees `Tasks/` only, 8 notes of a much larger vault. The
     journal and references add two folders. A dashboard needs a new read
-    model, no task field.
+    model, and not a task field.
 
 Deliverable: an ADR with the accepted changes and a migration note.
 Split the code into child tickets. Never rewrite the vault in bulk.
