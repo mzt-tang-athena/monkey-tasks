@@ -2,6 +2,7 @@ import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Landing } from "@/components/motion/landing";
 import type { JournalBlock, JournalPage } from "@/lib/journal/format";
+import { motion } from "@/lib/motion/tokens";
 import { journal, spacing, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { EntryRow } from "./entry-row";
@@ -42,6 +43,7 @@ export function JournalPaper({
             key={block.id}
             id={block.id}
             rise={journal.line * 2}
+            delay={motion.ms.sheet}
             wash={false}
           >
             <Block block={block} onReference={onReference} />
