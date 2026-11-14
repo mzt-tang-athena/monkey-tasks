@@ -7,6 +7,7 @@ import { Icon, type IconName } from "./icon";
 const names: IconName[] = [
   "list",
   "calendar",
+  "journal",
   "calendar-mini",
   "clock-mini",
   "plus",
