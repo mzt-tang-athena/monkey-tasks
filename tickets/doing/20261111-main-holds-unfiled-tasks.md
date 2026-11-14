@@ -36,15 +36,25 @@ same assumption before you run them.
 
 ## Acceptance
 
-- [ ] Main shows only tasks with no list.
-- [ ] A list tab shows only the tasks whose `list` is that name.
-- [ ] Setting a list removes the task from Main. Clearing it returns
+- [x] Main shows only tasks with no list.
+- [x] A list tab shows only the tasks whose `list` is that name.
+- [x] Setting a list removes the task from Main. Clearing it returns
       the task.
-- [ ] Capture into Main writes no `list`. Capture into a tab writes
+- [x] Capture into Main writes no `list`. Capture into a tab writes
       that list.
-- [ ] Unit tests cover the three moves and replace the old catch-all
+- [x] Unit tests cover the three moves and replace the old catch-all
       test.
 
 ## Outcome
 
-(filled in before moving to done/)
+Shipped on 2026-11-14.
+
+- `selectTabTasks` returns only the tasks with no `list` on Main. A
+  list tab keeps the one-link filter.
+- `emptyListLabel(tab)` is the one source for the empty line. Main says
+  it holds only unfiled tasks and points at the list tabs.
+- Unit tests cover the three moves and replace the catch-all cases.
+- The reorder tick-hold e2e swaps a Focus row for unfiled rows, so the
+  case still runs on Main.
+- tsc, eslint and 851 vitest tests pass. `reorder.spec.ts` passes 37
+  with 3 skipped.
