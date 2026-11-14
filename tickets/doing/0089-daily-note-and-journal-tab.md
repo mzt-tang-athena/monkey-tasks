@@ -3,7 +3,7 @@ id: 0089
 title: The daily note and the journal tab
 created: 2026-11-11
 priority: high
-assignee:
+assignee: claude-opus-5-5
 pr:
 depends: [0082, 0083]
 ---

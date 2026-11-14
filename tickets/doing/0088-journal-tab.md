@@ -3,7 +3,7 @@ id: 0088
 title: Journal tab
 created: 2026-11-11
 priority: high
-assignee:
+assignee: claude-opus-5-5
 pr:
 depends: [0082, 0083]
 ---
