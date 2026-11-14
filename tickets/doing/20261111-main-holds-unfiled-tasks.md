@@ -29,6 +29,11 @@ Tests: replace the "shows every task on Main" case
 Main only. A listed task shows on its tab and not on Main. Clearing
 the list returns the task to Main.
 
+The e2e suite assumes Main is the catch-all in places. `reorder.spec.ts`
+uses `Plan weekend hike`, a Focus task, on Main. Move that case to the
+Focus tab, or use an unfiled sample task. Check the other specs for the
+same assumption before you run them.
+
 ## Acceptance
 
 - [ ] Main shows only tasks with no list.
