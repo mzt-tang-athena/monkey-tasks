@@ -28,7 +28,7 @@ The app:
   in `vault:check`.
 
 Fixtures: one note with `list`, one with a two-item `lists`, one with
-neither, in the schema tests and in the app parser tests.
+neither. The schema tests and the app parser tests both use them.
 
 This ticket writes no note in bulk.
 

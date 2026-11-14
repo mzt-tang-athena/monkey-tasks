@@ -39,8 +39,8 @@ instead of flagging the type.
 
 ## Amendment, 2026-11-11: the drop renumbers the whole tab
 
-The scope changes. In My order a tab is one flat list, so a drop
-renumbers every open row in the tab, not the rows of one section.
+The scope changes. In My order a tab is one flat list. A drop
+renumbers every open row in that tab.
 
 The write rule stands. A drop writes `order` only for the rows whose
 number changed, as an integer, unquoted.

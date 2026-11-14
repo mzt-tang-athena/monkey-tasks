@@ -16,8 +16,7 @@ shows the tasks whose `list` carries that name. See ADR
 
 - `selectTabTasks` in `app/src/stores/tasks/selectors.ts`: Main filters
   the tasks with no list; any other tab filters by that one list.
-- A task changes tab when its list changes. There is no copy and no
-  delay.
+- A task changes tab the moment its list changes, with no copy.
 - Capture into Main writes no `list`. Capture into a list tab writes
   that list.
 - Hidden future occurrences and completed tasks keep their current
@@ -26,8 +25,8 @@ shows the tasks whose `list` carries that name. See ADR
   the list tabs.
 
 Tests: replace the "shows every task on Main" case
-(`selectors.test.ts:104`). Add three cases: an unfiled task shows on
-Main only; a listed task shows on its tab and not on Main; removing
+(`selectors.test.ts:104`). Add three cases. An unfiled task shows on
+Main only. A listed task shows on its tab and not on Main. Clearing
 the list returns the task to Main.
 
 ## Acceptance
@@ -38,8 +37,8 @@ the list returns the task to Main.
       the task.
 - [ ] Capture into Main writes no `list`. Capture into a tab writes
       that list.
-- [ ] Unit tests cover the three moves, and the old catch-all test is
-      gone.
+- [ ] Unit tests cover the three moves and replace the old catch-all
+      test.
 
 ## Outcome
 

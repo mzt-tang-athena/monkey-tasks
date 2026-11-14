@@ -21,7 +21,7 @@ A task belongs to one list. The note carries `list: [[Focus]]`, one
 wikilink. The parser still reads the old `lists` field and takes its
 first link. The app writes the singular field.
 
-Main holds the tasks with no list. It is no longer a catch-all.
+Main holds the tasks with no list. It stops being a catch-all.
 Capture into Main writes no `list`.
 
 `order` is the position of a task in its whole tab. In My order a tab
@@ -38,12 +38,12 @@ is not needed yet.
 One number per task has one meaning, because a task sits in one tab. A
 drag never writes a number that another tab reads differently.
 
-A task that fits two contexts is copied, or it keeps one list and gains
-a reference link in its body. There is no second copy, so completion,
-recurrence and reminders cannot drift between two notes.
+A task that fits two contexts keeps one list. Its body can link the
+other. Completion, recurrence and reminders live in one note, so they
+cannot drift between copies.
 
 Main becomes a queue to file from. A task leaves Main the moment it
-gets a list, and returns when the list is removed.
+gets a list, and returns when the user clears it.
 
 The date sections stay under the Due sort. My order no longer groups by
 date.
@@ -58,9 +58,9 @@ rewrite.
 
 A note with two links resolves to its first link. The app does not
 rewrite it. The next save of that task writes `list` and drops the
-extra links, so the tab shows the list the user kept.
+extra links.
 
-Existing `order` numbers were written inside a section, so one tab can
-hold duplicates. The My order sort breaks a tie by `created`, then by
+Old drags wrote `order` inside one section, so one tab can hold
+duplicates. The My order sort breaks a tie by `created`, then by
 name. The first drop in that tab renumbers it 1 to n. Until that drop,
-nothing is written.
+the app writes nothing.

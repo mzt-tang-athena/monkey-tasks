@@ -21,7 +21,7 @@ depends: [20261111-main-holds-unfiled-tasks]
   integer (ADR 0031).
 - The fallback stays: a task without `order` sorts after the ordered
   ones, oldest `created` first, then by name.
-- The Due sort is unchanged. It keeps Past, Today, the upcoming day
+- The Due sort does not change. It keeps Past, Today, the upcoming day
   sections and No date. `order` does not apply there, and a drag stays
   unavailable, as today (`canDrag = sortMode === "manual"` in
   `lists-screen.tsx`).

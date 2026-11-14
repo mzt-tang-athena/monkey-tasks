@@ -65,3 +65,12 @@ touches do not move until those settle.
 The three changes are child tickets, each with its own migration note:
 `20261111-completed-takes-a-time`, `20261111-kind-accepts-both-shapes`
 and `20261111-a-timed-due-rings`.
+
+## Amendment, 2026-11-14: one list and a whole-tab order
+
+ADR `20261111-one-list-and-tab-order` settles the list question.
+A task carries one `list`, a single wikilink. The parser still reads an
+old `lists` and takes its first link.
+
+`order` ranks the whole tab in My order. Due order keeps its date
+sections, and `order` does not apply there.

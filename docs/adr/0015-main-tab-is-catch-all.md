@@ -45,8 +45,8 @@ so capture into Main writes no list tag.
 This amendment replaces the decision above. Main is no longer a view of
 every task. It holds the tasks that carry no list.
 
-A task leaves Main when it gets a list, and returns when the list is
-removed. A list tab shows the tasks whose `list` carries that name.
+A task leaves Main when it gets a list, and returns when the user
+clears it. A list tab shows the tasks whose `list` carries that name.
 
 We made this change with the one-list decision in
 `20261111-one-list-and-tab-order`. Main is the queue to file from now.
