@@ -72,13 +72,13 @@ function task(): TaskItem {
     uri: OLD_URI,
     fileName: "Call.md",
     name: "Call",
-    text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21\nreminders:\n  - 2026-10-21T09:00\nlists:\n  - [[Focus]]\n---\n\nOld body.\n',
+    text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21\nreminders:\n  - 2026-10-21T09:00\nlist: "[[Focus]]"\n---\n\nOld body.\n',
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
       due: "2026-10-21",
       reminders: ["2026-10-21T09:00"],
-      lists: ["[[Focus]]"],
+      list: "[[Focus]]",
     },
     body: "\nOld body.\n",
   };
@@ -89,7 +89,7 @@ function edit(overrides: Partial<TaskEdit> = {}): TaskEdit {
     name: "Call",
     due: "2026-10-21",
     recurrence: null,
-    lists: ["Focus"],
+    list: "Focus",
     reminders: ["2026-10-21T09:00"],
     body: "\nOld body.\n",
     ...overrides,
@@ -167,18 +167,18 @@ describe("saveTaskEdit", () => {
     const result = await saveTaskEdit(
       safAdapter,
       task(),
-      edit({ due: null, reminders: [], lists: [] }),
+      edit({ due: null, reminders: [], list: null }),
     );
 
     expect(result.text).not.toContain("due:");
     expect(result.text).not.toContain("reminders");
-    expect(result.text).not.toContain("lists");
+    expect(result.text).not.toMatch(/^lists?:/m);
     expect(result.data?.due).toBeUndefined();
     expect(result.data?.reminders).toBeUndefined();
-    expect(result.data?.lists).toBeUndefined();
+    expect(result.data?.list).toBeUndefined();
   });
 
-  it("writes a one-item list as a block list", async () => {
+  it("writes the list as one scalar", async () => {
     const minimal: TaskItem = {
       ...task(),
       text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nOld body.\n',
@@ -190,15 +190,59 @@ describe("saveTaskEdit", () => {
       safAdapter,
       minimal,
       edit({
-        lists: ["Errands"],
+        list: "Errands",
         reminders: ["2026-10-25T08:00"],
       }),
     );
 
-    expect(result.text).toContain('lists:\n  - "[[Errands]]"');
+    expect(result.text).toContain('list: "[[Errands]]"');
+    expect(result.text).not.toContain("lists");
     expect(result.text).toContain("reminders:\n  - 2026-10-25T08:00");
-    expect(result.data?.lists).toEqual(["[[Errands]]"]);
+    expect(result.data?.list).toBe("[[Errands]]");
     expect(result.data?.reminders).toEqual(["2026-10-25T08:00"]);
+  });
+
+  it("drops a legacy two-link lists field on a save", async () => {
+    const legacy =
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n  - "[[Focus]]"\n  - "[[Home]]"\n---\n\nOld body.\n';
+    const item: TaskItem = {
+      ...task(),
+      text: legacy,
+      data: { kind: "[[tasks]]", created: "2026-10-20", list: "[[Focus]]" },
+    };
+    state.fileText = legacy;
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ list: "Home", reminders: [] }),
+    );
+
+    expect(result.text).toContain('list: "[[Home]]"');
+    expect(result.text).not.toContain("lists:");
+    expect(result.text.match(/\[\[(Focus|Home)\]\]/g)).toHaveLength(1);
+    expect(result.data?.list).toBe("[[Home]]");
+    expect(result.data).not.toHaveProperty("lists");
+  });
+
+  it("clears both list keys when a legacy note's list is cleared", async () => {
+    const legacy =
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n  - "[[Focus]]"\n  - "[[Home]]"\n---\n\nOld body.\n';
+    const item: TaskItem = {
+      ...task(),
+      text: legacy,
+      data: { kind: "[[tasks]]", created: "2026-10-20", list: "[[Focus]]" },
+    };
+    state.fileText = legacy;
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ list: null, reminders: [] }),
+    );
+
+    expect(result.text).not.toMatch(/^lists?:/m);
+    expect(result.data?.list).toBeUndefined();
   });
 
   it("replaces the body below the frontmatter", async () => {

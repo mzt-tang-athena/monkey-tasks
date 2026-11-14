@@ -64,8 +64,7 @@ kind: "[[tasks]]"
 created: 2026-10-23
 due: 2026-10-23T07:00
 recurrence: FREQ=WEEKLY
-lists:
-  - [[Main]]
+list: "[[Main]]"
 reminders:
   - 2026-10-23T07:00
 ---

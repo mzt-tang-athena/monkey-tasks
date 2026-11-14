@@ -45,10 +45,14 @@ export async function saveTaskEdit(
   text = updateProperty(text, "due", edit.due);
   text = updateProperty(text, "recurrence", recurrenceToWrite(item, edit));
   text = setBlockList(text, "reminders", edit.reminders);
-  text = setBlockList(
+  // A note that still carries the old `lists` would promote its first
+  // link on the next read and put the task back on its old tab, so a
+  // save drops it before writing the one list.
+  text = updateProperty(text, "lists", null);
+  text = updateProperty(
     text,
-    "lists",
-    edit.lists.map((name) => `[[${name}]]`),
+    "list",
+    edit.list == null || edit.list === "" ? null : `[[${edit.list}]]`,
   );
   text = replaceBody(text, edit.body);
 

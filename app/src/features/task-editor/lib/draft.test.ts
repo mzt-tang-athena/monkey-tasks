@@ -7,7 +7,6 @@ import {
   frontmatterEntries,
   isTaskNote,
   listName,
-  parseLists,
   parseReminders,
 } from "./draft";
 
@@ -35,20 +34,6 @@ describe("listName", () => {
 
   it("keeps a value with one bracket pair half open", () => {
     expect(listName("[[Focus")).toBe("[[Focus");
-  });
-});
-
-describe("parseLists", () => {
-  it("reads one list per line and drops blank lines", () => {
-    expect(parseLists("Focus\n\n[[Errands]]\r\n  \nHome")).toEqual([
-      "Focus",
-      "Errands",
-      "Home",
-    ]);
-  });
-
-  it("returns nothing for empty text", () => {
-    expect(parseLists("")).toEqual([]);
   });
 });
 
@@ -118,7 +103,7 @@ describe("draftOf", () => {
         title: "Call Mum: Sunday",
         due: "2026-10-26",
         recurrence: "FREQ=WEEKLY",
-        lists: ["[[Focus]]", "Errands"],
+        list: "[[Focus]]",
         reminders: ["2026-10-26T09:00"],
       },
     });
@@ -127,7 +112,7 @@ describe("draftOf", () => {
       name: "Call Mum: Sunday",
       due: "2026-10-26",
       recurrence: "FREQ=WEEKLY",
-      lists: ["Focus", "Errands"],
+      list: "Focus",
       reminders: ["2026-10-26T09:00"],
       body: "\nOld body.\n",
     });
@@ -138,7 +123,7 @@ describe("draftOf", () => {
       name: "Call",
       due: null,
       recurrence: null,
-      lists: [],
+      list: null,
       reminders: [],
       body: "\nOld body.\n",
     });

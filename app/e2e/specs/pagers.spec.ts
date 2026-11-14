@@ -233,7 +233,7 @@ async function seedErrand(page: Page) {
   await putNote(
     page,
     "Tasks/Preview errand.md",
-    '---\nkind: "[[tasks]]"\ncreated: 2026-10-01T09:00\nlists:\n  - "[[Errands]]"\n---\n',
+    '---\nkind: "[[tasks]]"\ncreated: 2026-10-01T09:00\nlist: "[[Errands]]"\n---\n',
   );
   await returnToTab(page);
 }
@@ -245,7 +245,7 @@ async function seedFinance(page: Page) {
   await putNote(
     page,
     "Tasks/Finance page two.md",
-    '---\nkind: "[[tasks]]"\ncreated: 2026-10-01T09:00\nlists:\n  - "[[Finance]]"\n---\n',
+    '---\nkind: "[[tasks]]"\ncreated: 2026-10-01T09:00\nlist: "[[Finance]]"\n---\n',
   );
   await returnToTab(page);
   await listTab(page, finance).click();

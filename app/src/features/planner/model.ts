@@ -130,9 +130,9 @@ export function pillsForSource(
 
 export function inSourceList(task: TaskItem, list: string): boolean {
   if (list === "Main") {
-    return task.data == null || !task.data.lists?.length;
+    return task.data == null || task.data.list == null;
   }
-  return task.data?.lists?.includes(`[[${list}]]`) ?? false;
+  return task.data?.list === `[[${list}]]`;
 }
 
 /** A task is done exactly per the contracts rule. */

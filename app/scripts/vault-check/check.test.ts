@@ -181,3 +181,51 @@ describe("checkVault", () => {
     expect(checkVault(dir)).toEqual({ notes: 0, findings: [] });
   });
 });
+
+describe("the one list field", () => {
+  it("accepts one list link", () => {
+    const dir = vault({ "Tasks/Shop.md": task('list: "[[Focus]]"\n') });
+
+    expect(checkVault(dir)).toEqual({ notes: 1, findings: [] });
+  });
+
+  it("accepts the field written empty", () => {
+    const dir = vault({ "Tasks/Shop.md": task("list:\n") });
+
+    expect(checkVault(dir)).toEqual({ notes: 1, findings: [] });
+  });
+
+  it("accepts a legacy two-link lists field", () => {
+    const dir = vault({
+      "Tasks/Shop.md": task('lists:\n  - "[[Focus]]"\n  - "[[Home]]"\n'),
+    });
+
+    expect(checkVault(dir)).toEqual({ notes: 1, findings: [] });
+  });
+
+  it("reports an empty string as a list value", () => {
+    const dir = vault({ "Tasks/Shop.md": task('list: ""\n') });
+
+    const { findings } = checkVault(dir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      file: "Tasks/Shop.md",
+      line: 4,
+      kind: "invalid",
+    });
+    expect(findings[0].reason).toContain("list:");
+  });
+
+  it("reports a block under list", () => {
+    const dir = vault({ "Tasks/Shop.md": task('list:\n  - "[[Focus]]"\n') });
+
+    const { findings } = checkVault(dir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      file: "Tasks/Shop.md",
+      line: 4,
+      kind: "invalid",
+    });
+    expect(findings[0].reason).toContain("list:");
+  });
+});

@@ -288,7 +288,7 @@ function spawnOf(body = "\nWater.\n"): string {
       previous: "Water plants",
       due: "2026-10-27",
       recurrence: "FREQ=WEEKLY",
-      lists: [],
+      list: null,
       reminders: [],
       body,
     },
@@ -492,7 +492,7 @@ describe("TasksProvider", () => {
         name: "Call",
         due: "2026-10-25",
         recurrence: null,
-        lists: ["Focus"],
+        list: "Focus",
         reminders: [],
         body: "\nNew body.\n",
       });
@@ -525,7 +525,7 @@ describe("TasksProvider", () => {
           name: "Call",
           due: "2026-10-25",
           recurrence: null,
-          lists: [],
+          list: null,
           reminders: [],
           body: before.body,
         }),
@@ -553,7 +553,7 @@ describe("TasksProvider", () => {
         name: "Water the ferns",
         due: "2026-10-30",
         recurrence: null,
-        lists: ["Focus"],
+        list: "Focus",
         reminders: ["2026-10-30T09:00"],
         body: "\nNew body.\n",
       });
@@ -568,7 +568,7 @@ describe("TasksProvider", () => {
     expect(edited?.data?.kind).toBe("[[tasks]]");
     expect(edited?.data?.created).toBeDefined();
     expect(edited?.data?.due).toBe("2026-10-30");
-    expect(edited?.data?.lists).toEqual(["[[Focus]]"]);
+    expect(edited?.data?.list).toBe("[[Focus]]");
     expect(edited?.data?.reminders).toEqual(["2026-10-30T09:00"]);
     expect(failures()).toEqual([]);
     // The rename is a new note in the vault, and the old one is gone.

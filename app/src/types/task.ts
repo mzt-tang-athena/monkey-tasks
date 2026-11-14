@@ -61,7 +61,8 @@ export type TaskEdit = {
   name: string;
   due: string | null;
   recurrence: string | null;
-  lists: string[];
+  /** The one list by name; null means Main. */
+  list: string | null;
   reminders: string[];
   body: string;
 };

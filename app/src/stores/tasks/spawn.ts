@@ -10,8 +10,8 @@ export type SpawnInput = {
   /** Stored date or datetime of the next occurrence. */
   due: string;
   recurrence: string;
-  /** Storage strings, for example "[[Focus]]". */
-  lists: string[];
+  /** Storage link, for example "[[Focus]]"; null means Main. */
+  list: string | null;
   /** Absolute datetimes for the next occurrence. */
   reminders: string[];
   body: string;
@@ -41,17 +41,16 @@ export function spawnFileName(
 
 /**
  * The next occurrence's note text: frontmatter through the one
- * serializer that quotes wikilinks and writes lists as blocks, then
- * the copied body.
+ * serializer that quotes wikilinks, then the copied body.
  */
 export function spawnContent(input: SpawnInput, created: string): string {
-  const properties: [string, string | string[]][] = [
+  const properties: [string, string | string[] | null][] = [
     ["kind", link("tasks")],
     ["created", created],
     ["title", input.title],
     ["due", input.due],
     ["recurrence", input.recurrence],
-    ["lists", input.lists],
+    ["list", input.list],
     ["reminders", input.reminders],
     ["recurrence previous", link(input.previous)],
   ];
@@ -90,7 +89,7 @@ export function isUntouchedSpawn(
     data.title === expected.title &&
     data.due === expected.due &&
     data.recurrence === expected.recurrence &&
-    sameOrder(data.lists, expected.lists) &&
+    (data.list ?? null) === (expected.list ?? null) &&
     sameOrder(data.reminders, expected.reminders) &&
     data["recurrence previous"] === link(expected.previous) &&
     spawn.body === expected.body

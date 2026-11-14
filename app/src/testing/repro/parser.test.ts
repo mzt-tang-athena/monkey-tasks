@@ -16,33 +16,33 @@ import { SAMPLE_DAY, sampleSeed } from "@/lib/vault/sample/seed";
 const TASKS = `${MEMORY_ROOT}/Tasks`;
 const URI = `${TASKS}/Call.md`;
 
-/** A task note whose Focus list item sits at the given indent. */
+/** A legacy task note whose Focus list item sits at the given indent. */
 function withList(indent: string): string {
   return `---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n${indent}- "[[Focus]]"\n---\n`;
 }
 
-function listsOf(text: string): string[] | null {
-  return validateNote("Call.md", text, taskFrontmatter).data?.lists ?? null;
+function listOf(text: string): string | null {
+  return validateNote("Call.md", text, taskFrontmatter).data?.list ?? null;
 }
 
 describe("block list indent (ticket 0053, finding 11)", () => {
   it("reads items at two spaces", () => {
-    expect(listsOf(withList("  "))).toEqual(["[[Focus]]"]);
+    expect(listOf(withList("  "))).toBe("[[Focus]]");
   });
 
   it("reads items with no indent", () => {
-    expect(listsOf(withList(""))).toEqual(["[[Focus]]"]);
+    expect(listOf(withList(""))).toBe("[[Focus]]");
   });
 
   it("reads items at four spaces", () => {
-    expect(listsOf(withList("    "))).toEqual(["[[Focus]]"]);
+    expect(listOf(withList("    "))).toBe("[[Focus]]");
   });
 
   it("reads items after a tab", () => {
-    expect(listsOf(withList("\t"))).toEqual(["[[Focus]]"]);
+    expect(listOf(withList("\t"))).toBe("[[Focus]]");
   });
 
-  // The editor seeds its draft from the parsed lists. A list the parser
+  // The editor seeds its draft from the parsed list. A list the parser
   // missed seeds as empty, and the save deletes it from the note.
   it("keeps a four-space list through an editor save", async () => {
     const vault = createMemoryVault({ "Tasks/Call.md": withList("    ") });
@@ -54,7 +54,7 @@ describe("block list indent (ticket 0053, finding 11)", () => {
       name: "Call",
       due: "2026-11-01",
       recurrence: null,
-      lists: (item.data?.lists ?? []).map((link) => link.slice(2, -2)),
+      list: item.data?.list?.slice(2, -2) ?? null,
       reminders: [],
       body: item.body,
     });
@@ -76,13 +76,45 @@ describe("block list indent (ticket 0053, finding 11)", () => {
       name: "Call",
       due: "2026-11-01",
       recurrence: null,
-      lists: (item.data?.lists ?? []).map((link) => link.slice(2, -2)),
+      list: item.data?.list?.slice(2, -2) ?? null,
       reminders: [],
       body: item.body,
     });
     const saved = vault.hooks.read("Tasks/Call.md") ?? "";
-    expect(listsOf(saved)).toEqual(["[[Focus]]"]);
+    expect(listOf(saved)).toBe("[[Focus]]");
     expect(saved.match(/\[\[Focus\]\]/g)).toHaveLength(1);
+  });
+});
+
+describe("one list field (ticket 20261111-one-list-field)", () => {
+  const base = { id: URI, uri: URI, fileName: "Call.md", name: "Call" };
+  const twoLinks =
+    '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n  - "[[Focus]]"\n  - "[[Home]]"\n---\n\nBody.\n';
+
+  it("reads the first link of a legacy two-link lists field", () => {
+    const data = validateNote("Call.md", twoLinks, taskFrontmatter).data;
+
+    expect(data?.list).toBe("[[Focus]]");
+    expect(data).not.toHaveProperty("lists");
+  });
+
+  it("drops the legacy lists field on an editor save", async () => {
+    const vault = createMemoryVault({ "Tasks/Call.md": twoLinks });
+    const item = taskFromText(base, twoLinks);
+
+    await saveTaskEdit(vault, item, {
+      name: "Call",
+      due: null,
+      recurrence: null,
+      list: "Home",
+      reminders: [],
+      body: item.body,
+    });
+
+    const saved = vault.hooks.read("Tasks/Call.md") ?? "";
+    expect(saved).toContain('list: "[[Home]]"');
+    expect(saved).not.toContain("lists:");
+    expect(saved.match(/\[\[(Focus|Home)\]\]/g)).toHaveLength(1);
   });
 });
 

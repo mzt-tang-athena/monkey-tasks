@@ -149,7 +149,7 @@ test.describe("states", () => {
       row(page, undated.second).getByRole("button", { name: undated.second }),
     );
 
-    const labels = ["Name", "Due", "Recurrence", "Lists", "Reminders", "Body"];
+    const labels = ["Name", "Due", "Recurrence", "List", "Reminders", "Body"];
     for (const label of labels) {
       await expect(
         page.getByRole("textbox", { name: label, exact: true }),

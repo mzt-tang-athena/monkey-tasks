@@ -68,14 +68,13 @@ export function TaskEditorForm({ task }: { task: TaskItem }) {
           editable={!saving}
         />
         <TextField
-          label="Lists"
-          value={editor.listsText}
-          onChangeText={editor.setListsText}
-          placeholder={"Focus\nErrands"}
-          hint="One list name per line."
+          label="List"
+          value={editor.listText}
+          onChangeText={editor.setListText}
+          placeholder="Focus"
+          hint="One list name. Leave empty for Main."
           autoCapitalize="none"
           autoCorrect={false}
-          multiline
           editable={!saving}
         />
         <TextField
