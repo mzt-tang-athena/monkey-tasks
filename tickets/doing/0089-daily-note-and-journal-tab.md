@@ -55,8 +55,8 @@ trailing embed line.
 
 If the note does not exist, the first send creates it. The app writes an
 empty body with no frontmatter and no embed. Opening the tab never creates
-a note, because an empty file made on open can race Obsidian's own daily
-note through sync. Do not copy a banner from another note and do not run
+a note. An empty file made on open can race Obsidian's own daily note
+through sync. Do not copy a banner from another note and do not run
 Templater. The ADR records this choice.
 
 ### The tab
@@ -96,11 +96,11 @@ shows a retry. The screen does not use the task store.
 
 Shipped in #143. A third tab opens today's note as a ruled page, and the
 tab's add button opens a sheet composer. One send writes one block and
-appends it before the trailing embed. The note is created on the first
-send, not on open. The journal store has its own query and shares the
-vault read gate and `VAULT_SCOPE` with the task writes. The sent block
+appends it before the trailing embed. The first send creates the note.
+Opening the tab only reads. The journal store has its own query and shares
+the vault read gate and `VAULT_SCOPE` with the task writes. The sent block
 rises after the sheet leaves, and reduced motion keeps no travel.
 
-Verified with 876 unit and component tests, the journal e2e in both
-motion projects, axe on the page and the open composer, and the web
-preview at 412 and 360 in light and midnight.
+Verified with 876 unit and component tests, and the journal e2e in both
+motion projects. Axe passes on the page and the open composer. The web
+preview holds at 412 and 360 in light and midnight.
