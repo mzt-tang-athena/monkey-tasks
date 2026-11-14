@@ -12,23 +12,51 @@ depends: []
 The task note carries `list`, one wikilink. It replaces `lists`. See
 ADR `20261111-one-list-and-tab-order`.
 
-The schema lives in the `contracts` submodule at
-`packages/schemas/src/vocabulary.ts`. A fresh clone leaves the
-submodule empty, so run `git submodule update --init` first. Change the
-schema there, publish it, and bump the version the app consumes (0077).
+The contract half is `20261114-task-list-field` in the contracts repo.
+It adds `list`, keeps `lists` for validation, drops it in a transform
+and promotes the first link. Merge that PR first.
 
-The app:
+The app pins the contract by submodule at
+`file:../contracts/packages/schemas`. Bump the gitlink to the contracts
+merge commit. Do not point at a PR head. No package publish is needed
+until 0077 lands.
 
-- Reads `list` as one wikilink.
-- Still reads `lists` from old notes and takes its first link.
-- Writes only `list`. `app/src/utils/yaml.ts` already writes one meta
-  value, so use its scalar path for a link. Do not write a block list.
-- Turns `TaskEdit.lists: string[]` into `list: string | null`.
-- Accepts `list`, `lists` and neither in the parser's repair path and
-  in `vault:check`.
+The app reads:
 
-Fixtures: one note with `list`, one with a two-item `lists`, one with
-neither. The schema tests and the app parser tests both use them.
+- `data.list`, one wikilink or absent. The schema transform means
+  `data.lists` no longer exists.
+- `inList` in `selectors.ts` compares the one link.
+- `inSourceList` in the planner compares the one link, and Main means
+  no list.
+- `draftOf` seeds one name.
+- `spawnInput` and `isUntouchedSpawn` copy and compare one value,
+  normalizing null and absent.
+
+The app writes:
+
+- `TaskEdit.lists: string[]` becomes `list: string | null`.
+- `saveTaskEdit` removes `lists` first, then writes `list` through the
+  scalar `updateProperty` path. A cleared list removes both keys. If
+  `lists` stays, the next read promotes its first link and the task
+  returns to the old tab.
+- `captureDraft` and `spawn` write one scalar, never a block list.
+- The editor form gets one single-line List field for this ticket. The
+  picker is `20261111-single-list-picker`, after 0093.
+- `vault:check` accepts `list`, a legacy two-link `lists`, and neither.
+  An empty `list:` is valid. `list: ""` and a block under `list` are
+  findings.
+
+Tests and samples:
+
+- Update every `lists` fixture the map names, including selectors,
+  spawn, capture, editor draft, planner, tasks provider, repro tests and
+  the three Focus sample notes.
+- Keep one legacy two-link fixture in the parser and save tests.
+- Run `npm run sample:build` in `app` and commit the generated
+  `index.ts`. The note counts stay the same because the three notes are
+  converted, not added.
+- e2e needs no change in this ticket. Main is still the catch-all until
+  the sibling ticket.
 
 This ticket writes no note in bulk.
 
@@ -37,11 +65,16 @@ This ticket writes no note in bulk.
 - [ ] A note with `list: "[[Focus]]"` parses to one list.
 - [ ] A note with two `lists` links parses to the first, and reading
       it changes nothing.
-- [ ] An editor save writes `list` and never `lists`.
-- [ ] `vault:check` accepts all three shapes and flags a `list` value
-      that is not a wikilink.
-- [ ] A fixture covers each shape in the schema tests and in the app
-      parser tests.
+- [ ] `data.lists` is gone from the parsed task.
+- [ ] An editor save writes `list` and removes `lists`.
+- [ ] Clearing the list removes both keys, and the task leaves the tab.
+- [ ] Capture and spawn write one scalar, never a block list.
+- [ ] `vault:check` accepts all three shapes and flags a block under
+      `list` and an empty string.
+- [ ] The sample notes use `list`, and the generated `index.ts` is
+      current.
+- [ ] `npx tsc --noEmit`, `npx vitest run`, `npx eslint` and the e2e
+      suite pass.
 
 ## Outcome
 
