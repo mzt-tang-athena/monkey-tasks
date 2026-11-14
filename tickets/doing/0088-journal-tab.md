@@ -61,7 +61,7 @@ already handles any folder under the granted root.
 
 Shipped in #143 with 0089 and 0090. ADR 20261112-journal-format records
 the path, the block grammar, append only, the create choice and the food
-convention, with a dated amendment for the build. README describes the
+convention. A dated amendment covers the build. README describes the
 Journal tab, its store and its vault paths.
 
 The food marker stays provisional, and the fourth destination belongs to

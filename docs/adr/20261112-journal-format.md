@@ -9,8 +9,8 @@ Tickets 0088, 0089 and 0090 add a journal to the app. The vault already
 holds the notes at `Journal/Daily/YYYY-MM-DD.md`. Each note has frontmatter
 for a banner, then time blocks, then a `![[daily.base]]` embed.
 
-The app appends to these notes. Obsidian still edits them. The format must
-settle before we build any screen, because the parser, the composer and the
+The app appends to these notes. Obsidian still edits them. The format
+must settle before we build any screen. The parser, the composer and the
 food marker all depend on it. We expect to revise the format after use.
 
 ## Decision
@@ -78,8 +78,8 @@ first time, at that minute. Only a retry skips a block that already ends
 the note, so a lost response cannot double an entry. A first send always
 appends, so two equal entries in the same minute both land.
 
-The page is a ruled sheet. One rule is 28 points, and every vertical value
-on the page is a multiple of it, so wrapped text lands on the rules. The
+The page is a ruled sheet. One rule is 28 points. Every vertical value
+on the page is a whole number of rules, so wrapped text lands on them. The
 time sits in a rail on the left, on the first line of its block. One
 hairline in `accentSoft` marks the notebook margin. The date is the serif
 display face, above the rules.
@@ -87,7 +87,7 @@ display face, above the rules.
 The composer is a sheet, like task capture. It rides the keyboard, and the
 bottom bar slides away on the same clock. Send closes the sheet and writes
 behind it. A sent block rises into place after the sheet leaves, so the
-rise is seen. Reduced motion keeps no travel and no wait.
+operator sees the rise. Reduced motion keeps no travel and no wait.
 
 A food bullet shows `Ate` in the accent color and hides the `#food`
 marker. Other tags stay quiet. A quiet Food band above the bottom bar
