@@ -166,6 +166,12 @@ test("a reference link opens its note, and a missing one says so", async ({
   await page.getByRole("button", { name: "close reference" }).click();
   await expect(sheet).toHaveCount(0);
 
+  // The same link opens the same note again.
+  await page.getByRole("link", { name: "open reference oatmeal" }).click();
+  await expect(sheet).toBeVisible();
+  await page.getByRole("button", { name: "close reference" }).click();
+  await expect(sheet).toHaveCount(0);
+
   const before = (await noteText(page, journalPath)) as string;
   await putNote(
     page,

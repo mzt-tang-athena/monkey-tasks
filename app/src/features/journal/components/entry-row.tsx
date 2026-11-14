@@ -1,9 +1,6 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import {
-  entrySegments,
-  type JournalEntry,
-} from "@/lib/journal/format";
+import { entrySegments, type JournalEntry } from "@/lib/journal/format";
 import { journal, spacing, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { LinkedText } from "./linked-text";

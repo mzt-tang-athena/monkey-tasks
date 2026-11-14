@@ -12,6 +12,10 @@ export type JournalRead = {
   error: string | null;
 };
 
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /**
  * Today's note. A missing note reads as an empty one: the page is empty
  * and the first send creates the file.
@@ -35,10 +39,6 @@ export function useJournalNote(day: string): JournalRead {
     text: query.data ?? "",
     error: query.error == null ? null : `vault read: ${messageOf(query.error)}`,
   };
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 /** Read the day again, as pull to refresh does. */

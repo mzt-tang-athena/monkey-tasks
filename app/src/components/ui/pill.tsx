@@ -30,13 +30,15 @@ export function Pill({
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const chip = tone === "chip";
+  // A fill only makes sense on a toggle, so a static pill ignores it.
+  const on = selected === true && onPress != null;
   const body = (
     <>
       {children}
       <Text
         style={[
           chip ? styles.chipText : styles.controlText,
-          selected && styles.selectedText,
+          on && styles.selectedText,
         ]}
       >
         {label}
@@ -52,13 +54,13 @@ export function Pill({
     <Pressable
       style={({ pressed }) => [
         chip ? styles.chip : styles.control,
-        selected && styles.selected,
-        pressed && (selected ? styles.selectedPressed : styles.pressed),
+        on && styles.selected,
+        pressed && (on ? styles.selectedPressed : styles.pressed),
       ]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      aria-pressed={selected}
+      aria-pressed={on}
     >
       {body}
     </Pressable>

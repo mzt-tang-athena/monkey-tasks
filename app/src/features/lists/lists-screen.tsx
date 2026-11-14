@@ -14,6 +14,7 @@ import {
   ErrorState,
   LoadingState,
 } from "@/components/ui/list-states";
+import { VaultPrompt } from "@/components/ui/vault-prompt";
 import { useStableCallback } from "@/hooks/use-stable-callback";
 import { useCommandPane } from "@/hooks/use-command-pane";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
@@ -23,7 +24,6 @@ import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useGrantFolder, useRefreshTasks } from "@/stores/tasks/use-vault-read";
 import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
-import { VaultPrompt } from "@/components/ui/vault-prompt";
 import { ListPagePreview } from "./components/list-page-preview";
 import { ListSectionHeader } from "./components/list-section-header";
 import { FailureBanner, RepairNotice } from "./components/list-notices";
