@@ -163,13 +163,13 @@ test("a reference link opens its note, and a missing one says so", async ({
   const sheet = page.getByRole("dialog", { name: "Reference: oatmeal" });
   await expect(sheet).toBeVisible();
   await expect(sheet).toContainText("Rolled oats with milk and brown sugar.");
-  await page.getByRole("button", { name: "close reference" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
   await expect(sheet).toHaveCount(0);
 
   // The same link opens the same note again.
   await page.getByRole("link", { name: "open reference oatmeal" }).click();
   await expect(sheet).toBeVisible();
-  await page.getByRole("button", { name: "close reference" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
   await expect(sheet).toHaveCount(0);
 
   const before = (await noteText(page, journalPath)) as string;

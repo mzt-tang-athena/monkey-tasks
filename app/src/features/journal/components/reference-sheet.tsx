@@ -71,7 +71,6 @@ export function ReferenceSheet({
           variant="text"
           tone="muted"
           onPress={onClose}
-          accessibilityLabel="close reference"
         />
       </View>
       {query.isPending ? (
