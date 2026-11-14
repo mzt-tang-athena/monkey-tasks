@@ -32,7 +32,7 @@ Wednesday, and Thursday with Friday. Saturday takes the last row at
 full width.
 
 We leave the eighth box out. A box that pushes a task to next week
-needs a rule for a week-long due date, and the vault stores one date.
+needs a rule for a week-long due date. The vault stores one date.
 Read the pairing as day boxes in the week's own order, Sunday first.
 
 **Rows.** Seven rows in one card, 44pt each, split by hairlines. A
@@ -40,10 +40,10 @@ Read the pairing as day boxes in the week's own order, Sunday first.
 number. Two chips follow, then "+N". The order reads top to bottom,
 like the list pane under it.
 
-Both layouts keep today's soft green box, the picked day's accent
-edge, the day press that picks the day, and the "+N more" press that
-opens the day. A drag from the pool drops on any of the seven boxes,
-and the C-Ink ring from ticket 0082 hugs the content inside the box.
+Both layouts keep today's soft green box and the picked day's accent
+edge. Both keep the day press that picks the day, and the "+N more"
+press that opens the day. A drag from the pool drops on any of the seven boxes. The C-Ink
+ring from ticket 0082 hugs the content inside the box.
 
 Every chip keeps one fixed height, so the count of chips stays
 arithmetic. ADR 0041 still owns that rule.
