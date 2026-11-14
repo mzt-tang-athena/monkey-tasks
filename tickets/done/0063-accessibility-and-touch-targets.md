@@ -107,7 +107,7 @@ Add `@axe-core/playwright` as a dev dependency for the screen scans.
 
 ## Outcome
 
-The web build has a fix for every finding. Each new state uses an
+The web build fixes every finding. Each new state uses an
 `aria-*` prop, and `grep -rn accessibilityState app/src` finds nothing.
 
 Where each finding lives now:

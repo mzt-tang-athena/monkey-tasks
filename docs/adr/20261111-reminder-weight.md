@@ -30,8 +30,8 @@ of the alert.
 - The editor writes `alert weight: quiet` for a cue and removes the line for a
   need, so only cues carry the property.
 - A harsh alert uses its own channel on the alarm audio stream and bypasses
-  Do Not Disturb. It resists a swipe while it rings and re-rings at 1, 5 and
-  15 minutes. The alarm stream is the one a clock alarm uses. Do Not Disturb
+  Do Not Disturb. A swipe cannot clear it while it rings, and it re-rings at
+  1, 5 and 15 minutes. The alarm stream is the one a clock alarm uses. Do Not Disturb
   is the phone setting that silences alerts on purpose.
 - A quiet alert uses a second channel with no sound and no vibration, repeats
   never, and respects Do Not Disturb.

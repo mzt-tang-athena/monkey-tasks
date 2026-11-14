@@ -45,5 +45,6 @@ Tickets 0009 and 0016 had a colon in an unquoted YAML title. The YAML
 did not parse, and Vale failed on them. Both titles are now quoted.
 Two titles changed wording to clear an alert, in 0019 and 0078.
 
-This change leaves `tickets/doing/` alone. Live sessions own those files, and the
-hook will check each one when its session commits it.
+This change rewords the four tickets still in `tickets/doing/` too. CI lints
+every tracked doc, so the fixed glob styles them as well, and they held
+22 alerts. None had changed since 11-11, so no session was mid-edit.

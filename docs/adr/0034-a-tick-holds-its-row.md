@@ -7,9 +7,9 @@
 
 Ticking a task writes the note and regroups the list in the same
 frame. A done task leaves its date group and moves to Completed, which
-in most cases sits below the fold. The row vanished under the finger and
-the tick effect never ran: the only visible change was a row
-disappearing.
+in most cases sits below the fold. That is why the row vanished under
+the finger, and the tick effect never ran. The only visible change was a
+row disappearing.
 
 The store is optimistic on purpose (ADR 0017). The write is immediate
 and the list is the truth. Any effect on the row has to happen before

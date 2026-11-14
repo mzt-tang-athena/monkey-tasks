@@ -46,8 +46,8 @@ Questions the discovery must answer:
    drag into a day set `due` on the note? Does it create an occurrence
    note instead? What does done mean for a practice such as reading?
 3. Appearance. The low-opacity quest belongs to the state recipe from
-   ticket 0082. Define it there or in a dated amendment, so it never
-   becomes a fourth ad hoc style.
+   ticket 0082. Define it there or in a dated amendment, so it does not
+   become a fourth ad hoc style.
 4. Toggles. Where do the filters live, how do they read to TalkBack,
    and does the choice persist in `lib/settings.ts`?
 5. The month view. A month cell with four optional quests must not turn
