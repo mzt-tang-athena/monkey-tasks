@@ -23,13 +23,10 @@ import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useGrantFolder, useRefreshTasks } from "@/stores/tasks/use-vault-read";
 import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
+import { VaultPrompt } from "@/components/ui/vault-prompt";
 import { ListPagePreview } from "./components/list-page-preview";
 import { ListSectionHeader } from "./components/list-section-header";
-import {
-  FailureBanner,
-  RepairNotice,
-  VaultPrompt,
-} from "./components/list-notices";
+import { FailureBanner, RepairNotice } from "./components/list-notices";
 import { ListsToolbar } from "./components/lists-toolbar";
 import { TaskCardRow } from "./components/task-card-row";
 import { useListSections } from "./hooks/use-list-sections";

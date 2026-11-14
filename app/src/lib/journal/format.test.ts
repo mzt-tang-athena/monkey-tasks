@@ -135,6 +135,7 @@ describe("buildEntry", () => {
     expect(buildEntry({ text: "one\n\n  two  \n", food: false, at: at(9, 5) })).toEqual({
       time: "09:05",
       block: "09:05\n- one\n- two",
+      retry: false,
     });
   });
 

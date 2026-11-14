@@ -1,7 +1,6 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Banner } from "@/components/ui/banner";
-import { Pressable } from "@/components/ui/pressable";
 import { useVaultFailures } from "@/stores/tasks/use-vault-failures";
 import { measure, pageGutter, spacing, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -9,29 +8,6 @@ import type { Repair } from "../hooks/use-list-sections";
 
 function sentence(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-/**
- * The prompt to pick the vault folder. It shows once the store knows
- * it has no folder, or when the folder stopped reading.
- */
-export function VaultPrompt({ onGrant }: { onGrant: () => void }) {
-  const { styles } = useThemedStyles(makeStyles);
-  return (
-    <View style={styles.slot}>
-      <Pressable
-        style={({ pressed }) => [styles.prompt, pressed && styles.pressed]}
-        onPress={onGrant}
-        accessibilityRole="button"
-        accessibilityLabel="connect vault folder"
-      >
-        <Text style={styles.promptTitle}>Connect your vault folder</Text>
-        <Text style={styles.promptHint}>
-          Pick the Obsidian vault to use this app with real tasks.
-        </Text>
-      </Pressable>
-    </View>
-  );
 }
 
 /**
@@ -128,21 +104,6 @@ const makeStyles = (colors: Palette) => ({
     },
     failures: {
       gap: spacing.s,
-    },
-    prompt: {
-      gap: 2,
-    },
-    pressed: {
-      opacity: 0.7,
-    },
-    promptTitle: {
-      ...type.control,
-      color: colors.accent,
-      fontWeight: "600",
-    },
-    promptHint: {
-      ...type.meta,
-      color: colors.inkMuted,
     },
     // The list header sits on the list's own grid, with a step below it.
     repairs: {

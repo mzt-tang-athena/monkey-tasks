@@ -66,6 +66,11 @@ export type JournalEntryDraft = {
   time: string;
   /** The block to append, lines joined with "\n", no trailing newline. */
   block: string;
+  /**
+   * True when this send repeats a draft whose answer was lost. Only a
+   * retry skips a block that already ends the note.
+   */
+  retry: boolean;
 };
 
 /** The embed Obsidian's daily template ends a note with. */
@@ -271,6 +276,7 @@ export function buildEntry({
   return {
     time,
     block: [time, ...lines.map((line) => `- ${line}`)].join("\n"),
+    retry: false,
   };
 }
 
