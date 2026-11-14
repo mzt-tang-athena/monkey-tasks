@@ -3,7 +3,7 @@ title: One list or many, and what order means
 created: 2026-11-11
 priority: high
 assignee: omp
-pr:
+pr: 140
 depends: ["0094-review-the-task-note-schema"]
 ---
 
