@@ -2,7 +2,7 @@
 title: Main holds the unfiled tasks
 created: 2026-11-11
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [20261111-one-list-field]
 ---
