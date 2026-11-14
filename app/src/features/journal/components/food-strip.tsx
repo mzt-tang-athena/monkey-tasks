@@ -19,8 +19,8 @@ export function FoodStrip({ food }: { food: FoodLine[] }) {
     <View
       style={styles.strip}
       testID="food-strip"
-      accessible
-      accessibilityLabel={foodName(labels)}
+      role="group"
+      aria-label={foodName(labels)}
     >
       <View style={styles.band}>
         <Text style={styles.heading}>Food</Text>

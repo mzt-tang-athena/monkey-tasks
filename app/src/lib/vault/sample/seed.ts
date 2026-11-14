@@ -20,6 +20,9 @@ const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
 const DATE_VALUE =
   /^(\s*(?:-\s+|[^\s:#][^:\n]*:[ \t]+))(\d{4})-(\d{2})-(\d{2})(?=$|[T\s])/gm;
 
+/** A daily journal note's path, whose date is part of the name. */
+const JOURNAL_PATH = /^(Journal\/Daily\/)(\d{4})-(\d{2})-(\d{2})(\.md)$/;
+
 /** Whole days from one `YYYY-MM-DD` to another. */
 export function daysBetween(from: string, to: string): number {
   const utc = (iso: string) => {
@@ -47,9 +50,24 @@ export function shiftDates(text: string, days: number): string {
   );
 }
 
+/** Move a daily note's date in its path, so it lands on `today` too. */
+function shiftPath(path: string, days: number): string {
+  const match = JOURNAL_PATH.exec(path);
+  if (match == null || days === 0) {
+    return path;
+  }
+  const [, folder, year, month, day, ext] = match;
+  const moved = new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day) + days),
+  );
+  return `${folder}${moved.toISOString().slice(0, 10)}${ext}`;
+}
+
 /**
  * The files of the named seeds, in order, with every date moved so the
- * sample day lands on `today`. Every group in the list then stays full.
+ * sample day lands on `today`: a property's date, and the date in a
+ * daily journal note's file name. Every group in the list then stays
+ * full.
  */
 export function sampleSeed(names: string[], today: string): VaultSeed {
   const days = daysBetween(SAMPLE_DAY, today);
@@ -62,7 +80,7 @@ export function sampleSeed(names: string[], today: string): VaultSeed {
       );
     }
     for (const [path, text] of Object.entries(notes)) {
-      files[path] = shiftDates(text, days);
+      files[shiftPath(path, days)] = shiftDates(text, days);
     }
   }
   return files;

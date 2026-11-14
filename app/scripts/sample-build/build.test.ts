@@ -15,7 +15,7 @@ describe("the sample notes", () => {
 
   it("pass vault:check in the default seed", () => {
     expect(checkVault(join(sampleDir, "default"))).toEqual({
-      notes: 27,
+      notes: 30,
       findings: [],
     });
   });
