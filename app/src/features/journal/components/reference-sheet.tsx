@@ -35,8 +35,9 @@ export function ReferenceSheet({
   const [shown, setShown] = React.useState<string | null>(null);
   const [mounted, setMounted] = React.useState(false);
   // A new name opens the sheet during the render that sees it, so no
-  // frame draws the previous reference over the tap.
-  if (name != null && name !== shown) {
+  // frame draws the previous reference over the tap. The same name
+  // opens it again once the last close has left the tree.
+  if (name != null && (name !== shown || !mounted)) {
     setShown(name);
     setMounted(true);
   }

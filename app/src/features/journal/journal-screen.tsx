@@ -1,5 +1,11 @@
 import * as React from "react";
-import { RefreshControl, StyleSheet, View } from "react-native";
+import {
+  RefreshControl,
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { JournalDockSlot } from "@/components/bottom-bar/dock-slot";
@@ -68,7 +74,7 @@ export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
   const scroller = React.useRef<React.ComponentRef<typeof MotionScrollView>>(null);
   const stick = React.useRef(true);
   const first = React.useRef(true);
-  const at = React.useRef({ height: 0, y: 0, view: 0 });
+  const size = React.useRef({ height: 0, view: 0 });
 
   const scrollToEnd = React.useCallback((animated: boolean) => {
     scroller.current?.scrollToEnd({ animated });
@@ -76,7 +82,7 @@ export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
 
   const onContentSizeChange = React.useCallback(
     (_width: number, height: number) => {
-      at.current.height = height;
+      size.current.height = height;
       if (first.current) {
         first.current = false;
         scrollToEnd(false);
@@ -104,11 +110,10 @@ export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
   }, [sent, scrollToEnd]);
 
   const onScroll = React.useCallback(
-    (event: { nativeEvent: { contentOffset: { y: number } } }) => {
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const y = event.nativeEvent.contentOffset.y;
-      at.current.y = y;
       stick.current =
-        at.current.height - y - at.current.view <= STICK_SLOP;
+        size.current.height - y - size.current.view <= STICK_SLOP;
     },
     [],
   );
@@ -129,7 +134,7 @@ export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
           contentContainerStyle={styles.content}
           onContentSizeChange={onContentSizeChange}
           onLayout={(event) => {
-            at.current.view = event.nativeEvent.layout.height;
+            size.current.view = event.nativeEvent.layout.height;
           }}
           onScroll={onScroll}
           scrollEventThrottle={16}
