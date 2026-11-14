@@ -10,7 +10,7 @@ depends: []
 
 ## Spec
 
-The task note carries ten fields. Some are underused. Some have a
+The task note carries ten fields. Some see little use. Some have a
 shape that will not serve the dashboard the operator wants. This is a
 review. No app code ships from it.
 
@@ -40,16 +40,16 @@ app is ahead of the vault, so absence is not proof a field is useless.
 
 Decisions to settle:
 
-1. `completed` holds a date. A dashboard cannot tell when in the day a
-   task was done. Accept a datetime, write one, keep old dates valid.
+1. `completed` holds a date. A dashboard cannot tell when in the day the
+   user finished a task. Accept a datetime, write one, keep old dates valid.
 2. `kind` is a wikilink, while the vault's own conventions use plain
    strings (`task`, `project`, `resource`). Accept both, and do not add
    more wikilink kinds.
 3. A timed `due` does not ring. Only `reminders` rings. That is a trap.
    Decide whether a timed due rings by itself, with `reminders` for
    extra alerts.
-4. `order` is a rank inside a date section, not a global order. The
-   name says otherwise. Document it, or make the reorder write the
+4. `order` is a rank inside a date section. The name says otherwise,
+   but this is no global order. Document it, or make the reorder write the
    whole tab.
 5. `lists` is many-to-many, and Main shows every task. Keep it. The
    editor should turn the newline field into a picker, which ticket
@@ -59,11 +59,11 @@ Decisions to settle:
    rebuild wants Todoist's P1 to P4.
 8. Subtasks do not exist. Adding `parent` is a schema and UI change.
    Do not add it without a product decision.
-9. Deeds are a contracts type the app never reads. Leave them out of
-   the app.
+9. Deeds are a contracts type the app never reads. This ticket keeps
+   them out of the app.
 10. The app sees `Tasks/` only, 8 notes of a much larger vault. The
-    journal and references add two folders. A dashboard is a new read
-    model, not a task field.
+    journal and references add two folders. A dashboard needs a new read
+    model rather than a task field.
 
 Deliverable: an ADR with the accepted changes and a migration note.
 Split the code into child tickets. Never rewrite the vault in bulk.
@@ -80,11 +80,11 @@ The operator answered on 2026-11-11.
 - `kind`. Accept both shapes in the parser, and always write the link
   form from the app. No new wikilink kinds.
 - `title`. Keep it and document why it exists.
-- Deeds. Do not leave them out. They should integrate with tasks, and
-  perhaps dissolve into them. Spike `20261111-deeds-into-tasks`.
+- Deeds. Keep them. They should integrate with tasks, and perhaps dissolve
+  into them. Spike `20261111-deeds-into-tasks`.
 - Priority. No vague low, medium or high. The need versus dismissible
-  idea is not that field. It is discussed in
-  `20261111-reminder-weight`.
+  idea is not that field. The ticket `20261111-reminder-weight`
+  discusses it.
 - Subtasks. No `parent` now. If they appear later, build them from
   lists and references, not a new field today.
 - References. No extra rules for a proper reference yet. Revisit when
@@ -112,7 +112,7 @@ exists.
 - [x] The parser still reads every old shape, with a fixture for each.
       A child ticket adds a fixture for every new shape.
 - [x] Each accepted change is a child ticket with its own migration.
-- [ ] The three discussion tickets are decided or dropped.
+- [ ] Decide the three discussion tickets, or drop them.
 - [x] No bulk rewrite of the vault.
 
 ## Outcome

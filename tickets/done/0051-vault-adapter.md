@@ -12,11 +12,11 @@ depends: [0050]
 
 Today the store talks to the phone's folder in one way and to the
 browser preview in another. On a phone every read and write goes
-through Android SAF (`expo-file-system/legacy`). In the browser there
-is no folder, so `lib/mock.ts` builds sample rows in memory, and every
-store action has its own `if (!rootUri && Platform.OS === "web")`
-branch. The preview therefore never runs the real write path, and
-Playwright (ticket 0049) has nothing real to drive.
+through Android SAF (`expo-file-system/legacy`). The browser has no
+folder, so `lib/mock.ts` builds sample rows in memory. Every store
+action has its own `if (!rootUri && Platform.OS === "web")` branch. As
+a result, the preview never runs the real write path, and Playwright
+(ticket 0049) has nothing real to drive.
 
 We put one port in front of the folder: a `VaultAdapter`. The SAF
 adapter wraps today's code. A memory adapter holds the notes in a
@@ -142,11 +142,11 @@ Replace `lib/mock.ts` with plain notes under
 - `lib/mock.ts:101` stores the Supplements rule as `RRULE:FREQ=DAILY`.
   The schema wants the bare form, so the sample uses `FREQ=DAILY`.
 - Today's sample dates are relative to today, so every group stays
-  full. The sample notes are written against the day `2026-10-26`. At
-  seed time the memory adapter moves every `YYYY-MM-DD` value in the
-  frontmatter by the number of days between that day and today.
+  full. The sample note dates assume the day `2026-10-26`. At seed
+  time the memory adapter moves every `YYYY-MM-DD` value in the
+  frontmatter. It moves each by the days between that day and today.
   Playwright pins today to `2026-10-26` (ticket 0049,
-  `app/e2e/fixtures.ts`), so under the suite nothing moves.
+  `app/e2e/fixtures.ts`). As a result, nothing moves under the suite.
 - Keep every sample name and every relative date the same as
   `lib/mock.ts`. The Playwright specs read them from `app/e2e/data.ts`
   (ticket 0049). If a name or a date has to change, update
@@ -222,9 +222,9 @@ Out of scope: the write path itself (ticket 0052), the parser
 
 - [x] `app/src/lib/vault/adapter.ts` exports the `VaultAdapter` port.
 - [x] Only `adapters/saf.ts` imports `expo-file-system/legacy`.
-- [x] One contract test runs the same cases against both adapters:
-      list, read, write, create with a taken name, remove a missing
-      file, find and make a folder.
+- [x] One contract test runs the same cases against both adapters.
+      The cases are list, read, write, create with a taken name, remove
+      a missing file, find and make a folder.
 - [x] Two creates of one name in the same tick get two names in the
       memory adapter.
 - [x] `npm run vault:check -- src/lib/vault/sample/default` exits 0.
@@ -237,7 +237,7 @@ Out of scope: the write path itself (ticket 0052), the parser
       or `app/e2e/data.ts` changes in the same PR.
 - [x] The Playwright suite (`npm run e2e`) passes on the commit before
       this ticket and on its last commit.
-- [x] `lib/mock.ts` and the `["mock"]` query are gone.
+- [x] `lib/mock.ts` and the `["mock"]` query no longer exist.
 - [x] No store action checks `Platform.OS` or `rootUri == null` to
       pick a mock path.
 - [x] Ticking a recurring sample task in the browser creates its next
@@ -245,9 +245,9 @@ Out of scope: the write path itself (ticket 0052), the parser
 - [x] In the browser, a capture of "Pay bill: water" still shows
       "Pay bill: water" after a refresh. The note is
       `Pay bill water.md` with that title (ticket 0053, ADR 0028).
-- [x] Latency and one failed write can be set from the page query and
-      from `globalThis.__vault`.
-- [x] `globalThis.__vault` is undefined in a release build.
+- [x] The page query and `globalThis.__vault` can each set latency and
+      one failed write.
+- [x] A release build leaves `globalThis.__vault` undefined.
 - [x] A test reproduces each bug in the table first, and passes after
       the fix.
 - [x] The three ticket 0051 repro tests in
@@ -265,8 +265,8 @@ Landed in PR #76 into `epic/0047-rebuild`.
   `no-restricted-imports` rule stops any other file from importing
   `expo-file-system/legacy`.
 - **The memory adapter.** `adapters/memory.ts` holds the memory
-  adapter. It acts like the provider: a taken name gets " (1)", a
-  create takes its name before it awaits, a write to a missing file
+  adapter. It acts like the provider. A taken name gets " (1)", and a
+  create takes its name before it awaits. A write to a missing file
   fails, and a remove of a missing file does not. One contract test
   runs the same 10 cases on both adapters. The SAF adapter runs over a
   fake document provider in `src/testing/fake-saf.ts`.
@@ -286,16 +286,16 @@ Landed in PR #76 into `epic/0047-rebuild`.
 - **Tests.** The three 0051 repro tests are plain `it`. A fourth test
   covers the read that made `Tasks/`. It failed on the old read only
   after the repro harness ran an ungated read on the store's own
-  vault. `e2e/specs/vault.spec.ts` covers the "Pay bill: water" reread,
-  the recurring tick, and the latency and failed write from both the
-  page query and `__vault`.
+  vault. `e2e/specs/vault.spec.ts` covers the "Pay bill: water" reread
+  and the recurring tick. It also covers the latency and failed write
+  from both the page query and `__vault`.
 - **ADR.** ADR 0037 has a 2026-10-31 amendment. It records why every
   web export carries the test hooks, and why a platform file picks the
   adapter.
 - **Docs lint.** The sample note names hold spaces. CI's prose step
-  and the pre-commit hook gave Vale a space separated list, so Vale
-  stopped at the first such name with an error, and the step passed
-  with no file checked. Both now pass a NUL separated list. Both also
+  and the pre-commit hook gave Vale a space separated list. As a
+  result, Vale stopped at the first such name with an error. The step
+  passed with no file checked. Both now pass a NUL separated list. Both also
   fail when Vale exits nonzero with no alerts.
 
 Changes from the spec:
@@ -320,8 +320,8 @@ Left open:
 - In the web preview, the planner's date strip touches the top edge.
   It looked the same before this ticket. Ticket 0056 owns that screen.
 - `.vale.ini` uses the section `[**.md]`. Vale 3.24 matches only
-  top-level files with it, so no local run or CI run checks `docs/`,
-  `tickets/` or the sample notes. With `[*.md]`, Vale reports 256
-  alerts in 95 older files, and two ticket titles hold YAML that Vale
-  cannot parse. That change edits most tickets at once, so it needs a
+  top-level files with it. As a result, no local run or CI run checks
+  `docs/`, `tickets/` or the sample notes. With `[*.md]`, Vale reports
+  256 alerts in 95 older files. Two ticket titles also hold YAML that
+  Vale cannot parse. That change edits most tickets at once, so it needs a
   ticket of its own.

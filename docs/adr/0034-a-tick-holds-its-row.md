@@ -7,9 +7,9 @@
 
 Ticking a task writes the note and regroups the list in the same
 frame. A done task leaves its date group and moves to Completed, which
-usually sits below the fold. So the row vanished under the finger and
-the tick effect never ran: the only visible change was a row
-disappearing.
+in most cases sits below the fold. That is why the row vanished under
+the finger, and the tick effect never ran. The only visible change was a
+row disappearing.
 
 The store is optimistic on purpose (ADR 0017). The write is immediate
 and the list is the truth. Any effect on the row has to happen before
@@ -17,13 +17,13 @@ the regroup, or on a row that no longer exists.
 
 ## Decision
 
-The lists screen holds a ticked row in the group it was in for 250 ms.
+The lists screen holds a ticked row in its original group for 250 ms.
 While the hold is active the row keeps its place, its index, and its
 identity, and the circle animates there. After the hold the row moves
 to Completed as the data already says it should.
 
-The hold lives in the screen, not in the store: the data is written at
-once and the grouping is what waits. A second tick on the same row, or
+The hold lives in the screen instead of the store. The data changes at
+once, and only the grouping waits. A second tick on the same row, or
 a change from the vault, drops the hold early.
 
 ## Consequences
@@ -46,7 +46,7 @@ already gone.
 would stop matching the notes, and a refresh would break it.
 
 **No hold, only a flash on the circle.** The circle can animate in
-place, but the row still vanishes in the same frame, so the effect
+place. But the row still vanishes in the same frame, so the effect
 reads as a flicker.
 
 ## Amendment, 2026-10-26: the animation ends the hold
@@ -55,8 +55,8 @@ ADR 0036 moves the tick to the UI thread, and ticket 0060 builds it.
 
 - The hold ends from the tick animation's completion callback, after
   the wash's 320 ms, not from a 250 ms timer.
-- Several holds can run at once. Each held row keeps its place among
-  the rows around it at tick time, so a second tick never moves
+- More than one hold can run at once. Each held row keeps its place
+  among the rows around it at tick time. A second tick never moves
   another row.
 - The rule that a vault change drops the hold never shipped. We drop
   it, because a hold lasts a third of a second.

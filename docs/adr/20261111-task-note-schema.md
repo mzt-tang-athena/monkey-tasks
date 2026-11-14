@@ -36,14 +36,14 @@ We add no field for priority. We add no `parent` field. A reference
 stays in the note body, with no extra rules until a case needs them.
 
 We rejected a scheme of vague priority levels. The operator does not
-use them, and a need versus a cue is reminder weight, not priority.
+use them. A need versus a cue is reminder weight rather than priority.
 
 We rejected subtasks as a `parent` field. A parent chain in frontmatter
 is a second ordering system, and lists and references already express
 most of it. If subtasks earn their place later, they start there.
 
 We rejected rewriting the 73 deed notes into tasks here. That decision
-needs the deed spike, and it is its own model question.
+needs the deed spike, and it stands as its own model question.
 
 ## Consequences
 

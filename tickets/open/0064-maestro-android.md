@@ -36,7 +36,7 @@ changes for each SDK bump.
 In Vitest the 0051 contract suite runs the SAF adapter against a fake
 `expo-file-system`. The real Storage Access Framework provider needs
 Android. A test screen runs the same suite against the SAF adapter, in
-a scratch folder under the granted root, and shows a pass or fail line
+a scratch folder under the granted root. It shows a pass or fail line
 per case. A Maestro flow opens the screen and checks that every case
 passes. Joplin also runs its file system driver tests on the phone, at
 startup behind a config flag
@@ -44,8 +44,8 @@ startup behind a config flag
 
 The screen shows only when `EXPO_PUBLIC_VAULT_TEST_HOOKS` is `1`, the
 flag that 0051 uses. The APK that reaches a phone never sets it (ADR
-0037 and its 2026-10-27 amendment). So this one flow needs its own
-build:
+0037 and its 2026-10-27 amendment). That is why this one flow needs its
+own build:
 
 - The workflow input `saf-contract` (default `false`) turns the flow
   on.
@@ -180,8 +180,8 @@ file name.
 
 GitHub Free gives a private repo 2,000 Linux minutes a month. A nightly
 run with the artifact costs about 300 of them. A nightly run with a
-build costs 900 to 1,500. So the workflow starts on `workflow_dispatch`
-only. We run it before the epic's final PR to main, beside the phone
+build costs 900 to 1,500. For that reason, the workflow starts on
+`workflow_dispatch` only. We run it before the epic's final PR to main, beside the phone
 pass. A schedule waits until Outcome shows its monthly cost fits.
 
 Run the same flows on a laptop with `maestro test app/e2e/maestro`

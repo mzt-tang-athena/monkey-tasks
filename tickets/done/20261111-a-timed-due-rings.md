@@ -12,25 +12,25 @@ depends: []
 Ticket 0094 decided that a `due` with a time rings, and that
 `reminders` holds extra alerts.
 
-Today `due` may carry a time, but it does not ring. The alarm list is
-built from `data.reminders` only, in
+Today `due` may carry a time, but it does not ring. The app builds the alarm list
+from `data.reminders` only, in
 `app/src/stores/tasks/reminder-sync.ts`, so a task with
 `due: 2026-11-11T18:00` and no reminder is silent. The recurrence spawn
-already treats a timed due as an alarm by copying it into `reminders`,
-which shows the intent.
+already treats a timed due as an alarm by copying it into `reminders`.
+That copy shows the intent.
 
 A timed due joins the alarm list. The order is the due time, then any
 reminder. A reminder that repeats the due minute rings once, not twice.
 A date-only due never rings. A completed task rings nothing.
 
-The rule lives in one place, so the sync, the cancel on tick and the
-per-task cancel on delete all agree. A denied permission still leaves
+The rule lives in one place. That way the sync, the cancel on tick,
+and the per-task cancel on delete all agree. A denied permission still leaves
 the notes untouched, and the sync stays best effort.
 
-The weight of a reminder is a later ticket,
+A later ticket covers the weight of a reminder,
 `20261111-reminder-weight`. Do not add it here.
 
-The alarm content names the task and says it is due.
+The alarm content names the task and states that the task is due.
 
 ## Acceptance
 
@@ -48,8 +48,8 @@ The alarm content names the task and says it is due.
 ## Outcome
 
 One rule, `alarmTimes` in `app/src/stores/tasks/reminder-sync.ts`. It
-returns the alarms an open task should ring: the timed due, then each
-future reminder, sorted by time and deduplicated by minute. The due wins
+returns the alarms an open task should ring. Those are the timed due,
+then each future reminder, sorted by time and deduplicated by minute. The due wins
 a shared minute. A date-only due never enters the list. The full
 rebuild, the tick move and the edit move all call it, so they agree.
 
@@ -92,8 +92,9 @@ Device, release APK from `5357916` on the `monkey-tasks-verify` AVD:
   23:00 UTC, and the shade showed "Verify reboot alarm / Due".
 - Evidence: `app/build/verify/evidence/android-20261111-224320/`
   (`ring-before-reboot.png`, `ring-after-reboot.png`, `reboot-proof.txt`).
-- Limit: the emulator reverted its zone to UTC across the reboot, and
-  the screenshots prove delivery, not sound or doze behavior. Sound was
+- Limit: the emulator reverted its zone to UTC across the reboot.
+  The screenshots prove delivery, and say nothing about sound or doze
+  behavior. Sound was
   not captured. That stays a phone check.
 
 The spawn of a recurring task still copies a timed due into
@@ -102,18 +103,18 @@ whole-minute dedupe keeps it to one ring. It stays because this ticket
 does not change the spawned note shape.
 
 Merged as `09b88d3`. The verifier passed eight checks. It ran the new
-tests against the base commit and saw exactly six fail, matching the
+tests on the base commit and saw exactly six fail, matching the
 report. It also confirmed the minute bucket cannot drop a reminder one
 minute later, because a stored value never carries seconds.
 
-Two evidence notes. The saved dumpsys files bracket the run but do not
-contain the two restored-alarm lines quoted in the proof text; the
+Two evidence notes. The saved dumpsys files bracket the run but omit
+the two restored-alarm lines quoted in the proof text. The
 screenshots carry the delivery proof. The evidence APK came from
-`5357916`, the commit before the rebase, so it is not byte-identical to
-the merged head, though the rule code is the same.
+`5357916`, the commit before the rebase. That commit is not
+byte-identical to the merged head, though the rule code is the same.
 
 Risks that stay open. Sound, doze and battery saver on the real phone
 are unproven, and so is a real timezone change. Two different reminders
-in the same minute would ring once; the app cannot write that today. A
-hand-written due with a `Z` or an offset reads as undated and stays
-silent.
+in the same minute would ring once, though the app cannot write that today. The app reads a
+hand-written due with a `Z` or an offset as undated and stays silent
+for it.

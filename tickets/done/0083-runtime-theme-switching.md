@@ -11,9 +11,9 @@ depends: []
 ## Spec
 
 Themes are already config. `app/src/theme/tokens.ts` holds `budget`,
-`todoist` and `clay`, all light. But `colors` is a module constant and
-every style sheet is created at module load, so a theme can only change
-by reloading the page, and only on web through `setDevTheme`. Settings
+`todoist` and `clay`, all light. But `colors` is a module constant, and
+module load creates every style sheet. A page reload is thus the
+only way to change a theme, and only on web through `setDevTheme`. Settings
 needs a real switch on the phone.
 
 Decide the mechanism in an ADR before writing code. The shape that
@@ -61,8 +61,8 @@ Fixed on 2026-11-11 on `feat/0083-runtime-themes`. Pull request #117,
 merge `ddacc17`.
 
 `ThemeProvider` owns the active palette. It reads the saved name in a
-state initializer, so the first frame carries the right palette, and it
-saves every change through `lib/settings.ts`. `useThemedStyles` builds
+state initializer, so the first frame carries the right palette. Every
+change saves through `lib/settings.ts`. `useThemedStyles` builds
 one sheet per palette and caches it in a `WeakMap`, so a switch back is
 a lookup. The provider sits above the overlay host, so menus, toasts
 and the capture sheet repaint too.
@@ -73,15 +73,15 @@ skipped 161, hand 0` and writes nothing. Four files needed hand work:
 `task-row-face`, `banner`, `error-boundary` and `planner-layout`.
 
 `midnight` joins the palettes, mapped onto the same 14 keys. The
-minimum text pair is 4.52 across the four palettes. The contrast test
-names its exclusions (`inkFaint` for disabled text, `hairline` for
-decoration). Todoist and clay accents moved slightly to pass AA as
+lowest text pair is 4.52 across the four palettes. The contrast test
+excludes `inkFaint`, for disabled text, and `hairline`, for
+decoration. Todoist and clay accents moved slightly to pass AA as
 text.
 
 The split grabber's arrow step could fire before the root reported its
-layout, so a press in that window did nothing. It now parks the step
-and applies it on the first layout report. A probe delayed
-`ResizeObserver` by four seconds to prove it.
+layout. As a result, a press in that window did nothing. It now parks the step and
+applies it on the first layout report. A probe proved it by delaying
+`ResizeObserver` four seconds.
 
 | Check | Result |
 |---|---|
@@ -94,15 +94,16 @@ and applies it on the first layout report. A probe delayed
 
 ### Evidence limits
 
-A real-phone restart and native palette rendering are unproven. No adb
-device was attached. The write path is the same `settings.ts` path the
-task form and sort mode use, and the reload is proven on web.
+Native palette rendering is unproven, and so is a real-phone restart.
+The runs had no adb device attached. The write path is the same
+`settings.ts` path the task form and sort mode use. The reload has
+proof on web.
 
 On web, `+html.tsx` paints the budget paper in the static shell, and
-the pre-hydration swap script is gone. A restart on another palette
+the pre-hydration swap script no longer exists. A restart on another palette
 shows budget paper until the bundle mounts. The phone's first frame
-does not flash, because the provider reads the saved name
+does not flash. That is because the provider reads the saved name
 synchronously.
 
 A switch re-renders every context consumer. The cost on a low-end phone
-with a long list is unmeasured.
+with a long list stays unmeasured.

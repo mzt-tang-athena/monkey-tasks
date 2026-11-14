@@ -20,17 +20,17 @@ mounts a fresh bar, and the fresh bar reads the fresh default pill.
 
 ## Consequences
 
-The pill follows the active tab. Any draft text in the panel is lost on
-a tab switch. The tabs sit under a scrim while the panel is open, so
-the user cannot switch while typing; the loss stays theoretical. A
+The pill follows the active tab. A tab switch drops any draft text in the
+panel. The tabs sit under a scrim while the panel is open. The user
+cannot switch while typing, so the loss stays theoretical. A
 following round can move the re-read into the bar and drop the key.
 
 ## Amendment, 2026-10-22
 
-The re-read moved into the bar, and the key is gone. The bar now reads the
-default target when that prop changes. The key made the whole bar remount
-on a tab switch, and the bar jumped for a frame while it came back. The
-re-read is a small state update instead, so the bar stays where it is.
+The re-read moved into the bar, and we removed the key. The bar now reads
+the default target when that prop changes. The key made the whole bar
+remount on a tab switch. The bar jumped for a frame while it came back. The
+re-read is a small state update instead, so the bar stays in place.
 
 ## Amendment, 2026-10-22 (capture target)
 

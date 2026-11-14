@@ -7,7 +7,7 @@ agents. Any harness can claim work by moving files; no app runs the loop.
 
 The folder is the state:
 
-- `open/` - ready to be claimed
+- `open/` - ready to claim
 - `doing/` - claimed, work in progress
 - `done/` - finished, outcome recorded
 

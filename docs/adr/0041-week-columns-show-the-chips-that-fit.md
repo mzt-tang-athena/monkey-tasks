@@ -5,9 +5,9 @@
 
 ## Context
 
-A week column had a minimum height and grew with its chips. The canvas
-around the columns has a fixed height (`weekCanvasHeight`), so a column
-with 8 tasks ran past it and the canvas cut it off. The cut showed no
+A week column had a height floor and grew with its chips. The canvas
+around the columns has a fixed height (`weekCanvasHeight`). A column
+with 8 tasks ran past it, and the canvas cut it off. The cut showed no
 sign that tasks were missing. Ticket 0056 (bug 2) asks for the chips
 that fit and a "+N more" line that opens the day.
 

@@ -28,8 +28,8 @@ same way day and month turn.
 
 Week mode offers two layouts. Spread leads, and Rows sits behind one
 setting in the Settings screen. Both draw seven day boxes at the same
-place, so the drag code and the drop ring do not change with the
-layout.
+place. That way, the drag code and the drop ring do not change with
+the layout.
 
 Spread pairs two days per row, Sunday with Monday first, and Saturday
 takes the last row across both columns. Rows stacks the seven days,
@@ -50,7 +50,7 @@ pane under it loses that much. The pane still shows four rows above
 the fold on a 360pt phone.
 
 We leave the spread's eighth box out. A drop that means
-"next week" needs a rule for a due date that covers a week, and the
+"next week" needs a rule for a due date that covers a week. The
 vault stores one date. We leave that out until a ticket defines it.
 
 Two layouts double the test path for the week body. The setting earns
@@ -63,7 +63,7 @@ list.
 drag and blocks the week swipe.
 
 **Seven narrow columns.** All seven days fit at about 47pt each. Each
-target barely clears the 44pt minimum, and names break into fragments.
+target barely clears the 44pt floor, and names break into fragments.
 
 **One wide day beside six slim marks.** The picked day opens wide and
 the others show a date and a dot per task. Six days lose their names,

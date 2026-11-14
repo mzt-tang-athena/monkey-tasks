@@ -23,8 +23,8 @@ with the tag `#food` inside the same timestamp block.
 - Ate: [[chinese-steamed-eggs]] #food #protein
 ```
 
-The `#food` tag is the machine marker. It is what Obsidian search and
-Bases see, and what a future dashboard reads from the vault. The `Ate:`
+The `#food` tag is the machine marker. Obsidian search and Bases see
+it, and a future dashboard reads it from the vault. The `Ate:`
 prefix is for the eye only. Extra inline tags are the operator's own
 labels, such as `#protein` or `#treat`. The app passes them through
 untouched and never strips them.
@@ -34,14 +34,15 @@ parses it for today's Food line. Any dashboard added later reads the
 vault tags, not app state. The same tag convention can carry other
 trackers later, such as mood or energy, without a new note type.
 
-The composer gets a Food toggle. With it on, the bullet is prefixed
-`Ate: `, ends with `#food`, and the field offers the reference picker
-from ticket 0091 when that exists. With it off, the bullet is plain
+The composer gets a Food toggle. With it on, the composer prefixes
+the bullet with `Ate: ` and ends it with `#food`. The field then offers
+the reference picker from ticket 0091 when that exists. With it off, the bullet is plain
 text.
 
 The journal screen gains a Food line for today, quiet, under the
 composer. It lists the `Ate:` bullets from today's blocks, newest
-last, and counts them. It is a reading of the note, not a second store.
+last, and counts them. The line reads the note instead of keeping a
+second store.
 Do not build calories, macros or portions yet.
 
 A `[[name]]` inside a food line is a reference link. Tapping it opens a
@@ -53,8 +54,9 @@ missing. The link is the same convention Obsidian uses.
 - [ ] A food entry sent from the composer appears as
       `- Ate: ... #food` under the current time, and survives a
       re-read.
-- [ ] Extra inline tags on a food line are kept byte for byte. The
-      parser finds the entry by `#food`, not by the `Ate:` prefix.
+- [ ] The app keeps extra inline tags on a food line byte for byte.
+      The parser finds the entry by `#food` instead of the `Ate:`
+      prefix.
 - [ ] The Food line lists today's entries and updates after a send.
 - [ ] A `[[reference]]` in a food line opens the reference preview. A
       missing note says so and does not crash.

@@ -23,7 +23,7 @@ A crash report the operator can read and send without a laptop.
   open, tab, drag start, drag drop). Write it with the crash report.
   No note body and no task text beyond the title.
 - The Diagnostics section of Settings (ticket 0084) lists the log, with
-  Copy and Share. Use `expo-sharing` if it is already installed.
+  Copy and Share. Use `expo-sharing` if already installed.
   Otherwise ask before adding it.
 - No network and no third party. ADR 0003 keeps the app offline first.
   Sentry is a separate decision with a privacy cost.
@@ -31,18 +31,18 @@ A crash report the operator can read and send without a laptop.
 Native limit: a Reanimated worklet exception is a C++ exception and can
 bypass the JS handler. That is what happened in ticket 0080.
 Investigate what Reanimated 4.7 exposes for worklet errors. If nothing
-reaches JS, record the limit here and rely on the 0080 fix plus a
-worklet precondition that reports through `runOnJS` before it throws.
-Do not claim a native crash is captured unless a run proves it.
+reaches JS, record the limit here. In that case, rely on the 0080 fix
+plus a worklet precondition that reports through `runOnJS` before it
+throws. Do not claim capture of a native crash unless a run proves it.
 
 Investigated on 2026-11-11 against `react-native-worklets` 0.13.0, the
 runtime Reanimated 4.7.1 installs. The package exports no worklet error
 hook. `WorkletRuntime::invoke` catches a `jsi::JSError` only inside
 `#ifndef NDEBUG`, then bubbles it to the React Native runtime through
-`ErrorUtils.reportFatalError`. A release build compiles the catch out,
-so the exception crosses C++ and the process dies before any JS handler
-runs. That is the 0080 crash. So the global handler captures JS-thread
-and render errors only. The 0080 fix stays the guard on that path, and
+`ErrorUtils.reportFatalError`. A release build compiles the catch out.
+The exception then crosses C++, and the process dies before any JS
+handler runs. That is the 0080 crash. As a result, the global handler
+captures JS-thread and render errors only. The 0080 fix stays the guard on that path, and
 this ticket adds no broad worklet guard.
 
 ## Acceptance
@@ -54,9 +54,9 @@ this ticket adds no broad worklet guard.
       Proven by `src/components/error-boundary.test.tsx`.
 - [x] The log caps at 200 KB and rotates. Proven by
       `src/lib/crash-log.test.ts`.
-- [ ] Copy and Share work on Android. Nothing is uploaded. Copy and
-      Share are wired and pass on the web preview and in component
-      tests. No Android run: no device was up, and the new
+- [ ] Copy and Share work on Android. The app uploads nothing. The
+      wiring for Copy and Share is in place, and both pass on the web
+      preview and in component tests. No Android run: no device was up, and the new
       `expo-clipboard` module needs a rebuilt APK.
 - [ ] A run of the 0080 native crash records what is and is not
       captured. Not run on a device. The limit above comes from the
@@ -71,28 +71,28 @@ merge `d7f24cb`.
 
 The app keeps one text file at
 `Paths.document/monkey-tasks-crash.log`. Each caught error appends an
-entry with the time, app version, build channel, platform, kind, fatal
-flag, message, 30 stack lines and the breadcrumb ring. Writes are
-synchronous on native, so the bytes land before the process can die.
-A failed write is swallowed. The file is capped at 200 KB; when an
-entry would pass the cap the file moves to
+entry. It holds the time, app version, build channel, platform,
+kind, fatal flag, message, 30 stack lines and the breadcrumb ring.
+Writes are synchronous on native, so the bytes land before the process
+can die. A failed write gets swallowed. The file caps at 200 KB. When
+an entry would pass the cap, the file moves to
 `monkey-tasks-crash.old.log` and the entry starts a new one. The
 rotation decision is a pure function, tested without a device.
 
 The global handler reports before it shows its alert. The render
 boundary reports once per catch with its screen label. The breadcrumb
 ring holds 20 actions in memory: tick, open, tab, drag start and drag
-drop. A detail is a task title, a list name or a group and its index
-range, collapsed and clipped to 80 characters. No note body enters it.
+drop. A detail is a task title, a list name, or a group and its index
+range. Each detail gets collapsed and clipped to 80 characters. No note body enters it.
 
 Settings > Diagnostics shows a Crash log card. It reads the count and
-the size against the cap, previews the newest entry at 1400
-characters, and offers Copy and Share of the whole file. Both are 44pt
+the size against the cap. It previews the newest entry at 1400
+characters and offers Copy and Share of the whole file. Both are 44pt
 and disabled when the log is empty.
 
 The web preview keeps the same text in local storage, so the e2e can
 read, copy, share and reload it. The test hooks exist only under the
-test-hook flag, so a release APK and a normal web build have no
+test-hook flag. As a result, a release APK and a normal web build have no
 `__crash` global.
 
 ### The animation thread
@@ -103,8 +103,8 @@ exposes no worklet error hook. `WorkletRuntime::invoke` catches a
 inside the same guard. A release build compiles both out, so the
 exception crosses C++ and the process dies before any JS handler runs.
 That is the 0080 crash. The log captures JS-thread and render errors
-only, and the card says so in one line. No broad worklet guard was
-added; the 0080 fix stays the guard on that path.
+only, and the card says so in one line. This ticket added no broad
+worklet guard; the 0080 fix stays the guard on that path.
 
 | Check | Result |
 |---|---|
@@ -122,14 +122,14 @@ Copy and Share on Android are unproven. The new `expo-clipboard`
 module needs a rebuilt dev client or APK, and no device was up. The
 web preview proves the wiring and the payload.
 
-The 0080 release crash is unproven too. The worklet source says it is
-not captured; no release APK run shows what reaches the log.
+The 0080 release crash is unproven too. The worklet source says the log
+does not capture it; no release APK run shows what reaches the log.
 
 The native append path itself runs on device only. Unit tests mock
-`expo-file-system` and the e2e runs the local storage branch, so the
-native append, rotation and size read have no automated run.
+`expo-file-system`, and the e2e runs the local storage branch. As a
+result, the native append, rotation and size read have no automated run.
 
-The card reads the log once at mount, so a crash that lands while
-Settings is open shows on the next visit. Two small assertions are
-missing: the exact-cap equality case, and the entry count after a
+The card reads the log once at mount. As a result, a crash that lands
+while Settings is open shows on the next visit. Two small assertions
+are missing: the exact-cap equality case, and the entry count after a
 boundary retry. Both are behavior the code already holds.

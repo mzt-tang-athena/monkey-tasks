@@ -5,12 +5,12 @@
 
 ## Context
 
-ADR 0036 moves every gesture and animation to the UI thread, on
-Reanimated 4.7.1, worklets 0.13.0 and gesture handler 3.3.0. It says the
-shared pieces live in `src/lib/motion`. It does not say what shape they
-take. Ticket 0058 first sketched hooks: `usePager`, `useLongPressDrag`
-with an `onMove` worklet, and a `drop-zones` registry. Tickets 0059 to
-0062 port the screens onto whatever 0058 builds.
+ADR 0036 moves every gesture and animation to the UI thread. That work
+builds on Reanimated 4.7.1, worklets 0.13.0 and gesture handler 3.3.0. It
+says the shared pieces live in `src/lib/motion`. It does not say what
+shape they take. Ticket 0058 first sketched hooks: `usePager`,
+`useLongPressDrag` with an `onMove` worklet, and a `drop-zones` registry.
+Tickets 0059 to 0062 port the screens onto whatever 0058 builds.
 
 Three facts limit the shape:
 
@@ -21,9 +21,10 @@ Three facts limit the shape:
   needs `Overlay`, and a reorder row needs the card shape from
   `components/ui/card-group-row`.
 - Most of the 21 bugs that tickets 0059 to 0062 list start at a call
-  site. A callback reads stale state, a layout effect resets an offset,
-  a timer runs beside an animation, a `touchAction` is missing, or a
-  React Native `Pressable` ignores the pan that should cancel it.
+  site. A callback reads stale state, or a layout effect resets an
+  offset. A timer runs beside an animation, or a `touchAction` is
+  missing. Or a React Native `Pressable` ignores the pan that
+  should cancel it.
 
 On 2026-11-08 an architect run built two candidates against the 0059 to
 0062 call sites.
@@ -66,8 +67,8 @@ lint makes that a build error.
   `react-native-gesture-handler` it allows only `Pressable`, plus
   `GestureHandlerRootView` in `src/app/_layout.tsx`.
 - A surface takes its policy as data: a `hold` kind (`row`, `pill` or
-  `grip`), page `bounds`, a zone's `target`, grid `cells`, a row's
-  `group`, `index` and `count`, and the split's `minTop` and
+  `grip`), page `bounds`, a zone's `target`, grid `cells`, and a row's
+  `group`, `index` and `count`. The split takes `minTop` and
   `minBottom`.
 - The surfaces own the look of a hold, a lift, a shake and a hover
   tint. Lists and Planner share one look, and no surface takes a style
@@ -88,30 +89,30 @@ crash, because it holds no worklet. A hooks call site can.
 
 ## Facts the design rests on
 
-The prototype ran on 2026-11-08 on the web build: Reanimated 4.7.1,
-worklets 0.13.0, gesture handler 3.3.0 and react-native-web 0.21.4. Each
-cell ran 10 times.
+The prototype ran on 2026-11-08 on the web build. It used Reanimated
+4.7.1 and worklets 0.13.0. It also used gesture handler 3.3.0 and
+react-native-web 0.21.4. Each cell ran 10 times.
 
 - Gesture handler's web `Pressable` does not fire when a parent pan
-  activates, with the mouse and with CDP touch (10 of 10 in each
-  cell). React Native's `Pressable` still fires after a mouse swipe,
-  after a mouse hold then a drag, and after a touch hold with no move
-  (10 of 10). After a touch hold then a swipe, it does not fire. So
-  only gesture handler's `Pressable` cancels in every case. `onPressIn`
-  and `onPressOut` still fire before the cancel.
+  activates. That held with the mouse and with CDP touch (10 of 10 in each
+  cell). React Native's `Pressable` still fires after a mouse swipe and
+  after a mouse hold then a drag. It also fires after a touch hold with no
+  move (10 of 10). After a touch hold then a swipe, it does not fire. Only
+  gesture handler's `Pressable` cancels in every case. `onPressIn` and
+  `onPressOut` still fire before the cancel.
 - A paused Playwright clock drives Reanimated's web frame loop. The
   value stays put through 500 ms of real time and moves only when
   `page.clock.runFor` steps it. The paused clock also stalls gesture
-  handler's long press. It was not active after 800 ms of real time,
-  and it was active after `runFor(350)` (10 of 10).
+  handler's long press. The press stayed inactive through 800 ms of real
+  time and turned active after `runFor(350)` (10 of 10).
 - With reduced motion, `withTiming` lands at once and calls back in the
   same call with `finished: true` (10 of 10).
 - `overflow: hidden` on the web scroller stops the scroll, but the
   browser then cancels the drag (20 of 20). A non-passive `touchmove`
-  listener on `document` that calls `preventDefault` while a drag is
-  active stops the scroll and keeps the drag (20 of 20).
+  listener on `document` calls `preventDefault` while a drag is active.
+  That stops the scroll and keeps the drag (20 of 20).
 - `measure()` in a source's `onActivate`, on sibling zone refs, found
-  the right zone with a rect error of 1 px or less, at scroll offsets 0
+  the right zone. The rect error was 1 px or less, at scroll offsets 0
   and 200 (10 of 10). Only the `pageX` and `pageY` fields share client
   space with the gesture's `absoluteX` and `absoluteY`. On the web, a
   shared-value registry of zone refs and a captured array gave the same
@@ -142,7 +143,7 @@ The config field passes the native filter
 (`v3/hooks/utils/propsWhiteList.ts`, line 44). The public config types
 omit it: `ExcludeInternalConfigProps` (`v3/types/UtilityTypes.ts`,
 lines 29 to 32) drops every key of `InternalConfigProps`, which holds
-`touchAction` (`v3/types/ConfigTypes.ts`, line 58). So one typed helper
+`touchAction` (`v3/types/ConfigTypes.ts`, line 58). One typed helper
 in `src/components/motion/internal/` adds the field, and no other file
 names it.
 
@@ -150,8 +151,9 @@ names it.
 
 The port tickets become call site work. A screen picks a surface,
 passes data and callbacks, and deletes its old gesture code. These bugs
-become impossible for a caller who uses a surface as shown: V1, V2, V3,
-V8, V10, V11, V12, J2, J3, L2, L3, B1, B2 and the split's first frame.
+become impossible for a caller who uses a surface as shown. The V bugs
+are V1, V2, V3, V8, V10, V11 and V12. The rest are J2, J3, L2, L3, B1,
+B2 and the split's first frame.
 V4, V7, J1 and L1 are half surface and half feature work. J4 moves onto
 one clock in `useProgress` and the `Sheet` primitive. V5, V6 and V9
 stay feature work. Each port ticket names its share.
@@ -177,10 +179,10 @@ We accept these costs:
 - `onReorder` must update the rendered order in the same tick. A late
   write still ends right, but its rows slide back and then jump.
 
-Some facts still need native proof. Ticket 0058 runs them on the
-Android emulator path from ticket 0073: `measure()` on shared-value zone
-refs, the scroll freeze with `scrollEnabled`, and the reorder drop with
-no blink. Feel and refresh rate on real hardware stay a phone check.
+Some facts still need native proof. Ticket 0058 runs them on the Android
+emulator path from ticket 0073. They are `measure()` on shared-value zone
+refs, the scroll freeze with `scrollEnabled`, and the reorder drop with no
+blink. Feel and refresh rate on real hardware stay a phone check.
 
 ## Alternatives
 
@@ -211,7 +213,8 @@ emulator. APK run 42496388537 built commit `6538d60`. The evidence is in
 - The zone registry shipped as written. Zones keep their animated refs
   in one shared value per session, and `measure()` reads them in the
   source's `onActivate`. On the emulator a held chip dropped on the box
-  under the finger, at scroll offset 0 and after a scroll of 176 px.
+  under the finger. That held at scroll offset 0 and after a scroll of
+  176 px.
   The fallback, zones that measure themselves at pickup, was not needed.
 - `scrollEnabled={false}` holds the scroller during a drag, and the drag
   goes on. The boxes kept their bounds through a 377 px vertical drag. A
@@ -240,13 +243,13 @@ Two facts change how the surfaces apply:
 
 ## Amendment, 2026-11-10: a press with no pan above it keeps its press
 
-The verifier of PR #97 found that gesture handler's web `Pressable`
-drops a press when the view re-renders under the finger. Under six
-browsers at once, the retry button of a write banner lost 15 presses
-of 120. React Native's `Pressable` lost none. The pointer down, up and
-click all reached the button, so the button did not move. The handler
-let the press go on its own. The same press turned the `vault` e2e
-spec red in 2 runs of 5.
+The verifier of PR #97 found a fault in gesture handler's web `Pressable`.
+It drops a press when the view re-renders under the finger. Under six
+browsers at once, the retry button of a write banner lost 15 presses of
+120. React Native's `Pressable` lost none. The pointer down, up and click
+all reached the button, so the button did not move. The handler let the
+press go on its own. The same press turned the `vault` e2e spec red in 2
+runs of 5.
 
 A banner re-renders while a finger rests on it. A failed write lands,
 or the app returns to the foreground. A press must still run.
@@ -273,28 +276,27 @@ The amendment above left every press under a pan on gesture handler's
 `Pressable`. That press fires from pointer up, and its web build first
 checks the press against the view's layout report. Before that report
 the box is 0 by 0, and a tap at the middle of the target fails
-`isTouchWithinInset`. A row that mounts after a drop can be tapped in
-that frame. The tap does nothing.
+`isTouchWithinInset`. A row that mounts after a drop still takes a tap
+in that frame. The tap does nothing.
 
-The same press is bound to the node that took the pointer down. A view
-that mounts or is replaced under the finger loses it. The lists screen
+The same press binds to the node that took the pointer down. A view
+that mounts or gets replaced under the finger loses it. The lists screen
 left this class in the amendment above. The planner rows and the
 reorder rows stayed on it because a pan must cancel their press.
 
-Reproduced on the head before the fix with a tap in the row's first
-layout frame: pointer down, pointer up and the browser click in the
-same task as the row's mount. The row did not tick, and a tap on a row
+We reproduced it on the head before the fix with a tap in the row's
+first layout frame. The pointer down, pointer up and browser click ran
+in the same task as the row's mount. The row did not tick, and a tap on a row
 that had reported layout did. Under load, a tap in the drop's frame
 lost 1 press of 80 on head. A tap 100 ms after the drop lost none in
-240 across six browsers, because the report had usually landed by
-then.
+240 across six browsers. By then the report had landed in most runs.
 
 Every press target now takes React Native's `Pressable` on the web,
 exported as `Pressable` from `components/ui/pressable.tsx`. That
 covers a Button, a row, a tab, a segment, a menu item and a planner
 cell. It fires from the browser's click, which goes to the element
 under the pointer at release. A row that mounts or re-renders under
-the finger still presses, and no layout report is needed.
+the finger still presses, and the press needs no layout report.
 
 A press must still not run on a drag. Two rules keep it off:
 
@@ -303,31 +305,31 @@ A press must still not run on a drag. Two rules keep it off:
   and a browser click does not.
 - A pan that activates arms a one-shot guard for its surface, in
   `components/motion/internal/press-cancel.ts`. The guard stops the
-  next click at `window` capture, however late the browser sends it.
+  next click at `window` capture, no matter how late the browser sends it.
   It disarms on that click, or on the next pointer or key down, which
   is a new gesture. A drag that makes no click leaves it armed until
-  that next press, so a late click is never missed and no window
+  that next press. The guard never misses a late click, and no window
   blocks a later tap (V10). `createDragSurface`, `createReorderSurface`,
   `Pager` and `Split` each own one guard.
 
 Alternative: remove the layout gate from gesture handler's web press.
 The gate sits inside the installed library, and the press still binds
-to the node that took the pointer down. A row that mounts or is
+to the node that took the pointer down. A row that mounts or gets
 replaced under the finger would still lose it. The native path keeps
 gesture handler's `Pressable`, where a pan cancels the press itself.
 
 Tests: `e2e/specs/press.spec.ts` presses a captured row in its first
-layout frame, and holds a tick in place with the mouse and with CDP
+layout frame. It also holds a tick in place with the mouse and with CDP
 touch. The first failed on head and passes at the fix. The planner's
 "a tap 100 ms after a drop still ticks the row" passed 20 of 20 runs.
-At the fix the six-browser load lost no press in 120 immediate taps
-and none in 240 taps at 100 ms. The two-frame press wait in
-`e2e/locators.ts` and the capture settle wait in `reorder.spec.ts` are
-gone. The press no longer needs either.
+At the fix the six-browser load lost no press in 120 immediate taps. It
+lost none in 240 taps at 100 ms. The fix drops the two-frame press wait
+in `e2e/locators.ts` and the capture settle wait in `reorder.spec.ts`.
+The press no longer needs either.
 
-A device would still prove the native half: gesture handler's press
-cancels under a pan with no click tail, and Enter and Space press on a
-hardware keyboard. No emulator ran here.
+A device would still prove the native half. One check is that gesture
+handler's press cancels under a pan with no click tail. The other is
+that Enter and Space press on a hardware keyboard. No emulator ran here.
 
 ## Amendment, 2026-11-11: the live page lays out at the track's origin
 
@@ -355,4 +357,4 @@ available.
 Proof: `pagers.spec.ts` reads the live page's layout offset on a
 non-first tab, 1200 px before the fix and 0 after. The emulator, with
 the release APK of `bd15a24`, reads the rows and banners on Errands
-and Focus, and the lists swipe journey passes end to end.
+and Focus. The lists swipe journey passes end to end.

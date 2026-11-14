@@ -26,8 +26,8 @@ run.
   takes the responder, so the native pan that resizes never saw the
   drag. Its `onPointerDown` never fired on Android either.
 
-Fix the swipe to read the responder system through `PanResponder`, with
-the capture phase taking the touch from the scroller on horizontal
+Fix the swipe to read the responder system through `PanResponder`. The
+capture phase takes the touch from the scroller on horizontal
 travel only. Make the grabber a plain `View`: the pan resizes on native,
 the pointer path keeps the web behaviour.
 

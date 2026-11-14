@@ -11,7 +11,7 @@ depends: [0052, 0055]
 ## Spec
 
 The Lists overflow menu showed Rename list, Delete list and Delete all
-completed tasks, and none of them did anything
+completed tasks. None of the three did anything
 (`src/app/(tabs)/index.tsx:1022-1047` at commit `b2c0b10`). Ticket 0055
 hid them. This ticket builds the three actions through the mutation
 layer from ticket 0052 and shows the items again.
@@ -56,15 +56,15 @@ A task joins a list through a `[[Name]]` entry in its `lists` property.
 
 ### Shared rules
 
-- Each action is a `useMutation` hook in `src/stores/tasks`, with an
+- Each action is a `useMutation` hook in `src/stores/tasks`. It has an
   optimistic update and a rollback on failure, in the same shape as the
   0052 writes.
 - A partial failure, for example 3 of 7 deletes, shows the failed count
-  in a `Banner` and keeps the writes that worked. The store then reads
+  in a `Banner`. It keeps the writes that worked. The store then reads
   the vault again.
-- Write an ADR for how a delete leaves the vault: remove the file, or
-  move it to Obsidian's `.trash/` folder so the user can restore it. The
-  same ADR covers the `recurrence previous` links.
+- Write an ADR for how a delete leaves the vault. It either removes the
+  file, or moves it to Obsidian's `.trash/` folder so the user can
+  restore it. The same ADR covers the `recurrence previous` links.
 
 ## Acceptance
 

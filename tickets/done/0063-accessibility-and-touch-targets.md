@@ -30,12 +30,12 @@ Paths and line numbers cite commit `b2c0b10`. Tickets 0050 and 0055 to
    timeline tick (`Timeline.tsx:128-133`) reports no state. Make each
    circle a `checkbox` named by its task. Name the row body by the task
    and its meta, for example "Buy milk, 3:00 PM, overdue".
-2. **Touch targets fall under 44 by 44.** Grow the pressable box and
+2. **Touch targets fall under 44 by 44.** Grow the pressable box, and
    keep the visible mark the same size. The Playwright check measures
-   layout boxes, and a layout box does not include `hitSlop`, so a
-   target must reach 44 by layout. If the month grid cannot reach 44 at
-   360pt wide without starving the list pane on a 640pt screen, record
-   the exception in an ADR.
+   layout boxes, and a layout box does not include `hitSlop`. A
+   target must thus reach 44 by layout. Suppose the month grid cannot
+   reach 44 at 360pt wide without starving the list pane on a 640pt
+   screen. Then record the exception in an ADR.
 
    | Control | Size now | Code |
    |---|---|---|
@@ -67,7 +67,7 @@ Paths and line numbers cite commit `b2c0b10`. Tickets 0050 and 0055 to
 5. **States and names are missing.** The editor fields take their name
    from the placeholder (`TaskEditorScreen.tsx:410`). The period strip
    (`PeriodStrip.tsx:215`) and the month cells (`MonthGrid.tsx:158`) mark
-   the selected day by color only, and a month cell never says that it
+   the selected day by color only. A month cell never says it
    holds tasks. The sort and list menu buttons (`index.tsx:889-915`)
    report no expanded state. The list tabs, the mode switch, the form
    toggle and the bottom nav have no `tablist` around them.
@@ -91,23 +91,23 @@ Add `@axe-core/playwright` as a dev dependency for the screen scans.
 - [x] A test reproduces the row name bug first. Afterwards a query for role `checkbox` with the task's name finds its circle, and `aria-checked` follows the tick.
 - [x] A row body's accessible name holds the task name and its meta.
 - [x] The timeline tick reports role `checkbox` and `aria-checked`.
-- [x] A Playwright check reproduces the target bug first. It covers Lists, Planner in day, week and month mode, the editor, and the open capture sheet.
-- [x] Afterwards every element with role button, tab, checkbox, radio, option, gridcell, menuitem, link or switch has a layout box of at least 44 by 44, or appears in the ADR's exception list.
+- [x] A Playwright check reproduces the target bug first. It covers Lists, Planner in day, week and month mode, and the editor. It also covers the open capture sheet.
+- [x] Afterwards every element with role button, tab, checkbox, radio, option, gridcell, menuitem, link or switch passes one of two checks. It has a layout box of at least 44 by 44, or it appears in the ADR's exception list.
 - [x] A test reproduces the silent error first. Afterwards the list write error, the repair notice, the editor save error and the capture failure toast each report role `alert`.
-- [x] A test reproduces the reorder gap first. Afterwards the Move down action on the first row in My order moves it to second place and writes the new order.
+- [x] A test reproduces the reorder gap first. Afterwards Move down on the first row in My order moves it to second place. The move writes the new order.
 - [x] The split grabber reports role `adjustable`, and increment and decrement change the timeline height.
 - [x] Each editor field's accessible name equals its label.
 - [x] The selected period strip cell and the selected month cell report `aria-selected`.
 - [x] A month cell with tasks says so in its accessible name.
 - [x] The sort and list menu buttons report `aria-expanded`.
-- [x] Every `aria-checked` sits on a `checkbox`, `radio` or `switch`, and every `aria-selected` on a `tab`, `option`, `gridcell` or `row`. Ticket 0049 put `aria-checked` on the tick and `aria-selected` on the sort options while both still had role `button`, which ARIA does not allow. The sort options become `radio` items in a `radiogroup`.
+- [x] Every `aria-checked` sits on a `checkbox`, `radio` or `switch`. Every `aria-selected` sits on a `tab`, `option`, `gridcell` or `row`. Ticket 0049 put `aria-checked` on the tick and `aria-selected` on the sort options. Both still had role `button`, and ARIA does not allow that. The sort options become `radio` items in a `radiogroup`.
 - [x] Each tab group sits inside a `tablist`.
-- [x] Playwright runs axe-core on each screen and finds no serious or critical issue.
+- [x] Playwright runs axe-core on each screen, and the run reports no serious or critical issue.
 - [x] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
 
 ## Outcome
 
-Every finding is fixed on the web build. Each new state uses an
+The web build fixes every finding. Each new state uses an
 `aria-*` prop, and `grep -rn accessibilityState app/src` finds nothing.
 
 Where each finding lives now:
@@ -116,13 +116,13 @@ Where each finding lives now:
    by its task, and the row body carries the task and its meta.
    `features/planner/components/timeline.tsx` gives the tick the same
    role and `aria-checked`.
-2. Targets. Each press box is 44 by 44 and the visible mark keeps its
+2. Targets. Each press box is 44 by 44, and the visible mark keeps its
    size. The month card's side padding drops to 4, so a cell is 44.4
-   wide at 360pt. At 320pt it would be under 44; no ADR exception is
-   needed for the ticket's 360pt reference.
+   wide at 360pt. At 320pt it would be under 44. The ticket's 360pt
+   reference needs no ADR exception.
 3. Errors. The list write error, the repair notice, the editor save
-   error and the capture toast each render through `Banner` or `Toast`,
-   which report `alert`. New tests pin all four.
+   error and the capture toast each render through `Banner` or `Toast`.
+   Those report `alert`. New tests pin all four.
 4. Non-drag. A row in My order has an actions menu: Move up, Move down,
    Move to top and Move to bottom. Each move writes the same
    `ReorderEvent` a drop writes. The split grabber reports `adjustable`
@@ -141,12 +141,12 @@ Where each finding lives now:
    the editor and the capture sheet. No serious or critical issue
    remains.
 
-The muted ink in each theme is a step darker, so secondary text clears
-4.5 to 1 on the paper and on the soft fill.
+The muted ink in each theme is a step darker. As a result, secondary
+text clears 4.5 to 1 on the paper and on the soft fill.
 
-Not proven here: TalkBack reads the names and the increment and
-decrement actions on a phone. The Android emulator and the phone stay
-unchecked, and a hardware keyboard check stays with the operator.
+Whether TalkBack on a phone reads the names is unproven. The same holds
+for the increment and decrement actions. The Android emulator and the
+phone stay unchecked. A hardware keyboard check stays with the operator.
 
 ## Amendment, 2026-11-11: the non-drag path moves onto the grip
 
@@ -158,10 +158,10 @@ The grip reports `adjustable` on native and `slider` on the web. Its
 name is `reorder <task>`. Its value is the row's one-based place in My
 order, from 1 to the group's size. Increment moves the row one place
 later and decrement one place earlier. Each step writes the same
-data-index `ReorderEvent` a drop writes. Arrow keys run the same step
-on the web. The menu's four moves are gone with the menu.
+data-index `ReorderEvent` that a drop writes. Arrow keys run the same step
+on the web. The menu's four moves left with the menu.
 
-The trade-off is unchanged in kind: a user must find the grip. It
+The trade-off stays the same in kind: a user must find the grip. The grip
 stays visible in My order, and its name and value explain it to
 TalkBack. The register entry stays unchecked until an emulator or a
 phone drives the two actions.

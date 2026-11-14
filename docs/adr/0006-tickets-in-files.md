@@ -6,8 +6,8 @@
 ## Context
 
 Work must be claimable by any harness without coupling to one tool. GitHub
-Issues exist and have a board, but they need the network and a token, and
-they would split the source of truth between the repo and GitHub.
+Issues exist and have a board. They need the network and a token, though.
+They would also split the source of truth between the repo and GitHub.
 
 ## Decision
 
@@ -20,5 +20,5 @@ so every new project starts with it.
 
 Any agent or human claims work with a file move and a commit, and git
 history is the audit trail. A kanban view does not exist until someone
-wants it; the folders are the board. If GitHub Issues are wanted later, a
+wants it; the folders are the board. If we want GitHub Issues later, a
 script imports the frontmatter, so nothing blocks the move.

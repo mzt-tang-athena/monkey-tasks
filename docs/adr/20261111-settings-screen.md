@@ -7,9 +7,9 @@
 
 Ticket 0083 gave the app a runtime theme provider. No screen shows the
 palette picker. The sort order and the task form live in
-`app/src/lib/settings.ts`, and each screen owns its own copy. A change
-made on a settings screen would not reach a screen that is already
-mounted under the tab navigator or the stack.
+`app/src/lib/settings.ts`, and each screen owns its own copy. A settings
+screen change would not reach a screen already mounted under the tab
+navigator or the stack.
 
 Ticket 0084 asks for one screen, one tap away from Lists and from
 Planner. It owns the palette picker and the two stored settings. Back
@@ -30,7 +30,7 @@ store, `app/src/lib/settings-store.ts`. A reader seeds itself from
 `saveSetting` and wakes every reader, which reads the saved value back.
 
 We rejected a focus refresh. It re-reads only when a screen regains
-focus, so a screen that stays mounted beside the settings route can show
+focus. A screen that stays mounted beside the settings route can then show
 a stale value. We rejected a second React context. It would wrap the
 whole tree for two values that two screens read.
 
@@ -46,11 +46,11 @@ manifest that `expo-constants` exposes, so a preview build reads
 
 A settings write repaints the theme in place and updates the mounted
 Lists and Planner screens at once. A reader that mounts later reads the
-saved value, so a tab that was closed agrees with the tab that was open.
+saved value. A closed tab then agrees with the open one.
 
 Each reader holds one effect and one subscription. The store keeps no
 copy of the values, so it cannot drift from storage. The cost is a
-synchronous read of the settings on mount and on each write, which is
+synchronous read of the settings on mount and on each write. Each read is
 one small JSON file or one storage read.
 
 The theme picker is a radio group. The two screen settings reuse the

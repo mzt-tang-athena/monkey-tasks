@@ -13,8 +13,8 @@ depends: [0058]
 Epic 0047, phase 4. ADR 0036, its amendment to ADR 0033, and ADR 0046
 decide this. Ticket 0058 built `Pager` in
 `src/components/motion/pager.tsx`. This ticket moves the list tabs, the
-planner day body and the month calendar onto it, and deletes the old
-pager. Paths are on `epic/0047-rebuild` at commit `745976f`, under
+planner day body and the month calendar onto it. It also deletes the
+old pager. Paths are on `epic/0047-rebuild` at commit `745976f`, under
 `app/src`.
 
 ### Design, 2026-11-08
@@ -25,13 +25,13 @@ records it. What matters here:
 - The screen writes no gesture code. It renders `Pager` with an
   `index`, `bounds`, `onPage` and `renderPreview`. The surface owns the
   pan, `touchAction`, the settle, the previews and reduce motion.
-- There is no `pageKey`, `canGo`, `goTo` or `claim()`. A tab tap or a
+- No `pageKey`, `canGo`, `goTo` or `claim()` exists. A tab tap or a
   strip tap sets a new `index`. One page away slides, and more than one
   cuts.
 - The prototype showed that gesture handler's web `Pressable` cancels
-  when a parent pan activates, with the mouse and with CDP touch, 10
-  runs in 10. React Native's `Pressable` does not. So the press guard's
-  swipe arm can go.
+  when a parent pan activates. That held with the mouse and with CDP
+  touch, 10 runs in 10. React Native's `Pressable` does not. As a
+  result, the press guard's swipe arm can go.
 - Gesture handler 3.3.0 drops the detector's `touchAction` prop on the
   web. `Pager` passes `pan-y` in the gesture config, and a test reads
   the computed value.
@@ -44,7 +44,7 @@ records it. What matters here:
 | V2 | `swipe-pager.tsx:101,135,157-160,180` and `lib/swipe.ts:64-68`. A new drag calls `setValue`, which stops the running settle with `finished: false`, so `onPage` never runs. | Two fast flicks move one page, and the first snaps back. |
 | V3 | `swipe-pager.tsx:161-171,178-182,188-208`, with `features/planner/hooks/use-planner-route.ts:45-48`. The kept cell renders from the new page, so it shows page N+2. The layout effect resets the offset apart from the commit, and day and month commit through an async `router.setParams`. | A frame of the wrong page can flash at the commit. The day and month flicker from the phone pass of ticket 0046. |
 | V4 | `features/lists/components/list-page-preview.tsx:28-54` and `features/planner/components/day/day-preview.tsx:36-47` draw from the top. The live cell has no key (`swipe-pager.tsx:200`), so it keeps its old scroll offset. | The landed page jumps. This is the list's vertical shift from the phone pass of ticket 0046. |
-| V5 | 0056 fixed the rows: the preview and the live day both call `dayRows`. One part is left: each page reads its own `now` (`day/day-page.tsx:37-38`). | Rows pop in when a swipe lands on a day with a recurring task, or on today. The rows are fixed. The now line can still jump. |
+| V5 | 0056 fixed the rows: the preview and the live day both call `dayRows`. One part remains: each page reads its own `now` (`day/day-page.tsx:37-38`). | Rows pop in when a swipe lands on a day with a recurring task, or on today. 0056 fixed the rows. The now line can still jump. |
 | J1 | `swipe-pager.tsx:123-131` sets screen state at swipe start. `list-page-preview.tsx:26-54` renders every row. The day preview mounts live rows with hooks (`task-list-section.tsx:73`, `day/overdue-group.tsx:38`). | The first frames of a swipe stall on a long list. |
 | V12 | `lib/swipe.ts:141,157-174` and `day/day-spread.tsx:133-155`. No pointer capture. `pointercancel` and native `terminate` count as a release and can commit. | In the browser, a release outside the body leaves the page offset. A cancelled touch can change the page. |
 | L1 | `components/ui/tab-strip.tsx:75` scrolls the strip with `animated: true` always. | The strip slides with reduce motion on. |
@@ -180,42 +180,42 @@ A jsdom component test covers J1. It counts renders and asserts that a
 swipe start renders the lists screen no times. For a list of 300 tasks,
 the preview renders no more rows than fit the viewport.
 
-The browser cannot show the frame flash in V3 or the ticket 0046 flicker,
-because Reanimated runs on the main thread there. The emulator and the
+The browser cannot show the frame flash in V3 or the ticket 0046 flicker.
+The cause is that Reanimated runs on the main thread there. The emulator and the
 phone show those.
 
 ## Acceptance
 
 - [x] Each scenario above has a failing Playwright or component test
-      before its fix, and all pass after, with the mouse and with
+      before its fix. All pass after, with the mouse and with
       touch.
 - [x] `list-pager`, `day-pager` and `month-pager` compute
       `touch-action: pan-y` in the browser.
 - [x] The B2 test in `e2e/specs/lists.spec.ts` passes without
-      `test.fail()`, and the swipe arm of `use-press-guard` is gone.
+      `test.fail()`, and `use-press-guard` has no swipe arm left.
 - [x] The list, the day and the month page through
       `src/components/motion/pager.tsx`. `swipe-pager.tsx`,
-      `lib/swipe.ts` and `lib/swipe.test.ts` are gone.
+      `lib/swipe.ts` and `lib/swipe.test.ts` no longer exist.
 - [x] Web reorder still works in My order, through the handlers that
       moved off the pager host.
 - [x] The web grabber still resizes the day split. 0061's `Split` now
       owns the grabber, and `day-spread.tsx` holds no split handler.
 - [x] Lint passes with this ticket's files out of the allowlist, except
       `lists-screen.tsx` for the 0060 reorder handlers.
-- [ ] Emulator, with the `verify-monkey-tasks` Android path: on the
-      list, the day and the month, a slow drag, a flick, a short drag,
-      a double flick and a swipe at each end show no blank strip, no
-      flash at the commit and no vertical shift on landing, in the
-      recorded frames.
-- [ ] Emulator: a vertical scroll with sideways drift never pages, a
-      swipe on the chip strip scrolls the strip, and a row hold then a
+- [ ] Emulator, with the `verify-monkey-tasks` Android path, on the
+      list, the day and the month. The gestures are a slow drag, a
+      flick, a short drag, a double flick and a swipe at each end. In
+      the recorded frames, they show no blank strip, no flash at the
+      commit and no vertical shift on landing.
+- [ ] Emulator: a vertical scroll with sideways drift never pages. A
+      swipe on the chip strip scrolls the strip. A row hold then a
       sideways drag lifts the row.
 - [ ] Phone: the system back gesture from the screen edge never
       changes the page.
-- [ ] Phone, reduce motion on: the page does not travel, a release
+- [ ] Phone, reduce motion on: the page does not travel. A release
       past the threshold changes the page, and a tab tap changes it at
       once.
-- [ ] The phone pass that ticket 0046 left open passes here: the list
+- [ ] The phone pass that ticket 0046 left open passes here. The list
       lands with no vertical shift, and the day and the month land with
       no flicker.
 
@@ -223,8 +223,8 @@ phone show those.
 
 - From the review of PR #81 (0055), 2026-11-07: `src/lib/swipe.ts`
   `down()` does not reset `swiping`. A mouse swipe released outside the
-  list pager leaves the press guard armed, and the guard swallows the
-  next row tap. The page also stays at its drag offset.
+  list pager leaves the press guard armed. The guard swallows the next
+  row tap. The page also stays at its drag offset.
 - 2026-11-08: the new design removes both causes. Gesture handler
   captures the pointer, so a release outside still ends the pan, and no
   guard exists to stay armed. The second B1 scenario above proves it.
@@ -249,16 +249,16 @@ Web gates, all clean:
 
 `e2e/specs/pagers.spec.ts` runs the ticket's scenarios with the mouse
 and with CDP touch, in the `motion` and `reduced-motion` projects.
-The scenario names are the ticket's own: a swipe turns the list page,
-a swipe that starts on a row opens no editor, a short drag keeps its
-preview until the track rests, two fast drags move two tabs, a landed
-tab holds no page two away, a drag right at the first list stops at
-the rubber band, a tab tap one page away slides, a tab tap three pages
-away cuts, a swipe on a month cell opens no day, a swipe released over
-the bottom bar rests and the next tap opens, the list and day preview
-screenshot pairs, a touch drag that ends in touchCancel keeps the tab,
-a vertical touch drag with sideways drift scrolls and never pages, the
-reduce-motion track, and the tab strip. The J1 component test is
+The scenario names are the ticket's own. A swipe turns the list page.
+A swipe that starts on a row opens no editor. A short drag keeps its
+preview until the track rests. Two fast drags move two tabs. A landed
+tab holds no page two away. A drag right at the first list stops at
+the rubber band. A tab tap one page away slides, and a tab tap three
+pages away cuts. A swipe on a month cell opens no day. A swipe released
+over the bottom bar rests, and the next tap opens. Then come the list
+and day preview screenshot pairs. A touch drag that ends in touchCancel
+keeps the tab. A vertical touch drag with sideways drift scrolls and
+never pages. The last two are the reduce-motion track and the tab strip. The J1 component test is
 `lists-screen.test.tsx` "renders nothing at a swipe start, and caps the
 preview rows".
 
@@ -277,8 +277,8 @@ Decisions taken while building:
   `components/ui/pressable.tsx`: the tab strip, the period strip and
   the list notices.
 - `day-spread.tsx` left the 0058 lint allowlist. 0061 had already
-  deleted the split handlers and the touch gate the ticket wanted kept,
-  and the pager host needs no banned motion path. `lists-screen.tsx`
+  deleted the split handlers and the touch gate the ticket wanted kept.
+  The pager host needs no banned motion path. `lists-screen.tsx`
   stays for the 0060 reorder handlers.
 - The day preview draws still `PreviewRow`s and `SplitStill` from the
   same `dayRows` and one `now` in `day-spread.tsx`. It mounts no live
@@ -290,19 +290,20 @@ Test-harness decisions:
 
 - `press()` in `e2e/locators.ts` scrolls, waits two frames, then
   clicks. Gesture handler's web press drops a press on a target it has
-  not measured, and Playwright scrolls after its own stability check,
-  so a row that mounts with that scroll loses the press.
+  not measured. Playwright scrolls after its own stability check. As a
+  result, a row that mounts with that scroll loses the press.
 - `pickDay` retries a month cell until the picked pane shows, and the
   keyboard test in `capture-dock.spec.ts` focuses until the button holds
   focus. The toast check scopes `alert` to its text.
 - The preview screenshot pairs compare pixels with a small tolerance.
-  The held page stands a fraction of a pixel beside the landed page,
-  and the test also asserts that the landed pager's `scrollTop` is 0.
+  The held page stands a fraction of a pixel beside the landed page.
+  The test also asserts that the landed pager's `scrollTop` is 0.
 
 Not proven:
 
-- Emulator boxes: every drag, flick, double flick, end swipe, drift,
-  hold-to-lift and chip strip scenario in the recorded Android frames.
+- Emulator boxes, in the recorded Android frames. That covers every
+  drag, flick, double flick, end swipe, drift, hold-to-lift and chip
+  strip scenario.
 - Phone boxes: the system back gesture, reduce motion on the device,
   and the 0046 phone pass.
 - The browser cannot show the V3 frame flash or the 0046 flicker,

@@ -25,7 +25,7 @@ space, so the document's text and the name hold the same words.
 
 A trailing space hangs at the end of a line and moves nothing. We
 measured the row at 412 wide, and the label, the hint and the menu
-height stayed the same. A leading space on the hint also passes, but it
+height stayed the same. A leading space on the hint also passes. It
 pushes the hint about 3 px right, which changes the layout.
 
 We rejected a name with no space. It would match the document's text,
@@ -33,7 +33,7 @@ but a screen reader then says "Move to listPick a list".
 
 We also tried hiding the hint from assistive tech with `aria-hidden` and
 naming the item by its label. Axe still reports the mismatch at serious
-impact, and a screen reader user would lose text the row shows. So that
+impact, and a screen reader user would lose text the row shows. That
 path does not work.
 
 ## Consequences

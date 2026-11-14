@@ -19,8 +19,9 @@ done, dropped, someday), `parent deed`, `categories`, `types`,
 `kind: "[[tasks]]"`, `completed`, `due`, `reminders`, `recurrence`,
 `recurrence previous` and `lists`.
 
-The two models disagree on what done means. A task is done when
-`completed` is present. A deed is done when `status` is `[[done]]`.
+The two models disagree on what done means. A task counts as done when
+`completed` is present. A deed counts as done when `status` is
+`[[done]]`.
 Both have a due date and reminders. A deed can have a parent deed; a
 task cannot.
 
@@ -31,11 +32,11 @@ Questions to settle:
 
 1. Are deeds a different thing, an ongoing pursuit or project, or a
    task with a status and no completion date?
-2. Which model wins? A task gains `status`; a deed gains `completed`
-   and becomes a task; or both keep their shape and the app reads
-   deeds as a second surface.
-3. What does the app show? A tab, a filter, a board, or nothing until
-   the merge.
+2. Which model wins? A task gains `status`, or a deed gains `completed`
+   and becomes a task. Otherwise both keep their shape, and the app
+   reads deeds as a second surface.
+3. What does the app show before the merge? A tab, a filter, a board,
+   or nothing.
 4. `parent deed`. Does it become `parent` on a task, or does a project
    note own its tasks? Tie this to ticket 0093, which rejects subtasks
    for now.
@@ -50,11 +51,11 @@ picks.
 
 ## Acceptance
 
-- [ ] The report names the shared and conflicting fields.
+- [ ] The report lists the shared fields and the conflicting ones.
 - [ ] It offers two or three models, with the migration cost of each.
-- [ ] It recommends one and says what breaks.
-- [ ] The operator picks a direction, or the idea is dropped.
-- [ ] Child tickets are filed if the operator accepts a model.
+- [ ] It recommends one model and names the breakage.
+- [ ] The operator picks a direction, otherwise the idea gets dropped.
+- [ ] Child tickets get filed once the operator accepts a model.
 
 ## Outcome
 

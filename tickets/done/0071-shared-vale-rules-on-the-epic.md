@@ -17,7 +17,8 @@ sentences over 20 words.
 
 Main's docs job runs Vale on `git ls-files '*.md'`. The `[**.md]`
 section in `.vale.ini` matches only files at the repo root under the
-pinned Vale 3.24.0. So the job lints `README.md` and `AGENTS.md` only.
+pinned Vale 3.24.0. Hence the job lints only `README.md` and
+`AGENTS.md`.
 
 On 2026-11-07, the epic's `README.md` gave 19 `SentenceLength` alerts
 under the pack. `AGENTS.md` takes main's clean copy at the merge. When
@@ -77,7 +78,7 @@ pre-commit hook blocks it otherwise. Vale with the pack now prints
 nothing on `README.md` and `AGENTS.md`.
 
 Main's ADR 0035 is now ADR 0044. Main's done ticket 0047 is now 0074.
-Main's done ticket 0048 clashed with the epic's 0048 too, so it is now
+Main's done ticket 0048 clashed with the epic's 0048 too, so it became
 0075. The README and ticket 0074 cite ADR 0044.
 
 `make lint` passes. In `app/`, the typecheck, ESLint and 669 Vitest

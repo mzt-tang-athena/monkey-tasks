@@ -1,7 +1,7 @@
 # Task editor
 
 A tap on a row opens the task editor at `/task/<id>`. The user changes
-the name, date, time, list or repeat, then saves or cancels and returns
+the name, date, time, list or repeat. Then they save or cancel and return
 to where they came from.
 
 ## Sub-features
@@ -19,7 +19,7 @@ to where they came from.
 Preconditions: a fresh page on `/`.
 
 - **Open.** `row(page, rename.from).getByRole("button", { name: "open task" }).click()`. The textbox `Task name` holds `Call Mum`.
-- **Save.** Fill `Task name` with `rename.to`, click `save task`. The URL is `/`, the row reads `Call Mum about Sunday`, and no `Call Mum` row is left.
+- **Save.** Fill `Task name` with `rename.to`, click `save task`. The URL is `/`, the row reads `Call Mum about Sunday`, and no `Call Mum` row remains.
 - **Cancel.** Change the name, click `cancel editing`. The row keeps its old name.
 - **Side effect.** After a save, `notePaths(page, "Tasks/")` and `noteText` show the renamed note, and the row survives `returnToTab`.
 - **Proof.** Screenshot the editor with the change typed, and the list after the return.

@@ -13,7 +13,7 @@ laggy.
 
 The obvious approach is to reorder the data on every crossing and
 animate the difference. React Native cannot animate a cell that has
-moved to a new index, because the cell is a new element at a new
+moved to a new index. The cell is a new element at a new
 position. Any compensation races the commit.
 
 ## Decision
@@ -21,10 +21,10 @@ position. Any compensation races the commit.
 The list keeps its order for the whole drag. Each row animates a
 `translateY` to the slot it would take. The divider between rows lives
 inside the row, so it travels with the row. The corner radii come from
-the slot the row is heading to, not from its index.
+the slot the row heads to rather than from its index.
 
 The drop reorders the data and zeroes the transforms in the same
-commit, so there is no frame between the two.
+commit. No frame falls between the two.
 
 Only rows whose slot changed start an animation. A crossing that moves
 two rows animates two rows.
@@ -34,9 +34,9 @@ two rows animates two rows.
 Nothing reorders under a finger, so nothing can blink. The rows slide
 on the native driver, because only a transform moves.
 
-The row that lands first in a section needs the card's top corners and
-the row that lands last needs the bottom corners, so the radii depend
-on the preview order. Any new row style must read the same preview
+The row that lands first in a section needs the card's top corners. The
+row that lands last needs the bottom corners. As a result, the radii
+depend on the preview order. Any new row style must read the same preview
 order, not the index.
 
 ## Alternatives
@@ -51,8 +51,8 @@ would land.
 
 ## Amendment, 2026-10-26: the slide runs on the UI thread
 
-The decision stands. The list keeps its order while a finger is down,
-and the corner radii follow the slot a row heads to. The offsets, the
+The decision stands. The list keeps its order while a finger is down.
+The corner radii follow the slot a row heads to. The offsets, the
 radii and the slot move into shared values (ADR 0036), so a crossing
 writes no React state.
 
@@ -61,14 +61,14 @@ React commit. Ticket 0060 tries two ways on a phone and adds a dated
 note here with the result.
 
 The first version missed one reset. A drop that read a stale slot equal
-to its start skipped the reset, and the rows stayed offset until the
+to its start skipped the reset. The rows stayed offset until the
 next drag.
 
 ## Amendment, 2026-11-10: the drop ships with the index stamp
 
 Ticket 0060 built `createReorderSurface` and moved the lists row
-reorder onto it. The decision stands: the list keeps its order while a
-finger is down, and the rows, the divider and the corners move as
+reorder onto it. The decision stands. The list keeps its order while a
+finger is down. The rows, the divider and the corners move as
 shared values.
 
 The drop ships with the index stamp, not a new key per moved row.
@@ -76,12 +76,12 @@ The drop ships with the index stamp, not a new key per moved row.
 - Each row's shift and its corner radii count only while its `index`
   prop equals the index it had at pickup.
 - The commit that reorders the data changes the index of every row
-  that moved. The commit therefore draws those rows at zero, with no
+  that moved. As a result, the commit draws those rows at zero, with no
   reset in its frame.
 - The shared shifts reset after the commit. A pickup also starts from
   zero, so a cancelled drag cannot leave an offset behind.
 - The fallback in the ticket, a new key per moved row
-  (`${id}#${dropCount}`), was not needed. `Landing` is unchanged.
+  (`${id}#${dropCount}`), was not needed. `Landing` stays the same.
 
 The web build carries the evidence. `app/e2e/specs/reorder.spec.ts`
 runs in the `motion` and `reduced-motion` projects, with the mouse and

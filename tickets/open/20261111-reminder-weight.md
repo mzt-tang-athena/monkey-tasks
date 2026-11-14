@@ -12,21 +12,21 @@ depends: ["0094-review-the-task-note-schema"]
 The operator wants two kinds of reminders.
 
 - Harsh. A need to do. It should ring and be hard to miss.
-- Dismissible. The task is a cue for a time, not urgent. It should be
-  quiet and easy to clear.
+- Dismissible. The task is a cue for a time and is not urgent. It should
+  be quiet and easy to clear.
 
 Today `reminders` is a list of datetimes and `due` is a date or a
 datetime. A timed due does not ring. Ticket 0094 settles that a timed
 due rings by default. This ticket settles the weight.
 
 The operator hates vague priorities such as low, medium and high. This
-weight may be what they actually wanted from a priority field. Do not
+weight may be what they wanted from a priority field. Do not
 add a P1 to P4 field.
 
 Questions to settle:
 
 1. Is the weight on the task, on each reminder, or a default on the
-   list? A task usually has one intent, so a task property is the
+   list? In most cases a task has one intent, so a task property is the
    simplest. Say why if not.
 2. Values. `harsh` and `soft`? `need` and `cue`? Pick words the
    operator will use out loud.
@@ -41,8 +41,8 @@ Questions to settle:
 7. Due and reminders. A harsh task with a due time and a reminder may
    ring twice. State the rule.
 
-Deliver: a spec in this ticket, an ADR if a real alternative remains,
-and a device check of the notification behavior. Do not build the field
+Deliver a spec in this ticket, and an ADR if a real alternative remains.
+Add a device check of the notification behavior. Do not build the field
 before the operator decides.
 
 ## Decisions
@@ -55,15 +55,15 @@ On the task. One note, one intent, one weight. The editor writes it, the
 parser reads it, and every alert the task produces uses it.
 
 We rejected two shapes. A weight on each reminder lets one note mix a ring
-and a quiet cue, and the vault field stops being readable at a glance. A
-default on the list hides the answer in another note and makes one task
+and a quiet cue. The vault field also stops being readable at a glance. A
+default on the list hides the answer in another note. It also makes one task
 harder to reason about on its own.
 
 ### What weight means
 
 Delivery only. It decides what the alert does when it fires. It does not
-order tasks, move sections, or tint rows. It is not a priority field, and
-it is the idea that replaces one. Ticket 0094 keeps P1 to P4 out.
+order tasks, move sections, or tint rows. The weight is not a priority field.
+It replaces one. Ticket 0094 keeps P1 to P4 out.
 
 ### Values and vault shape
 
@@ -76,7 +76,7 @@ it is the idea that replaces one. Ticket 0094 keeps P1 to P4 out.
   a need. Only cues carry the property, so the vault stays clean.
 - An unknown value falls back to `harsh` and raises the note repair error.
   A typo must never make an alert silent.
-- A plain string, not a wikilink. The values are words, not notes.
+- A plain string, not a wikilink. The values are words rather than notes.
 
 ### What each weight does
 
@@ -87,7 +87,7 @@ it is the idea that replaces one. Ticket 0094 keeps P1 to P4 out.
 | Vibration | yes | no |
 | Do Not Disturb | bypasses it | respects it |
 | Repeat | re-rings at +1, +5, +15 minutes | never |
-| Dismissal | sticky while ringing, cannot be swiped away | swipes away, or one tap clears it |
+| Dismissal | sticky while ringing, a swipe cannot clear it | swipes away, or one tap clears it |
 | Foreground | banner and sound | banner, no sound |
 
 The alarm stream is the one a clock alarm uses. A harsh alert rings with the
@@ -107,7 +107,7 @@ notification today. It must decide by weight: harsh plays, quiet does not.
 ### Due and reminders
 
 A timed `due` and each `reminders` entry fire at the task's weight, so they
-share one loudness. There is no "harsh due, quiet reminder" inside a task.
+share one loudness. No task holds a "harsh due, quiet reminder".
 
 A due time and a reminder at the same minute ring once, not twice. Capture
 writes a reminder from the due time, so this case is common today.
@@ -119,7 +119,7 @@ A completed task rings nothing, as it does today.
 
 ### Channels get new ids
 
-Android freezes a channel's behavior when it is created; only the name and
+Android freezes a channel's behavior at creation; only the name and
 description can change later. The existing `reminders` channel already
 carries MAX importance and no sound choice, so we do not reuse it. The build
 creates `reminders-harsh` and `reminders-quiet` once, and deletes the old
@@ -136,7 +136,7 @@ creates `reminders-harsh` and `reminders-quiet` once, and deletes the old
 - A harsh repeat is a separate scheduled notification. The build keeps the
   id of each follow-up per task so one acknowledgement cancels the rest.
   Today `reminder-sync.ts` keeps ids per task but schedules one alert per
-  reminder, so it needs the follow-up ids in that map.
+  reminder. It needs the follow-up ids in that map.
 - Android asks for the Do Not Disturb bypass once, in system settings. The
   app can only request it, and the alert must still work when refused.
 
@@ -160,9 +160,9 @@ decision. That is a later ticket if the app ships on iOS.
    back to harsh with a repair error. Fixtures for harsh, quiet, absent and
    unknown. Depends on 0094.
 2. Alerts. Two channels, weight passed into `scheduleAt`, a foreground
-   handler by weight, the three follow-ups and their cancel, quiet cleared
+   handler by weight, the three follow-ups and their cancel. Quiet cleared
    on tick, the DND request, the old channel deleted. Depends on
-   `20261111-a-timed-due-rings`, which is done, and reuses its `alarmTimes`.
+   `20261111-a-timed-due-rings`, already done, and reuses its `alarmTimes`.
 3. Editor. A two-state control in the task editor, writing and removing the
    property through the existing edit path. No row marker, because weight is
    delivery only.
@@ -174,9 +174,9 @@ decision. That is a later ticket if the app ships on iOS.
 Not run yet. It needs a build. On the phone, check:
 
 - A harsh alert rings with the ringer on silent, and shows the alarm icon.
-- A harsh alert breaks Do Not Disturb after the permission is granted, and
-  still rings when it is refused.
-- A harsh alert cannot be swiped away while ringing.
+- A harsh alert breaks Do Not Disturb after the permission grant, and
+  still rings when refused.
+- A swipe cannot clear a harsh alert while it rings.
 - The +1, +5 and +15 repeats arrive, and stop after +15.
 - Ticking the task cancels the remaining repeats, and so does opening it.
 - A quiet alert is silent with the phone loud, sends no vibration, swipes
@@ -187,10 +187,10 @@ Not run yet. It needs a build. On the phone, check:
 ## Acceptance
 
 - [x] The operator picks the field, its values and where it lives.
-- [ ] The notification behavior for each weight is written down and
-      checked on the phone.
-- [ ] The vault shape is recorded and reads well in Obsidian.
-- [ ] The build is split into child tickets, or the idea is dropped.
+- [ ] The ticket records the notification behavior for each weight, and
+      the phone check confirms it.
+- [ ] The ticket records the vault shape, which reads well in Obsidian.
+- [ ] Split the build into child tickets, or drop the idea.
 
 ## Outcome
 

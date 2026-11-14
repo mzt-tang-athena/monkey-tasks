@@ -6,8 +6,8 @@
 ## Context
 
 Ticket 0037 asked for a check over every note in the vault. A trial run
-over the real vault found 93 parser differences in 42 notes. All of
-them sat outside the app's folders: `banner_position: 20` in journal
+over the real vault found 93 parser differences in 42 notes. They
+all sat outside the app's folders: `banner_position: 20` in journal
 notes, `tags: [a, b]` in agent notes, `year: 2025` in a review. None of
 them can break the app, which reads three folders. Reporting them would
 bury the findings that matter.
@@ -37,5 +37,5 @@ not, so the note is still unsafe for other tools. The fix is to put
 spaces in place of the tab.
 
 We did not make the check accept a tab. That would hide a note that a
-YAML reader cannot read, and finding those notes is the job of the
+YAML reader cannot read. Finding those notes is the job of the
 check.

@@ -26,8 +26,8 @@ it skips a month that has no such day:
 A task due on the 30th skips February every year. A task due on the
 29th skips February in a common year. A yearly task due on 29
 February comes back only in a leap year. Each tick creates the next
-note from the rule (ADR 0027), so the gap comes back for the life of
-the task. The user sees no error. The task is missing for a month.
+note from the rule (ADR 0027). As a result, the gap comes back for the
+life of the task. The user sees no error. The task is missing for a month.
 
 The Obsidian Tasks plugin warns about the same trap, and it
 recommends "every month on the last"
@@ -36,9 +36,9 @@ recommends "every month on the last"
 ### The fix
 
 A month-end task lands on the last day of each short month. Then it
-goes back to its own day. Write this into the rule, so the rule does
-not depend on the start date, and every reader of the note gets the
-same dates. We checked each rule below against rrule on 2026-10-27:
+goes back to its own day. Write this into the rule. That way the rule
+does not depend on the start date. Every reader of the note then gets
+the same dates. We checked each rule below against rrule on 2026-10-27:
 
 | Due date | Rule | Dates |
 |---|---|---|
@@ -67,9 +67,9 @@ change.
 
 Each case gets a failing test before its fix:
 
-- A capture of "pay rent every month" due 31 January 2027 gives due
-  dates 31 January, 28 February, 31 March and 30 April over three
-  ticks.
+- A capture of "pay rent every month" due 31 January 2027 runs
+  through three ticks. It gives due dates 31 January, 28 February,
+  31 March and 30 April.
 - The same for the 30th and the 29th, through February in a leap year
   and in a common year.
 - A capture of "pay rent every other month" due 31 December 2026
@@ -88,8 +88,8 @@ Each case gets a failing test before its fix:
 - [x] In the browser, three ticks of a month-end sample task show the
       dates in the table under "The fix". (A Playwright spec ticks a
       31 January 2026 task three times: 28 February, 31 March and
-      30 April. The table's 2027 rows are covered by the unit and
-      store tests, because a future next date has no row to tick.)
+      30 April. The unit and store tests cover the table's 2027
+      rows, because a future next date has no row to tick.)
 
 ## Outcome
 
@@ -98,24 +98,24 @@ Month-end rules landed (ADR 0042).
 - `monthEndRule` in `app/src/lib/recurrence.ts` makes the rule from the
   bare rule and the due day. Capture, the editor save, the tick and the
   reader call it. A bare `FREQ=MONTHLY` note due after the 28th reads
-  as the month-end rule, and the app writes the explicit rule at the
+  as the month-end rule. The app writes the explicit rule at the
   next tick or editor save. It never rewrites a note on load.
-- Tests came first and failed before the fix: unit tests for the rule
-  and the tick chain, capture and editor tests, store tests that
-  capture a line and tick it through the short months, and a
-  Playwright spec. The 29 January 2028 case passed before the fix,
+- Tests came first and failed before the fix. The set held unit tests
+  for the rule and the tick chain, plus capture and editor tests. It
+  also held store tests that capture a line and tick it through the
+  short months, and a Playwright spec. The 29 January 2028 case passed before the fix,
   because 2028 is a leap year. It stays as a guard.
 - `npm run vault:check` reports 0 findings for the four new rule forms.
 
 Findings from earlier reviews, assigned to this ticket:
 
 1. The "keeps the recurring sample valid after a no-op edit" test now
-   asserts `FREQ=DAILY` on the sample and on the row. It fails when
+   asserts `FREQ=DAILY`. It checks both the sample and the row. It fails when
    the sample goes back to `RRULE:FREQ=DAILY`.
 2. A `SuccessorKeptError` now schedules the kept note's alarm. The
    mutation spec has an `errorAlarms` hook for it.
 3. A Retry that runs behind a tap that fails left the row open while
-   the note was done. `settle` now gets a `last` flag. When no other
+   the note was complete. `settle` now gets a `last` flag. When no other
    vault write is pending, the toggle lands the note's state on the
    row. A store test covers it.
 4. The 0052 sentence now says the Playwright test covers only the

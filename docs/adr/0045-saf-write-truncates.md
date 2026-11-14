@@ -10,7 +10,7 @@ The SAF adapter wrote notes with the legacy `writeAsStringAsync` from
 `contentResolver.openOutputStream(uri, "w")`. On Android 10 and later
 the external storage provider opens "w" without truncating. A shorter
 write keeps the old bytes past its end. An untick left
-`leted: 2026-11-08` and a second `---` at the end of the note, and the
+`leted: 2026-11-08` and a second `---` at the end of the note. The
 app read that tail as the body (ticket 0076).
 
 The new `File.write()` has the same fault. `SAFDocumentFile` opens its
@@ -31,7 +31,7 @@ the note a new uri, and a create can get a " (1)" name.
 ## Consequences
 
 The fix uses a public SDK call and no native change. Tests cannot see
-native truncation, so the fake provider now keeps the old tail on mode
+native truncation. The fake provider now keeps the old tail on mode
 "w", as the phone does. A contract case fails if the SAF adapter goes
 back to "w".
 

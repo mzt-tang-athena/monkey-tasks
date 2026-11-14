@@ -16,8 +16,8 @@ jump horizontally when the page commits.
 
 The cause is the wrapper. The live grip sits inside `styles.gripSlot`,
 which is 72 wide and `alignSelf: center`. `SplitStill` puts
-`styles.grip` straight into `styles.divider`, and the grip is
-absolutely positioned at `left: 0`, so it sits at the left edge.
+`styles.grip` straight into `styles.divider`, and the grip uses
+absolute positioning at `left: 0`, so it sits at the left edge.
 
 Fix it by rendering the still grip inside the same `gripSlot` wrapper.
 Keep the 44pt target and do not change the live split.
@@ -36,9 +36,9 @@ Keep the 44pt target and do not change the live split.
 
 Fixed on 2026-11-11 on `fix/split-grip-center`. Pull request #112.
 
-`SplitStill` rendered the grip outside `gripSlot`. The grip is
-absolutely positioned at `left: 0`, so the bar sat at the divider's
-left edge while the live split centred it. The preview and the landed
+`SplitStill` rendered the grip outside `gripSlot`. The grip uses
+absolute positioning at `left: 0`, so the bar sat at the divider's
+left edge. The live split centred it. The preview and the landed
 page jumped 144 px horizontally at the commit.
 
 The still grip now sits in the same 72 wide `gripSlot` wrapper. The

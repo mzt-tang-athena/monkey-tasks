@@ -17,19 +17,19 @@ refresh. The same happens when the editor renames a note onto an
 existing name.
 
 The app cannot choose the provider's suffix, and a suffix is the
-provider's and Obsidian's own convention. It is a fine file name. The
-problem is the display, not the file.
+provider's and Obsidian's own convention. The suffixed name works fine
+as a file name. Only the display has a problem.
 
-After a create, read the name the file really got. When it differs
+After a create, read the name the file ended up with. When it differs
 from the requested name, write `title: <requested name>` into the
 note. The display already prefers `title`, so the row keeps its name
 before and after a refresh. Do the same for an editor rename.
 
 A note the user makes in Obsidian (`draw (1).md`) has no title and
 keeps displaying its file name. The app never strips a suffix from a
-name it did not create, because `(2)` can be part of a real name.
+name it didn't create, because `(2)` can be part of a real name.
 
-Writing a title from free text makes the emitter's quoting matter: a
+Writing a title from free text makes the emitter's quoting matter. A
 name with a colon or a leading `#` must stay valid YAML. Extend
 `serializeValue` to quote any string a YAML parser would misread.
 
@@ -53,8 +53,8 @@ Out of scope: UUIDs and inline checklists. ADR 0028 records why.
 
 The app now reads the name the provider gave the file. When it differs
 from the requested name, `createNote` writes the typed name as
-`title`, and the row takes the file name, text and data the file
-really has. The capture and the editor rename both go through it, so
+`title`. The row takes the real file name, text and data of the
+file. The capture and the editor rename both go through it, so
 the suffix never reaches the screen.
 
 `serializeValue` quotes a value YAML would read as something else: a
