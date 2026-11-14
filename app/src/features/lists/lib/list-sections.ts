@@ -18,6 +18,16 @@ export type ListsSection = {
 export const completedTitle = "Completed";
 
 /**
+ * The line an empty page shows. Main is the unfiled bucket, so its
+ * line says what it holds and points at the list tabs.
+ */
+export function emptyListLabel(tab: string): string {
+  return tab === "Main"
+    ? "No unfiled tasks. Main holds only tasks with no list; filed tasks show on their list tab."
+    : "Nothing on this list yet.";
+}
+
+/**
  * The screen's groups: the open ones in due order, then one quiet
  * Completed group when it has rows. Each open group's title names it
  * for the whole session ("Today", "Fri, 30 Oct"), so the title is

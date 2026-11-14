@@ -114,23 +114,30 @@ describe("selectTabTasks", () => {
     task("Second focus", { list: "[[Focus]]" }),
   ];
 
-  it("shows only Focus list tasks on the Focus tab", () => {
+  it("shows an unfiled task on Main only", () => {
+    expect(names(selectTabTasks(tasks, "Main", NOW))).toEqual(["Call bank"]);
+  });
+
+  it("shows a listed task on its tab and not on Main", () => {
     expect(names(selectTabTasks(tasks, "Focus", NOW))).toEqual([
       "Plan week",
       "Second focus",
     ]);
+    expect(names(selectTabTasks(tasks, "Main", NOW))).not.toContain("Plan week");
   });
 
-  it("shows every task on Main, ADR 0015", () => {
-    // Main is the catch-all in this ticket, so Focus and Work tasks
-    // show here too, once each.
-    expect(names(selectTabTasks(tasks, "Main", NOW))).toEqual([
-      "Plan week",
-      "Buy milk",
-      "Call bank",
-      "Errand",
-      "Deep work",
-      "Second focus",
+  it("returns a task to Main when its list is cleared", () => {
+    const listed = task("Water plants", { list: "[[Home]]" });
+
+    expect(names(selectTabTasks([listed], "Home", NOW))).toEqual([
+      "Water plants",
+    ]);
+    expect(names(selectTabTasks([listed], "Main", NOW))).toEqual([]);
+
+    listed.data!.list = null;
+
+    expect(names(selectTabTasks([listed], "Main", NOW))).toEqual([
+      "Water plants",
     ]);
   });
 
@@ -165,15 +172,6 @@ describe("selectTabTasks", () => {
     ]);
     expect(isHiddenOccurrence(spawn, NOW)).toBe(true);
     expect(isHiddenOccurrence(overdue, NOW)).toBe(false);
-  });
-
-  it("does not drop a list tab's tasks from Main", () => {
-    const focus = selectTabTasks(tasks, "Focus", NOW);
-    const mainUris = new Set(
-      selectTabTasks(tasks, "Main", NOW).map((item) => item.uri),
-    );
-
-    expect(focus.every((item) => mainUris.has(item.uri))).toBe(true);
   });
 });
 

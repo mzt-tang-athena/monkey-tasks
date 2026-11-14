@@ -22,7 +22,6 @@ const inputs: Input[] = ["mouse", "touch"];
 
 const captured = "Send invoice";
 const apples = "Groceries: milk, eggs, oats";
-const plan = "Plan weekend hike";
 
 async function openMain(page: Page) {
   await page.goto("/");
@@ -353,10 +352,10 @@ test.describe("the tick hold", () => {
       );
       const loop = () => {
         const second = document.querySelector(
-          '[data-testid="task-row:Plan weekend hike"]',
+          '[data-testid="task-row:Supplements"]',
         );
         const third = document.querySelector(
-          '[data-testid="task-row:Supplements"]',
+          '[data-testid="task-row:Dentist appointment"]',
         );
         const below = header?.getBoundingClientRect().top ?? 0;
         if (
@@ -380,7 +379,7 @@ test.describe("the tick hold", () => {
     await pauseClock(page);
     await tickButton(page, apples).click();
     await page.clock.runFor(100);
-    await tickButton(page, plan).click();
+    await tickButton(page, supplements).click();
     await page.clock.runFor(350);
     await page.clock.resume();
 
