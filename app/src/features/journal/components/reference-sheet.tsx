@@ -2,10 +2,12 @@ import * as React from "react";
 import {
   StyleSheet,
   Text,
+  View,
   useWindowDimensions,
 } from "react-native";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { Banner } from "@/components/ui/banner";
+import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/list-states";
 import { Sheet } from "@/components/ui/sheet";
 import { useProgress } from "@/lib/motion/progress";
@@ -62,7 +64,16 @@ export function ReferenceSheet({
       label={shown == null ? "Reference" : `Reference: ${shown}`}
       closeLabel="close reference"
     >
-      <Text style={styles.title}>{shown ?? ""}</Text>
+      <View style={styles.head}>
+        <Text style={styles.title}>{shown ?? ""}</Text>
+        <Button
+          label="Close"
+          variant="text"
+          tone="muted"
+          onPress={onClose}
+          accessibilityLabel="close reference"
+        />
+      </View>
       {query.isPending ? (
         <LoadingState label="Reading the reference" />
       ) : query.isError ? (
@@ -97,6 +108,14 @@ const makeStyles = (colors: Palette) => ({
       ...type.control,
       fontWeight: "700",
       color: colors.ink,
+      flexShrink: 1,
+    },
+    head: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.s,
+      minHeight: 44,
     },
     content: {
       gap: spacing.s,
