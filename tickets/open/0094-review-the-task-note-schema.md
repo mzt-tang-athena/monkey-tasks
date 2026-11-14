@@ -10,7 +10,7 @@ depends: []
 
 ## Spec
 
-The task note carries ten fields. Users underuse some of them. Some have a
+The task note carries ten fields. Some see little use. Some have a
 shape that will not serve the dashboard the operator wants. This is a
 review. No app code ships from it.
 
@@ -112,7 +112,7 @@ exists.
 - [x] The parser still reads every old shape, with a fixture for each.
       A child ticket adds a fixture for every new shape.
 - [x] Each accepted change is a child ticket with its own migration.
-- [ ] The team decides the three discussion tickets, or drops them.
+- [ ] The three discussion tickets end decided or dropped.
 - [x] No bulk rewrite of the vault.
 
 ## Outcome

@@ -276,8 +276,8 @@ The amendment above left every press under a pan on gesture handler's
 `Pressable`. That press fires from pointer up, and its web build first
 checks the press against the view's layout report. Before that report
 the box is 0 by 0, and a tap at the middle of the target fails
-`isTouchWithinInset`. A user can tap a row in the frame where it mounts
-after a drop. The tap does nothing.
+`isTouchWithinInset`. A row that mounts after a drop still takes a tap
+in that frame. The tap does nothing.
 
 The same press binds to the node that took the pointer down. A view
 that mounts or gets replaced under the finger loses it. The lists screen

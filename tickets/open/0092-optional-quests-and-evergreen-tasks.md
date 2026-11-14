@@ -38,8 +38,8 @@ available rather than owed.
 
 Questions the discovery must answer:
 
-1. Data. Is a quest a task note with a flag, a new note kind
-   such as `kind: "[[events]]"`? Or a note in a new folder? Does it
+1. Data. Is an optional quest a task note with a flag? Or a new
+   note kind such as `kind: "[[events]]"`? Or a note in a new folder? Does it
    carry `due`, `recurrence`, an area, a cost and a duration, or only
    some of those?
 2. Evergreen. How does it differ from a task with no due date? Does a

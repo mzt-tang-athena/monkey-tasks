@@ -28,8 +28,8 @@ travels. The current cell never remounts, so the list keeps its scroll
 and its drag machinery.
 
 The neighbour page is a static preview. It shows the same cards and
-the same look. It takes no touches and keeps no state, because the user
-only ever sees it while moving.
+the same look. It takes no touches and keeps no state, because it only
+ever shows while moving.
 
 The controller follows the finger from the first horizontal travel and
 reports whether a release can commit. A release past the threshold

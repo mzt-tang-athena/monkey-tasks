@@ -91,7 +91,7 @@ The app PR is 130, and it waits for the operator to merge.
 Merged as `20ae213`. The verifier passed seven checks. It ran 825 app
 tests plus 89 contracts tests. It confirmed the rewritten acceptance is
 honest. A grep found no reader that does date math on `completed`, so
-no change covers a gap. It also read every changed test.
+nothing built here went unreported. It also read every changed test.
 Four e2e specs tightened a date match to a datetime prefix. No
 assertion went missing.
 

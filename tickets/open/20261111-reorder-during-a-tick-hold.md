@@ -33,7 +33,7 @@ The fix direction: make the drop conditional on the snapshot still
 matching the data. Either cancel the drag when its group's data changes,
 or rebase the snapshot by row key. A rebase then drops only when every
 key still exists and the relative order stays the same. A cancel is the
-smaller, safe change. A rebase is better if the team can prove it.
+smaller, safe change. A rebase is better when proof exists.
 
 ## Acceptance
 

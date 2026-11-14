@@ -33,9 +33,9 @@ Paths and line numbers cite commit `b2c0b10`. Tickets 0050 and 0055 to
 2. **Touch targets fall under 44 by 44.** Grow the pressable box, and
    keep the visible mark the same size. The Playwright check measures
    layout boxes, and a layout box does not include `hitSlop`. A
-   target must thus reach 44 by layout. The month grid might not reach 44 at
-   360pt wide without starving the list pane on a 640pt screen. If so,
-   record the exception in an ADR.
+   target must thus reach 44 by layout. The month grid cannot reach 44 at
+   360pt wide without starving the list pane on a 640pt screen. If it
+   cannot, record the exception in an ADR.
 
    | Control | Size now | Code |
    |---|---|---|

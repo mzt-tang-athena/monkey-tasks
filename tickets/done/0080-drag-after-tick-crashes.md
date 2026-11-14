@@ -117,8 +117,9 @@ of `Supplements` gave `order: 1` on `Supplements` and `order: 2` on
 values come from a byte for byte read-back of the device vault.
 
 One residual stays unfixed here. If the tick's hold ends between
-pick-up and drop, the data indexes describe the pre-drop group. The
-screen can then apply a no-op. That staleness predates this ticket and
+pick-up and drop, the data indexes come from the drop writes.
+They still describe the pre-drop group. The screen can then apply a
+no-op. That staleness predates this ticket and
 needs its own.
 
 Web gates: `tsc` clean, `eslint` clean, `vitest` 81 files and 727 tests
