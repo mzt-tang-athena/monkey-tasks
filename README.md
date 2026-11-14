@@ -404,7 +404,7 @@ three child tickets:
 
 The feature queue:
 
-- 0088 the journal tab, with 0089 and 0090
+- 0088 the journal tab, built with 0089 and 0090 in PR #143
 - 0091 reference notes on a task
 - 0092 optional quests and evergreen tasks, a discovery
 - 0093 the task editor rebuild, starting with a design
@@ -447,8 +447,8 @@ Phases:
    the vocabulary (0002, ADR 0005). Done. The package lives in the
    central contracts repo (0007, ADR 0007).
 4. MVP screens: focus list, upcoming reminders, calendar, task editor,
-   note viewer (0003, children 0009 to 0013). In progress. Lists and
-   Planner exist. The task editor and note viewer do not.
+   note viewer (0003, children 0009 to 0013). In progress. Lists,
+   Planner and Journal exist. The task editor and note viewer do not.
 5. Capture: quick capture with offline natural language dates. It uses
    chrono-node and rrule.js. Unparsed lines go to athena agents later
    (0006). Done.
