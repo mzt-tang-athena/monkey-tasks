@@ -4,7 +4,7 @@ title: Food log in the journal
 created: 2026-11-11
 priority: normal
 assignee: claude-opus-5-5
-pr:
+pr: 143
 depends: [0089]
 ---
 
@@ -53,21 +53,27 @@ missing. The link is the same convention Obsidian uses.
 
 ## Acceptance
 
-- [ ] A food entry sent from the composer appears as
+- [x] A food entry sent from the composer appears as
       `- Ate: ... #food` under the current time, and survives a
       re-read.
-- [ ] The app keeps extra inline tags on a food line byte for byte.
+- [x] The app keeps extra inline tags on a food line byte for byte.
       The parser finds the entry by `#food` instead of the `Ate:`
       prefix.
-- [ ] The Food line lists today's entries and updates after a send.
-- [ ] A `[[reference]]` in a food line opens the reference preview. A
+- [x] The Food line lists today's entries and updates after a send.
+- [x] A `[[reference]]` in a food line opens the reference preview. A
       missing note says so and does not crash.
-- [ ] The Food chip keeps the last choice for the day and does not change
+- [x] The Food chip keeps the last choice for the day and does not change
       the plain composer.
-- [ ] No new folder, no new note type, no nutrition totals.
-- [ ] 44pt targets, named controls, TalkBack reads the entries, axe
+- [x] No new folder, no new note type, no nutrition totals.
+- [x] 44pt targets, named controls, TalkBack reads the entries, axe
       clean. e2e covers a food send and the preview.
 
 ## Outcome
 
-(filled in before moving to done/)
+Shipped in #143. A food entry is `- Ate: ... #food` inside a normal
+block. The parser finds it by the tag, not by the prefix, and keeps
+other tags byte for byte. The composer has a Food chip, and a quiet band
+above the bottom bar shows the count and the labels. A `[[name]]` opens
+a read-only preview of `References/<name>.md`.
+
+The marker stays provisional until the operator uses it for a while.
