@@ -61,3 +61,61 @@ We rejected a frontmatter key, because every append would rewrite the
 frontmatter and break append only. We rejected a bare `Ate: ` prefix with
 no tag, because Obsidian search and Bases read tags more reliably than
 bullet text.
+
+## Amendment, 2026-11-14: the first build
+
+The app has a Journal tab now. We built the format above, with these
+changes and details.
+
+Creation happens on the first send, not when the tab opens. An empty note
+made on open can race Obsidian creating the same daily note through sync.
+The app's rule is that a read never writes. The first send makes
+`Journal/` and `Journal/Daily/` when they are missing.
+
+One send writes one block: a zero padded `HH:MM` line, then one `- `
+bullet per non-empty typed line. A retry writes the block it built the
+first time, at that minute. Only a retry skips a block that already ends
+the note, so a lost response cannot double an entry. A first send always
+appends, so two equal entries in the same minute both land.
+
+The page is a ruled sheet. One rule is 28 points, and every vertical value
+on the page is a multiple of it, so wrapped text lands on the rules. The
+time sits in a rail on the left, on the first line of its block. One
+hairline in `accentSoft` marks the notebook margin. The date is the serif
+display face, above the rules.
+
+The composer is a sheet, like task capture. It rides the keyboard, and the
+bottom bar slides away on the same clock. Send closes the sheet and writes
+behind it. A sent block rises into place after the sheet leaves, so the
+rise is seen. Reduced motion keeps no travel and no wait.
+
+A food bullet shows `Ate` in the accent color and hides the `#food`
+marker. Other tags stay quiet. A quiet Food band above the bottom bar
+shows the count and the labels, newest last. It always draws, so later
+stats cause no layout jump.
+
+The note text is the single source of truth. The query cache holds it, and
+`lib/journal/format.ts` derives blocks and food from it. The append is
+optimistic with `planAppend`, the same function the file write uses. The
+write shares `VAULT_SCOPE` with the task writes, so the vault takes one
+write at a time. The journal reads no task state and has its own store.
+
+A `[[name]]` link opens a read-only sheet with `References/<name>.md`. A
+missing note says so and changes nothing.
+
+The Journal dock answers no capture request. The command pane's "Add task"
+means a task, so it stays inert on this tab.
+
+v1 does not edit or delete an entry. It does not count calories. The food
+marker stays provisional.
+
+## Amendment, 2026-11-14: consequences of the first build
+
+New notes still look plainer than notes that Obsidian creates. The page
+opens at its newest line, so a long day opens below its date. The app
+cannot fix a typo in place, because it only appends. The tab fits three
+destinations at 360 points; ticket 0095 owns the fourth.
+
+The Food band shows labels, not portions. A dashboard that reads the tags
+can arrive before the app shows any number from them.
+
