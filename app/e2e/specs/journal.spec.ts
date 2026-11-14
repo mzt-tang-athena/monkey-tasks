@@ -1,7 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "../fixtures";
 import type { Page } from "@playwright/test";
-import { noteText, putNote, returnToTab } from "../vault";
+import { failNextWrite, noteText, putNote, returnToTab } from "../vault";
 
 /**
  * The Journal tab on the web build: today's note, the composer, the
@@ -105,7 +105,7 @@ test("the first send creates the note on an empty vault", async ({ page }) => {
 
 test("a failed write keeps the draft and Retry lands it", async ({ page }) => {
   await openJournal(page);
-  await page.evaluate(() => globalThis.__vault?.failNext("write", "2026-10-26.md"));
+  await failNextWrite(page, "2026-10-26.md");
 
   await sendEntry(page, "kept for retry");
   await expect(page.getByText(/Couldn't save the entry\./)).toBeVisible();
@@ -123,7 +123,7 @@ test("a failed write keeps the draft and Retry lands it", async ({ page }) => {
 
 test("a failed write leaves its draft in the composer", async ({ page }) => {
   await openJournal(page);
-  await page.evaluate(() => globalThis.__vault?.failNext("write", "2026-10-26.md"));
+  await failNextWrite(page, "2026-10-26.md");
 
   await sendEntry(page, "still in the box");
   await expect(page.getByText(/Couldn't save the entry\./)).toBeVisible();
