@@ -120,10 +120,11 @@ export function selectOpenTasks(tasks: TaskItem[], now: Date): TaskItem[] {
 }
 
 /**
- * Main is the catch-all: every task, whatever list it carries. Any
- * other tab is a list note, so it shows the tasks whose list property
- * carries [[that name]]. Focus is a list note like the rest. See ADR
- * 0015 and its 2026-10-24 amendment.
+ * Main holds the unfiled tasks: those with no list. Any other tab is a
+ * list note, so it shows the tasks whose list property carries
+ * [[that name]]. Focus is a list note like the rest. See ADR
+ * 20261111-one-list-and-tab-order and the 2026-11-11 amendment to ADR
+ * 0015.
  */
 export function selectTabTasks(
   tasks: TaskItem[],
@@ -132,7 +133,7 @@ export function selectTabTasks(
 ): TaskItem[] {
   const shown = tasks.filter((task) => !isHiddenOccurrence(task, now));
   if (tab === "Main") {
-    return shown;
+    return shown.filter((task) => !task.data?.list);
   }
   return inList(shown, tab);
 }

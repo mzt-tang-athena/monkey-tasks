@@ -36,7 +36,7 @@ import { useListSections } from "./hooks/use-list-sections";
 import { useListTabState } from "./hooks/use-list-tabs";
 import { useSortMode } from "./hooks/use-sort-mode";
 import { useTickHold } from "./hooks/use-tick-hold";
-import type { ListsSection } from "./lib/list-sections";
+import { emptyListLabel, type ListsSection } from "./lib/list-sections";
 import { applyTickHold } from "./lib/tick-hold";
 import { ListReorder } from "./lib/list-reorder";
 import { reorderItems } from "./lib/reorder";
@@ -44,7 +44,7 @@ import type { ReorderEvent } from "@/components/motion/reorder";
 
 /**
  * Lists tab: Main first, then one tab per list note, with capture
- * docked above the bottom bar. Main shows every task. The screen
+ * docked above the bottom bar. Main holds the unfiled tasks. The screen
  * composes the hooks and the components. Its rows reorder only
  * through `ListReorder`, and the tick holds come from each row's own
  * animation (ADR 0034, ADR 0046).
@@ -227,7 +227,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                     <>
                       <RepairNotice repairs={repairs} />
                       {status === "ready" && onlyCompleted ? (
-                        <EmptyState label="Nothing on this list yet." />
+                        <EmptyState label={emptyListLabel(tab)} />
                       ) : null}
                     </>
                   }
@@ -240,7 +240,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                         onRetry={() => void reload()}
                       />
                     ) : (
-                      <EmptyState label="Nothing on this list yet." />
+                      <EmptyState label={emptyListLabel(tab)} />
                     )
                   }
                   stickySectionHeadersEnabled={false}

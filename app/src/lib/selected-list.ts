@@ -14,7 +14,7 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Pick a list tab. Main is the catch-all. */
+/** Pick a list tab. Main is the unfiled bucket. */
 export function selectList(name: string): void {
   if (selected === name) {
     return;

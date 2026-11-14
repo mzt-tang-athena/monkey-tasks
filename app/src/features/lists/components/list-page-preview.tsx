@@ -7,7 +7,7 @@ import { taskFaceHeight } from "@/components/task-row-face";
 import type { SortMode } from "@/lib/settings";
 import { measure, pageGutter, spacing } from "@/theme/tokens";
 import { useListSections } from "../hooks/use-list-sections";
-import type { ListsSection } from "../lib/list-sections";
+import { emptyListLabel, type ListsSection } from "../lib/list-sections";
 import { ListSectionHeader } from "./list-section-header";
 import { RepairNotice } from "./list-notices";
 
@@ -80,9 +80,9 @@ export function ListPagePreview({
     <View testID="list-preview" style={styles.root} pointerEvents="none">
       <View style={styles.content}>
         <RepairNotice repairs={repairs} />
-        {onlyCompleted ? <EmptyState label="Nothing on this list yet." /> : null}
+        {onlyCompleted ? <EmptyState label={emptyListLabel(tab)} /> : null}
         {sections.length === 0 ? (
-          <EmptyState label="Nothing on this list yet." />
+          <EmptyState label={emptyListLabel(tab)} />
         ) : null}
         {visible.map(({ section, data }) => (
           <View key={section.key}>
