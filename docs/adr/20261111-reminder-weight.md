@@ -78,8 +78,8 @@ a loud phone.
 - **Weight on each reminder.** More control, and a note could hold a need and
   a cue. It loses on readability and on one intent per task.
 - **Default weight on the list, with a per-task override.** Less typing for
-  routine lists. It puts the answer behind a second note, and a single task
-  no longer reads on its own.
+  routine lists. It puts the answer behind a second note, and you can no longer read a
+  single task on its own.
 - **A low, medium, high priority field.** A rank for ordering work. It says
   nothing about the alert, and the operator rejected it.
 - **Notification sound only, no channels.** Simpler code. It cannot keep the

@@ -25,10 +25,15 @@ doc without paying off old debt first. Change wording only.
 - [x] Operator quotes and literal test names stay verbatim.
 
 ## Outcome
-Delegates reworded 161 docs: 52 ADRs, 100 tickets, six verify-skill
-files, `app/AGENTS.md`, the epic handover and `tickets/README.md`. A script
-compared code spans, numbers, links, and headings against `origin/main`.
-Reviewers read every diff and restored more than 50 shifted meanings.
+Delegates reworded 165 docs: 53 ADRs, 104 tickets, six verify-skill
+files, `app/AGENTS.md` and the epic handover. A script compared code
+spans, numbers, links, and headings against `origin/main`. Reviewers read
+every diff and restored more than 60 shifted meanings.
+
+Six docs from PRs 139 and 140 landed after this work began. Their
+authors wrote them before the glob fix, so they carry the same
+alerts. This change cleans them too. Without that, main would go red
+on merge.
 
 Three spots carry `<!-- vale off -->`. Two wrap operator quotes, in
 0092 and 0093. One wraps a test name in 0052 that matches the code.

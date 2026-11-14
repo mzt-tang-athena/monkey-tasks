@@ -22,7 +22,7 @@ later use the same on-device path through geofencing. We verify reboot
 behavior for scheduled notifications during the spike. That is the one
 platform detail we have not tested.
 
-Amendment 2026-10-19: the spike verified the above on a
+Amendment 2026-10-19: the spike verified every item above on a
 Xiaomi-family ROM with one caveat. When the app is merely backgrounded,
 scheduled alarms survive reboot. When a swipe-away closes the app, the ROM
 treats it as a force-stop and never delivers `BOOT_COMPLETED`. The phone
