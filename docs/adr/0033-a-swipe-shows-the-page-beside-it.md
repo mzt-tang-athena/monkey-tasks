@@ -145,3 +145,13 @@ same frame as the content, so a landing moves nothing vertically.
 A list tab is a different list. Its inner list still starts at the
 top, as its preview draws it. A tab tap does not restore the previous
 tab's scroll. Per-tab memory is a separate change.
+
+## Amendment, 2026-11-14: the week body pages too
+
+Week mode joined the pager. The week body slides, and its neighbour is
+a static twin of the week. The chrome, the period strip and the mode
+switch, still sits still.
+
+Earlier text gives the month grid as the page that sets its own
+height. The week body does the same, and the height follows the chosen
+layout. ADR 20261114 decides that layout.

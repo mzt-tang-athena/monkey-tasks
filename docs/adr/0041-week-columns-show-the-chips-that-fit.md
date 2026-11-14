@@ -35,3 +35,14 @@ name sits in a chip with room for two. The week looks more even, and it
 shows fewer tasks than before on a column with short names. If the
 fixed height proves too coarse, a later ticket can measure the chips.
 `weekChipCount` is the one place to change.
+
+## Amendment, 2026-11-14: the week fits one screen
+
+Week mode draws day boxes now, not scrolling columns. A box still shows
+the chips that fit, and the count still comes from arithmetic on one
+fixed chip height. Spread fits two chips and a "+N" line. Rows fits two
+chips and a "+N" count. `weekChipCount` stays the one place to change.
+
+The old text that gives 4 chips and 3 chips plus the line described a
+144pt column. That width no longer exists. ADR 20261114 decides the
+layout.
