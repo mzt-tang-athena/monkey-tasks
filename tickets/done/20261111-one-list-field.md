@@ -3,7 +3,7 @@ title: One list field on the task note
 created: 2026-11-11
 priority: high
 assignee: omp
-pr:
+pr: 142
 depends: []
 ---
 
@@ -73,7 +73,7 @@ This ticket writes no note in bulk.
       `list` and an empty string.
 - [x] The sample notes use `list`, and the generated `index.ts` is
       current.
-- [ ] `npx tsc --noEmit`, `npx vitest run`, `npx eslint` and the e2e
+- [x] `npx tsc --noEmit`, `npx vitest run`, `npx eslint` and the e2e
       suite pass.
 
 ## Outcome
@@ -92,5 +92,6 @@ Shipped on 2026-11-14.
   `vault:check` reports 27 notes with 0 findings.
 - Local e2e: 458 passed and 26 skipped. The only failures are gallery
   and theme axe scans that hit their 30 second timeout on this machine,
-  in palettes that vary between runs. Recent CI runs pass the same
-  suite, so CI on this PR is the final check.
+  in palettes that vary between runs.
+- CI e2e passed after one rerun. The first run hit a planner day-swipe
+  frame flake; the rerun passed the same suite with 465 tests.
