@@ -22,15 +22,15 @@ shape of field.
 ## Decision
 
 We add one optional frontmatter property, `alert weight`, with two values,
-`harsh` and `quiet`. It lives on the task, and it changes only how the alert
-is delivered.
+`harsh` and `quiet`. It lives on the task, and it changes only the delivery
+of the alert.
 
 - Absent means `harsh`, because an alert you set is a promise. A missing or
   misspelled value must never make an alert silent.
 - The editor writes `alert weight: quiet` for a cue and removes the line for a
   need, so only cues carry the property.
-- A harsh alert uses its own channel on the alarm audio stream, bypasses Do
-  Not Disturb, cannot be swiped away while ringing, and re-rings at 1, 5 and
+- A harsh alert uses its own channel on the alarm audio stream and bypasses
+  Do Not Disturb. It resists a swipe while it rings and re-rings at 1, 5 and
   15 minutes. The alarm stream is the one a clock alarm uses. Do Not Disturb
   is the phone setting that silences alerts on purpose.
 - A quiet alert uses a second channel with no sound and no vibration, repeats
@@ -53,24 +53,25 @@ The costs we accept:
 
 - One task has one intent. A note that holds both a need and a cue has to be
   two tasks.
-- A harsh alert rings with the ringer on silent. That is the point, and it is
-  also the one setting that can surprise a bystander.
+- A harsh alert rings with the ringer on silent. That is the point, and also
+  the one setting that can surprise a bystander.
 - The Do Not Disturb bypass needs one grant in system settings. The alert
   still rings, quieter, when the operator refuses.
 - Android freezes a channel's settings at creation. The build adds
   `reminders-harsh` and `reminders-quiet` as new ids and deletes the old
-  `reminders` channel. A channel id can never be repurposed later.
+  `reminders` channel. A channel id can never serve a second purpose later.
 - The weight is invisible in the task list. The operator chose delivery only,
   so a need does not look different in a row. Both kinds share one order and
   one look.
 - iOS is out of scope. It has no channel, and a need there needs its own
   decision.
-- Ticking a task must cancel its remaining harsh repeats, so the alert state
-  now depends on the tick path as well as the schedule.
+- Ticking a task must cancel its remaining harsh repeats. That now makes the
+  alert state depend on the tick path as well as the schedule.
 
 Evidence for the channel calls sits in the ticket. The device check is still
-to run. It covers the silent ringer, the Do Not Disturb grant and refusal, the
-three repeats, the cancel on tick, and a quiet alert on a loud phone.
+to run. It covers the silent ringer, the Do Not Disturb grant and refusal,
+and the three repeats. It also covers the cancel on tick and a quiet alert on
+a loud phone.
 
 ## Alternatives
 
@@ -78,7 +79,7 @@ three repeats, the cancel on tick, and a quiet alert on a loud phone.
   a cue. It loses on readability and on one intent per task.
 - **Default weight on the list, with a per-task override.** Less typing for
   routine lists. It puts the answer behind a second note, and a single task
-  can no longer be read alone.
+  no longer reads on its own.
 - **A low, medium, high priority field.** A rank for ordering work. It says
   nothing about the alert, and the operator rejected it.
 - **Notification sound only, no channels.** Simpler code. It cannot keep the

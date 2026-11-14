@@ -26,8 +26,8 @@ alert weight: quiet
 
 Where the code lives:
 
-- `contracts/` is a git submodule, and it is not checked out in a fresh
-  worktree. Run `git submodule update --init contracts` first.
+- `contracts/` is a git submodule, and a fresh worktree lacks it.
+  Run `git submodule update --init contracts` first.
 - The package is `contracts/packages/schemas`, and the app links it as
   `file:../contracts/packages/schemas`.
 - The type is `TaskFrontmatter` in
@@ -39,7 +39,7 @@ Rules:
 
 1. Accept the spaced key. Confirm the Zod object parses `alert weight` and not
    only its camel case twin.
-2. A missing key parses as `harsh`, so no note migration is needed.
+2. A missing key parses as `harsh`, so the notes need no migration.
 3. An unknown value, a typo or a number falls back to `harsh` and returns a
    repair error in the note's `errors` list. A typo must never make an alert
    silent.
@@ -59,7 +59,7 @@ submodule pointer here in a second commit on this branch.
 - [ ] A fixture proves absent reads as `harsh`.
 - [ ] A fixture proves `quiet` survives a parse and a write round trip.
 - [ ] An unknown value reads as `harsh` and raises a repair error.
-- [ ] The contracts PR is merged and the submodule pointer is bumped.
+- [ ] Merge the contracts PR and bump the submodule pointer.
 - [ ] `npx tsc --noEmit` and lint pass in both repos.
 
 ## Outcome

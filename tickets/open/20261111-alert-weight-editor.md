@@ -18,8 +18,8 @@ The editor goes through `app/src/features/task-editor/` and writes through
 
 Build:
 
-1. A two state control, `Harsh` and `Quiet`, with one sentence under it that
-   says what changes: `Harsh rings on the alarm stream. Quiet is silent.`
+1. A two state control, `Harsh` and `Quiet`. One sentence under it says what
+   changes: `Harsh rings on the alarm stream. Quiet is silent.`
    Keep the words on screen the same as the vault values.
 2. The control starts at the note's value, and absent shows `Harsh`.
 3. On save, write `alert weight: quiet` for a cue and remove the key for a
@@ -28,7 +28,7 @@ Build:
 4. Add `alertWeight` to `TaskEdit` and the dirty check, so the save button
    reacts to a change of weight. Keep the existing edit path and the single
    write per save.
-5. If ticket 0093 has rebuilt the editor by the time this is claimed, add the
+5. If ticket 0093 has rebuilt the editor before this ticket starts, add the
    control to the rebuilt form instead. Never keep two editors.
 6. No marker on the row, no filter, no sort. The weight is delivery only.
 
