@@ -30,7 +30,7 @@ files, `app/AGENTS.md` and the epic handover. A script compared code
 spans, numbers, links, and headings against `origin/main`. Reviewers read
 every diff and restored more than 60 shifted meanings.
 
-Ten docs from PRs 139, 140 and 141 landed after this work began.
+Eight docs from PRs 139 and 141 landed after this work began.
 Their authors wrote them before the glob fix, so they carry the same
 alerts. This change cleans them too. Without that, main would go red
 on merge.
