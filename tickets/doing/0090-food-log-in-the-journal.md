@@ -3,7 +3,7 @@ id: 0090
 title: Food log in the journal
 created: 2026-11-11
 priority: normal
-assignee:
+assignee: claude-opus-5-5
 pr:
 depends: [0089]
 ---
