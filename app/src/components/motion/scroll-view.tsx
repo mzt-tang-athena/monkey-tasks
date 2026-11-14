@@ -8,6 +8,8 @@ import { useRegistry } from "./internal/session";
 /** What a caller needs from the scroller: the imperative scroll calls. */
 export type MotionScrollRef = {
   scrollTo: (options: { x?: number; y?: number; animated?: boolean }) => void;
+  /** Scroll to the end of the content, as a journal page sits. */
+  scrollToEnd: (options?: { animated?: boolean }) => void;
 };
 
 type MotionScrollProps = Omit<ScrollViewProps, "ref"> & {
