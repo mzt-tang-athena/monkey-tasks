@@ -63,7 +63,7 @@ Decisions to settle:
    them out of the app.
 10. The app sees `Tasks/` only, 8 notes of a much larger vault. The
     journal and references add two folders. A dashboard needs a new read
-    model, and not a task field.
+    model rather than a task field.
 
 Deliverable: an ADR with the accepted changes and a migration note.
 Split the code into child tickets. Never rewrite the vault in bulk.
@@ -80,7 +80,7 @@ The operator answered on 2026-11-11.
 - `kind`. Accept both shapes in the parser, and always write the link
   form from the app. No new wikilink kinds.
 - `title`. Keep it and document why it exists.
-- Deeds. Keep them. They should integrate with tasks, and perhaps merge
+- Deeds. Keep them. They should integrate with tasks, and perhaps dissolve
   into them. Spike `20261111-deeds-into-tasks`.
 - Priority. No vague low, medium or high. The need versus dismissible
   idea is not that field. The ticket `20261111-reminder-weight`
@@ -112,7 +112,7 @@ exists.
 - [x] The parser still reads every old shape, with a fixture for each.
       A child ticket adds a fixture for every new shape.
 - [x] Each accepted change is a child ticket with its own migration.
-- [ ] The three discussion tickets end decided or dropped.
+- [ ] Decide the three discussion tickets, or drop them.
 - [x] No bulk rewrite of the vault.
 
 ## Outcome

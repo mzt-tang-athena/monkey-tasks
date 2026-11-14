@@ -25,13 +25,13 @@ doc without paying off old debt first. Change wording only.
 - [x] Operator quotes and literal test names stay verbatim.
 
 ## Outcome
-Delegates reworded 165 docs: 53 ADRs, 104 tickets, six verify-skill
+Delegates reworded 171 docs: 54 ADRs, 109 tickets, six verify-skill
 files, `app/AGENTS.md` and the epic handover. A script compared code
 spans, numbers, links, and headings against `origin/main`. Reviewers read
 every diff and restored more than 60 shifted meanings.
 
-Six docs from PRs 139 and 140 landed after this work began. Their
-authors wrote them before the glob fix, so they carry the same
+Ten docs from PRs 139, 140 and 141 landed after this work began.
+Their authors wrote them before the glob fix, so they carry the same
 alerts. This change cleans them too. Without that, main would go red
 on merge.
 
