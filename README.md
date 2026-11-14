@@ -376,7 +376,11 @@ The feature queue:
 - 0095 a Notes tab from Inbox, starting with a design
 - 20261111 reminder weight, a discussion. Children: the schema, the alerts,
   the editor, and the device check (20261111-alert-weight-*)
-- 20261111 one list or many, and order, a discussion
+- 20261111 one list and a whole-tab order, decided. The children:
+  - one list field on the task note
+  - Main holds the unfiled tasks
+  - order the whole tab
+  - pick one list in the editor
 - 20261111 fold deeds into tasks, a spike
 
 Open feature tickets:
@@ -386,9 +390,10 @@ Open feature tickets:
 - 0003, 0005 and 0008 carry the larger ideas.
 
 The app has two tabs today, Lists and Planner, and the journal joins
-them in 0088. The Lists tab shows Main and the list notes. Main shows
-every task. Any other tab shows the tasks whose `lists` property
-carries that name (ADR 0015).
+them in 0088. The Lists tab shows Main and the list notes. Main holds
+the tasks with no list. Any other tab shows the tasks whose `list`
+carries that name. My order makes each tab one flat list (ADR 0015 and
+its 2026-11-11 amendment, `20261111-one-list-and-tab-order`).
 
 The vault now serves more than `Tasks/`. The journal appends to
 `Journal/Daily/YYYY-MM-DD.md`, and the reference picker reads

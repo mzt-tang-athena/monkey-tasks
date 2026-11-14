@@ -36,3 +36,17 @@ you added to it, not alphabetically. New notes carry the second in
 hold the date alone, and both compare as text. The app's parser reads every
 scalar as text, so the vault check compares `order` numerically
 instead of flagging the type.
+
+## Amendment, 2026-11-11: the drop renumbers the whole tab
+
+The scope changes. In My order a tab is one flat list. A drop
+renumbers every open row in that tab.
+
+The write rule stands. A drop writes `order` only for the rows whose
+number changed, as an integer, unquoted.
+
+The Due sort keeps its date sections and its own order. `order` does
+not apply there. The rest of the decision stands: no fractions, no
+links, and the same fallback for a task without `order`.
+
+See `20261111-one-list-and-tab-order`.
