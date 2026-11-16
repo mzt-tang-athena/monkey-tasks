@@ -47,7 +47,6 @@ function warnRename(): void {
 const TOAST_MS = 5000;
 
 type Notice = {
-  id: number;
   message: string;
   action?: { label: string; accessibilityLabel: string; run: () => void };
 };
@@ -68,6 +67,11 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
   const insets = useSafeAreaInsets();
 
   const [state, setState] = React.useState<EditorState>(EMPTY_EDITOR);
+  // The state as it stands now. A press handler belongs to an earlier
+  // render, and a write settles long after it, so both read this ref and
+  // write through `commit`. A job starts outside a state updater, which
+  // a strict render calls twice.
+  const held = React.useRef<EditorState>(EMPTY_EDITOR);
   const [notice, setNotice] = React.useState<Notice | null>(null);
   // The write in flight, so a delete or a tick waits for it.
   const inFlight = React.useRef<Promise<void> | null>(null);
@@ -76,8 +80,13 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
   const row = openId == null ? null : (findTask(tasks, openId) ?? null);
   const { mounted, progress } = useSheetClock(session != null);
 
-  const notify = React.useCallback((next: Omit<Notice, "id">) => {
-    setNotice({ ...next, id: Date.now() });
+  const commit = (next: EditorState): void => {
+    held.current = next;
+    setState(next);
+  };
+
+  const notify = React.useCallback((next: Notice) => {
+    setNotice(next);
   }, []);
 
   React.useEffect(() => {
@@ -94,8 +103,8 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
     async (id: string, edit: TaskEdit, expected: string) => {
       const target = findTask(tasks, id);
       if (target == null) {
-        setState((held) =>
-          reduce(held, {
+        commit(
+          reduce(held.current, {
             type: "session",
             id,
             event: { type: "failed", message: "the task is no longer here" },
@@ -115,17 +124,16 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
       }
       try {
         const written = await editTask(target, edit, expected);
-        setState(
-          (held) =>
-            reduce(held, {
-              type: "session",
-              id,
-              event: { type: "written", edit, text: written.text },
-            }).state,
+        commit(
+          reduce(held.current, {
+            type: "session",
+            id,
+            event: { type: "written", edit, text: written.text },
+          }).state,
         );
       } catch (error) {
-        setState((held) =>
-          reduce(held, {
+        commit(
+          reduce(held.current, {
             type: "session",
             id,
             event: {
@@ -141,20 +149,18 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
 
   const apply = React.useCallback(
     (event: EditorEvent) => {
-      setState((held) => {
-        const result = reduce(held, event);
-        if (result.job != null) {
-          const { id, job } = result.job;
-          const run = runWrite(id, job.edit, job.expected);
-          inFlight.current = run;
-          void run.finally(() => {
-            if (inFlight.current === run) {
-              inFlight.current = null;
-            }
-          });
-        }
-        return result.state;
-      });
+      const result = reduce(held.current, event);
+      commit(result.state);
+      if (result.job != null) {
+        const { id, job } = result.job;
+        const run = runWrite(id, job.edit, job.expected);
+        inFlight.current = run;
+        void run.finally(() => {
+          if (inFlight.current === run) {
+            inFlight.current = null;
+          }
+        });
+      }
     },
     [runWrite],
   );
