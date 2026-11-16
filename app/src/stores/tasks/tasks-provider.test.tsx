@@ -1087,6 +1087,8 @@ describe("recurring completion", () => {
       `${TASKS}/Buy stamps.md`,
       `${TASKS}/Water the fern.md`,
     ]);
+    expect(vault.hooks.read("Tasks/Buy stamps.md")).toBeNull();
+    expect(vault.hooks.read("Tasks/Water the fern.md")).toBeNull();
     expect(vault.hooks.read("Tasks/Fix bike light.md")).toBe(REOPENED_TEXT);
     expect(byFile("Fix bike light.md").data?.completed).toBeUndefined();
     const [notice] = store().failures;
