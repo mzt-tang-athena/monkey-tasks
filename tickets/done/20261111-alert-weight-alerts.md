@@ -77,8 +77,9 @@ phone's default alarm sound.
 ## Outcome
 
 Done in #153. An alert now follows its weight. A harsh alert makes
-four rings at 0, 1, 5 and 15 minutes on the alarm channel, and stays in
-the tray until the task is cleared. A quiet alert makes one silent ring.
+four rings at 0, 1, 5 and 15 minutes on the alarm channel. It stays in
+the tray until the operator clears the task. A quiet alert makes one
+silent ring.
 
 The plan is a pure function over the tasks, the time, the cleared
 groups, and the OS schedule. A rebuild compares by ring id, so it
@@ -87,8 +88,9 @@ ring, and it never drops a running group's follow-ups. A cleared group
 lives in `app/src/lib/alerts/acked.ts` and expires after 20 minutes. A
 tap, an open from the alert, and a tick all clear the group.
 
-The unit tests cover the plan, the escalation, the rebuild rules, the
-cleared groups, the tick, the moved reminder, and the prune. The device
-check carries the phone proof: the two channels, the alarm stream with
-the ringer silent, the Do Not Disturb grant and refusal, the sticky
-ring, the three repeats, and a quiet alert on a loud phone.
+The unit tests cover the plan, the escalation, and the rebuild rules.
+They also cover the cleared groups, the tick, the moved reminder, and
+the prune. The device check carries the phone proof. It covers the two
+channels, the alarm stream with the ringer silent, and the Do Not
+Disturb grant and refusal. It also covers the sticky ring, the three
+repeats, and a quiet alert on a loud phone.
