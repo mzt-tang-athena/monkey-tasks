@@ -35,7 +35,7 @@ Cases:
    swipes away, and never repeats.
 8. A note with no `alert weight` rings harsh.
 9. A note with `alert weight: quiet`, edited in Obsidian to `loud`, rings
-   harsh and shows the repair error.
+   harsh, keeps its row, and Needs repair shows the warning.
 10. A timed due and a reminder at the same minute ring once.
 11. The phone's notification settings show the two channels and no stale
     `reminders` channel.

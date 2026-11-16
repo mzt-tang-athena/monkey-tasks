@@ -2,7 +2,7 @@
 title: Alert weight in the schema
 created: 2026-11-11
 priority: high
-assignee:
+assignee: opencode
 pr:
 depends: ["0094-review-the-task-note-schema"]
 ---
@@ -40,14 +40,15 @@ Rules:
 1. Accept the spaced key. Confirm the Zod object parses `alert weight` and not
    only its camel case twin.
 2. A missing key parses as `harsh`, so the notes need no migration.
-3. An unknown value, a typo or a number falls back to `harsh` and returns a
-   repair error in the note's `errors` list. A typo must never make an alert
-   silent.
+3. An unknown value, a typo or a number falls back to `harsh`. The note
+   stays valid, so its row stays and it rings. The contract also returns a
+   warning for it, which Needs repair shows. A typo must never make an
+   alert silent. See the ADR amendment of 2026-11-16.
 4. A note with `alert weight: harsh` parses the same as a note with no key.
 5. Do not add a wikilink or a boolean form.
 
 Fixtures: absent, `harsh`, `quiet`, an unknown value, and a value with the
-wrong case (`Quiet`). The last two read as harsh and raise the repair error.
+wrong case (`Quiet`). The last two read as harsh and raise the warning.
 
 The contracts package is its own repo. Open its PR there, then bump the
 submodule pointer here in a second commit on this branch.
@@ -58,7 +59,8 @@ submodule pointer here in a second commit on this branch.
       `quiet`.
 - [ ] A fixture proves absent reads as `harsh`.
 - [ ] A fixture proves `quiet` survives a parse and a write round trip.
-- [ ] An unknown value reads as `harsh` and raises a repair error.
+- [ ] An unknown value reads as `harsh` and raises a warning. The row stays
+      in its list, and Needs repair lists the warning.
 - [ ] Merge the contracts PR and bump the submodule pointer.
 - [ ] `npx tsc --noEmit` and lint pass in both repos.
 
