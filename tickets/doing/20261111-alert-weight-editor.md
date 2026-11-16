@@ -2,7 +2,7 @@
 title: Alert weight in the editor
 created: 2026-11-11
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: ["20261111-alert-weight-schema"]
 ---
