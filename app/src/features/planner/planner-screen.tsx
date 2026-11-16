@@ -190,6 +190,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
               ) : null}
               {status === "ready" && mode === "week" ? (
                 <WeekPane
+                  layout="spread"
                   tasks={tasks}
                   openTasks={openTasks}
                   day={day}
