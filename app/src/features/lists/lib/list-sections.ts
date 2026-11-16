@@ -28,6 +28,29 @@ export function emptyListLabel(tab: string): string {
 }
 
 /**
+ * Fold the Completed group: its header and count stay, and its rows
+ * leave. Only the view is folded. The tick hold and the reorder read
+ * the groups before this step, so a fold never changes their answer.
+ */
+export function foldCompleted(
+  sections: ListsSection[],
+  open: boolean,
+): ListsSection[] {
+  if (open) {
+    return sections;
+  }
+  let folded = false;
+  const next = sections.map((section) => {
+    if (section.tone !== "faint" || section.data.length === 0) {
+      return section;
+    }
+    folded = true;
+    return { ...section, data: [] };
+  });
+  return folded ? next : sections;
+}
+
+/**
  * The screen's groups: the open ones in due order, then one quiet
  * Completed group when it has rows. Each open group's title names it
  * for the whole session ("Today", "Fri, 30 Oct"), so the title is

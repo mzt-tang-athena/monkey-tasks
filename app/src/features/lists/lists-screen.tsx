@@ -17,7 +17,9 @@ import {
 import { useStableCallback } from "@/hooks/use-stable-callback";
 import { useCommandPane } from "@/hooks/use-command-pane";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
+import { toggleCompleted, useCompletedOpen } from "@/lib/folded-completed";
 import { useStoreMeta } from "@/stores/tasks/task-state";
+import { useClearCompleted } from "@/stores/tasks/mutations/use-clear-completed";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useGrantFolder, useRefreshTasks } from "@/stores/tasks/use-vault-read";
@@ -36,7 +38,7 @@ import { useListSections } from "./hooks/use-list-sections";
 import { useListTabState } from "./hooks/use-list-tabs";
 import { useSortMode } from "./hooks/use-sort-mode";
 import { useTickHold } from "./hooks/use-tick-hold";
-import { emptyListLabel, type ListsSection } from "./lib/list-sections";
+import { emptyListLabel, foldCompleted, type ListsSection } from "./lib/list-sections";
 import { applyTickHold } from "./lib/tick-hold";
 import { ListReorder } from "./lib/list-reorder";
 import { reorderItems } from "./lib/reorder";
@@ -54,6 +56,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const { show: showCommands } = useCommandPane();
   const { rootUri, status, readError } = useStoreMeta();
   const toggleTask = useToggleTask();
+  const clearCompleted = useClearCompleted();
   const reorderSection = useReorderSection();
   const refresh = useRefreshTasks();
   const grant = useGrantFolder();
@@ -64,7 +67,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const tabState = useListTabState();
   const { tab, setTab, index, bounds, onPage } = tabState;
   const { sortMode, setSortMode } = useSortMode();
-  const { shown, repairs, sections, onlyCompleted } = useListSections(
+  const { shown, repairs, sections, onlyCompleted, completed } = useListSections(
     tab,
     sortMode,
   );
@@ -73,6 +76,19 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const held = React.useMemo(
     () => applyTickHold(sections, tickHold.holds, shown),
     [sections, tickHold.holds, shown],
+  );
+  // The fold is a view step: the groups above keep every row, so a
+  // reorder and a tick hold read the whole group.
+  const completedOpen = useCompletedOpen(tab);
+  const folded = React.useMemo(
+    () => foldCompleted(held, completedOpen),
+    [held, completedOpen],
+  );
+  // A folded group still shows its count, so the header reads the
+  // group before the fold.
+  const counts = React.useMemo(
+    () => new Map(held.map((section) => [section.key, section.data.length])),
+    [held],
   );
 
   const moveTask = React.useCallback(
@@ -113,14 +129,19 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   });
 
   const renderSectionHeader = React.useCallback(
-    ({ section }: { section: ListsSection }) => (
-      <ListSectionHeader
-        title={section.title}
-        count={section.data.length}
-        tone={section.tone}
-      />
-    ),
-    [],
+    ({ section }: { section: ListsSection }) => {
+      const disclosure = section.tone === "faint";
+      return (
+        <ListSectionHeader
+          title={section.title}
+          count={counts.get(section.key) ?? section.data.length}
+          tone={section.tone}
+          expanded={disclosure ? completedOpen : undefined}
+          onToggle={disclosure ? () => toggleCompleted(tab) : undefined}
+        />
+      );
+    },
+    [completedOpen, counts, tab],
   );
 
   const renderItem = React.useCallback(
@@ -177,6 +198,8 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
             onSelectTab={setTab}
             sortMode={sortMode}
             onSortMode={setSortMode}
+            completed={completed}
+            onClearCompleted={clearCompleted}
           />
         </PullSurface>
         {/* A failed tick or field write leaves the list usable, so each
@@ -218,7 +241,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                   contentContainerStyle={styles.content}
                   onRefresh={reload}
                   refreshing={refreshing}
-                  sections={held}
+                  sections={folded}
                   keyExtractor={keyExtractor}
                   renderItem={renderItem}
                   renderSectionHeader={renderSectionHeader}

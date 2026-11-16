@@ -9,6 +9,8 @@ import { useCommandPane } from "@/hooks/use-command-pane";
 import type { SortMode } from "@/lib/settings";
 import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
+import type { TaskItem } from "@/types/task";
+import { ClearCompletedSheet } from "./clear-completed-sheet";
 
 const sortOptions: { key: SortMode; label: string; hint: string }[] = [
   { key: "due", label: "Due date", hint: "Soonest first" },
@@ -28,17 +30,28 @@ export function ListsToolbar({
   onSelectTab,
   sortMode,
   onSortMode,
+  completed,
+  onClearCompleted,
 }: {
   tabs: string[];
   tab: string;
   onSelectTab: (tab: string) => void;
   sortMode: SortMode;
   onSortMode: (mode: SortMode) => void;
+  /** The current tab's completed rows: what a clear deletes. */
+  completed: readonly TaskItem[];
+  onClearCompleted: (tasks: readonly TaskItem[]) => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const { show } = useCommandPane();
   // One menu at a time: opening one closes the other.
   const [open, setOpen] = React.useState<"sort" | "more" | null>(null);
+  // The clear's confirmation. It keeps the snapshot and the sheet's
+  // lifetime apart, so the count holds while the sheet leaves.
+  const [clear, setClear] = React.useState<{
+    tasks: readonly TaskItem[];
+    open: boolean;
+  } | null>(null);
   const sortAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
   const moreAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
   const close = React.useCallback(() => setOpen(null), []);
@@ -53,8 +66,9 @@ export function ListsToolbar({
       close();
     },
   }));
-  // Rename list, Delete list and Delete all completed tasks come with
-  // ticket 0065. Until then the menu holds only what works.
+  // Rename list and Delete list come with ticket 0065. Until then the
+  // menu holds only what works. A tab with no completed task gets no
+  // clear item, so a danger action never reads as available.
   const moreItems: MenuItem[] = [
     {
       key: "settings",
@@ -73,6 +87,20 @@ export function ListsToolbar({
       },
     },
   ];
+  if (completed.length > 0) {
+    moreItems.push({
+      key: "clear-completed",
+      label: "Delete all completed tasks",
+      tone: "danger",
+      onPress: () => {
+        close();
+        setClear({ tasks: [...completed], open: true });
+      },
+    });
+  }
+
+  const shut = () =>
+    setClear((current) => (current == null ? current : { ...current, open: false }));
 
   return (
     <View style={styles.band}>
@@ -87,7 +115,7 @@ export function ListsToolbar({
         <IconButton label="open commands" onPress={show}>
           <Icon name="chevron-down" />
         </IconButton>
-        <View ref={sortAnchor}>
+        <View ref={sortAnchor} testID="sort-menu-anchor">
           <IconButton
             label="sort list"
             active={open === "sort" || sortMode !== "due"}
@@ -97,7 +125,7 @@ export function ListsToolbar({
             <SortGlyph />
           </IconButton>
         </View>
-        <View ref={moreAnchor}>
+        <View ref={moreAnchor} testID="list-menu-anchor">
           <IconButton
             label="list menu"
             active={open === "more"}
@@ -123,6 +151,18 @@ export function ListsToolbar({
         label="List menu"
         items={moreItems}
       />
+      {clear != null ? (
+        <ClearCompletedSheet
+          open={clear.open}
+          tasks={clear.tasks}
+          onCancel={shut}
+          onConfirm={(tasks) => {
+            shut();
+            onClearCompleted(tasks);
+          }}
+          onExited={() => setClear(null)}
+        />
+      ) : null}
     </View>
   );
 }
