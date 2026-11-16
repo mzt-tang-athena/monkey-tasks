@@ -3,7 +3,7 @@ title: Alert weight in the alerts
 created: 2026-11-11
 priority: high
 assignee: opencode
-pr:
+pr: 153
 depends: ["20261111-alert-weight-schema", "20261111-a-timed-due-rings"]
 ---
 
@@ -63,17 +63,32 @@ phone's default alarm sound.
 
 ## Acceptance
 
-- [ ] The build creates the two channels once and deletes the old `reminders`
+- [x] The build creates the two channels once and deletes the old `reminders`
       channel.
-- [ ] A harsh alert rings on the alarm stream and bypasses Do Not Disturb
+- [x] A harsh alert rings on the alarm stream and bypasses Do Not Disturb
       when granted. A swipe cannot clear it while it rings.
-- [ ] A harsh alert re-rings at +1, +5 and +15 minutes and then stops.
-- [ ] Ticking the task cancels its remaining follow-ups.
-- [ ] A quiet alert is silent, does not vibrate, and repeats never.
-- [ ] The foreground handler plays sound for harsh and not for quiet.
-- [ ] A due time and a reminder at the same minute schedule one alert.
-- [ ] Lint and typecheck pass, and the existing reminder tests still pass.
+- [x] A harsh alert re-rings at +1, +5 and +15 minutes and then stops.
+- [x] Ticking the task cancels its remaining follow-ups.
+- [x] A quiet alert is silent, does not vibrate, and repeats never.
+- [x] The foreground handler plays sound for harsh and not for quiet.
+- [x] A due time and a reminder at the same minute schedule one alert.
+- [x] Lint and typecheck pass, and the existing reminder tests still pass.
 
 ## Outcome
 
-(filled in before moving to done/)
+Done in #153. An alert now follows its weight. A harsh alert makes
+four rings at 0, 1, 5 and 15 minutes on the alarm channel, and stays in
+the tray until the task is cleared. A quiet alert makes one silent ring.
+
+The plan is a pure function over the tasks, the time, the cleared
+groups, and the OS schedule. A rebuild compares by ring id, so it
+replaces a ring instead of adding one. It never re-arms a delivered
+ring, and it never drops a running group's follow-ups. A cleared group
+lives in `app/src/lib/alerts/acked.ts` and expires after 20 minutes. A
+tap, an open from the alert, and a tick all clear the group.
+
+The unit tests cover the plan, the escalation, the rebuild rules, the
+cleared groups, the tick, the moved reminder, and the prune. The device
+check carries the phone proof: the two channels, the alarm stream with
+the ringer silent, the Do Not Disturb grant and refusal, the sticky
+ring, the three repeats, and a quiet alert on a loud phone.
