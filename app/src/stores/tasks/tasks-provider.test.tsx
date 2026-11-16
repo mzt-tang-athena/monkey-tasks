@@ -59,9 +59,12 @@ vi.mock("./load-vault", async (importOriginal) => {
 // The alarm code runs for real on a fake OS that schedules nothing.
 vi.mock("@/lib/notifications", () => ({
   ensureNotificationPermission: async () => true,
-  scheduleAt: async () => "alarm",
-  cancelAllScheduled: async () => undefined,
+  ensureChannels: async () => undefined,
+  scheduleRing: async () => "alarm",
   cancelScheduled: async () => undefined,
+  listScheduledDetailed: async () => [],
+  listDeliveredDetailed: async () => [],
+  dismissDelivered: async () => undefined,
 }));
 
 import { makeQueryClient } from "@/lib/react-query";

@@ -224,7 +224,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing` and `MotionScrollView`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
-| `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
+| `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`. `lib/alerts` holds the ring shape and the acknowledged groups. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
 | `types` | Shared types, such as `TaskItem`. |
 | `utils` | Pure helpers: dates, YAML, schema errors. |
 | `theme` | Design tokens. |
@@ -420,7 +420,10 @@ Phases:
    rebuilds the alarm list after every successful vault read. A capture,
    a tick, or a drag leaves the schedule matching the vault. Ticking a
    recurring task completes the occurrence. It creates the next one as
-   its own note (ADR 0027).
+   its own note (ADR 0027). An alert uses its task's `alert weight`. A
+   harsh alert rings on the alarm stream and escalates at 1, 5 and 15
+   minutes. A quiet one rings once in silence. A tap or a tick clears
+   the group (ADR 20261111-reminder-weight).
 7. Later: deed vocabulary cleanup (0005), the quick-task and deed merge
    decision, and capture text highlighting (0008). Location triggers,
    MCP capture on athena, ntfy fallback, and the athena operational
