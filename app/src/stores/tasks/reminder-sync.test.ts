@@ -313,6 +313,65 @@ describe("rebuild", () => {
     expect([...world.os.values()][0].weight).toBe("quiet");
   });
 
+  it("cancels a running harsh group when the task turns quiet", async () => {
+    const base = NOW + 10 * MINUTE;
+    const later = base + 40 * MINUTE;
+    const loud = task("Call Mum", [stamp(base), stamp(later)]);
+    await syncReminders([loud]);
+    deliver(id(loud.uri, base, 0));
+    deliver(id(loud.uri, base, 1));
+
+    const quiet = task("Call Mum", [stamp(base), stamp(later)], {
+      weight: "quiet",
+    });
+    vi.setSystemTime(base + 2 * MINUTE);
+    await syncReminders([quiet]);
+
+    expect(world.cancelled.sort()).toEqual(
+      [
+        ...[5, 15].map((step) => id(loud.uri, base, step)),
+        ...[0, 1, 5, 15].map((step) => id(loud.uri, later, step)),
+      ].sort(),
+    );
+    expect(stepsOf(quiet.uri, base)).toEqual([]);
+    expect(world.delivered.has(id(quiet.uri, base, 0))).toBe(true);
+    expect(stepsOf(quiet.uri, later)).toEqual([0]);
+    expect(world.os.get(id(quiet.uri, later, 0))?.weight).toBe("quiet");
+  });
+
+  it("moves a running due group when the due changes", async () => {
+    const first = NOW + 10 * MINUTE;
+    const moved = first + 30 * MINUTE;
+    const before = task("Pay rent", [], { due: stamp(first) });
+    await syncReminders([before]);
+
+    vi.setSystemTime(first + 2 * MINUTE);
+    const after = task("Pay rent", [], { due: stamp(moved) });
+    await syncReminders([after]);
+
+    expect(world.cancelled.sort()).toEqual(
+      [0, 1, 5, 15].map((step) => id(before.uri, first, step)).sort(),
+    );
+    expect(stepsOf(after.uri, first)).toEqual([]);
+    expect(stepsOf(after.uri, moved)).toEqual([0, 1, 5, 15]);
+  });
+
+  it("cancels a removed reminder's running group and keeps the other", async () => {
+    const first = NOW + 10 * MINUTE;
+    const kept = first + 20 * MINUTE;
+    const before = task("Call Mum", [stamp(first), stamp(kept)]);
+    await syncReminders([before]);
+
+    vi.setSystemTime(first + 2 * MINUTE);
+    const after = task("Call Mum", [stamp(kept)]);
+    await syncReminders([after]);
+
+    expect(world.cancelled.sort()).toEqual(
+      [0, 1, 5, 15].map((step) => id(before.uri, first, step)).sort(),
+    );
+    expect(stepsOf(after.uri, kept)).toEqual([0, 1, 5, 15]);
+  });
+
   it("cancels a done task's rings", async () => {
     const base = NOW + 10 * MINUTE;
     const open = task("Call Mum", [stamp(base)]);
