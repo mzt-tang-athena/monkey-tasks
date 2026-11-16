@@ -22,6 +22,31 @@ export function listTab(page: Page, name: string): Locator {
   return page.getByRole("tab", { name, exact: true });
 }
 
+/** The Completed group's disclosure, by the name its count gives it. */
+export function completedToggle(page: Page): Locator {
+  return page.getByRole("button", { name: /^Completed \d+ tasks?$/ });
+}
+
+/** Show the Completed rows when they are folded. */
+export async function openCompleted(page: Page) {
+  const toggle = completedToggle(page);
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-expanded")) === "false") {
+    await press(page, toggle);
+  }
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+}
+
+/** Fold the Completed rows again. */
+export async function closeCompleted(page: Page) {
+  const toggle = completedToggle(page);
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-expanded")) === "true") {
+    await press(page, toggle);
+  }
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+}
+
 /** The top edge of an element, in page order. */
 async function topOf(target: Locator): Promise<number> {
   const box = await target.boundingBox();

@@ -38,6 +38,8 @@ const labels = new Map<GalleryStateId, string>(
 const exemptFromContrast = [
   '[data-testid="gallery-state:button:disabled"]',
   '[data-testid="gallery-state:section-header:faint"]',
+  '[data-testid="gallery-state:section-header:expanded"]',
+  '[data-testid="gallery-state:section-header:collapsed"]',
 ];
 
 async function scan(

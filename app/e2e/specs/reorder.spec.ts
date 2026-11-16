@@ -9,7 +9,14 @@ import {
   press,
   type Input,
 } from "../gestures";
-import { expectAbove, expectBefore, listTab, row, sectionHeader } from "../locators";
+import {
+  expectAbove,
+  expectBefore,
+  listTab,
+  openCompleted,
+  row,
+  sectionHeader,
+} from "../locators";
 import { noteText } from "../vault";
 
 /**
@@ -404,6 +411,7 @@ test.describe("the tick hold", () => {
   }) => {
     test.skip(reducedMotion === "reduce", "a reduced-motion tick regroups at once");
     await openMain(page);
+    await openCompleted(page);
     await pauseClock(page);
     await tickButton(page, supplements).click();
     await page.clock.runFor(200);
@@ -427,9 +435,12 @@ test.describe("a tick after a drop", () => {
       await page.waitForTimeout(100);
       await tickButton(page, apples).click();
 
-      await expect(
-        row(page, apples).getByRole("checkbox"),
-      ).toHaveAttribute("aria-checked", "true");
+      // The row folds away, so the note is the proof that the press ran.
+      await expect
+        .poll(() =>
+          noteText(page, "Tasks/Groceries milk, eggs, oats.md"),
+        )
+        .toContain("completed: 2026-10-26T");
     });
   }
 });
@@ -484,6 +495,7 @@ test("the capture entrance never replays within the freshness window", async ({
 
   // A tick regroups the row under a completed key. The copy that mounts
   // there must show at full opacity on its first frame.
+  await openCompleted(page);
   await watchRow(page, captured);
   await tickButton(page, captured).click();
   await expectBefore(
@@ -587,6 +599,7 @@ test("a reduced-motion drag lands at once, a tick regroups at once, a capture re
   await expectResting(page);
 
   await openMain(page);
+  await openCompleted(page);
   await tickButton(page, supplements).click();
   await expectAbove(
     sectionHeader(page, sections.completed),

@@ -1,7 +1,14 @@
 import { expect, test } from "../fixtures";
 import { sections, supplements, tabs, undated } from "../data";
 import { holdDrag, swipe, touchSwipe } from "../gestures";
-import { expectAbove, listTab, press, row, sectionHeader } from "../locators";
+import {
+  expectAbove,
+  listTab,
+  openCompleted,
+  press,
+  row,
+  sectionHeader,
+} from "../locators";
 import { putNote, returnToTab } from "../vault";
 
 test.beforeEach(async ({ page }) => {
@@ -72,6 +79,8 @@ test.describe("row names and states", () => {
     });
     await expect(tick).toHaveAttribute("aria-checked", "false");
 
+    // Keep the group open, so the ticked row stays on the page.
+    await openCompleted(page);
     await press(page, tick);
 
     await expect(
@@ -219,16 +228,21 @@ test.describe("list menu", () => {
     await expect(page).toHaveURL("/");
   });
 
-  test("the overflow menu shows only what works", async ({ page }) => {
-    // Bug 2: three items closed the menu and did nothing. Two used the
-    // danger color, so a user could think a delete ran. Ticket 0065
-    // builds them.
+  test("the overflow menu holds what works and leaves out what does not", async ({
+    page,
+  }) => {
+    // Bug 2: three items closed the menu and did nothing. Rename list
+    // and Delete list still wait on ticket 0065. The clear is built.
     await page.getByRole("button", { name: "list menu" }).click();
 
-    await expect(page.getByText("Diagnostics")).toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "Diagnostics" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "Delete all completed tasks" }),
+    ).toBeVisible();
     await expect(page.getByText("Rename list")).toHaveCount(0);
     await expect(page.getByText("Delete list")).toHaveCount(0);
-    await expect(page.getByText("Delete all completed tasks")).toHaveCount(0);
   });
 });
 
