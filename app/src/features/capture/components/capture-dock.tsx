@@ -8,6 +8,7 @@ import { Pressable } from "@/components/ui/pressable";
 import { Sheet } from "@/components/ui/sheet";
 import { Toast } from "@/components/ui/toast";
 import { useCaptureRequest } from "@/lib/capture-request";
+import { useTaskEditor } from "@/hooks/use-task-editor";
 import { useCaptureSheet } from "@/features/capture/hooks/use-capture-sheet";
 import { bottomBar, fonts, radii, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -24,6 +25,9 @@ export function CaptureDock(slot: CaptureSlot) {
   const { styles } = useThemedStyles(makeStyles);
   const bar = useBar();
   const focused = useIsFocused();
+  // The editor sheet draws over this tab, and its own toast would land
+  // on the sheet's edge. The capture toast waits until the sheet goes.
+  const { showing } = useTaskEditor();
   const sheet = useCaptureSheet({ ...slot, bar, focused });
   // The command pane's Add task reaches the dock on the focused tab.
   useCaptureRequest(() => {
@@ -80,7 +84,7 @@ export function CaptureDock(slot: CaptureSlot) {
       {/* The toast belongs to its tab. The overlay host sits above the
           whole stack, so a tab that is not focused draws nothing: the
           editor and the other tab stay clear. */}
-      {sheet.toast != null && focused ? (
+      {sheet.toast != null && focused && !showing ? (
         <Toast
           message={sheet.toast.message}
           bottom={bar.height + spacing.s}

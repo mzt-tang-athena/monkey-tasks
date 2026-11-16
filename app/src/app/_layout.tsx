@@ -10,6 +10,7 @@ import { VaultProvider } from "@/lib/vault/vault-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { OverlayHost } from "@/components/ui/overlay-host";
 import { CommandPaneProvider } from "@/features/command/command-pane-provider";
+import { TaskEditorProvider } from "@/features/task-editor/task-editor-provider";
 import { ThemeProvider } from "@/theme/theme-provider";
 import { installErrorAlert } from "@/lib/errors";
 import { installCrashTestHooks } from "@/lib/crash-test-hooks";
@@ -79,6 +80,10 @@ export default function RootLayout() {
                       screen, in one z order (ADR 0040). */}
                   <OverlayHost>
                     <CommandPaneProvider>
+                      {/* The task editor sheet and its toasts draw over
+                          every screen, so a write outlives the sheet
+                          that started it. */}
+                      <TaskEditorProvider>
                       <Stack>
                         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                         <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
@@ -86,6 +91,7 @@ export default function RootLayout() {
                             stack's header never covers the page. */}
                         <Stack.Screen name="settings" options={{ headerShown: false }} />
                       </Stack>
+                      </TaskEditorProvider>
                     </CommandPaneProvider>
                   </OverlayHost>
                 </TasksProvider>

@@ -6,8 +6,6 @@ import {
   findTask,
   frontmatterEntries,
   isTaskNote,
-  listName,
-  parseReminders,
 } from "./draft";
 
 function item(overrides: Partial<TaskItem> = {}): TaskItem {
@@ -26,28 +24,6 @@ function item(overrides: Partial<TaskItem> = {}): TaskItem {
     ...overrides,
   };
 }
-
-describe("listName", () => {
-  it("strips the wikilink brackets", () => {
-    expect(listName("[[Focus]]")).toBe("Focus");
-  });
-
-  it("passes a bare value through, trimmed", () => {
-    expect(listName("  Errands ")).toBe("Errands");
-  });
-
-  it("keeps a value with one bracket pair half open", () => {
-    expect(listName("[[Focus")).toBe("[[Focus");
-  });
-});
-
-describe("parseReminders", () => {
-  it("trims each line and drops blank ones", () => {
-    expect(
-      parseReminders(" 2026-10-21T09:00 \n\n2026-10-21T18:30\r\n"),
-    ).toEqual(["2026-10-21T09:00", "2026-10-21T18:30"]);
-  });
-});
 
 describe("decode", () => {
   it("decodes a percent escape", () => {

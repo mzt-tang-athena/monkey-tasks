@@ -2,8 +2,8 @@
 title: Pick one list in the editor
 created: 2026-11-11
 priority: normal
-assignee:
-pr:
+assignee: opencode
+pr: 155
 depends: [0093, 20261111-one-list-field]
 ---
 
@@ -25,13 +25,16 @@ newline field for `lists`. See ADR `20261111-one-list-and-tab-order`.
 
 ## Acceptance
 
-- [ ] The editor shows one list choice, not a text field and not a
+- [x] The editor shows one list choice, not a text field and not a
       multi-select.
-- [ ] Picking a list writes `list` and no `lists`.
-- [ ] Picking the empty choice removes the key.
-- [ ] A legacy note with two links shows the first and saves one.
-- [ ] The picker works with TalkBack and every target is 44pt.
+- [x] Picking a list writes `list` and no `lists`.
+- [x] Picking the empty choice removes the key.
+- [x] A legacy note with two links shows the first and saves one.
+- [x] The picker works with TalkBack and every target is 44pt.
 
 ## Outcome
 
-(filled in before moving to done/)
+The picker landed inside the 0093 editor rebuild, as this ticket
+asked. The header control opens a searchable single choice: Main plus
+the list notes. Main removes the key. Any other pick writes `list` and
+drops `lists`. PR 155.

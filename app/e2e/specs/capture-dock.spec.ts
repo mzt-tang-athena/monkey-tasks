@@ -64,15 +64,20 @@ test.describe("the floating chrome on a wide window", () => {
     );
   });
 
-  test("the editor header sits inside the column", async ({ page }) => {
+  test("the editor sheet sits inside the column", async ({ page }) => {
     await page.goto("/");
     await press(page, row(page, undated.second));
+    const editor = page.getByRole("dialog", { name: "Task" });
+    await expect(editor).toBeVisible();
 
     await expectInColumn(
-      page.getByRole("button", { name: "cancel editing" }),
-      "Cancel",
+      editor.getByRole("button", { name: /^change list/ }),
+      "the list",
     );
-    await expectInColumn(page.getByRole("button", { name: "save task" }), "Save");
+    await expectInColumn(
+      editor.getByRole("textbox", { name: "Task name" }),
+      "the title",
+    );
   });
 });
 
@@ -113,11 +118,13 @@ test("a failed capture toast belongs to its tab and shows over no other screen",
   // sits below the fold, and a click that scrolls it in can land before
   // its press target is measured; `press` scrolls and waits a frame.
   await press(page, row(page, undated.second));
-  await expect(page.getByRole("button", { name: "save task" })).toBeVisible();
+  const editor = page.getByRole("dialog", { name: "Task" });
+  await expect(editor).toBeVisible();
   await expect(toast).toHaveCount(0);
 
   // Back on the tab, the toast is still there, with its draft.
-  await page.getByRole("button", { name: "cancel editing" }).click();
+  await page.getByRole("button", { name: "close the task" }).click();
+  await expect(page.getByRole("dialog", { name: "Task" })).toHaveCount(0);
   await expect(toast).toHaveCount(1);
 
   // The other tab shows no toast of this tab.
@@ -175,10 +182,8 @@ test.describe("the sheet belongs to its tab", () => {
       .toBe(true);
     await page.keyboard.press("Enter");
 
-    await expect(page.getByRole("button", { name: "save task" })).toBeVisible();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-
-    await page.getByRole("button", { name: "cancel editing" }).click();
+    await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
+    await page.getByRole("button", { name: "close the task" }).click();
     await expect(row(page, undated.second)).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expectBarBack(page);

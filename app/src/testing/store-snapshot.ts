@@ -1,3 +1,5 @@
+import { useDeleteTask } from "@/stores/tasks/mutations/use-delete-task";
+import { useRestoreTask } from "@/stores/tasks/mutations/use-restore-task";
 import { useCaptureTask } from "@/stores/tasks/mutations/use-capture-task";
 import { useEditTask } from "@/stores/tasks/mutations/use-edit-task";
 import { usePatchTask } from "@/stores/tasks/mutations/use-patch-task";
@@ -23,6 +25,8 @@ export type StoreSnapshot = StoreMeta & {
   reorder: ReturnType<typeof useReorderSection>;
   capture: ReturnType<typeof useCaptureTask>;
   edit: ReturnType<typeof useEditTask>;
+  remove: ReturnType<typeof useDeleteTask>;
+  restore: ReturnType<typeof useRestoreTask>;
   refresh: ReturnType<typeof useRefreshTasks>;
   grant: ReturnType<typeof useGrantFolder>;
   failures: VaultFailure[];
@@ -42,6 +46,8 @@ export function useStoreSnapshot(): StoreSnapshot {
     reorder: useReorderSection(),
     capture: useCaptureTask(),
     edit: useEditTask(),
+    remove: useDeleteTask(),
+    restore: useRestoreTask(),
     refresh: useRefreshTasks(),
     grant: useGrantFolder(),
     failures: useVaultFailures(),
