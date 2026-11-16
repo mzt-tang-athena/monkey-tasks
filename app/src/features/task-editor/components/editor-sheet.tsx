@@ -25,6 +25,7 @@ import {
   type Palette,
 } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
+import { useClampedHeight } from "../hooks/use-clamped-height";
 import { bodyOf, noteText, PROPERTIES, type Property } from "../model";
 import { AlertsPicker } from "./alerts-picker";
 import { DuePicker } from "./due-picker";
@@ -80,6 +81,10 @@ export function EditorSheet({
   const [title, setTitle] = React.useState<string | null>(null);
   const typed = React.useRef(draft.name);
   const [menu, setMenu] = React.useState(false);
+  // The tiles and the strip scroll inside the room above the keyboard,
+  // so the title never leaves the screen.
+  const cap = Math.max(120, window.height * 0.55 - keyboard - insets.top);
+  const body = useClampedHeight(cap);
   const menuAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
 
   // A draft name that changed elsewhere, such as a retried write, reads
@@ -208,12 +213,9 @@ export function EditorSheet({
             style={styles.title}
           />
         </View>
-        {/* The tiles and the strip scroll inside the room above the
-            keyboard, so the title never leaves the screen. */}
         <MotionScrollView
-          style={{
-            maxHeight: Math.max(120, window.height * 0.55 - keyboard - insets.top),
-          }}
+          style={{ height: body.height, maxHeight: cap }}
+          onContentSizeChange={body.onContentSizeChange}
           contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -240,6 +242,7 @@ export function EditorSheet({
           {missing.length > 0 ? (
             <MotionScrollView
               horizontal
+              style={styles.stripScroll}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.strip}
             >
@@ -495,6 +498,10 @@ const makeStyles = (colors: Palette) => ({
     tileWords: {
       ...type.control,
       color: colors.ink,
+    },
+    stripScroll: {
+      flexGrow: 0,
+      width: "100%",
     },
     strip: {
       gap: spacing.s,

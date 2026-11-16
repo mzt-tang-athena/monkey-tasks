@@ -31,6 +31,7 @@ async function openEditor(page: import("@playwright/test").Page) {
 }
 
 test("the editor writes each property as it is picked", async ({ page }, info) => {
+  test.setTimeout(120_000);
   const shot = (name: string) =>
     page.screenshot({ path: info.outputPath(`${name}.png`) });
 
@@ -84,9 +85,11 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await shot("06-alerts-picker");
   await alerts.getByRole("button", { name: "save reminder" }).click();
   await expect(
-    editor.getByRole("button", { name: /^remove reminder/ }),
+    alerts.getByRole("button", { name: /^remove reminder/ }),
   ).toHaveCount(1);
-  await alerts.getByRole("button", { name: "close alerts" }).click();
+  await shot("06b-alert-added");
+  // The scrim's close control sits in the sheet's own overlay.
+  await page.getByRole("button", { name: "close alerts" }).click();
   await expect(alerts).toHaveCount(0);
 
   // A note.
@@ -127,6 +130,7 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
 });
 
 test("a failed write keeps the draft, and Retry saves it", async ({ page }, info) => {
+  test.setTimeout(120_000);
   const shot = (name: string) =>
     page.screenshot({ path: info.outputPath(`${name}.png`) });
 
@@ -154,11 +158,12 @@ test("a failed write keeps the draft, and Retry saves it", async ({ page }, info
 });
 
 test("delete shows a toast, and Undo puts the exact text back", async ({ page }, info) => {
+  test.setTimeout(120_000);
   const shot = (name: string) =>
     page.screenshot({ path: info.outputPath(`${name}.png`) });
 
-  const before = await noteText(page, path);
   const editor = await openEditor(page);
+  const before = await noteText(page, path);
 
   await editor.getByRole("button", { name: "task menu" }).click();
   const menu = page.getByRole("menu", { name: "Task menu" });

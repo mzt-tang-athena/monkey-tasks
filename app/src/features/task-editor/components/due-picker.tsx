@@ -96,7 +96,14 @@ export function DuePicker({
             variant="text"
             label="Add a time"
             accessibilityLabel="add a time"
-            onPress={() => setClock(DEFAULT_CLOCK)}
+            onPress={() => {
+              // The time writes as soon as it shows, so the tile and the
+              // alerts read the datetime without another tap.
+              setClock(DEFAULT_CLOCK);
+              if (day != null) {
+                onChange(storedOf(day, DEFAULT_CLOCK));
+              }
+            }}
           />
         ) : (
           <View style={styles.timeSet}>

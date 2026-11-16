@@ -216,6 +216,7 @@ const makeStyles = (colors: Palette) => ({
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.hairline,
       borderRadius: radiusFloating,
+      overflow: "hidden",
       padding: spacing.m,
       gap: sheetGap,
       ...shadows.floating,

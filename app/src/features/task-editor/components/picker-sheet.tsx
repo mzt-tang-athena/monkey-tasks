@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { spacing, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
+import { useClampedHeight } from "../hooks/use-clamped-height";
 import { useSheetClock } from "../hooks/use-sheet-clock";
 
 /**
@@ -41,6 +42,8 @@ export function PickerSheet({
   const keyboard = useKeyboardState((state) => state.height);
   const window = useWindowDimensions();
   const { mounted, progress } = useSheetClock(open);
+  const cap = Math.max(240, window.height * 0.55 - keyboard - insets.top);
+  const body = useClampedHeight(cap);
   if (!mounted) {
     return null;
   }
@@ -70,7 +73,8 @@ export function PickerSheet({
       {/* The body scrolls inside a cap, so a tall month grid and the
           keyboard never push the header off the top of the sheet. */}
       <MotionScrollView
-        style={{ maxHeight: Math.max(240, window.height * 0.6 - keyboard - insets.top) }}
+        style={{ height: body.height, maxHeight: cap }}
+        onContentSizeChange={body.onContentSizeChange}
         contentContainerStyle={styles.body}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
