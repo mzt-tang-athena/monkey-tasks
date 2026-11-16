@@ -31,13 +31,19 @@ function task(name: string, data: TaskFrontmatter | null): TaskItem {
 }
 
 function due(value: string): TaskFrontmatter {
-  return { kind: "[[tasks]]", created: "2026-10-20", due: value };
+  return {
+    kind: "[[tasks]]",
+    created: "2026-10-20",
+    "alert weight": "harsh",
+    due: value,
+  };
 }
 
 function doneDue(value: string): TaskFrontmatter {
   return {
     kind: "[[tasks]]",
     created: "2026-10-20",
+    "alert weight": "harsh",
     due: value,
     completed: "2026-10-21",
   };
@@ -47,6 +53,7 @@ function recurringDue(value: string, recurrence: string): TaskFrontmatter {
   return {
     kind: "[[tasks]]",
     created: "2026-10-20",
+    "alert weight": "harsh",
     due: value,
     recurrence,
   };
@@ -103,7 +110,11 @@ describe("hasTime and timeOf", () => {
   });
 
   it("has neither for an undated task", () => {
-    const item = task("Alpha", { kind: "[[tasks]]", created: "2026-10-20" });
+    const item = task("Alpha", {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+    });
     expect(hasTime(item)).toBe(false);
     expect(timeOf(item)).toBe("");
   });
@@ -169,6 +180,7 @@ describe("inSourceList", () => {
   const focused = task("Alpha", {
     kind: "[[tasks]]",
     created: "2026-10-20",
+    "alert weight": "harsh",
     list: "[[Focus]]",
   });
 
@@ -180,7 +192,11 @@ describe("inSourceList", () => {
   });
 
   it("treats an unlisted task as Main", () => {
-    const loose = task("Bravo", { kind: "[[tasks]]", created: "2026-10-20" });
+    const loose = task("Bravo", {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+    });
     expect(inSourceList(loose, "Main")).toBe(true);
     expect(inSourceList(loose, "Focus")).toBe(false);
   });

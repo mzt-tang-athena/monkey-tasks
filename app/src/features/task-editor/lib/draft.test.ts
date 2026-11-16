@@ -17,7 +17,11 @@ function item(overrides: Partial<TaskItem> = {}): TaskItem {
     fileName: "Call.md",
     name: "Call",
     text: "",
-    data: { kind: "[[tasks]]", created: "2026-10-20" },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+    },
     body: "\nOld body.\n",
     ...overrides,
   };
@@ -100,6 +104,7 @@ describe("draftOf", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
+        "alert weight": "harsh",
         title: "Call Mum: Sunday",
         due: "2026-10-26",
         recurrence: "FREQ=WEEKLY",

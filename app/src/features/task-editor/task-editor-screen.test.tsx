@@ -61,7 +61,11 @@ function task(): TaskItem {
     fileName: "Call.md",
     name: "Call",
     text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nOld body.\n',
-    data: { kind: "[[tasks]]", created: "2026-10-20" },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+    },
     body: "\nOld body.\n",
   };
 }

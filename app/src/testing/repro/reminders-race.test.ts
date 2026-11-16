@@ -61,6 +61,7 @@ function task(name: string, open = true): TaskItem {
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
+      "alert weight": "harsh",
       reminders: ["2999-01-01T09:00"],
       ...(open ? {} : { completed: "2026-10-26" }),
     },

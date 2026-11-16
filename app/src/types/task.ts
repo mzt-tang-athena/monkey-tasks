@@ -20,6 +20,11 @@ export type TaskItem = {
   body: string;
   /** Why the frontmatter failed, when it did. Absent on a valid note. */
   errors?: string[];
+  /**
+   * Why a value was read through a fallback, one message each. The row
+   * still shows, and Needs repair names it. Absent on a clean note.
+   */
+  warnings?: string[];
 };
 
 /** A list note, as the store exposes it: a tab name and its file. */

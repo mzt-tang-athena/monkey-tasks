@@ -50,6 +50,7 @@ function task(
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
+      "alert weight": "harsh",
       reminders,
       ...(due != null ? { due } : {}),
       ...(completed ? { completed } : {}),

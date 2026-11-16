@@ -13,7 +13,12 @@ function task(name: string, extra: Partial<TaskFrontmatter> = {}): TaskItem {
     fileName: `${name}.md`,
     name,
     text: "",
-    data: { kind: "[[tasks]]", created: "2026-10-20", ...extra },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+      ...extra,
+    },
     body: "",
   };
 }
