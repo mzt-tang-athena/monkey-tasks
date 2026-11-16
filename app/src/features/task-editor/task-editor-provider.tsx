@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Toast } from "@/components/ui/toast";
 import { TaskEditorContext, type TaskEditorValue } from "@/hooks/use-task-editor";
 import { safeFileName } from "@/lib/vault/file-name";
+import { NoteChangedError } from "@/lib/vault/notes";
 import {
   useDeleteTask,
   type DeletedTask,
@@ -107,7 +108,7 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
           reduce(held.current, {
             type: "session",
             id,
-            event: { type: "failed", message: "the task is no longer here" },
+            event: { type: "failed", reason: "gone" },
           }).state,
         );
         return;
@@ -138,7 +139,7 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
             id,
             event: {
               type: "failed",
-              message: error instanceof Error ? error.message : String(error),
+              reason: error instanceof NoteChangedError ? "changed" : "failed",
             },
           }).state,
         );

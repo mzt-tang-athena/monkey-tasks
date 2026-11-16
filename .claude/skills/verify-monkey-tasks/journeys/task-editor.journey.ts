@@ -101,10 +101,37 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await expect(
     alerts.getByRole("button", { name: /^remove reminder/ }),
   ).toHaveCount(1);
+  // The body shrinks back after a measure. Let it land.
+  await page.waitForTimeout(300);
   await shot("06b-alert-added");
+
+  // The weight covers the whole task, and writes as soon as it is picked.
+  await alerts.getByRole("tab", { name: "Quiet" }).click();
+  await expect.poll(() => noteText(page, path)).toContain("alert weight: quiet");
+  await expect(alerts.getByRole("tab", { name: "Quiet" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await alerts.getByRole("tab", { name: "Quiet" }).scrollIntoViewIfNeeded();
+  await shot("06c-alert-weight");
   // The scrim's close control sits in the sheet's own overlay.
   await page.getByRole("button", { name: "close alerts" }).click();
   await expect(alerts).toHaveCount(0);
+  await expect(editor.getByRole("button", { name: "change alerts" })).toContainText(
+    "Quiet",
+  );
+  await shot("06d-quiet-tile");
+
+  // Harsh is the default, so it takes the key off the note.
+  await editor.getByRole("button", { name: "change alerts" }).click();
+  await expect(alerts).toHaveCSS("opacity", "1");
+  await alerts.getByRole("tab", { name: "Harsh" }).click();
+  await expect.poll(() => noteText(page, path)).not.toContain("alert weight");
+  await page.getByRole("button", { name: "close alerts" }).click();
+  await expect(alerts).toHaveCount(0);
+  await expect(
+    editor.getByRole("button", { name: "change alerts" }),
+  ).not.toContainText("Quiet");
 
   // A note.
   await editor.getByRole("button", { name: /^(add|edit) note$/ }).click();
@@ -146,6 +173,22 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await expect(moved).toBeVisible();
   await moved.scrollIntoViewIfNeeded();
   await shot("09-row-after-reread");
+});
+
+test("the four chips fit a 360 wide screen", async ({ page }, info) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  const editor = await openEditor(page);
+  const sheet = await editor.boundingBox();
+  for (const name of ["add due date", "add repeat", "add reminder", "add note"]) {
+    const chip = await editor.getByRole("button", { name }).boundingBox();
+    expect(chip, `${name} is drawn`).not.toBeNull();
+    expect(chip!.x + chip!.width, `${name} stays inside the sheet`).toBeLessThanOrEqual(
+      sheet!.x + sheet!.width,
+    );
+  }
+  await expect(page.getByTestId("strip-fade-end")).toHaveCount(0);
+  await checkTargets(page, "the sheet at 360");
+  await page.screenshot({ path: info.outputPath("15-sheet-at-360.png") });
 });
 
 test("a failed write keeps the draft, and Retry saves it", async ({ page }, info) => {

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskItem } from "@/types/task";
 import { dayLabel, formatTime } from "@/utils/dates";
 import { OverlayHost } from "@/components/ui/overlay-host";
+import { NoteChangedError } from "@/lib/vault/notes";
 import { useTaskEditor } from "@/hooks/use-task-editor";
 import { TaskEditorProvider } from "./task-editor-provider";
 
@@ -249,10 +250,31 @@ describe("the task editor sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tomorrow" }));
 
     expect(await screen.findByText("Not saved.", undefined, { timeout: 4000 })).toBeTruthy();
-    expect(screen.getByText("disk full")).toBeTruthy();
+    expect(
+      screen.getByText("The file did not change. Retry writes it again."),
+    ).toBeTruthy();
+    // The raw error names a file call, not a next step.
+    expect(screen.queryByText(/disk full/)).toBeNull();
     // The new value stays on screen.
     expect(screen.getByRole("button", { name: "change due date" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "retry save" })).toBeTruthy();
+  }, 15000);
+
+  it("says so when the note changed on disk before the write", async () => {
+    store.edit.mockRejectedValueOnce(new NoteChangedError("content://vault/Tasks/Call.md"));
+    mount();
+    openTask();
+
+    fireEvent.click(screen.getByRole("button", { name: "add due date" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tomorrow" }));
+
+    expect(
+      await screen.findByText(
+        "The note changed on disk. Retry writes this change onto it.",
+        undefined,
+        { timeout: 4000 },
+      ),
+    ).toBeTruthy();
   }, 15000);
 
   it("sends the same draft again on Retry, against the latest text", async () => {

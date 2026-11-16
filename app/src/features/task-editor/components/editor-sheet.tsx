@@ -1,15 +1,21 @@
 import * as React from "react";
 import {
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   View,
   useWindowDimensions,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type TextStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useKeyboardState } from "react-native-keyboard-controller";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { Banner } from "@/components/ui/banner";
+import { EdgeFade, fadedEdges } from "@/components/ui/edge-fade";
 import { Icon } from "@/components/ui/icon";
 import { IconButton } from "@/components/ui/icon-button";
 import { Menu } from "@/components/ui/menu";
@@ -19,6 +25,7 @@ import type { Progress } from "@/lib/motion/progress";
 import type { TaskEdit } from "@/types/task";
 import {
   radii,
+  radius,
   spacing,
   touchTarget,
   type,
@@ -27,12 +34,20 @@ import {
 import { useThemedStyles } from "@/theme/theme-provider";
 import { useClampedHeight } from "../hooks/use-clamped-height";
 import { bodyOf, noteText, PROPERTIES, type Property } from "../model";
+import type { WriteFailure, WriteState } from "../lib/session";
 import { AlertsPicker } from "./alerts-picker";
 import { DuePicker } from "./due-picker";
 import { ListPicker } from "./list-picker";
 import { NoteEditor } from "./note-editor";
 import { PickerSheet } from "./picker-sheet";
 import { RepeatPicker } from "./repeat-picker";
+
+// A browser textarea holds two rows by default. The title follows its
+// text instead, as a native multiline input does.
+const autoSizedTitle = Platform.select({
+  web: { fieldSizing: "content" } as unknown as TextStyle,
+  default: {},
+});
 
 /** The sheet's open pickers: one at a time, over the editor. */
 export type Picker = "due" | "repeat" | "list" | "alerts" | null;
@@ -61,7 +76,7 @@ export function EditorSheet({
   draft: TaskEdit;
   today: Date;
   lists: string[];
-  write: { kind: "idle" } | { kind: "writing" } | { kind: "failed"; message: string };
+  write: WriteState;
   onChange: (patch: Partial<TaskEdit>) => void;
   onRetry: () => void;
   onClose: () => void;
@@ -144,10 +159,9 @@ export function EditorSheet({
         closeLabel="close the task"
       >
         {write.kind === "failed" ? (
+          // The raw error stays out: it names a file call, not a next step.
           <Banner
             tone="danger"
-            title="Not saved."
-            lines={[write.message]}
             actions={[
               {
                 label: "Retry",
@@ -155,7 +169,10 @@ export function EditorSheet({
                 onPress: onRetry,
               },
             ]}
-          />
+          >
+            <Text style={styles.failedTitle}>Not saved.</Text>
+            <Text style={styles.failedLine}>{failedWords[write.reason]}</Text>
+          </Banner>
         ) : null}
         <View style={styles.header}>
           <Pressable
@@ -212,7 +229,7 @@ export function EditorSheet({
             placeholderTextColor={colors.inkFaint}
             selectionColor={colors.accent}
             aria-label="Task name"
-            style={styles.title}
+            style={[styles.title, autoSizedTitle]}
           />
         </View>
         <MotionScrollView
@@ -241,28 +258,7 @@ export function EditorSheet({
               </View>
             ) : null}
             {missing.length > 0 ? (
-              <MotionScrollView
-                horizontal
-                style={styles.stripScroll}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.strip}
-              >
-                {missing.map((property) => (
-                  <Pressable
-                    key={property.key}
-                    style={({ pressed }) => [
-                      styles.chip,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => openPicker(property)}
-                    accessibilityRole="button"
-                    accessibilityLabel={property.names.add}
-                  >
-                    <Icon name={property.icon} color="inkMuted" />
-                    <Text style={styles.chipText}>{property.chip}</Text>
-                  </Pressable>
-                ))}
-              </MotionScrollView>
+              <AddStrip properties={missing} onPick={openPicker} />
             ) : null}
           </View>
         </MotionScrollView>
@@ -366,6 +362,69 @@ export function EditorSheet({
 }
 
 /**
+ * The chips of the properties with no value, in one row. A row wider
+ * than the sheet scrolls, and the edge that hides a chip fades.
+ */
+function AddStrip({
+  properties,
+  onPick,
+}: {
+  properties: Property[];
+  onPick: (property: Property) => void;
+}) {
+  const { styles } = useThemedStyles(makeStyles);
+  const [frame, setFrame] = React.useState({ view: 0, content: 0, x: 0 });
+  const fade = fadedEdges(frame);
+  return (
+    <View>
+      <MotionScrollView
+        horizontal
+        style={styles.stripScroll}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.strip}
+        scrollEventThrottle={16}
+        onLayout={(event: LayoutChangeEvent) => {
+          const view = event.nativeEvent.layout.width;
+          setFrame((current) => ({ ...current, view }));
+        }}
+        onContentSizeChange={(content) =>
+          setFrame((current) => ({ ...current, content }))
+        }
+        onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
+          const x = event.nativeEvent.contentOffset.x;
+          setFrame((current) => ({ ...current, x }));
+        }}
+      >
+        {properties.map((property) => (
+          <Pressable
+            key={property.key}
+            style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+            onPress={() => onPick(property)}
+            accessibilityRole="button"
+            accessibilityLabel={property.names.add}
+          >
+            <Icon name={property.icon} size={glyph} />
+            <Text style={styles.chipText}>{property.chip}</Text>
+          </Pressable>
+        ))}
+      </MotionScrollView>
+      {fade.start ? <EdgeFade side="start" testID="strip-fade-start" /> : null}
+      {fade.end ? <EdgeFade side="end" testID="strip-fade-end" /> : null}
+    </View>
+  );
+}
+
+/** What a failed write means for the user, by its reason. */
+const failedWords: Record<WriteFailure, string> = {
+  changed: "The note changed on disk. Retry writes this change onto it.",
+  gone: "The task is no longer in the vault.",
+  failed: "The file did not change. Retry writes it again.",
+};
+
+/** A property's glyph, sized to read beside its label. */
+const glyph = 16;
+
+/**
  * One property with a value: its label and words, a clear control where
  * one exists, and the press target that opens its picker.
  */
@@ -394,7 +453,7 @@ function PropertyTile({
         accessibilityLabel={property.names.open}
       >
         <View style={styles.tileHead}>
-          <Icon name={property.icon} color="inkMuted" />
+          <Icon name={property.icon} size={glyph} />
           <Text style={styles.tileTitle}>{property.title}</Text>
         </View>
         <Text style={styles.tileWords} numberOfLines={2}>
@@ -439,6 +498,15 @@ const makeStyles = (colors: Palette) => ({
     pressed: {
       backgroundColor: colors.pressed,
     },
+    failedTitle: {
+      ...type.control,
+      fontWeight: "600",
+      color: colors.danger,
+    },
+    failedLine: {
+      ...type.meta,
+      color: colors.danger,
+    },
     titleRow: {
       flexDirection: "row",
       alignItems: "flex-start",
@@ -482,7 +550,7 @@ const makeStyles = (colors: Palette) => ({
     tile: {
       flexGrow: 0,
       flexBasis: "48%",
-      borderRadius: radii.pill,
+      borderRadius: radius,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.hairline,
       backgroundColor: colors.paper,
@@ -494,7 +562,7 @@ const makeStyles = (colors: Palette) => ({
       gap: spacing.xs,
       paddingHorizontal: spacing.m,
       paddingVertical: spacing.m,
-      borderRadius: radii.pill,
+      borderRadius: radius,
     },
     tileClear: {
       position: "absolute",
@@ -524,21 +592,19 @@ const makeStyles = (colors: Palette) => ({
     },
     strip: {
       gap: spacing.s,
-      paddingRight: spacing.s,
     },
+    // A light chip: no border, so the four default chips fit a 360
+    // wide screen. The set values above stay cards.
     chip: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.xs,
       minHeight: touchTarget,
-      paddingHorizontal: spacing.m,
-      borderRadius: radii.pill,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.hairline,
+      paddingHorizontal: spacing.xs,
+      borderRadius: radius,
     },
     chipText: {
       ...type.control,
-      fontWeight: "600",
       color: colors.inkMuted,
     },
   }),

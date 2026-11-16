@@ -11,13 +11,13 @@ import { useThemedStyles } from "@/theme/theme-provider";
 import { whenWords } from "../lib/when";
 
 /** The presets, in the order the picker lists them. */
-export const PRESETS = [
+export const PRESETS: readonly { rule: string; label: string; hint?: string }[] = [
   { rule: "FREQ=DAILY", label: "Daily" },
-  { rule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", label: "Weekdays" },
+  { rule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", label: "Weekdays", hint: "Monday to Friday" },
   { rule: "FREQ=WEEKLY", label: "Weekly" },
   { rule: "FREQ=MONTHLY", label: "Monthly" },
   { rule: "FREQ=YEARLY", label: "Yearly" },
-] as const;
+];
 
 /**
  * The due a repeat starts from when the task has none: the rule's first
@@ -74,7 +74,7 @@ export function RepeatPicker({
             <ChoiceRow
               key={preset.rule}
               label={preset.label}
-              hint={plain === preset.label ? undefined : plain}
+              hint={plain === preset.label ? preset.hint : plain}
               chosen={chosen}
               onPress={() => pick(preset.rule)}
             />
@@ -88,6 +88,7 @@ export function RepeatPicker({
         />
         <ChoiceRow
           label="Don't repeat"
+          hint="Happens once"
           chosen={recurrence == null && !advanced}
           onPress={() => {
             onPick("", due);

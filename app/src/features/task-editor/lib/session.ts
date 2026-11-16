@@ -1,10 +1,17 @@
 import type { TaskEdit } from "@/types/task";
 
+/**
+ * Why a write failed, as the sheet explains it: the note changed on
+ * disk since the editor read it, the task left the vault, or the write
+ * itself failed.
+ */
+export type WriteFailure = "changed" | "gone" | "failed";
+
 /** Where the one write of a task stands. */
 export type WriteState =
   | { kind: "idle" }
   | { kind: "writing" }
-  | { kind: "failed"; message: string };
+  | { kind: "failed"; reason: WriteFailure };
 
 /**
  * One open task in the editor. The draft is what the sheet shows. The
@@ -26,7 +33,7 @@ export type SessionEvent =
   | { type: "change"; patch: Partial<TaskEdit> }
   /** The write of `edit` landed, and the file now holds `text`. */
   | { type: "written"; edit: TaskEdit; text: string }
-  | { type: "failed"; message: string }
+  | { type: "failed"; reason: WriteFailure }
   /** Write the draft again, against the latest text the store holds. */
   | { type: "retry"; base: string };
 
@@ -85,7 +92,7 @@ export function step(
       return {
         session: {
           ...session,
-          write: { kind: "failed", message: event.message },
+          write: { kind: "failed", reason: event.reason },
           queued: false,
         },
         job: null,

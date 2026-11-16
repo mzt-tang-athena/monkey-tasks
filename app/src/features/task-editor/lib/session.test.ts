@@ -5,6 +5,7 @@ import {
   reduce,
   type EditorEvent,
   type EditorState,
+  type WriteFailure,
   type WriteJob,
 } from "./session";
 
@@ -48,10 +49,10 @@ const written = (edit: TaskEdit, text: string): EditorEvent => ({
   id: "a",
   event: { type: "written", edit, text },
 });
-const failed = (message: string): EditorEvent => ({
+const failed = (reason: WriteFailure): EditorEvent => ({
   type: "session",
   id: "a",
-  event: { type: "failed", message },
+  event: { type: "failed", reason },
 });
 
 describe("the editor's write queue", () => {
@@ -131,13 +132,13 @@ describe("the editor's write queue", () => {
     const { state } = run([
       open,
       change({ due: "2026-10-27" }),
-      failed("disk full"),
+      failed("failed"),
     ]);
 
     expect(state.sessions.a?.draft.due).toBe("2026-10-27");
     expect(state.sessions.a?.write).toEqual({
       kind: "failed",
-      message: "disk full",
+      reason: "failed",
     });
   });
 
@@ -145,9 +146,9 @@ describe("the editor's write queue", () => {
     const { state, jobs } = run([
       open,
       change({ due: "2026-10-27" }),
-      failed("disk full"),
+      failed("failed"),
       change({ list: "Focus" }),
-      failed("disk full"),
+      failed("failed"),
       { type: "session", id: "a", event: { type: "retry", base: "file v3" } },
     ]);
 
@@ -214,7 +215,7 @@ describe("the editor's sessions", () => {
     const { state } = run([
       open,
       change({ due: "2026-10-27" }),
-      failed("disk full"),
+      failed("failed"),
       { type: "close" },
       { type: "open", id: "a", draft: draft(), base: "fresh" },
     ]);

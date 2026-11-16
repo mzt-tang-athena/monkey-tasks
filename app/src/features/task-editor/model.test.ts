@@ -39,8 +39,17 @@ describe("alerts", () => {
       reminders: ["2026-10-27T12:30"],
     });
 
-    expect(alerts.words(held, today)).toBe("At due, Tomorrow 12:30 PM");
+    expect(alerts.words(held, today)).toBe("At due, 12:30 PM");
     expect(alerts.isSet(held)).toBe(true);
+  });
+
+  it("names the day of a reminder that falls on another day than the due", () => {
+    const held = draft({
+      due: "2026-10-27T09:00",
+      reminders: ["2026-10-26T18:00"],
+    });
+
+    expect(alerts.words(held, today)).toBe("At due, Today 6:00 PM");
   });
 
   it("names the timed due alone when it holds no reminder", () => {

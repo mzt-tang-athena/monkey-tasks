@@ -26,6 +26,11 @@ export function whenWords(stored: string, today: Date): string {
     : `${day}${year}`;
 }
 
+/** A clock time in words: "8:30 AM". */
+export function clockWords(clock: Clock): string {
+  return formatTime(new Date(2000, 0, 1, clock.hour, clock.minute));
+}
+
 /** The time a stored value carries, or null for a plain date. */
 export function clockOf(stored: string | null): Clock | null {
   const parsed = stored == null ? null : parseStoredDate(stored);

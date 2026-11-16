@@ -1,7 +1,7 @@
 import type { IconName } from "@/components/ui/icon";
 import { ruleWords } from "@/lib/recurrence";
 import type { TaskEdit } from "@/types/task";
-import { clockOf, whenWords } from "./lib/when";
+import { clockOf, clockWords, dayOf, whenWords } from "./lib/when";
 
 export type PropertyKey = "due" | "repeat" | "alerts" | "note";
 
@@ -33,11 +33,21 @@ export type Property = {
   names: { open: string; clear: string; add: string };
 };
 
-/** The alerts in words: "at due" for a timed due, then each reminder. */
+/**
+ * The alerts in words: "at due" for a timed due, then each reminder. A
+ * reminder on the due's day says its time alone, since the Due tile
+ * already names the day.
+ */
 export function alertWords(draft: TaskEdit, today: Date): string[] {
+  const dueDay = dayOf(draft.due)?.getTime();
   const reminders = [...draft.reminders]
     .sort()
-    .map((at) => whenWords(at, today));
+    .map((at) => {
+      const clock = clockOf(at);
+      return clock != null && dayOf(at)?.getTime() === dueDay
+        ? clockWords(clock)
+        : whenWords(at, today);
+    });
   return clockOf(draft.due) == null ? reminders : ["At due", ...reminders];
 }
 
@@ -66,8 +76,8 @@ export const PROPERTIES: readonly Property[] = [
   {
     key: "due",
     title: "Due",
-    chip: "Date",
-    icon: "calendar-mini",
+    chip: "Due",
+    icon: "calendar",
     isSet: (draft) => draft.due != null,
     many: false,
     wide: false,

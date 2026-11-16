@@ -132,21 +132,24 @@ export function AlertsPicker({
           <Text style={styles.addText}>Add reminder</Text>
         </Pressable>
       )}
-      <View style={styles.weight}>
-        <Text style={styles.weightLabel} aria-hidden>
-          Alert weight
-        </Text>
-        <SegmentedControl
-          label="Alert weight"
-          segments={weightSegments}
-          selected={weight}
-          onSelect={onWeight}
-          stretch
-        />
-        <Text style={styles.hint}>
-          Harsh rings on the alarm stream. Quiet is silent.
-        </Text>
-      </View>
+      {/* The add flow is one task at a time, so the weight waits. */}
+      {adding ? null : (
+        <View style={styles.weight}>
+          <Text style={styles.weightLabel} aria-hidden>
+            Alert weight
+          </Text>
+          <SegmentedControl
+            label="Alert weight"
+            segments={weightSegments}
+            selected={weight}
+            onSelect={onWeight}
+            stretch
+          />
+          <Text style={styles.hint}>
+            Harsh rings on the alarm stream. Quiet is silent.
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
