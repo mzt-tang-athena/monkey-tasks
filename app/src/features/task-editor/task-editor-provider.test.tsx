@@ -296,6 +296,20 @@ describe("the task editor sheet", () => {
     expect(written().name).toBe("Call Mum about Sunday");
   });
 
+  it("writes the title as typed when the sheet closes at once", async () => {
+    mount();
+    openTask();
+    const field = screen.getByRole("textbox", { name: "Task name" });
+
+    // Typing and pressing Close, with no other press between, still
+    // writes the last keystroke.
+    fireEvent.change(field, { target: { value: "Call Mum about Sunday" } });
+    fireEvent.click(screen.getByRole("button", { name: "close the task" }));
+
+    await waitFor(() => expect(store.edit).toHaveBeenCalledTimes(1));
+    expect(written().name).toBe("Call Mum about Sunday");
+  });
+
   it("reverts an empty title instead of writing it", async () => {
     mount();
     openTask();

@@ -171,6 +171,31 @@ describe("the editor's sessions", () => {
     expect(landed.state.sessions.a).toBeUndefined();
   });
 
+  it("keeps a queued draft when the task closes behind the write in flight", () => {
+    // The first write lands after the close. The queued draft still goes
+    // next, so a title typed and closed at once is never lost.
+    const first = draft({ due: "2026-10-27" });
+    const closed = run([
+      open,
+      change({ due: "2026-10-27" }),
+      change({ name: "Call Mum about Sunday" }),
+      { type: "close" },
+    ]);
+    expect(closed.state.sessions.a).toBeDefined();
+
+    const landed = run([written(first, "file v2")], closed.state);
+    const queued = {
+      edit: draft({ due: "2026-10-27", name: "Call Mum about Sunday" }),
+      expected: "file v2",
+    };
+    expect(landed.jobs).toEqual([queued]);
+    expect(landed.state.sessions.a).toBeDefined();
+
+    // The queued write lands, and the task is then forgotten.
+    const done = run([written(queued.edit, "file v3")], landed.state);
+    expect(done.state.sessions.a).toBeUndefined();
+  });
+
   it("forgets an idle task when it closes", () => {
     const { state } = run([open, { type: "close" }]);
 

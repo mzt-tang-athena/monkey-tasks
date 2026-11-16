@@ -117,7 +117,10 @@ test("the editor writes a new name when the sheet closes", async ({ page }) => {
   await expect(page).toHaveURL("/");
   await expect(row(page, rename.to)).toBeVisible();
   await expect(row(page, rename.from)).toHaveCount(0);
+  // The rename writes a new file named for the title, so the note
+  // carries no separate title key.
   await expect
     .poll(() => noteText(page, `Tasks/${rename.to}.md`))
-    .toContain(`title: ${rename.to}`);
+    .toContain('kind: "[[tasks]]"');
+  expect(await noteText(page, `Tasks/${rename.from}.md`)).toBeNull();
 });

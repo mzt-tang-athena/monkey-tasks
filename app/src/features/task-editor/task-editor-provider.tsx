@@ -115,12 +115,13 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
       }
       try {
         const written = await editTask(target, edit, expected);
-        setState((held) =>
-          reduce(held, {
-            type: "session",
-            id,
-            event: { type: "written", edit, text: written.text },
-          }).state,
+        setState(
+          (held) =>
+            reduce(held, {
+              type: "session",
+              id,
+              event: { type: "written", edit, text: written.text },
+            }).state,
         );
       } catch (error) {
         setState((held) =>

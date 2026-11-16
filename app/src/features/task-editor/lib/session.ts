@@ -120,7 +120,10 @@ export const EMPTY_EDITOR: EditorState = { openId: null, sessions: {} };
 function settled(state: EditorState, id: string): boolean {
   const session = state.sessions[id];
   return (
-    session != null && id !== state.openId && session.write.kind === "idle"
+    session != null &&
+    id !== state.openId &&
+    session.write.kind === "idle" &&
+    !session.queued
   );
 }
 

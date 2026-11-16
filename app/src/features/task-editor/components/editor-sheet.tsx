@@ -73,7 +73,12 @@ export function EditorSheet({
   const keyboard = useKeyboardState((state) => state.height);
   const [picker, setPicker] = React.useState<Picker>(null);
   const [noteOpen, setNoteOpen] = React.useState(false);
-  const [title, setTitle] = React.useState(draft.name);
+  // The field's text as typed, or null when it holds the draft's name.
+  // A press handler belongs to an earlier render, so the typed text is
+  // a ref the field writes on every keystroke. The field reads the
+  // draft's name, so a rename that lands elsewhere shows here.
+  const [title, setTitle] = React.useState<string | null>(null);
+  const typed = React.useRef(draft.name);
   const [menu, setMenu] = React.useState(false);
   const menuAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
 
@@ -82,15 +87,19 @@ export function EditorSheet({
   const [shownName, setShownName] = React.useState(draft.name);
   if (shownName !== draft.name) {
     setShownName(draft.name);
-    setTitle(draft.name);
+    setTitle(null);
   }
+  React.useEffect(() => {
+    typed.current = draft.name;
+  }, [draft.name]);
 
   // A title writes on blur, on submit and on close, never per keystroke:
   // a rename writes a new file under SAF. An empty title never writes.
   const commitTitle = () => {
-    const name = title.trim();
+    const name = typed.current.trim();
+    setTitle(null);
     if (name === "") {
-      setTitle(draft.name);
+      typed.current = draft.name;
       return;
     }
     if (name !== draft.name) {
@@ -184,8 +193,11 @@ export function EditorSheet({
             />
           </Pressable>
           <TextInput
-            value={title}
-            onChangeText={setTitle}
+            value={title ?? draft.name}
+            onChangeText={(text) => {
+              typed.current = text;
+              setTitle(text);
+            }}
             onBlur={commitTitle}
             onSubmitEditing={commitTitle}
             multiline
@@ -271,8 +283,6 @@ export function EditorSheet({
         open={picker === "due"}
         onClose={() => setPicker(null)}
         title="Due"
-        doneLabel="Done"
-        onDone={() => setPicker(null)}
       >
         <DuePicker
           due={draft.due}
