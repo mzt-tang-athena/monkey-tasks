@@ -42,7 +42,10 @@ export function PickerSheet({
   const keyboard = useKeyboardState((state) => state.height);
   const window = useWindowDimensions();
   const { mounted, progress } = useSheetClock(open);
-  const cap = Math.max(240, window.height * 0.55 - keyboard - insets.top);
+  // A picker holds no title above it, so it takes more of the window
+  // than the editor does. The month grid and the time face then fit
+  // without a scroll on a tall phone.
+  const cap = Math.max(240, window.height * 0.8 - keyboard - insets.top);
   const body = useClampedHeight(cap);
   if (!mounted) {
     return null;
@@ -74,12 +77,12 @@ export function PickerSheet({
           keyboard never push the header off the top of the sheet. */}
       <MotionScrollView
         style={{ height: body.height, maxHeight: cap }}
-        onContentSizeChange={body.onContentSizeChange}
-        contentContainerStyle={styles.body}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {children}
+        <View style={styles.body} onLayout={body.onLayout}>
+          {children}
+        </View>
       </MotionScrollView>
     </Sheet>
   );

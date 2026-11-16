@@ -215,51 +215,54 @@ export function EditorSheet({
         </View>
         <MotionScrollView
           style={{ height: body.height, maxHeight: cap }}
-          onContentSizeChange={body.onContentSizeChange}
-          contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {showing.length > 0 ? (
-            <View style={styles.tiles}>
-              {showing.map((property) => (
-                <PropertyTile
-                  key={property.key}
-                  property={property}
-                  draft={draft}
-                  today={today}
-                  onPress={() => openPicker(property)}
-                  onClear={() => {
-                    const patch = property.clear(draft);
-                    if (patch != null) {
-                      onChange(patch);
-                    }
-                  }}
-                />
-              ))}
-            </View>
-          ) : null}
-          {missing.length > 0 ? (
-            <MotionScrollView
-              horizontal
-              style={styles.stripScroll}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.strip}
-            >
-              {missing.map((property) => (
-                <Pressable
-                  key={property.key}
-                  style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
-                  onPress={() => openPicker(property)}
-                  accessibilityRole="button"
-                  accessibilityLabel={property.names.add}
-                >
-                  <Icon name={property.icon} color="inkMuted" />
-                  <Text style={styles.chipText}>{property.chip}</Text>
-                </Pressable>
-              ))}
-            </MotionScrollView>
-          ) : null}
+          <View style={styles.body} onLayout={body.onLayout}>
+            {showing.length > 0 ? (
+              <View style={styles.tiles}>
+                {showing.map((property) => (
+                  <PropertyTile
+                    key={property.key}
+                    property={property}
+                    draft={draft}
+                    today={today}
+                    onPress={() => openPicker(property)}
+                    onClear={() => {
+                      const patch = property.clear(draft);
+                      if (patch != null) {
+                        onChange(patch);
+                      }
+                    }}
+                  />
+                ))}
+              </View>
+            ) : null}
+            {missing.length > 0 ? (
+              <MotionScrollView
+                horizontal
+                style={styles.stripScroll}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.strip}
+              >
+                {missing.map((property) => (
+                  <Pressable
+                    key={property.key}
+                    style={({ pressed }) => [
+                      styles.chip,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => openPicker(property)}
+                    accessibilityRole="button"
+                    accessibilityLabel={property.names.add}
+                  >
+                    <Icon name={property.icon} color="inkMuted" />
+                    <Text style={styles.chipText}>{property.chip}</Text>
+                  </Pressable>
+                ))}
+              </MotionScrollView>
+            ) : null}
+          </View>
         </MotionScrollView>
       </Sheet>
 
@@ -389,14 +392,18 @@ function PropertyTile({
           <Icon name={property.icon} color="inkMuted" />
           <Text style={styles.tileTitle}>{property.title}</Text>
         </View>
-        <Text style={styles.tileWords} numberOfLines={property.wide ? 2 : 1}>
+        <Text style={styles.tileWords} numberOfLines={2}>
           {property.words(draft, today)}
         </Text>
       </Pressable>
+      {/* The clear control sits in the corner, so the value keeps the
+          tile's full width. */}
       {canClear ? (
-        <IconButton label={property.names.clear} onPress={onClear}>
-          <Icon name="close" />
-        </IconButton>
+        <View style={styles.tileClear}>
+          <IconButton label={property.names.clear} onPress={onClear}>
+            <Icon name="close" />
+          </IconButton>
+        </View>
       ) : null}
     </View>
   );
@@ -464,26 +471,29 @@ const makeStyles = (colors: Palette) => ({
       flexWrap: "wrap",
       gap: spacing.s,
     },
+    // Two per row. A tile alone in its row keeps half the width, so the
+    // grid reads as a grid.
     tile: {
-      flexGrow: 1,
-      flexBasis: "46%",
-      flexDirection: "row",
-      alignItems: "flex-start",
+      flexGrow: 0,
+      flexBasis: "48%",
       borderRadius: radii.pill,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.hairline,
       backgroundColor: colors.paper,
-      paddingLeft: spacing.m,
     },
     tileWide: {
       flexBasis: "100%",
     },
     tileMain: {
-      flex: 1,
       gap: spacing.xs,
+      paddingHorizontal: spacing.m,
       paddingVertical: spacing.m,
-      paddingRight: spacing.s,
       borderRadius: radii.pill,
+    },
+    tileClear: {
+      position: "absolute",
+      top: 0,
+      right: 0,
     },
     tileHead: {
       flexDirection: "row",

@@ -140,9 +140,7 @@ export function DuePicker({
         />
       )}
       <View style={styles.footer}>
-        {due == null ? (
-          <View style={styles.spacer} />
-        ) : (
+        {due == null ? null : (
           <Button
             variant="text"
             tone="danger"
@@ -151,6 +149,7 @@ export function DuePicker({
             onPress={onClear}
           />
         )}
+        <View style={styles.spacer} />
         <Button
           label="Done"
           accessibilityLabel="done with the date"

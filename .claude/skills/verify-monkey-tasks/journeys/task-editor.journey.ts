@@ -1,6 +1,6 @@
 import { expect, test } from "../../../../app/e2e/fixtures";
 import { rename, undated } from "../../../../app/e2e/data";
-import { press, row } from "../../../../app/e2e/locators";
+import { listTab, press, row } from "../../../../app/e2e/locators";
 import {
   failNextWrite,
   noteText,
@@ -49,6 +49,8 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await expect(
     due.getByRole("button", { name: "done with the date" }),
   ).toBeVisible();
+  // The time face grows the panel after a measure. Let it land.
+  await page.waitForTimeout(300);
   await shot("03-due-picker-with-time");
   await due.getByRole("button", { name: "done with the date" }).click();
   await expect(due).toHaveCount(0);
@@ -93,7 +95,7 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await expect(alerts).toHaveCount(0);
 
   // A note.
-  await editor.getByRole("button", { name: "edit note" }).click();
+  await editor.getByRole("button", { name: /^(add|edit) note$/ }).click();
   const note = page.getByRole("dialog", { name: "Note" });
   await expect(note).toBeVisible();
   await expect(note).toHaveCSS("opacity", "1");
@@ -108,7 +110,8 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await editor
     .getByRole("textbox", { name: "Task name" })
     .fill(rename.to);
-  await page.getByRole("button", { name: "close the task" }).click();
+  // Escape is Android back in the browser: it closes the sheet.
+  await page.keyboard.press("Escape");
   await expect(editor).toHaveCount(0);
 
   // The note holds every choice, and no raw syntax reached the sheet.
@@ -123,6 +126,8 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await info.attach("note", { body: text ?? "", contentType: "text/plain" });
 
   await returnToTab(page);
+  // The task took the Focus list, so it left Main for that tab.
+  await listTab(page, "Focus").click();
   const moved = row(page, rename.to);
   await expect(moved).toBeVisible();
   await moved.scrollIntoViewIfNeeded();
