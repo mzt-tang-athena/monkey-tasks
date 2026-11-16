@@ -153,15 +153,6 @@ export const drag = {
 export const measure = 720;
 
 /**
- * Week mode's day-column width and canvas height. Sized so a 390pt
- * phone shows two full columns plus a third peeking after the page
- * gutters; the canvas height caps the columns so tall viewports do
- * not stretch them into the bottom section's space.
- */
-export const weekColWidth = 144;
-export const weekCanvasHeight = 256;
-
-/**
  * The period strip's scroll step: one strip pill plus one gap. Keep
  * in sync with the styles: stripDay is 44 wide and the rail gap is
  * spacing.s. The rail alignment math consumes this.

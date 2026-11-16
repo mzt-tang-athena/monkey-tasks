@@ -1,6 +1,7 @@
 import type { TaskItem } from "@/types/task";
 import type { WeekLayout } from "@/lib/settings";
 import { addDays, isoOf, isSameDay } from "@/utils/dates";
+import { spacing, touchTarget } from "@/theme/tokens";
 import { startOfWeek, tasksForDay } from "@/features/planner/model";
 import { sortDay } from "./day-rows";
 
@@ -63,11 +64,12 @@ export type WeekGeometry = {
   height: number;
 };
 
-/** A Spread box: padding, the header line, two chips, and the border. */
-export const spreadBox = { height: 68, gap: 8, header: 14, chip: 18 } as const;
+/** A Spread box: a 4pt pad, the 14pt header line, two 18pt chips 4pt
+    apart, and room for the hairline border, on the 4pt grid. */
+export const spreadBox = { height: 68, gap: spacing.s, header: 14, chip: 18 } as const;
 
 /** A Rows line: one touch target tall. */
-export const rowsLine = { height: 44, chip: 24, date: 36 } as const;
+export const rowsLine = { height: touchTarget, chip: 24, date: 36 } as const;
 
 export const weekLayouts: Record<WeekLayout, WeekGeometry> = {
   // Sunday with Monday, Tuesday with Wednesday, Thursday with Friday,

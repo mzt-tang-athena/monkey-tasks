@@ -8,9 +8,9 @@ import { TaskListSection } from "./task-list-section";
 import { WeekView } from "./week-view";
 
 /**
- * The week body: the day columns, and under them the list pane fed the
- * week's placement pool. The calendar sits still, and only the pane
- * scrolls.
+ * The week body: the seven day boxes, and under them the list pane fed
+ * the week's placement pool. The calendar sits still, and only the
+ * pane scrolls.
  */
 export function WeekPane({
   tasks,
@@ -22,7 +22,7 @@ export function WeekPane({
 }: {
   /** Every valid task: the pool draws from the source. */
   tasks: TaskItem[];
-  /** The open tasks the columns draw. */
+  /** The open tasks the day boxes draw. */
   openTasks: TaskItem[];
   day: Date;
   today: Date;
@@ -35,17 +35,19 @@ export function WeekPane({
     [tasks, source, day],
   );
   return (
-    <View style={layout.weekBody}>
+    <View style={[layout.weekBody, layout.gutter]}>
       <WeekView
+        layout="spread"
         tasks={openTasks}
         today={today}
         selected={day}
+        interactive
         onSelect={onSelect}
         onOpenDay={onOpenDay}
       />
       {/* Week's foot: the shared section in its own scrolling pane,
           fed the week's placement pool. */}
-      <View style={[layout.paneList, layout.gutter]}>
+      <View style={layout.paneList}>
         <TaskListSection
           style={layout.paneScroll}
           mode="week"
