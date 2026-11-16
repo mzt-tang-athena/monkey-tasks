@@ -17,7 +17,7 @@ hid them. This ticket builds rename and delete through the mutation
 layer from ticket 0052 and shows the items again.
 
 Delete all completed tasks moved to
-`tickets/doing/20261116-fold-and-clear-completed.md`. It ships with the
+`tickets/done/20261116-fold-and-clear-completed.md`. It ships with the
 folded Completed group.
 
 A list is a note with `kind: "[[lists]]"` in the vault's `Tasks/Lists/`
@@ -50,7 +50,7 @@ A task joins a list through a `[[Name]]` entry in its `lists` property.
 
 ### Delete all completed tasks
 
-Moved to `tickets/doing/20261116-fold-and-clear-completed.md`.
+Moved to `tickets/done/20261116-fold-and-clear-completed.md`.
 
 ### Shared rules
 
