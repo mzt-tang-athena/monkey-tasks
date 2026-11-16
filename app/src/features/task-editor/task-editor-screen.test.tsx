@@ -1,7 +1,7 @@
 import * as React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { TaskItem } from "@/types/task";
+import type { TaskEdit, TaskItem } from "@/types/task";
 import TaskEditorScreen from "./task-editor-screen";
 
 // The route and the store are the screen's two inputs: a task id
@@ -10,6 +10,7 @@ import TaskEditorScreen from "./task-editor-screen";
 const state = vi.hoisted(() => ({
   tasks: [] as TaskItem[],
   status: "ready" as "loading" | "ready" | "error",
+  edits: [] as TaskEdit[],
 }));
 
 vi.mock("react-native-safe-area-context", () => ({
@@ -36,7 +37,9 @@ vi.mock("@/stores/tasks/task-state", () => ({
 }));
 
 vi.mock("@/stores/tasks/mutations/use-edit-task", () => ({
-  useEditTask: () => async () => undefined,
+  useEditTask: () => async (_task: TaskItem, edit: TaskEdit) => {
+    state.edits.push(edit);
+  },
 }));
 
 const NOTE_ID = "content://vault/Notes/Garden.md";
@@ -78,6 +81,7 @@ function mount(item: TaskItem) {
 beforeEach(() => {
   state.tasks = [];
   state.status = "ready";
+  state.edits.length = 0;
 });
 
 describe("TaskEditorScreen", () => {
@@ -134,5 +138,58 @@ describe("TaskEditorScreen", () => {
     const form = screen.getByTestId("keyboard-aware");
     expect(form.contains(screen.getByRole("textbox", { name: "Body" }))).toBe(true);
     expect(form.contains(screen.getByRole("textbox", { name: "Reminders" }))).toBe(true);
+  });
+
+  it("shows the note's weight, then saves Quiet", async () => {
+    mount(task());
+
+    expect(
+      screen
+        .getByRole("tab", { name: "Harsh" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("tab", { name: "Quiet" })
+        .getAttribute("aria-selected"),
+    ).toBe("false");
+    expect(
+      screen.getByText("Harsh rings on the alarm stream. Quiet is silent."),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Quiet" }));
+    expect(
+      screen
+        .getByRole("tab", { name: "Quiet" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
+
+    fireEvent.click(screen.getByRole("button", { name: "save task" }));
+
+    await waitFor(() => expect(state.edits).toHaveLength(1));
+    expect(state.edits[0]?.alertWeight).toBe("quiet");
+  });
+
+  it("opens a quiet note at Quiet", () => {
+    const quiet = task();
+    mount({
+      ...quiet,
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "quiet",
+      },
+    });
+
+    expect(
+      screen
+        .getByRole("tab", { name: "Quiet" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("tab", { name: "Harsh" })
+        .getAttribute("aria-selected"),
+    ).toBe("false");
   });
 });

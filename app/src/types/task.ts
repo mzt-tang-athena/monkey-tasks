@@ -1,4 +1,4 @@
-import type { TaskFrontmatter } from "@monkey-tasks/schemas";
+import type { AlertWeight, TaskFrontmatter } from "@monkey-tasks/schemas";
 
 export type TaskItem = {
   /**
@@ -69,5 +69,6 @@ export type TaskEdit = {
   /** The one list by name; null means Main. */
   list: string | null;
   reminders: string[];
+  alertWeight: AlertWeight;
   body: string;
 };

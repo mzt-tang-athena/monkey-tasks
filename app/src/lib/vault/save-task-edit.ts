@@ -44,6 +44,16 @@ export async function saveTaskEdit(
   let text = expected;
   text = updateProperty(text, "due", edit.due);
   text = updateProperty(text, "recurrence", recurrenceToWrite(item, edit));
+  // An unknown value reads as harsh, so an unchanged weight keeps its
+  // line and its warning.
+  const weight = item.data?.["alert weight"] ?? "harsh";
+  if (edit.alertWeight !== weight) {
+    text = updateProperty(
+      text,
+      "alert weight",
+      edit.alertWeight === "quiet" ? "quiet" : null,
+    );
+  }
   text = setBlockList(text, "reminders", edit.reminders);
   // A note that still carries the old `lists` would promote its first
   // link on the next read and put the task back on its old tab, so a

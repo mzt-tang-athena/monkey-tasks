@@ -1,12 +1,23 @@
 import * as React from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Banner } from "@/components/ui/banner";
+import {
+  SegmentedControl,
+  type Segment,
+} from "@/components/ui/segmented-control";
 import { TextField } from "@/components/ui/text-field";
+import type { AlertWeight } from "@monkey-tasks/schemas";
 import type { TaskItem } from "@/types/task";
-import { measure, pageGutter, spacing } from "@/theme/tokens";
+import { measure, pageGutter, spacing, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { useTaskEditorDraft } from "../hooks/use-task-editor-draft";
 import { EditorHeader } from "./editor-header";
+
+const weightSegments: Segment<AlertWeight>[] = [
+  { key: "harsh", label: "Harsh" },
+  { key: "quiet", label: "Quiet" },
+];
 
 /**
  * The editor for a task note: the header and the fields. The fields
@@ -15,6 +26,7 @@ import { EditorHeader } from "./editor-header";
  * lifts the focused field above the keyboard itself.
  */
 export function TaskEditorForm({ task }: { task: TaskItem }) {
+  const { styles } = useThemedStyles(makeStyles);
   const editor = useTaskEditorDraft(task);
   const { draft, change, saving } = editor;
 
@@ -88,6 +100,21 @@ export function TaskEditorForm({ task }: { task: TaskItem }) {
           multiline
           editable={!saving}
         />
+        <View style={styles.field}>
+          <Text style={styles.label} aria-hidden>
+            Alert weight
+          </Text>
+          <SegmentedControl
+            label="Alert weight"
+            segments={weightSegments}
+            selected={draft.alertWeight}
+            onSelect={(alertWeight) => change({ alertWeight })}
+            stretch
+          />
+          <Text style={styles.hint}>
+            Harsh rings on the alarm stream. Quiet is silent.
+          </Text>
+        </View>
         <TextField
           label="Body"
           value={draft.body}
@@ -103,18 +130,33 @@ export function TaskEditorForm({ task }: { task: TaskItem }) {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  // The error banner and the fields, one step apart.
-  content: {
-    maxWidth: measure,
-    alignSelf: "center",
-    width: "100%",
-    paddingHorizontal: pageGutter,
-    paddingTop: spacing.l,
-    paddingBottom: spacing.xxxl,
-    gap: spacing.l,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    scroll: {
+      flex: 1,
+    },
+    // The error banner and the fields, one step apart.
+    content: {
+      maxWidth: measure,
+      alignSelf: "center",
+      width: "100%",
+      paddingHorizontal: pageGutter,
+      paddingTop: spacing.l,
+      paddingBottom: spacing.xxxl,
+      gap: spacing.l,
+    },
+    field: {
+      gap: spacing.xs,
+    },
+    label: {
+      ...type.eyebrow,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+      color: colors.inkMuted,
+    },
+    hint: {
+      ...type.caption,
+      color: colors.inkMuted,
+    },
+  }),
 });

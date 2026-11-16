@@ -652,6 +652,7 @@ describe("preview and empty folder (ticket 0051)", () => {
         recurrence: sample.data?.recurrence ?? null,
         list: null,
         reminders: [],
+        alertWeight: sample.data?.["alert weight"] ?? "harsh",
         body: "",
       });
     });

@@ -495,6 +495,7 @@ describe("TasksProvider", () => {
         recurrence: null,
         list: "Focus",
         reminders: [],
+        alertWeight: "harsh",
         body: "\nNew body.\n",
       });
     });
@@ -528,6 +529,7 @@ describe("TasksProvider", () => {
           recurrence: null,
           list: null,
           reminders: [],
+          alertWeight: "harsh",
           body: before.body,
         }),
       ).rejects.toThrow("disk full");
@@ -556,6 +558,7 @@ describe("TasksProvider", () => {
         recurrence: null,
         list: "Focus",
         reminders: ["2026-10-30T09:00"],
+        alertWeight: before.data?.["alert weight"] ?? "harsh",
         body: "\nNew body.\n",
       });
     });
