@@ -242,7 +242,7 @@ documents its props, and each primitive has a component test.
 |---|---|
 | `Button` | A solid or quiet pill, a round send control, or a `text` label at least 44 pt high. |
 | `IconButton`, `Pill` | An icon in a 44 pt target. A control pill, or a `chip` that reads a parsed field. |
-| `Icon` | Every glyph the app draws, by `name` and color token. The app has no icon font. |
+| `Icon` | Every glyph the app draws, by `name` and color token. An optional `size` centers it in a square box beside text. The app has no icon font. |
 | `OverlayHost`, `Overlay` | The root portal in `app/_layout.tsx`. An overlay draws above every screen at its layer. A `modal` overlay hides the screen from assistive tech. |
 | `Menu`, `placeMenu` | A menu that opens from an anchor. It flips above near the bottom bar and stays inside the page gutter. |
 | `Sheet` | A scrim, a dock that rides the keyboard, and a panel. The scrim and Android back close it. A `stacked` sheet draws over another sheet, and a `covered` one waits under it. |
@@ -252,6 +252,7 @@ documents its props, and each primitive has a component test.
 | `SectionHeader` | An eyebrow label over a group, with a count and a tone. |
 | `CardGroupRow` | One row of a group card, with its edges and an inset divider. |
 | `TabStrip`, `SegmentedControl` | Tabs that scroll, with a fade over an edge that hides more tabs, and segments. Every target is at least 44 by 44. |
+| `EdgeFade` | The stepped fade over the edge of a sideways strip that hides more items. The tab strip and the editor's add strip share it. |
 | `Pressable` | Every press target. React Native's press on the web, because it takes the browser click. A row that mounts or re-renders under the finger still presses. It needs no layout report. Gesture handler's on native, where a pan cancels it. A surface swallows the one click a pan activation leaves behind. A web keyboard focus draws the shared focus mark, in the active palette. |
 | `TextField` | A labelled input, with a hint or an error. |
 
