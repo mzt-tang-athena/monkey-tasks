@@ -1,40 +1,59 @@
 import * as React from "react";
 import { Platform } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
-import { taskIsDone } from "@monkey-tasks/schemas";
+import { taskIsDone, type AlertWeight } from "@monkey-tasks/schemas";
 import { parseStoredDate } from "@/utils/dates";
 import type { TaskItem } from "@/types/task";
 import {
-  cancelAllScheduled,
+  ESCALATION_MINUTES,
+  alertRing,
+  type AlertRing,
+} from "@/lib/alerts/rings";
+import {
+  isAcked,
+  loadAcked,
+  recordAcks,
+  type AckedGroups,
+} from "@/lib/alerts/acked";
+import {
   cancelScheduled,
+  dismissDelivered,
+  ensureChannels,
   ensureNotificationPermission,
-  scheduleAt,
+  listDeliveredDetailed,
+  listScheduledDetailed,
+  scheduleRing,
 } from "@/lib/notifications";
 import { TASKS_KEY, type TaskListData } from "./query";
-
-type PendingAlarm = {
-  uri: string;
-  when: Date;
-  title: string;
-  body: string;
-};
 
 /** A moment the OS should ring, and whether it is the task's due time. */
 type AlarmTime = { when: number; due: boolean };
 
+/** A scheduled notification, as the plan sees it. */
+export type ScheduledRing = {
+  id: string;
+  data: {
+    uri: string;
+    base: number;
+    step: number;
+    weight: AlertWeight;
+  } | null;
+};
+
+/** What a rebuild must schedule and cancel to reach the wanted rings. */
+export type AlertPlan = { schedule: AlertRing[]; cancel: string[] };
+
 const MINUTE_MS = 60_000;
 
-/**
- * Which alarm ids belong to which task note, so a tick can cancel that
- * task's alarms without touching the rest. Rebuilt by `syncReminders`.
- */
-const alarmIds = new Map<string, string[]>();
+/** The whole harsh escalation fits in this window; quiet is shorter. */
+const LOOKBACK_MS =
+  Math.max(...ESCALATION_MINUTES.harsh) * MINUTE_MS;
 
 /**
- * Every alarm change waits for the one before it. A rebuild cancels
- * every alarm and then schedules each one, with a native call between
- * each step. Two runs that overlap would both schedule, and one
- * reminder would ring twice.
+ * Every alarm change waits for the one before it. A rebuild compares
+ * the OS schedule with the wanted rings, with native calls between each
+ * step. Two runs that overlap would both see the same gaps and both
+ * schedule them.
  */
 let chain: Promise<unknown> = Promise.resolve();
 
@@ -49,14 +68,13 @@ function inTurn<T>(work: () => Promise<T>): Promise<T> {
  * each reminder as an extra alert. A reminder in the due minute adds no
  * second ring. A date-only due has no time of day, so it stays silent.
  */
-function alarmTimes(task: TaskItem | null): AlarmTime[] {
+function alarmTimes(task: TaskItem | null, now: number): AlarmTime[] {
   const data = task?.data;
   // A completed task keeps its due and reminders in the note but rings
   // no alarm; an unreadable note has nothing to trust either.
   if (data == null || taskIsDone(data)) {
     return [];
   }
-  const now = Date.now();
   const alarms: AlarmTime[] = [];
   const due = data.due == null ? null : parseStoredDate(data.due);
   if (due != null && due.hasTime && due.date.getTime() > now) {
@@ -86,22 +104,106 @@ function alarmBody(alarm: AlarmTime): string {
   return alarm.due ? "Due" : "Task reminder";
 }
 
-function sameAlarms(before: AlarmTime[], after: AlarmTime[]): boolean {
+/** Every ring the task makes that is still ahead of `now`. */
+function ringsFor(task: TaskItem | null, now: number): AlertRing[] {
+  if (task == null) {
+    return [];
+  }
+  const weight: AlertWeight = task.data?.["alert weight"] ?? "harsh";
+  const rings: AlertRing[] = [];
+  // A group whose base minute has passed keeps its future follow-ups,
+  // so the alarm list is asked for the whole escalation window.
+  for (const alarm of alarmTimes(task, now - LOOKBACK_MS)) {
+    for (const step of ESCALATION_MINUTES[weight]) {
+      rings.push(
+        alertRing({
+          uri: task.uri,
+          base: alarm.when,
+          step,
+          weight,
+          title: task.name,
+          body: alarmBody(alarm),
+        }),
+      );
+    }
+  }
+  return rings.filter((ring) => ring.when > now);
+}
+
+function sameRings(before: AlertRing[], after: AlertRing[]): boolean {
   return (
     before.length === after.length &&
     before.every(
-      (alarm, index) =>
-        alarm.when === after[index].when && alarm.due === after[index].due,
+      (ring, index) =>
+        ring.id === after[index].id && ring.weight === after[index].weight,
     )
   );
 }
 
 /**
- * Rebuild the OS alarm list from the task list: one exact alarm per
- * future alarm on an open task (a timed due, and each reminder), nothing
- * else. All of them are absolute datetimes, so the whole list can be
- * recomputed from the notes after every load instead of tracking alarms
- * one by one.
+ * The rings the OS should hold right now, and the scheduled ones it
+ * must drop. Pure: `now`, the acknowledged groups and the OS schedule
+ * are its whole input.
+ *
+ * A ring whose base minute has passed belongs to a group that is still
+ * escalating, so it stays unless its task is gone or done. A ring whose
+ * base is ahead is dropped when the note no longer wants it: a reminder
+ * moved, the weight turned quiet, or the step is outside the window. A
+ * ring still wanted under another weight is dropped too, so the quiet
+ * channel replaces it.
+ */
+export function planRings(
+  tasks: readonly TaskItem[],
+  now: number,
+  acked: AckedGroups,
+  scheduled: readonly ScheduledRing[],
+): AlertPlan {
+  const byUri = new Map(tasks.map((task) => [task.uri, task]));
+  const wanted = new Map<string, AlertRing>();
+  for (const task of tasks) {
+    for (const ring of ringsFor(task, now)) {
+      if (!isAcked(acked, ring.uri, ring.base)) {
+        wanted.set(ring.id, ring);
+      }
+    }
+  }
+
+  const cancel: string[] = [];
+  for (const entry of scheduled) {
+    const data = entry.data;
+    // A notification this build did not schedule is not a ring.
+    if (data == null) {
+      continue;
+    }
+    const task = byUri.get(data.uri);
+    if (task == null || task.data == null || taskIsDone(task.data)) {
+      cancel.push(entry.id);
+    } else if (isAcked(acked, data.uri, data.base)) {
+      cancel.push(entry.id);
+    } else if (data.base > now) {
+      const want = wanted.get(entry.id);
+      if (want == null || want.weight !== data.weight) {
+        cancel.push(entry.id);
+      }
+    }
+  }
+
+  // A cancelled ring that is still wanted comes back under the new
+  // weight or the new step.
+  const cancelled = new Set(cancel);
+  const scheduledIds = new Set(scheduled.map((entry) => entry.id));
+  const schedule = [...wanted.values()]
+    .filter((ring) => !scheduledIds.has(ring.id) || cancelled.has(ring.id))
+    .sort((a, b) => a.when - b.when || a.id.localeCompare(b.id));
+
+  return { schedule, cancel };
+}
+
+/**
+ * Rebuild the OS alarm list from the task list after each read of the
+ * vault. The notes are the truth: rings whose task is gone or done drop,
+ * a running group keeps its future follow-ups, and a delivered ring is
+ * never armed again because its minute has passed.
  *
  * Alarms are best effort: the store calls this fire-and-forget, so it
  * reports what it managed and never throws.
@@ -120,51 +222,115 @@ async function rebuild(
     return { scheduled: 0, skipped: true };
   }
 
-  const pending: PendingAlarm[] = [];
-  for (const task of tasks) {
-    for (const alarm of alarmTimes(task)) {
-      pending.push({
-        uri: task.uri,
-        when: new Date(alarm.when),
-        title: task.name,
-        body: alarmBody(alarm),
-      });
-    }
-  }
-
-  // This runs only after a successful vault read, so the notes are the
-  // truth: a task completed or deleted since the last sync drops its
-  // alarm here instead of ringing from stale state. Permission is
-  // checked before the cancel, so a denied prompt cannot wipe alarms.
-  let scheduled = 0;
   try {
-    if (pending.length > 0) {
-      // One prompt covers the whole batch; scheduleAt reuses the granted
-      // state for each alarm it creates.
+    await ensureChannels();
+    const now = Date.now();
+    const scheduled = await listScheduledDetailed();
+    const plan = planRings(tasks, now, loadAcked(now), scheduled);
+    // Permission is checked before any cancel, so a denied prompt cannot
+    // wipe the schedule.
+    if (plan.schedule.length > 0) {
       const granted = await ensureNotificationPermission();
       if (!granted) {
         return { scheduled: 0, skipped: true };
       }
     }
-    await cancelAllScheduled();
-    alarmIds.clear();
-    for (const alarm of pending) {
-      const id = await scheduleAt(alarm.when, alarm.title, alarm.body);
-      const ids = alarmIds.get(alarm.uri) ?? [];
-      ids.push(id);
-      alarmIds.set(alarm.uri, ids);
-      scheduled += 1;
+    for (const id of plan.cancel) {
+      await cancelScheduled(id);
     }
-    return { scheduled, skipped: pending.length === 0 };
+    for (const ring of plan.schedule) {
+      await scheduleRing(ring);
+    }
+    return {
+      scheduled: plan.schedule.length,
+      skipped: plan.schedule.length === 0,
+    };
   } catch {
-    return { scheduled, skipped: true };
+    return { scheduled: 0, skipped: true };
   }
 }
 
+/** Every ring a task ever had, including ones whose minute has passed. */
+function everyRing(task: TaskItem | null): AlertRing[] {
+  return ringsFor(task, Number.NEGATIVE_INFINITY);
+}
+
 /**
- * Move one task's alarms to match its new state. A tick cancels that
- * task's alarms and schedules its new ones; the rest of the list is
- * untouched, so a tap never rebuilds every alarm in the vault.
+ * Clear every ring of one task: remember each group as acknowledged, so
+ * a later rebuild cannot ring it, then cancel what is scheduled and
+ * dismiss what the tray shows.
+ */
+async function acknowledgeTaskNow(
+  uri: string,
+  now: number,
+  extra: readonly AlertRing[] = [],
+): Promise<void> {
+  const scheduled = (await listScheduledDetailed()).filter(
+    (entry) => entry.data?.uri === uri,
+  );
+  const delivered = (await listDeliveredDetailed()).filter(
+    (entry) => entry.data?.uri === uri,
+  );
+  const bases = new Set(extra.map((ring) => ring.base));
+  for (const entry of [...scheduled, ...delivered]) {
+    if (entry.data != null) {
+      bases.add(entry.data.base);
+    }
+  }
+  recordAcks(
+    [...bases].map((base) => ({ uri, base })),
+    now,
+  );
+  for (const entry of scheduled) {
+    await cancelScheduled(entry.id);
+  }
+  await dismissDelivered(delivered.map((entry) => entry.id));
+}
+
+/** Clear one group: the rings a task makes from one alarm minute. */
+export function acknowledgeRing(
+  ring: Pick<AlertRing, "uri" | "base">,
+): Promise<void> {
+  return inTurn(async () => {
+    if (Platform.OS === "web") {
+      return;
+    }
+    try {
+      const now = Date.now();
+      const group = (entry: ScheduledRing) =>
+        entry.data?.uri === ring.uri && entry.data.base === ring.base;
+      const scheduled = (await listScheduledDetailed()).filter(group);
+      const delivered = (await listDeliveredDetailed()).filter(group);
+      recordAcks([{ uri: ring.uri, base: ring.base }], now);
+      for (const entry of scheduled) {
+        await cancelScheduled(entry.id);
+      }
+      await dismissDelivered(delivered.map((entry) => entry.id));
+    } catch {
+      // The alert stays; the next rebuild or tap tries again.
+    }
+  });
+}
+
+/** Clear every group of one task. */
+export function acknowledgeTask(uri: string): Promise<void> {
+  return inTurn(async () => {
+    if (Platform.OS === "web") {
+      return;
+    }
+    try {
+      await acknowledgeTaskNow(uri, Date.now());
+    } catch {
+      // The alert stays; the next rebuild or tap tries again.
+    }
+  });
+}
+
+/**
+ * Move one task's alarms to match its new state. A tick clears that
+ * task's rings; an edit reconciles them against the OS schedule. The
+ * rest of the list stays untouched, so a tap never rebuilds every alarm
+ * in the vault.
  *
  * Same contract as `syncReminders`: best effort, never throws.
  */
@@ -172,10 +338,10 @@ export function syncTaskReminders(
   before: TaskItem | null,
   after: TaskItem | null,
 ): Promise<void> {
-  return inTurn(() => moveTaskAlarms(before, after));
+  return inTurn(() => reconcileTask(before, after));
 }
 
-async function moveTaskAlarms(
+async function reconcileTask(
   before: TaskItem | null,
   after: TaskItem | null,
 ): Promise<void> {
@@ -186,37 +352,40 @@ async function moveTaskAlarms(
   if (uri == null) {
     return;
   }
-  const was = alarmTimes(before);
-  const now = alarmTimes(after);
-  if (sameAlarms(was, now)) {
+  const now = Date.now();
+
+  // A tick, a deleted note, or one that no longer parses: nothing of
+  // this task stays in the tray or the schedule.
+  if (after == null || after.data == null || taskIsDone(after.data)) {
+    try {
+      await acknowledgeTaskNow(uri, now, everyRing(before));
+    } catch {
+      // Best effort; the next rebuild clears what this missed.
+    }
     return;
   }
 
-  const stale = alarmIds.get(uri) ?? [];
-  alarmIds.delete(uri);
-  for (const id of stale) {
-    try {
-      await cancelScheduled(id);
-    } catch {
-      // An id the OS already dropped needs no second cancel.
-    }
-  }
-  if (after == null || now.length === 0) {
+  if (sameRings(ringsFor(before, now), ringsFor(after, now))) {
     return;
   }
 
   try {
-    const granted = await ensureNotificationPermission();
-    if (!granted) {
-      return;
+    const scheduled = (await listScheduledDetailed()).filter(
+      (entry) => entry.data?.uri === uri,
+    );
+    const plan = planRings([after], now, loadAcked(now), scheduled);
+    if (plan.schedule.length > 0) {
+      const granted = await ensureNotificationPermission();
+      if (!granted) {
+        return;
+      }
     }
-    const ids: string[] = [];
-    for (const alarm of now) {
-      ids.push(
-        await scheduleAt(new Date(alarm.when), after.name, alarmBody(alarm)),
-      );
+    for (const id of plan.cancel) {
+      await cancelScheduled(id);
     }
-    alarmIds.set(uri, ids);
+    for (const ring of plan.schedule) {
+      await scheduleRing(ring);
+    }
   } catch {
     // Best effort: a missing channel or permission leaves the task open.
   }
