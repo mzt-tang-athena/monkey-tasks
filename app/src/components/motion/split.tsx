@@ -11,6 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { radius, touchTarget, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
+import { clampFraction, clampTop } from "@/lib/motion/split-math";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
 import { useArrowKeys } from "./internal/keys";
@@ -34,7 +35,9 @@ export type SplitProps = {
  * `flexGrow` from the fraction, so the first frame needs no layout
  * report and no px default. A grabber drag moves the split on the UI
  * thread, clamped to `minTop` and `minBottom` against the height it
- * measured at pickup, and one `onResize` reports the release.
+ * measured at pickup, and one `onResize` reports the release. A new
+ * height re-clamps the stored share, so a valid split stays valid when
+ * the screen shrinks.
  */
 export function Split({
   fraction,
@@ -70,9 +73,11 @@ export function Split({
       if (usable <= 0) {
         return;
       }
-      const top = Math.min(
-        Math.max(fraction * usable + direction * touchTarget, minTop),
-        Math.max(usable - minBottom, minTop),
+      const top = clampTop(
+        fraction * usable + direction * touchTarget,
+        usable,
+        minTop,
+        minBottom,
       );
       onResize(top / usable);
     },
@@ -93,10 +98,14 @@ export function Split({
   useArrowKeys(gripRef, step);
 
   // A new fraction from the screen, before paint: the panes never show
-  // a frame between the release and the state that carries it.
+  // a frame between the release and the state that carries it. A share
+  // the current height no longer allows lands on its floor instead.
   React.useLayoutEffect(() => {
-    grow.set(fraction);
-  }, [fraction, grow]);
+    const usable = height.current - dividerHeight;
+    grow.set(
+      usable > 0 ? clampFraction(fraction, usable, minTop, minBottom) : fraction,
+    );
+  }, [fraction, grow, minTop, minBottom]);
 
   const gesture = usePanGesture(
     withTouchAction("none", {
@@ -123,11 +132,7 @@ export function Split({
           return;
         }
         const raw = startTop.value + (e.absoluteY - startY.value);
-        const clamped = Math.min(
-          Math.max(raw, minTop),
-          Math.max(usable - minBottom, minTop),
-        );
-        grow.set(clamped / usable);
+        grow.set(clampTop(raw, usable, minTop, minBottom) / usable);
       },
       onFinalize: () => {
         "worklet";
@@ -156,6 +161,16 @@ export function Split({
           const direction = pendingStep.current;
           pendingStep.current = null;
           applyStep(direction);
+          return;
+        }
+        const usable = height.current - dividerHeight;
+        if (usable <= 0) {
+          return;
+        }
+        const next = clampFraction(fraction, usable, minTop, minBottom);
+        if (Math.abs(next - fraction) * usable > 0.5) {
+          grow.set(next);
+          onResize(next);
         }
       }}
     >

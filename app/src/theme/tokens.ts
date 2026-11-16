@@ -131,13 +131,11 @@ export const radii = { pill: 999 } as const;
 
 /**
  * Day-spread drag physics: pointer travel that promotes a press into
- * a drag, and how small either pane of the split may go. Each value
- * comes from the motion tokens. The port that removes the last user
- * deletes this.
+ * a drag. Each value comes from the motion tokens. The port that
+ * removes the last user deletes this.
  */
 export const drag = {
   threshold: motion.hold.slop,
-  minPane: motion.split.minPane,
   /** Touch pickups wait out this hold; scrolling never gets hijacked. */
   pickMs: motion.hold.row,
   /** The pills row has free space to scroll from, so its pickup is
