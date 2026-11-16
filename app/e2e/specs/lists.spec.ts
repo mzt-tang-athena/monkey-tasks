@@ -154,6 +154,43 @@ test.describe("My order", () => {
   });
 });
 
+test.describe("the sort control", () => {
+  test("the glyph clears the band and fills without moving it", async ({
+    page,
+  }) => {
+    const band = page.getByTestId("lists-toolbar");
+    const sort = page.getByRole("button", { name: "sort list" });
+
+    const bandAtRest = await band.boundingBox();
+    const glyphAtRest = await page.getByTestId("icon:sort").boundingBox();
+    const sortAtRest = await sort.boundingBox();
+    if (bandAtRest == null || glyphAtRest == null || sortAtRest == null) {
+      throw new Error("the band, the glyph or the sort button has no box");
+    }
+    // Bug 1: the selected ground ran to the band's bottom edge.
+    expect(
+      glyphAtRest.y + glyphAtRest.height,
+      "the glyph clears the band's edge",
+    ).toBeLessThanOrEqual(bandAtRest.y + bandAtRest.height - 4);
+
+    await press(page, sort);
+
+    await expect(page.getByTestId("icon:sort:fill")).toBeVisible();
+    await expect(sort).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("menu")).toHaveCount(0);
+    await expect(page.getByTestId("icon:sort")).toBeVisible();
+
+    const bandAfter = await band.boundingBox();
+    const sortAfter = await sort.boundingBox();
+    expect(bandAfter?.height).toBe(bandAtRest.height);
+    expect(sortAtRest.width).toBe(44);
+    expect(sortAtRest.height).toBe(44);
+    expect(sortAfter?.width).toBe(sortAtRest.width);
+    expect(sortAfter?.height).toBe(sortAtRest.height);
+  });
+});
+
 test.describe("the tab strip", () => {
   test("a clipped tab name has a fade over its edge", async ({ page }) => {
     // At 412 wide the strip holds more tabs than fit, so the last one
