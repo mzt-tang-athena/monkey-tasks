@@ -1,8 +1,8 @@
 import * as React from "react";
 import { View } from "react-native";
-import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CaptureTarget, TaskItem } from "@/types/task";
+import { openTask as openTaskRoute } from "@/lib/task-route";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { ErrorState, LoadingState } from "@/components/ui/list-states";
@@ -84,7 +84,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
 
   const openTask = React.useCallback((task: TaskItem) => {
     recordBreadcrumb("open", task.data?.title ?? task.name);
-    router.push(`/task/${encodeURIComponent(task.id)}`);
+    openTaskRoute(task.id);
   }, []);
 
   const toggle = React.useCallback(
