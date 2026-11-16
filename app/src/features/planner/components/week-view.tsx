@@ -36,7 +36,10 @@ type DayProps = {
 
 /** Each layout's grid rows and its day box. The rest of the body is
     the same for both. */
-const faces: Record<WeekLayout, { slots: WeekSlot[][]; Day: (props: DayProps) => React.ReactNode }> = {
+const faces: Record<
+  WeekLayout,
+  { slots: WeekSlot[][]; Day: (props: DayProps) => React.ReactNode }
+> = {
   spread: { slots: weekRows(weekLayouts.spread), Day: SpreadDay },
   rows: { slots: weekRows(weekLayouts.rows), Day: RowsDay },
 };
@@ -93,7 +96,11 @@ export function WeekView({
       ))}
     </View>
   ));
-  const body: StyleProp<ViewStyle> = [styles.grid, layout === "spread" && styles.spreadGrid, { height: geometry.height }];
+  const body: StyleProp<ViewStyle> = [
+    styles.grid,
+    layout === "spread" && styles.spreadGrid,
+    { height: geometry.height },
+  ];
 
   return (
     <View
@@ -118,34 +125,49 @@ export function WeekView({
   );
 }
 
-/** A box that takes the day press when it is live, and only draws when
-    it is the neighbour page. */
+/**
+ * A day box. The box draws, the day press fills it, and the "+N" press
+ * and the ring sit over it as siblings. A button may not nest inside
+ * another button, and the count opens the day instead of selecting it.
+ */
 function DayBox({
   day,
   interactive,
   onSelect,
   style,
+  content,
+  more,
+  ring,
   children,
 }: {
   day: WeekDay;
   interactive: boolean;
   onSelect?: (date: Date) => void;
   style: StyleProp<ViewStyle>;
+  /** The press's own layout, over the box's fill. */
+  content: StyleProp<ViewStyle>;
+  more?: React.ReactNode;
+  ring?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { styles } = useThemedStyles(makeStyles);
-  if (!interactive) {
-    return <View style={style}>{children}</View>;
-  }
   return (
-    <Pressable
-      testID={`week-day:${day.iso}`}
-      style={({ pressed }) => [style, pressed && styles.pressed]}
-      onPress={() => onSelect?.(day.date)}
-      accessibilityRole="button"
-    >
-      {children}
-    </Pressable>
+    <View style={style}>
+      {interactive ? (
+        <Pressable
+          testID={`week-day:${day.iso}`}
+          style={({ pressed }) => [styles.fill, content, pressed && styles.pressed]}
+          onPress={() => onSelect?.(day.date)}
+          accessibilityRole="button"
+        >
+          {children}
+        </Pressable>
+      ) : (
+        <View style={[styles.fill, content]}>{children}</View>
+      )}
+      {more}
+      {ring}
+    </View>
   );
 }
 
@@ -242,13 +264,26 @@ function SpreadDay({ day, cell, span, interactive, onSelect, onOpenDay }: DayPro
         day.isSelected && styles.boxSelected,
         day.isToday && styles.boxToday,
       ]}
+      content={styles.boxContent}
+      more={
+        hidden > 0 ? (
+          <More
+            day={day}
+            hidden={hidden}
+            interactive={interactive}
+            onOpenDay={onOpenDay}
+            style={styles.spreadMore}
+          />
+        ) : null
+      }
+      ring={<DropRing day={day} cell={cell} interactive={interactive} />}
     >
       <View style={styles.head}>
         <Text style={[styles.caption, day.isToday && styles.captionToday]}>
           {day.isToday ? "Today" : WEEKDAYS[day.date.getDay()]}
         </Text>
         <Text style={[styles.headDate, day.isToday && styles.dateToday]}>
-          {` ${day.date.getDate()} `}
+          {`\u00a0${day.date.getDate()}\u00a0`}
         </Text>
       </View>
       <View style={[styles.spreadChips, hidden > 0 && styles.spreadChipsBesideMore]}>
@@ -256,16 +291,6 @@ function SpreadDay({ day, cell, span, interactive, onSelect, onOpenDay }: DayPro
           <Chip key={task.id} task={task} interactive={interactive} style={styles.spreadChip} />
         ))}
       </View>
-      {hidden > 0 ? (
-        <More
-          day={day}
-          hidden={hidden}
-          interactive={interactive}
-          onOpenDay={onOpenDay}
-          style={styles.spreadMore}
-        />
-      ) : null}
-      <DropRing day={day} cell={cell} interactive={interactive} />
     </DayBox>
   );
 }
@@ -286,12 +311,25 @@ function RowsDay({ day, cell, interactive, onSelect, onOpenDay }: DayProps) {
       interactive={interactive}
       onSelect={onSelect}
       style={[styles.line, day.isToday && styles.lineToday]}
+      content={styles.lineContent}
+      more={
+        hidden > 0 ? (
+          <More
+            day={day}
+            hidden={hidden}
+            interactive={interactive}
+            onOpenDay={onOpenDay}
+            style={styles.lineMore}
+          />
+        ) : null
+      }
+      ring={<DropRing day={day} cell={cell} interactive={interactive} />}
     >
       {cell > 0 ? <View style={styles.rule} /> : null}
       <View style={styles.dateBlock}>
         <Text style={styles.caption}>{WEEKDAYS[day.date.getDay()]}</Text>
         <Text style={[styles.lineDate, day.isToday && styles.dateToday]}>
-          {` ${day.date.getDate()} `}
+          {`\u00a0${day.date.getDate()}\u00a0`}
         </Text>
       </View>
       <View style={styles.lineChips}>
@@ -308,13 +346,10 @@ function RowsDay({ day, cell, interactive, onSelect, onOpenDay }: DayProps) {
           ),
         )}
       </View>
-      <View style={styles.moreSlot}>
-        {hidden > 0 ? (
-          <More day={day} hidden={hidden} interactive={interactive} onOpenDay={onOpenDay} style={styles.lineMore} />
-        ) : null}
-      </View>
-      {day.isSelected || day.isToday ? <View pointerEvents="none" style={[styles.fill, styles.edge]} /> : null}
-      <DropRing day={day} cell={cell} interactive={interactive} />
+      <View style={styles.moreSlot} />
+      {day.isSelected || day.isToday ? (
+        <View pointerEvents="none" style={[styles.fill, styles.edge]} />
+      ) : null}
     </DayBox>
   );
 }
@@ -385,16 +420,18 @@ const makeStyles = (colors: Palette) => ({
       fontWeight: "600",
     },
 
-    // Spread: boxes in pairs, the gap between them stays paper.
+    // Spread: boxes in pairs, and the gap between them stays paper.
     box: {
       height: spreadBox.height,
       overflow: "hidden",
-      gap: spacing.xs,
-      padding: spacing.xs,
       backgroundColor: colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.hairline,
       borderRadius: radius,
+    },
+    boxContent: {
+      gap: spacing.xs,
+      padding: spacing.xs,
     },
     boxSelected: {
       borderColor: colors.accent,
@@ -445,13 +482,15 @@ const makeStyles = (colors: Palette) => ({
     line: {
       flex: 1,
       height: rowsLine.height,
+    },
+    lineToday: {
+      backgroundColor: colors.accentSoft,
+    },
+    lineContent: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.s,
       paddingLeft: spacing.s,
-    },
-    lineToday: {
-      backgroundColor: colors.accentSoft,
     },
     // The rule draws over the line's top edge and takes no height, so
     // every line keeps one touch target.
@@ -495,6 +534,9 @@ const makeStyles = (colors: Palette) => ({
       width: touchTarget,
     },
     lineMore: {
+      position: "absolute",
+      top: 0,
+      right: 0,
       alignItems: "center",
       justifyContent: "center",
     },

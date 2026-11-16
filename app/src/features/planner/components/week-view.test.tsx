@@ -80,10 +80,13 @@ describe("WeekView", () => {
         expect(tuesday.textContent).toContain("Chore 1");
         expect(tuesday.textContent).toContain("Chore 2");
         expect(tuesday.textContent).not.toContain("Chore 3");
-        expect(tuesday.textContent).toContain("+6");
-        expect(
-          screen.getByRole("button", { name: "+6 more on Tuesday 27, open the day" }),
-        ).toBeTruthy();
+        // The count is its own press beside the day press, so the day's
+        // name does not read it.
+        expect(tuesday.textContent).not.toContain("+6");
+        const more = screen.getByRole("button", {
+          name: "+6 more on Tuesday 27, open the day",
+        });
+        expect(tuesday.parentElement?.contains(more)).toBe(true);
       });
 
       it("shows no count when a day's tasks all fit", () => {
@@ -91,7 +94,7 @@ describe("WeekView", () => {
 
         const tuesday = screen.getByTestId("week-day:2026-10-27");
         expect(tuesday.textContent).toContain("Chore 2");
-        expect(tuesday.textContent).not.toContain("+");
+        expect(screen.queryByRole("button", { name: /open the day/ })).toBeNull();
       });
 
       it("opens the day when the count is pressed, and does not select it", () => {
