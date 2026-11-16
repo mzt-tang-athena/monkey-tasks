@@ -130,7 +130,9 @@ test.describe("a slow vault and a failed write", () => {
         await page.goto(
           `/?latency=${latencyMs}&fail=${encodeURIComponent(`write:${fileName}`)}`,
         );
-        await expect(row(page, name)).toBeVisible();
+        // The page delays every call by 300 ms, and the first read makes
+        // about twenty. On a loaded host the default 5 s is too tight.
+        await expect(row(page, name)).toBeVisible({ timeout: 15_000 });
       } else {
         await page.goto("/");
         await expect(row(page, name)).toBeVisible();

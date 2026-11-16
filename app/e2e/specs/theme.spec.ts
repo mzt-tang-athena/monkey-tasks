@@ -116,10 +116,10 @@ test.describe("runtime theme switch", () => {
 test.describe("every palette", () => {
   for (const name of names) {
     test(`axe holds on every screen in ${name}`, async ({ page }) => {
-      // Five screens, each with an axe scan. That is heavy for the
-      // default 30s on a shared machine, and a dedicated runner still
-      // lands well inside 90s.
-      test.slow();
+      // Five screens, each with an axe scan. On a shared machine that
+      // can take a minute or more; 180s caps it without hiding a real
+      // slowdown. A dedicated runner lands far inside it.
+      test.setTimeout(180_000);
       await page.goto("/");
       await setTheme(page, name);
       await expect(row(page, undated.second)).toBeVisible();
