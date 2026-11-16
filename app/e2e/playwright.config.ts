@@ -11,14 +11,7 @@ export default defineConfig({
   // Without this, traces land beside package.json, not in e2e/.
   outputDir: "./test-results",
   forbidOnly: !!process.env.CI,
-  // A flaky test is a bug to fix, so nothing retries. The suite grew
-  // to 500 tests and heavy axe scans, and this host is shared with
-  // other checkouts. 60s is still short enough to fail a real hang,
-  // and a dedicated CI runner lands far inside it.
-  timeout: 60_000,
-  // A rendered row can take longer than the default 5s when the host
-  // is busy. A missing row still fails, only later.
-  expect: { timeout: 10_000 },
+  // A flaky test is a bug to fix, so nothing retries.
   retries: 0,
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI
