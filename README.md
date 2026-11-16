@@ -417,14 +417,17 @@ screenshot per palette and width. The gallery found two defects.
 as one name, and the gallery draws a hint again. `20261112-control-focus-ring`
 fixes the second. The shared press draws one focus mark for a keyboard
 focus, in every palette. The gallery's focus cells follow the keyboard
-(ADR 20261112-control-focus-ring). Next is ticket 0082, the selected
-state recipe, which waits on the operator's pick.
+(ADR 20261112-control-focus-ring). Ticket 0082 settled the selected
+state recipe. Icon buttons carry their state in the glyph. They draw
+outline at rest and filled when selected, with no box behind the
+button (PR 148). The week drop target draws a 2pt ink ring inside the
+day box. The gap between boxes stays paper (ADR 20261114).
 
 The phase 4 rebuild merged in `b3acdb1`. The round of tickets 0080 to
 0087 finished. It fixed the crash after a tick and the pager remount.
 It added runtime themes, a settings screen, a crash log and a command
-pane. It also moved reorder to the grip only. One ticket waits on the
-operator: 0082, the selected state recipe, with three mockups.
+pane. It also moved reorder to the grip only. Ticket 0082 shipped both
+halves of its pick, the icon glyphs and the week drop ring.
 
 The operator decided the schema review, 0094. Its remaining work is
 three child tickets:
