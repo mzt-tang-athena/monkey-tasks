@@ -423,7 +423,7 @@ Phases:
    its own note (ADR 0027). An alert uses its task's `alert weight`. A
    harsh alert rings on the alarm stream and escalates at 1, 5 and 15
    minutes. A quiet one rings once in silence. A tap or a tick clears
-   the group (ADR 20261111).
+   the group (ADR 20261111-reminder-weight).
 7. Later: deed vocabulary cleanup (0005), the quick-task and deed merge
    decision, and capture text highlighting (0008). Location triggers,
    MCP capture on athena, ntfy fallback, and the athena operational

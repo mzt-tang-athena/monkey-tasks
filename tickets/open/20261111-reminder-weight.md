@@ -172,7 +172,8 @@ decision. That is a later ticket if the app ships on iOS.
 
 ### Device check
 
-Not run yet. It needs a build. On the phone, check:
+The emulator pass ran on 2026-11-17. Its evidence and the phone checklist are in
+`20261111-alert-weight-device-check`. On the phone, check:
 
 - A harsh alert rings with the ringer on silent, and shows the alarm icon.
 - A harsh alert breaks Do Not Disturb after the permission grant, and
