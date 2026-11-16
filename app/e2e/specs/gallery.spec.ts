@@ -180,6 +180,14 @@ async function checkPaint(
     cell("text-field:error").getByRole("textbox"),
     `${where} error edge`,
   ).toHaveCSS("border-top-color", rgb(p.danger));
+  await expect(
+    cell("icon-button:selected").getByTestId("icon:sort:fill"),
+    `${where} selected glyph`,
+  ).toBeVisible();
+  await expect(
+    cell("icon-button:rest").getByTestId("icon:sort"),
+    `${where} rest glyph`,
+  ).toBeVisible();
 
   const box = await page.getByTestId("gallery-scroll").evaluate((element) => ({
     scroll: element.scrollWidth,
