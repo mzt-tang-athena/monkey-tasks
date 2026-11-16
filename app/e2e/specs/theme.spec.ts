@@ -120,9 +120,6 @@ test.describe("every palette", () => {
   test.describe.configure({ timeout: 90_000 });
   for (const name of names) {
     test(`axe holds on every screen in ${name}`, async ({ page }) => {
-      // Six full-page scans, one per screen. On a busy runner they
-      // outrun the suite's default. The scans themselves are unchanged.
-      test.setTimeout(90_000);
       await page.goto("/");
       await setTheme(page, name);
       await expect(row(page, undated.second)).toBeVisible();
