@@ -3,7 +3,7 @@ id: 0082
 title: One recipe for selected and active states
 created: 2026-11-11
 priority: high
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
