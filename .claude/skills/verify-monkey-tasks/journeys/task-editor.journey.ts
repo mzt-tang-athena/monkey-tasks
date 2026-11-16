@@ -77,7 +77,7 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await expect(editor.getByRole("button", { name: "change repeat" })).toBeVisible();
 
   // One list, from the header.
-  await editor.getByRole("button", { name: "change list" }).click();
+  await editor.getByRole("button", { name: /^change list/ }).click();
   const list = page.getByRole("dialog", { name: "List" });
   await expect(list).toBeVisible();
   await expect(list).toHaveCSS("opacity", "1");
@@ -85,7 +85,7 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await shot("05-list-picker");
   await list.getByRole("button", { name: "Focus", exact: true }).click();
   await expect(list).toHaveCount(0);
-  await expect(editor.getByRole("button", { name: "change list" })).toContainText(
+  await expect(editor.getByRole("button", { name: /^change list/ })).toContainText(
     "Focus",
   );
 

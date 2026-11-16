@@ -131,7 +131,7 @@ describe("the task editor sheet", () => {
     openTask();
 
     expect(screen.getByRole("dialog", { name: "Task" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "change list" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^change list/ })).toBeTruthy();
     expect(screen.getByText("Main")).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "Task name" })).toHaveProperty(
       "value",

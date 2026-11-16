@@ -595,7 +595,7 @@ test.describe("with the mouse", () => {
     await expect.poll(() => trackX(page)).toBe(0);
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
     await press(page, row(page, undated.second).getByRole("button", { name: undated.second }));
-    await expect(page).toHaveURL(/\/task\//);
+    await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
   });
 
   test("the list preview matches the landed page", async ({ page }, testInfo) => {

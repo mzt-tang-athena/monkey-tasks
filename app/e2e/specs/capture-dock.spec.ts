@@ -71,7 +71,7 @@ test.describe("the floating chrome on a wide window", () => {
     await expect(editor).toBeVisible();
 
     await expectInColumn(
-      editor.getByRole("button", { name: "change list" }),
+      editor.getByRole("button", { name: /^change list/ }),
       "the list",
     );
     await expectInColumn(

@@ -35,8 +35,8 @@ Preconditions: a fresh page on `/`.
   then `done with the date` writes a datetime. `clear due date` on the
   tile removes it.
 - **Repeat.** `add repeat`, then `Weekly` writes `FREQ=WEEKLY`.
-- **List.** `change list`, then the list's name writes `list`. `Main`
-  removes the key.
+- **List.** `change list, <name>` (the visible name is the list's), then
+  the list's name writes `list`. `Main` removes the key.
 - **Alerts.** `add reminder`, then `save reminder`. Each reminder row has
   `remove reminder <words>`.
 - **Note.** `edit note` opens the dialog `Note`. `done with the note`

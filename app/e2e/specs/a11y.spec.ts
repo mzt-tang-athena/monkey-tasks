@@ -148,13 +148,29 @@ test.describe("states", () => {
       page,
       row(page, undated.second).getByRole("button", { name: undated.second }),
     );
+    const editor = page.getByRole("dialog", { name: "Task" });
+    await expect(
+      editor.getByRole("textbox", { name: "Task name", exact: true }),
+    ).toBeVisible();
 
-    const labels = ["Name", "Due", "Recurrence", "List", "Reminders", "Body"];
-    for (const label of labels) {
-      await expect(
-        page.getByRole("textbox", { name: label, exact: true }),
-      ).toBeVisible();
-    }
+    // Each picker's one field carries its own name.
+    await press(page, editor.getByRole("button", { name: /^change list/ }));
+    await expect(
+      page.getByRole("textbox", { name: "Find a list", exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await press(page, editor.getByRole("button", { name: "add repeat" }));
+    await press(page, page.getByRole("button", { name: /^Advanced/ }));
+    await expect(
+      page.getByRole("textbox", { name: "Repeat rule", exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await press(page, editor.getByRole("button", { name: /note$/ }));
+    await expect(
+      page.getByRole("textbox", { name: "Note", exact: true }),
+    ).toBeVisible();
   });
 });
 
@@ -185,7 +201,11 @@ test.describe("touch targets", () => {
       page,
       row(page, undated.second).getByRole("button", { name: undated.second }),
     );
-    await expect(page.getByRole("textbox", { name: "Name", exact: true })).toBeVisible();
+    const editor = page.getByRole("dialog", { name: "Task" });
+    await expect(
+      editor.getByRole("textbox", { name: "Task name", exact: true }),
+    ).toBeVisible();
+    await expect(editor).toHaveCSS("opacity", "1");
     await expectTargets(page);
   });
 

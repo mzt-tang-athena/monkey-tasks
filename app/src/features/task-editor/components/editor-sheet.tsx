@@ -165,7 +165,9 @@ export function EditorSheet({
               setPicker("list");
             }}
             accessibilityRole="button"
-            accessibilityLabel="change list"
+            // The visible name is the list's, so the control's name
+            // carries it (WCAG 2.5.3).
+            accessibilityLabel={`change list, ${draft.list ?? "Main"}`}
           >
             <Icon name="list" color="inkMuted" />
             <Text style={styles.listName} numberOfLines={1}>
