@@ -116,6 +116,10 @@ test.describe("runtime theme switch", () => {
 test.describe("every palette", () => {
   for (const name of names) {
     test(`axe holds on every screen in ${name}`, async ({ page }) => {
+      // Five screens, each with an axe scan. That is heavy for the
+      // default 30s on a shared machine, and a dedicated runner still
+      // lands well inside 90s.
+      test.slow();
       await page.goto("/");
       await setTheme(page, name);
       await expect(row(page, undated.second)).toBeVisible();
