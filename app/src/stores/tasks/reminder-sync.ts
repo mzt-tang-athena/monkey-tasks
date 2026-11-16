@@ -94,15 +94,19 @@ function alarmBody(alarm: AlarmTime): string {
   return alarm.due ? "Due" : "Task reminder";
 }
 
+function taskWeight(task: TaskItem): AlertWeight {
+  return task.data?.["alert weight"] ?? "harsh";
+}
+
 /** Every ring the task makes that is still ahead of `now`. */
 function ringsFor(task: TaskItem | null, now: number): AlertRing[] {
   if (task == null) {
     return [];
   }
-  const weight: AlertWeight = task.data?.["alert weight"] ?? "harsh";
+  const weight = taskWeight(task);
   const rings: AlertRing[] = [];
-  // A group whose base minute has passed keeps its future follow-ups,
-  // so the alarm list is asked for the whole escalation window.
+  // The window reaches back the whole escalation, so a started group
+  // still yields the follow-ups that are ahead.
   for (const alarm of alarmTimes(task, now - LOOKBACK_MS)) {
     for (const step of ESCALATION_MINUTES[weight]) {
       rings.push(
@@ -135,12 +139,12 @@ function sameRings(before: AlertRing[], after: AlertRing[]): boolean {
  * must drop. Pure: `now`, the acknowledged groups and the OS schedule
  * are its whole input.
  *
- * A ring whose base minute has passed belongs to a group that is still
- * escalating, so it stays unless its task is gone or done. A ring whose
- * base is ahead is dropped when the note no longer wants it: a reminder
- * moved, the weight turned quiet, or the step is outside the window. A
- * ring still wanted under another weight is dropped too, so the quiet
- * channel replaces it.
+ * A scheduled ring stays only while its task is open, its group is
+ * unacknowledged, its weight still matches the note, and its base
+ * minute is still one of the note's alarms over the escalation window.
+ * A ring whose base is ahead also leaves when its exact step is not
+ * wanted. A cancelled ring that is still wanted comes back under the
+ * new weight or step.
  */
 export function planRings(
   tasks: readonly TaskItem[],
@@ -150,7 +154,16 @@ export function planRings(
 ): AlertPlan {
   const byUri = new Map(tasks.map((task) => [task.uri, task]));
   const wanted = new Map<string, AlertRing>();
+  const weights = new Map<string, AlertWeight>();
+  const bases = new Map<string, Set<number>>();
   for (const task of tasks) {
+    weights.set(task.uri, taskWeight(task));
+    bases.set(
+      task.uri,
+      new Set(
+        alarmTimes(task, now - LOOKBACK_MS).map((alarm) => alarm.when),
+      ),
+    );
     for (const ring of ringsFor(task, now)) {
       if (!isAcked(acked, ring.uri, ring.base)) {
         wanted.set(ring.id, ring);
@@ -168,18 +181,25 @@ export function planRings(
     const task = byUri.get(data.uri);
     if (task == null || task.data == null || taskIsDone(task.data)) {
       cancel.push(entry.id);
-    } else if (isAcked(acked, data.uri, data.base)) {
+      continue;
+    }
+    if (isAcked(acked, data.uri, data.base)) {
       cancel.push(entry.id);
-    } else if (data.base > now) {
-      const want = wanted.get(entry.id);
-      if (want == null || want.weight !== data.weight) {
-        cancel.push(entry.id);
-      }
+      continue;
+    }
+    const weight = weights.get(data.uri);
+    if (
+      data.weight !== weight ||
+      !bases.get(data.uri)?.has(data.base)
+    ) {
+      cancel.push(entry.id);
+      continue;
+    }
+    if (data.base > now && wanted.get(entry.id) == null) {
+      cancel.push(entry.id);
     }
   }
 
-  // A cancelled ring that is still wanted comes back under the new
-  // weight or the new step.
   const cancelled = new Set(cancel);
   const scheduledIds = new Set(scheduled.map((entry) => entry.id));
   const schedule = [...wanted.values()]
@@ -192,8 +212,8 @@ export function planRings(
 /**
  * Rebuild the OS alarm list from the task list after each read of the
  * vault. The notes are the truth: rings whose task is gone or done drop,
- * a running group keeps its future follow-ups, and a delivered ring is
- * never armed again because its minute has passed.
+ * a running group keeps only the follow-ups its note still wants, and a
+ * delivered ring is never armed again because its minute has passed.
  *
  * Alarms are best effort: the store calls this fire-and-forget, so it
  * reports what it managed and never throws.
