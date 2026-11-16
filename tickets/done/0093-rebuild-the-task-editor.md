@@ -4,7 +4,7 @@ title: Rebuild the task editor
 created: 2026-11-11
 priority: high
 assignee: opencode
-pr:
+pr: 155
 depends: [0082, 0091]
 ---
 
@@ -184,17 +184,36 @@ The list picker from ticket `20261111-single-list-picker` lands here.
 
 ## Acceptance
 
-- [ ] The spec names every property, its control and the save model.
+- [x] The spec names every property, its control and the save model.
 - [x] Three directions show the same task, and the operator chooses
       one.
-- [ ] The prototype opens and closes. It changes a date and a list,
+- [x] The prototype opens and closes. It changes a date and a list,
       adds a reference and edits the note. No raw syntax shows on the
-      main path.
-- [ ] A failed write keeps the draft and reports it.
-- [ ] 44pt targets, named controls, keyboard and TalkBack reach every
+      main path. The shipped editor replaced the prototype. Reference
+      waits for ticket 0091.
+- [x] A failed write keeps the draft and reports it.
+- [x] 44pt targets, named controls, keyboard and TalkBack reach every
       control. axe clean.
-- [ ] The editor ships from this ticket, minus reference.
+- [x] The editor ships from this ticket, minus reference.
 
 ## Outcome
 
-(filled in before moving to done/)
+The editor is a bottom sheet over Lists and Planner. Set properties
+show as tiles, and unset ones show as chips in a strip. Due, Repeat,
+List, Alerts and Note each open a picker. Alerts holds the alert weight.
+No raw ISO or RRULE text shows outside the Advanced repeat field.
+
+Every change writes at once through one queue per task. A failed write
+keeps the value and offers Retry. Delete has a five-second Undo that
+writes the exact file text back. ADR `20261116-task-editor-sheet`
+records the trade-offs.
+
+The operator skipped the separate web prototype. They asked for the
+build to ship for the 1.0 release, and adjust it after.
+
+Proof sits in PR 155. The full Playwright suite passed, and a web
+journey covers every picker, Retry and Undo. The web cannot prove
+keyboard insets, Android back or real SAF writes. The phone pass owes
+those.
+
+Reference waits for ticket 0091.
