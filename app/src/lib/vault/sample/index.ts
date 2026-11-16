@@ -61,6 +61,8 @@ export const sampleNotes: Record<string, Record<string, string>> = {
   "repair": {
     "Tasks/Broken note.md":
       "---\nkind: \"[[tasks]]\"\n---\n\nNo created date.\n",
+    "Tasks/Descale the kettle.md":
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\nlist: \"[[Focus]]\"\nalert weight: loud\n---\n",
     "Tasks/Lists/Garden.md":
       "---\nkind: \"[[list]]\"\n---\n\n# Garden\n",
   },

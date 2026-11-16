@@ -16,10 +16,15 @@ import {
   listFrontmatter,
   parseFrontmatter,
   taskFrontmatter,
+  taskWarnings,
   validateNote,
 } from "@monkey-tasks/schemas";
 
-export type FindingKind = "invalid" | "bare-wikilink" | "parser-disagreement";
+export type FindingKind =
+  | "invalid"
+  | "warning"
+  | "bare-wikilink"
+  | "parser-disagreement";
 
 export type Finding = {
   /** Path relative to the vault folder, with forward slashes. */
@@ -153,6 +158,16 @@ function checkNote(file: string, text: string): Finding[] {
       kind: "invalid",
       reason: `${key === "" ? "note" : key}: ${issue.message}`,
     });
+  }
+  if (checked.data != null && schema === taskFrontmatter) {
+    for (const warning of taskWarnings(note.values)) {
+      findings.push({
+        file,
+        line: lineOfKey(block, "alert weight"),
+        kind: "warning",
+        reason: warning,
+      });
+    }
   }
 
   let parsed: unknown;

@@ -14,6 +14,8 @@ export const tabs = {
   main: "Main",
   /** The tab after Main. No sample task sits on it. */
   next: "Errands",
+  /** The tab that holds the sample task with a typo in its weight. */
+  focus: "Focus",
 } as const;
 
 /** The section headers on Main under TODAY. */
@@ -51,6 +53,12 @@ export const completedNotes = {
 
 /** A task note that fails validation. It never renders as a row. */
 export const broken = "Broken note";
+
+export const warnedWeight = {
+  name: "Descale the kettle",
+  path: "Tasks/Descale the kettle.md",
+  warning: 'alert weight "loud" is not harsh or quiet, so it rings harsh',
+} as const;
 
 /** An overdue task with no time: due yesterday. */
 export const overdue = {
