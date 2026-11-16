@@ -402,9 +402,11 @@ again (ADR `20261116-fold-and-clear-completed`).
 
 The list menu's Delete all completed tasks asks first and names the
 count. It removes the done notes of the tab it opened from, one note at
-a time. A note the app cannot delete comes back, and the banner says
-how many stayed. The app keeps no trash and no undo, so the delete is
-final. Obsidian sync sees the removed files and syncs the deletion.
+a time. It reads each note again before the delete, so a note another
+app reopened while the sheet was up stays. A note the app cannot delete
+comes back too, and the banner says how many stayed. The app keeps no
+trash and no undo, so the delete is final. Obsidian sync sees the
+removed files and syncs the deletion.
 
 The vault now serves more than `Tasks/`. The journal appends to
 `Journal/Daily/YYYY-MM-DD.md`, and the reference picker reads

@@ -95,6 +95,21 @@ The delete removes the note through the SAF adapter. The app keeps no
 trash and no undo. Obsidian sync sees the delete and syncs it to the
 other devices.
 
+The confirm reads each note again before it removes it. A note that
+another app reopened, or one that is missing or unreadable, stays. The
+notice names how many stayed and why. If every note in the set came
+back open, the clear ends in a notice and offers no retry.
+
+Done rows and the Completed header read the muted ink. Both meet 4.5
+to 1 in all four palettes. The strikethrough and the filled check still
+say "done".
+
+Clearing a done recurring occurrence can delete the note that made its
+successor. The successor's `recurrence previous` link then points at a
+file the vault no longer holds. The app never reads that link target.
+The successor keeps its row and its day. The ADR records why the app
+leaves the link text alone.
+
 Proof: component tests cover the fold default and toggle. They also
 cover the clear count, tab scoping, the safe Cancel and a partial
 delete failure. Web e2e covers the fold, the menu, Cancel and the

@@ -73,3 +73,40 @@ are still rows.
 The chevron is the only motion. A height animation would need the rows
 out of the `SectionList`. That would break the tick hold, the reorder
 and the still preview.
+
+## Amendment, 2026-11-16: the delete reads each note again
+
+The confirmation freezes its set when the sheet opens. Another app can
+reopen a note while the sheet is up. A verifier did that and the app
+deleted the reopened note.
+
+The delete now reads each note again before it removes it. It deletes a
+note only when the note still parses as completed. A note that is
+missing, unreadable or reopened stays. The notice names how many stayed
+and why the first one did.
+
+A read that fails does not count as a failed delete. If every note in
+the set came back open, the clear ends in a notice and offers no
+retry.
+
+The adapter has no conditional delete. A window remains between the
+read and the remove call. ADR 0035 records the same read-then-act
+window for `writeNoteIfUnchanged`. A second writer can still land in
+it. Closing the window needs a compare-and-delete in the vault
+adapter. Neither platform offers one today.
+
+## Amendment, 2026-11-16: a cleared occurrence can leave a broken link
+
+A recurring task's next note carries `recurrence previous`, a link to
+the note that made it. A clear can delete that earlier note. The link
+then points at a file the vault no longer holds.
+
+We accept the broken link. The app never reads the link target. It only
+checks that the property exists, to hide the next occurrence until its
+due day. The untick path that reads the earlier note leaves with that
+note. Obsidian draws the link as unresolved, and the vault loses no
+data.
+
+We do not rewrite the next note. That would be a write the user did not
+ask for, and it can race another app. The next note keeps its row, its
+date and its link text.

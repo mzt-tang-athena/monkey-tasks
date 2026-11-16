@@ -1,3 +1,4 @@
+import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "../fixtures";
 import { sections, tabs, undated } from "../data";
 import {
@@ -8,6 +9,7 @@ import {
   row,
   sectionHeader,
 } from "../locators";
+import { setTheme } from "../theme";
 import { notePaths, noteText, putNote, returnToTab } from "../vault";
 
 /**
@@ -29,6 +31,15 @@ const ERRANDS_DONE_TEXT = [
   "---",
   "",
   "Sandwich and an apple.",
+  "",
+].join("\n");
+
+/** A done sample note after another app removes its completion line. */
+const REOPENED = [
+  "---",
+  'kind: "[[tasks]]"',
+  "created: 2026-10-26T09:00",
+  "---",
   "",
 ].join("\n");
 
@@ -56,6 +67,31 @@ test("Completed starts folded with its count, and opens and closes", async ({
   await closeCompleted(page);
   for (const name of doneNotes) {
     await expect(row(page, name)).toHaveCount(0);
+  }
+});
+
+test("the opened group holds axe at 360 in a light and a dark palette", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 915 });
+  for (const palette of ["budget", "midnight"] as const) {
+    await setTheme(page, palette);
+    await openCompleted(page);
+    for (const name of doneNotes) {
+      await expect(row(page, name)).toBeVisible();
+    }
+
+    const result = await new AxeBuilder({ page }).analyze();
+    const bad = result.violations.filter(
+      (finding) => finding.impact === "serious" || finding.impact === "critical",
+    );
+    expect(
+      bad.map((finding) => ({
+        id: finding.id,
+        nodes: finding.nodes.map((node) => node.target.join(" ")),
+      })),
+      palette,
+    ).toEqual([]);
   }
 });
 
@@ -94,6 +130,30 @@ test("Cancel changes nothing", async ({ page }) => {
   for (const name of doneNotes) {
     await expect.poll(() => noteText(page, `Tasks/${name}.md`)).not.toBeNull();
   }
+});
+
+test("keeps a note another app reopened while the confirmation is up", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "list menu" }).click();
+  await page
+    .getByRole("menuitem", { name: "Delete all completed tasks" })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Delete completed tasks" });
+  await expect(dialog).toContainText("Delete 3 completed tasks?");
+
+  // Obsidian reopens Buy stamps while the sheet's set is frozen.
+  await putNote(page, "Tasks/Buy stamps.md", REOPENED);
+
+  await dialog.getByRole("button", { name: "Delete" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await expect.poll(() => noteText(page, "Tasks/Buy stamps.md")).toBe(REOPENED);
+  await expect.poll(() => noteText(page, "Tasks/Fix bike light.md")).toBeNull();
+  await expect.poll(() => noteText(page, "Tasks/Water the fern.md")).toBeNull();
+  await expect(row(page, "Buy stamps")).toBeVisible();
+  await expect(completedToggle(page)).toHaveCount(0);
+  await expect(page.getByText(/1 of 3 completed tasks stayed/)).toBeVisible();
 });
 
 test("the confirm removes exactly the completed notes of its tab", async ({

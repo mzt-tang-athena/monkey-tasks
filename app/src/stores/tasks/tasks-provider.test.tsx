@@ -94,6 +94,9 @@ const FOCUS_TEXT = '---\nkind: "[[lists]]"\ncreated: 2026-10-20\n---\n';
 /** A done task note, for the clear tests. */
 const DONE_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ncompleted: 2026-10-25\n---\n\nBody.\n';
 
+/** The same note after another app removed its completion line. */
+const REOPENED_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nBody.\n';
+
 /** Three done notes beside the open Call note. */
 function doneVault(): VaultSeed {
   return {
@@ -1064,5 +1067,46 @@ describe("recurring completion", () => {
     expect(failures()).toEqual([
       "clear completed: 2 of 2 completed tasks stayed: locked",
     ]);
+  });
+
+  it("keeps a note another app reopened while the confirmation was up", async () => {
+    await mount(doneVault());
+    // The sheet froze three done rows. Another app reopens one of them.
+    vault.hooks.write("Tasks/Fix bike light.md", REOPENED_TEXT);
+
+    await act(async () => {
+      await store().clear([
+        byFile("Buy stamps.md"),
+        byFile("Fix bike light.md"),
+        byFile("Water the fern.md"),
+      ]);
+    });
+    await flush();
+
+    expect(deletes.sort()).toEqual([
+      `${TASKS}/Buy stamps.md`,
+      `${TASKS}/Water the fern.md`,
+    ]);
+    expect(vault.hooks.read("Tasks/Fix bike light.md")).toBe(REOPENED_TEXT);
+    expect(byFile("Fix bike light.md").data?.completed).toBeUndefined();
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toBe("1 of 3 completed tasks stayed: it was reopened");
+  });
+
+  it("reports a clear whose notes were all reopened as a notice, not a retry", async () => {
+    await mount(doneVault());
+    vault.hooks.write("Tasks/Buy stamps.md", REOPENED_TEXT);
+
+    await act(async () => {
+      await store().clear([byFile("Buy stamps.md")]);
+    });
+    await flush();
+
+    expect(deletes).toEqual([]);
+    expect(vault.hooks.read("Tasks/Buy stamps.md")).toBe(REOPENED_TEXT);
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toBe("1 of 1 completed tasks stayed: it was reopened");
   });
 });

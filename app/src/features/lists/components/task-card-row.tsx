@@ -13,8 +13,6 @@ export type TaskCardRowProps = {
       surface reads both for its slot math and the card corners. */
   index: number;
   count: number;
-  /** The row is in the Completed group, which recedes. */
-  completed: boolean;
   /** My order is on, so the row can be picked up. */
   canDrag: boolean;
   onToggle: (task: TaskItem) => void;
@@ -36,7 +34,6 @@ function TaskCardRowBase({
   section,
   index,
   count,
-  completed,
   canDrag,
   onToggle,
   onOpen,
@@ -53,7 +50,7 @@ function TaskCardRowBase({
     [canDrag, task.name],
   );
   return (
-    <View style={[styles.slot, completed && styles.completed]}>
+    <View style={styles.slot}>
       <ListReorder.Item
         payload={task}
         id={task.uri}
@@ -87,8 +84,5 @@ const styles = StyleSheet.create({
   },
   main: {
     flex: 1,
-  },
-  completed: {
-    opacity: 0.55,
   },
 });

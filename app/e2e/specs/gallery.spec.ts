@@ -31,15 +31,12 @@ const labels = new Map<GalleryStateId, string>(
 );
 
 /**
- * WCAG exempts disabled text, and the faint step is the receding mark
- * for done work (ADR 20261111-runtime-theme-provider). Both sit below
- * 4.5 to 1 on purpose, so the contrast rule skips those two cells.
+ * WCAG exempts disabled text. The other cells read at 4.5 to 1 or
+ * better: the faint step is now the muted ink, so the done header and
+ * the done row are scanned like every other cell.
  */
 const exemptFromContrast = [
   '[data-testid="gallery-state:button:disabled"]',
-  '[data-testid="gallery-state:section-header:faint"]',
-  '[data-testid="gallery-state:section-header:expanded"]',
-  '[data-testid="gallery-state:section-header:collapsed"]',
 ];
 
 async function scan(
@@ -169,6 +166,17 @@ async function checkPaint(
   await expect(heading("section-header:muted"), `${where} muted ink`).toHaveCSS(
     "color",
     rgb(p.inkMuted),
+  );
+  // Done work reads the muted ink, and the strike still marks it done.
+  await expect(heading("section-header:faint"), `${where} faint ink`).toHaveCSS(
+    "color",
+    rgb(p.inkMuted),
+  );
+  const doneName = cell("task-row:done").getByText("Done row");
+  await expect(doneName, `${where} done ink`).toHaveCSS("color", rgb(p.inkMuted));
+  await expect(doneName, `${where} done strike`).toHaveCSS(
+    "text-decoration-line",
+    "line-through",
   );
   await expect(
     cell("banner:danger").getByRole("alert"),

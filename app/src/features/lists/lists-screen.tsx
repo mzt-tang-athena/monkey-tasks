@@ -161,7 +161,6 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           section={section.key}
           index={at}
           count={section.data.length}
-          completed={faint}
           canDrag={sortMode === "manual" && !faint}
           onToggle={onToggle}
           onOpen={onOpen}

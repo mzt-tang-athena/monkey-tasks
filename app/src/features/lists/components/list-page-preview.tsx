@@ -18,8 +18,11 @@ import { RepairNotice } from "./list-notices";
  * evaluates heights from the face's own numbers, so a long list never
  * mounts more than a screenful (J1). A folded Completed group draws its
  * header and no rows, as the live page does.
+ *
+ * Exported for its fold test: the preview takes input from no one, so
+ * the rows it would draw are the whole of its behaviour.
  */
-function previewSections(
+export function previewSections(
   sections: ListsSection[],
   height: number,
   repairs: number,
@@ -107,7 +110,6 @@ export function ListPagePreview({
               <CardGroupRow
                 key={task.uri}
                 position={cardPosition(index, section.data.length)}
-                style={section.tone === "faint" ? styles.completed : undefined}
               >
                 <View style={styles.main}>
                   <PreviewRow task={task} done={task.data?.completed != null} />
@@ -137,8 +139,5 @@ const styles = StyleSheet.create({
   },
   main: {
     flex: 1,
-  },
-  completed: {
-    opacity: 0.55,
   },
 });

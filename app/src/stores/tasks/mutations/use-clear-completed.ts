@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { TaskItem } from "@/types/task";
 import { insertRow, rowById } from "../rows";
+import { taskFromText } from "../task-notes";
 import { useRefreshTasks } from "../use-vault-read";
 import {
   messageOf,
@@ -25,6 +26,18 @@ function stayed(count: number, total: number, message: string): string {
   return `${count} of ${total} completed tasks stayed: ${message}`;
 }
 
+/**
+ * Why a note no longer holds a completion. The sheet's set is fixed
+ * when it opens, so another app can reopen a note while the
+ * confirmation is up. The delete reads the note again, and a note that
+ * changed stays.
+ */
+function notCompleted(fresh: TaskItem): string {
+  return fresh.data == null
+    ? "its frontmatter no longer reads"
+    : "it was reopened";
+}
+
 const spec: VaultMutationSpec<
   ClearCompletedVariables,
   Cleared,
@@ -45,18 +58,30 @@ const spec: VaultMutationSpec<
   async run({ tasks }, io) {
     const removed: TaskItem[] = [];
     const kept: { task: TaskItem; message: string }[] = [];
+    let deleteAttempts = 0;
     // One note per task, so a lock on one note never stops the rest.
     for (const task of tasks) {
+      // The gap between this read and the remove is the read-then-act
+      // window `writeNoteIfUnchanged` documents: the adapter has no
+      // conditional delete, so another app can still land in between.
       try {
+        const fresh = taskFromText(task, await io.adapter.read(task.uri));
+        if (fresh.data?.completed == null) {
+          kept.push({ task, message: notCompleted(fresh) });
+          continue;
+        }
+        deleteAttempts += 1;
         await io.adapter.remove(task.uri);
         removed.push(task);
       } catch (error) {
         kept.push({ task, message: messageOf(error) });
       }
     }
-    if (kept.length > 0 && removed.length === 0) {
-      // A clear that deleted nothing is a failed write: the rows come
-      // back and the failure banner offers Retry.
+    if (kept.length > 0 && removed.length === 0 && deleteAttempts > 0) {
+      // A clear whose deletes all failed is a failed write: the rows
+      // come back and the failure banner offers Retry. A clear that
+      // found every note reopened deleted nothing by design, so it
+      // lands with a notice instead.
       throw new Error(stayed(kept.length, tasks.length, kept[0].message));
     }
     return {
@@ -90,11 +115,12 @@ const spec: VaultMutationSpec<
 };
 
 /**
- * Delete the notes of the completed tasks the user confirmed. The rows
- * leave at once. A note that cannot be deleted comes back, and the
- * notice names how many stayed. The promise settles when the writes do
- * and never rejects. A finished write reads the vault again, so the
- * list shows what the folder holds.
+ * Delete the notes of the completed tasks the user confirmed, after
+ * reading each note again. The rows leave at once. A note that no
+ * longer holds a completion, or that cannot be read or deleted, comes
+ * back, and the notice names how many stayed. The promise settles when
+ * the writes do and never rejects. A finished write reads the vault
+ * again, so the list shows what the folder holds.
  */
 export function useClearCompleted(): (tasks: readonly TaskItem[]) => Promise<void> {
   const { mutateAsync } = useVaultMutation(spec);

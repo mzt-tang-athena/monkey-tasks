@@ -31,11 +31,15 @@ describe("SectionHeader", () => {
       ["accent", palette.accent],
       ["danger", palette.danger],
       ["muted", palette.inkMuted],
-      ["faint", palette.inkFaint],
+      // Done work reads the muted step, not a dimmed faint one.
+      ["faint", palette.inkMuted],
     ] as const;
     for (const [tone, color] of cases) {
       const { unmount } = render(<SectionHeader label="Past" tone={tone} />);
-      expect(getComputedStyle(screen.getByRole("heading")).color).toBe(rgb(color));
+      const style = getComputedStyle(screen.getByRole("heading"));
+      expect(style.color).toBe(rgb(color));
+      // A second dimming would drop the pair under 4.5 to 1.
+      expect(style.opacity).toBe("1");
       unmount();
     }
   });

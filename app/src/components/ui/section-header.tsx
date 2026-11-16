@@ -88,7 +88,7 @@ function FoldChevron({ open }: { open: boolean }) {
   }));
   return (
     <Animated.View style={style}>
-      <Icon name="chevron-down" color="inkFaint" />
+      <Icon name="chevron-down" color="inkMuted" />
     </Animated.View>
   );
 }
@@ -107,10 +107,12 @@ const makeStyles = (colors: Palette) => ({
     muted: {
       color: colors.inkMuted,
     },
-    // Done work recedes: the faint ink, dimmed again.
+    // Done work recedes by its ink step alone. The faint step sits
+    // near 2 to 1, too low for a group the user opens on purpose, so
+    // this reads the muted step, which clears 4.5 to 1 in every
+    // palette. The strikethrough and filled check carry "done".
     faint: {
-      color: colors.inkFaint,
-      opacity: 0.55,
+      color: colors.inkMuted,
     },
     // The whole row is the target, so a finger near the label still
     // opens the group.
