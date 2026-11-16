@@ -1,3 +1,4 @@
+import type { AlertWeight } from "@monkey-tasks/schemas";
 import { safeFileName } from "@/lib/vault/file-name";
 import { updateProperty } from "@/lib/vault/frontmatter";
 import type { TaskItem } from "@/types/task";
@@ -14,6 +15,8 @@ export type SpawnInput = {
   list: string | null;
   /** Absolute datetimes for the next occurrence. */
   reminders: string[];
+  /** How hard every alert of the next occurrence rings. */
+  alertWeight: AlertWeight;
   body: string;
 };
 
@@ -52,6 +55,8 @@ export function spawnContent(input: SpawnInput, created: string): string {
     ["recurrence", input.recurrence],
     ["list", input.list],
     ["reminders", input.reminders],
+    // Only a cue carries the key, so a need's note stays clean.
+    ["alert weight", input.alertWeight === "quiet" ? "quiet" : null],
     ["recurrence previous", link(input.previous)],
   ];
   let text = "---\n\n---\n";
@@ -91,6 +96,7 @@ export function isUntouchedSpawn(
     data.recurrence === expected.recurrence &&
     (data.list ?? null) === (expected.list ?? null) &&
     sameOrder(data.reminders, expected.reminders) &&
+    data["alert weight"] === expected.alertWeight &&
     data["recurrence previous"] === link(expected.previous) &&
     spawn.body === expected.body
   );

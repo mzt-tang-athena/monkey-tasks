@@ -8,6 +8,7 @@ function task(name: string, order?: number): TaskItem {
   const data: TaskFrontmatter = {
     kind: "[[tasks]]",
     created: "2026-10-20",
+    "alert weight": "harsh",
     ...(order == null ? {} : { order }),
   };
   return {

@@ -290,6 +290,7 @@ function spawnOf(body = "\nWater.\n"): string {
       recurrence: "FREQ=WEEKLY",
       list: null,
       reminders: [],
+      alertWeight: "harsh",
       body,
     },
     "2026-10-24",

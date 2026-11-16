@@ -74,8 +74,9 @@ It replaces one. Ticket 0094 keeps P1 to P4 out.
   goes quiet. This matches 0094: a timed `due` rings by default.
 - The editor writes `alert weight: quiet` for a cue and removes the line for
   a need. Only cues carry the property, so the vault stays clean.
-- An unknown value falls back to `harsh` and raises the note repair error.
-  A typo must never make an alert silent.
+- An unknown value falls back to `harsh`. The note stays valid and raises
+  a warning, which Needs repair lists. A typo must never make an alert
+  silent. The ADR amendment of 2026-11-16 explains why this is no error.
 - A plain string, not a wikilink. The values are words rather than notes.
 
 ### What each weight does
@@ -157,7 +158,7 @@ decision. That is a later ticket if the app ships on iOS.
 
 1. Schema and parser. Add `"alert weight"?: "harsh" | "quiet"` to the task
    frontmatter in the contracts submodule. Absent means harsh, unknown falls
-   back to harsh with a repair error. Fixtures for harsh, quiet, absent and
+   back to harsh with a warning. Fixtures for harsh, quiet, absent and
    unknown. Depends on 0094.
 2. Alerts. Two channels, weight passed into `scheduleAt`, a foreground
    handler by weight, the three follow-ups and their cancel. Quiet cleared

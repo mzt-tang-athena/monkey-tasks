@@ -1,8 +1,8 @@
 import { expect, test } from "../fixtures";
-import { sections, supplements, tabs, undated } from "../data";
+import { sections, supplements, tabs, undated, warnedWeight } from "../data";
 import { holdDrag, swipe, touchSwipe } from "../gestures";
 import { expectAbove, listTab, press, row, sectionHeader } from "../locators";
-import { putNote, returnToTab } from "../vault";
+import { putNote, noteText, returnToTab } from "../vault";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -332,5 +332,21 @@ test.describe("a note that needs repair", () => {
 
   test("the notice names the file and its error", async ({ page }) => {
     await expect(page.getByText("Broken note.md")).toBeVisible();
+  });
+});
+
+test.describe("a note whose alert weight is a typo", () => {
+  test("keeps its row and names the warning", async ({ page }) => {
+    await expect(page.getByText(warnedWeight.warning)).toBeVisible();
+
+    await press(page, listTab(page, tabs.focus));
+    await expect(listTab(page, tabs.focus)).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(row(page, warnedWeight.name)).toBeVisible();
+    expect(await noteText(page, warnedWeight.path)).toContain(
+      "alert weight: loud",
+    );
   });
 });

@@ -76,6 +76,7 @@ function task(): TaskItem {
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
+      "alert weight": "harsh",
       due: "2026-10-21",
       reminders: ["2026-10-21T09:00"],
       list: "[[Focus]]",
@@ -141,6 +142,7 @@ describe("saveTaskEdit", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
+        "alert weight": "harsh",
         due: "2027-01-31",
         recurrence: "FREQ=MONTHLY;BYMONTHDAY=-1",
       },
@@ -182,7 +184,11 @@ describe("saveTaskEdit", () => {
     const minimal: TaskItem = {
       ...task(),
       text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nOld body.\n',
-      data: { kind: "[[tasks]]", created: "2026-10-20" },
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "harsh",
+      },
     };
     state.fileText = minimal.text;
 
@@ -200,6 +206,33 @@ describe("saveTaskEdit", () => {
     expect(result.text).toContain("reminders:\n  - 2026-10-25T08:00");
     expect(result.data?.list).toBe("[[Errands]]");
     expect(result.data?.reminders).toEqual(["2026-10-25T08:00"]);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("keeps the warning after a save that leaves the bad value", async () => {
+    const loud =
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nalert weight: loud\n---\n\nOld body.\n';
+    const item: TaskItem = {
+      ...task(),
+      text: loud,
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "harsh",
+      },
+    };
+    state.fileText = loud;
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ reminders: [] }),
+    );
+
+    expect(result.text).toContain("alert weight: loud");
+    expect(result.warnings).toEqual([
+      'alert weight "loud" is not harsh or quiet, so it rings harsh',
+    ]);
   });
 
   it("drops a legacy two-link lists field on a save", async () => {
@@ -208,7 +241,12 @@ describe("saveTaskEdit", () => {
     const item: TaskItem = {
       ...task(),
       text: legacy,
-      data: { kind: "[[tasks]]", created: "2026-10-20", list: "[[Focus]]" },
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "harsh",
+        list: "[[Focus]]",
+      },
     };
     state.fileText = legacy;
 
@@ -231,7 +269,12 @@ describe("saveTaskEdit", () => {
     const item: TaskItem = {
       ...task(),
       text: legacy,
-      data: { kind: "[[tasks]]", created: "2026-10-20", list: "[[Focus]]" },
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "harsh",
+        list: "[[Focus]]",
+      },
     };
     state.fileText = legacy;
 
@@ -364,6 +407,7 @@ describe("saveTaskEdit", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
+        "alert weight": "harsh",
         title: "Water plants",
         due: "2026-10-27",
       },

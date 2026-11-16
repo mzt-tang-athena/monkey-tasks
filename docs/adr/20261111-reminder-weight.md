@@ -84,3 +84,26 @@ a loud phone.
   nothing about the alert, and the operator rejected it.
 - **Notification sound only, no channels.** Simpler code. It cannot keep the
   phone's ringer silent for a need, or mute the cue without muting the need.
+
+## Amendment 2026-11-16: a bad value rings harsh and warns
+
+The first draft said an unknown `alert weight` raises the note repair error.
+That clashed with how the app reads notes.
+A note with any schema error loses all its data.
+Its row hides under Needs repair, and it schedules no alarm.
+A typo such as `alert weight: loud` would then silence the task.
+The decision forbids exactly that.
+
+The operator chose a softer path.
+An unknown value reads as `harsh`.
+The note stays valid, keeps its row, and rings harsh.
+The contract also returns a warning for that value.
+Needs repair lists the warning, and the row stays in its list.
+
+A warning is new.
+It means "a valid note, with one value read by a fallback".
+An error still means "the note fails, and the app hides it".
+
+Alternative: read the unknown value as `harsh` with no message.
+That was simpler.
+The operator would learn of the typo only when a cue rang loud.

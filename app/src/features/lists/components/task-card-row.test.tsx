@@ -26,7 +26,11 @@ const apple: TaskItem = {
   name: "Apple",
   text: "",
   body: "",
-  data: { kind: "[[tasks]]", created: "2026-10-20" },
+  data: {
+    kind: "[[tasks]]",
+    created: "2026-10-20",
+    "alert weight": "harsh",
+  },
 };
 
 const none = () => undefined;

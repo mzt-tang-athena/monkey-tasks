@@ -1,4 +1,4 @@
-import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
+import { taskFrontmatter, taskWarnings, validateNote } from "@monkey-tasks/schemas";
 import type { VaultAdapter } from "@/lib/vault/adapter";
 import { keepTypedName, writeNoteIfUnchanged } from "@/lib/vault/notes";
 import {
@@ -90,6 +90,7 @@ export async function saveTaskEdit(
   }
 
   const note = validateNote(fileName, written, taskFrontmatter);
+  const warnings = note.data == null ? [] : taskWarnings(note.note.values);
   return {
     // The row keeps its identity: a rename changes the uri, not which
     // row the list is showing.
@@ -100,5 +101,6 @@ export async function saveTaskEdit(
     text: written,
     data: note.data,
     body: note.note.body,
+    ...(warnings.length > 0 ? { warnings } : {}),
   };
 }
