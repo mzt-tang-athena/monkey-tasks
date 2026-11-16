@@ -428,11 +428,6 @@ test.describe("the gallery", () => {
     test(`${palette}: every state, name, target and axe, at 360 and 412`, async ({
       page,
     }, testInfo) => {
-      // Two widths and five axe scans per width. The page grows with
-      // every primitive, and a shared machine runs it near the default
-      // 30s. Slow gives it 90s; a dedicated CI runner still lands well
-      // inside that.
-      test.slow();
       for (const width of widths) {
         const where = `${palette} ${width}`;
         await openGallery(page, palette, width);
