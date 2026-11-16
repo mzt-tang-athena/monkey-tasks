@@ -96,6 +96,7 @@ function spawnInput(task: TaskItem, due: string): SpawnInput {
     list: data?.list ?? null,
     // A date-only due carries no time of day, so no alarm.
     reminders: due.includes("T") ? [due] : [],
+    alertWeight: data?.["alert weight"] ?? "harsh",
     body: task.body,
   };
 }
