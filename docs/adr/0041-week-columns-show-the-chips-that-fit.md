@@ -59,3 +59,6 @@ end of the line. `weekChipCount` returns `Math.min(count, 2)`.
 The old text gives a "+N more" line under the chips in Spread. The
 shipped Spread puts the count in the header instead. The box then
 keeps one header line and two chip rows.
+
+Each layout keeps one chip height, 18pt in Spread and 24pt in Rows.
+The count no longer depends on that height, because it caps at two.
