@@ -8,6 +8,7 @@ import {
   pointOn,
   press,
   scrollTopOf,
+  swipe,
   touchFlick,
   type Input,
 } from "../gestures";
@@ -79,6 +80,50 @@ async function expectGhostOnPointer(page: Page, point: { x: number; y: number },
       ),
     )
     .toBeLessThanOrEqual(4);
+}
+
+/** Saturday 31 October 2026: the last day of the sample week, and the
+    one a sideways scroll used to hide. */
+const saturday = "2026-10-31";
+
+/** The dentist task on Tuesday 27, at 2:30 PM. */
+const dentist = {
+  name: "Dentist appointment",
+  path: "Tasks/Dentist appointment.md",
+} as const;
+
+async function openWeek(page: Page, layout: "spread" | "rows") {
+  await page.addInitScript((value) => {
+    globalThis.localStorage.setItem("monkey-tasks.week-view", value);
+  }, layout);
+  await page.goto("/planner");
+  await expect(page.getByTestId("day-heading")).toBeVisible();
+  await page.getByRole("tab", { name: "Week", exact: true }).click();
+  await expect(page.getByTestId(`week-view:${layout}`)).toBeVisible();
+}
+
+/** The day's drop ring shows, and it sits inside the day's own box. */
+async function expectRingInsideDay(page: Page, iso: string) {
+  await expect
+    .poll(
+      () =>
+        page.getByTestId(`week-ring:${iso}`).evaluate((element) => {
+          const ring = element.getBoundingClientRect();
+          const day = element.parentElement?.getBoundingClientRect();
+          if (day == null) {
+            return "no day box";
+          }
+          const shown = Number(getComputedStyle(element).opacity) > 0.9;
+          const inside =
+            ring.left >= day.left &&
+            ring.top >= day.top &&
+            ring.right <= day.right &&
+            ring.bottom <= day.bottom;
+          return shown && inside ? "inside" : `shown ${shown} inside ${inside}`;
+        }),
+      { message: "the ring shows inside the day box" },
+    )
+    .toBe("inside");
 }
 
 async function hoverOpacity(page: Page, testID: string): Promise<number> {
@@ -492,3 +537,65 @@ test("a touch drag that ends in touchCancel writes nothing", async ({ page }) =>
   await expect(page.getByTestId("drag-ghost")).toHaveCount(0);
   expect(await noteText(page, overdueNote)).toBe(before);
 });
+
+  test.describe("a drop on Saturday", () => {
+    for (const layout of ["spread", "rows"] as const) {
+      test(`a pool row dropped on Saturday in ${layout} takes that day, and the ring sits inside the box`, async ({
+        page,
+      }) => {
+        await openWeek(page, layout);
+        const source = page.getByTestId(`task-source:${undated.second}`);
+        await source.scrollIntoViewIfNeeded();
+        const box = page.getByTestId(`week-day:${saturday}`);
+
+        const pointer = await press(page, "mouse", source, { holdMs: 400 });
+        await pointer.moveTo(await pointOn(page, box));
+        await expectRingInsideDay(page, saturday);
+        await pointer.up();
+
+        await expect
+          .poll(() => noteText(page, "Tasks/Call Mum.md"))
+          .toContain(`due: ${saturday}`);
+        await expect(box.getByText(undated.second)).toBeVisible();
+      });
+    }
+
+    test("a touch drag drops on Saturday too", async ({ page }) => {
+      await openWeek(page, "spread");
+      const source = page.getByTestId(`task-source:${undated.second}`);
+      await source.scrollIntoViewIfNeeded();
+      const box = page.getByTestId(`week-day:${saturday}`);
+
+      const pointer = await press(page, "touch", source, { holdMs: 400 });
+      await pointer.moveTo(await pointOn(page, box));
+      await expectRingInsideDay(page, saturday);
+      await pointer.up();
+
+      await expect
+        .poll(() => noteText(page, "Tasks/Call Mum.md"))
+        .toContain(`due: ${saturday}`);
+    });
+  });
+
+  test("a chip dragged across the week moves the task and turns no page", async ({ page }) => {
+    await openWeek(page, "spread");
+    const chip = page.getByTestId(`week-task:${dentist.name}`);
+
+    await dragWith(page, "mouse", chip, page.getByTestId("week-day:2026-10-29"));
+
+    await expect
+      .poll(() => noteText(page, dentist.path))
+      .toContain("due: 2026-10-29T14:30");
+    await expect(page.getByTestId("week-day:2026-11-02")).toHaveCount(0);
+    await expect(page.getByTestId(`week-task:${dentist.name}`)).toBeVisible();
+  });
+
+  test("a swipe on a chip turns the week and writes nothing", async ({ page }) => {
+    await openWeek(page, "spread");
+    const before = await noteText(page, dentist.path);
+
+    await swipe(page, page.getByTestId(`week-task:${dentist.name}`), "left");
+
+    await expect(page.getByTestId("week-day:2026-11-02")).toBeVisible();
+    expect(await noteText(page, dentist.path)).toBe(before);
+  });
