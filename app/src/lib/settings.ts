@@ -25,14 +25,22 @@ export type Settings = {
   sortMode: SortMode;
   /** The active palette name. */
   theme: ThemeName;
+  /** Week mode's body: day boxes in pairs, or seven stacked rows. */
+  weekView: WeekLayout;
 };
 
-const DEFAULTS: Settings = { taskForm: "rows", sortMode: "due", theme: "budget" };
+const DEFAULTS: Settings = {
+  taskForm: "rows",
+  sortMode: "due",
+  theme: "budget",
+  weekView: "spread",
+};
 
 const LOCAL_KEYS: Record<keyof Settings, string> = {
   taskForm: "monkey-tasks.task-form",
   sortMode: "monkey-tasks.sort-mode",
   theme: "monkey-tasks.theme",
+  weekView: "monkey-tasks.week-view",
 };
 
 const FILE_NAME = "monkey-tasks-settings.json";
@@ -69,6 +77,7 @@ function pick<K extends keyof Settings>(
     taskForm: ["rows", "pills"],
     sortMode: ["due", "manual"],
     theme: Object.keys(THEMES),
+    weekView: ["spread", "rows"],
   };
   return typeof value === "string" && allowed[key].includes(value)
     ? (value as Settings[K])

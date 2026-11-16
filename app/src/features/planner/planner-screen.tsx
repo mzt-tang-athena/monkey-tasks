@@ -82,6 +82,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   // One global task form (rows or pills) for every planner mode,
   // live across the planner and the settings screen; default rows.
   const [taskForm, changeForm] = useSetting("taskForm");
+  const [weekView] = useSetting("weekView");
 
   const openTask = React.useCallback(
     (task: TaskItem) => {
@@ -190,7 +191,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
               ) : null}
               {status === "ready" && mode === "week" ? (
                 <WeekPane
-                  layout="spread"
+                  layout={weekView}
                   tasks={tasks}
                   openTasks={openTasks}
                   day={day}
