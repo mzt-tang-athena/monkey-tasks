@@ -374,8 +374,8 @@ The feature queue:
 - 0092 optional quests and evergreen tasks, a discovery
 - 0093 the task editor rebuild, starting with a design
 - 0095 a Notes tab from Inbox, starting with a design
-- 20261111 reminder weight, a discussion. Children: the schema, the alerts,
-  the editor, and the device check (20261111-alert-weight-*)
+- 20261111 reminder weight shipped in #150, #152 and #153. The phone check
+  remains (20261111-alert-weight-device-check)
 - 20261111 one list and a whole-tab order, decided. The children:
   - one list field on the task note
   - Main holds the unfiled tasks
