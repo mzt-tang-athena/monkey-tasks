@@ -255,10 +255,13 @@ test.describe("errors announce", () => {
     );
     await failNextWrite(page, `${undated.second}.md`);
 
-    await page.getByRole("textbox", { name: "Name", exact: true }).fill("Call Mum back");
-    await press(page, page.getByRole("button", { name: "save task" }));
+    // The sheet writes each change, so a picked day is the save.
+    await press(page, page.getByRole("button", { name: "add due date" }));
+    await press(page, page.getByRole("button", { name: "Tomorrow" }));
 
-    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Not saved" }),
+    ).toBeVisible();
   });
 
   test("the capture failure toast is an alert", async ({ page }) => {
@@ -401,8 +404,12 @@ test.describe("overlays", () => {
 });
 
 test.describe("axe", () => {
-  async function scan(page: Page, where: string) {
-    const result = await new AxeBuilder({ page }).analyze();
+  async function scan(page: Page, where: string, include?: string) {
+    const builder = new AxeBuilder({ page });
+    if (include != null) {
+      builder.include(include);
+    }
+    const result = await builder.analyze();
     const bad = result.violations.filter(
       (finding) => finding.impact === "serious" || finding.impact === "critical",
     );
@@ -441,8 +448,10 @@ test.describe("axe", () => {
       page,
       row(page, undated.second).getByRole("button", { name: undated.second }),
     );
-    await expect(page.getByRole("textbox", { name: "Name", exact: true })).toBeVisible();
-    await scan(page, "editor");
+    const editor = page.getByRole("dialog", { name: "Task" });
+    await expect(editor.getByRole("textbox", { name: "Task name" })).toBeVisible();
+    await expect(editor).toHaveCSS("opacity", "1");
+    await scan(page, "editor", '[role="dialog"]');
   });
 
   test("the open capture sheet", async ({ page }) => {

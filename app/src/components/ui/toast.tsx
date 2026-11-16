@@ -11,22 +11,29 @@ import { Overlay } from "./overlay-host";
  * failed capture. It holds a message and up to two actions: the first
  * reads as the main one, the second as a quiet dismiss. The caller
  * places it with `bottom`, the distance from the window's bottom edge.
+ * A `danger` toast reports a failure. An `info` toast reports a done
+ * action, such as a delete with its Undo.
  */
 export function Toast({
   message,
   actions = [],
   bottom,
+  tone = "danger",
 }: {
   message: string;
   actions?: [BannerAction] | [BannerAction, BannerAction] | [];
   bottom: number;
+  tone?: "danger" | "info";
 }) {
   const { styles } = useThemedStyles(makeStyles);
   return (
     <Overlay layer="toast">
       <View pointerEvents="box-none" style={[styles.dock, { bottom }]}>
         <View role="alert" aria-live="polite" style={styles.toast}>
-          <Text style={styles.message} numberOfLines={3}>
+          <Text
+            style={[styles.message, tone === "info" && styles.info]}
+            numberOfLines={3}
+          >
             {message}
           </Text>
           {actions.map((action, index) => (
@@ -74,6 +81,9 @@ const makeStyles = (colors: Palette) => ({
       flex: 1,
       ...type.meta,
       color: colors.danger,
+    },
+    info: {
+      color: colors.ink,
     },
   }),
 });

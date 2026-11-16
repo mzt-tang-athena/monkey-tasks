@@ -245,7 +245,7 @@ documents its props, and each primitive has a component test.
 | `Icon` | Every glyph the app draws, by `name` and color token. The app has no icon font. |
 | `OverlayHost`, `Overlay` | The root portal in `app/_layout.tsx`. An overlay draws above every screen at its layer. A `modal` overlay hides the screen from assistive tech. |
 | `Menu`, `placeMenu` | A menu that opens from an anchor. It flips above near the bottom bar and stays inside the page gutter. |
-| `Sheet` | A scrim, a dock that rides the keyboard, and a panel. The scrim and Android back close it. |
+| `Sheet` | A scrim, a dock that rides the keyboard, and a panel. The scrim and Android back close it. A `stacked` sheet draws over another sheet, and a `covered` one waits under it. |
 | `CommandPane` | A searchable command list that slides down from the top edge. The screen behind is inert. |
 | `Banner`, `Toast` | A danger or info message with role `alert`. A toast floats above every other layer. |
 | `LoadingState`, `EmptyState`, `ErrorState` | One look for a list that loads, holds nothing or fails. |
@@ -278,6 +278,23 @@ gallery.
 palette (ADR 20261112-component-gallery). Its route is `/gallery`. A
 reviewer reaches it from Diagnostics only. `model.ts` holds the state
 matrix, and the Playwright spec walks the same list.
+
+`features/task-editor` is the task editor (ADR
+20261116-task-editor-sheet). A row press on Lists or Planner opens it,
+through `hooks/use-task-editor.tsx` and the provider in
+`app/_layout.tsx`. It draws as a bottom sheet over the screen. It shows
+the list, the title, and one control per property. A property with a
+value is a tile. One without is a chip in the add strip. `model.ts` is the property registry: Due, Repeat, Alerts
+and Note. Reference (ticket 0091) and alert weight join it as one more
+entry each.
+
+Each committed change writes at once. `lib/session.ts` is the session
+reducer and its queue: one write per task, last draft wins, and a
+failure keeps the draft. `lib/when.ts` and `lib/recurrence.ts` turn
+dates and rules into plain words. A picker is a second sheet stacked
+over the editor. Delete sits in the sheet's menu and shows a toast
+with Undo. The `/task/[id]` route now opens only the read-only note
+viewer for a note that is not a task.
 
 `features/command` holds the command pane that ticket 0085 adds
 (ADR 20261111-command-pane). A downward pull on a header band, or the
@@ -372,7 +389,7 @@ The feature queue:
 - 0088 the journal tab, with 0089 and 0090
 - 0091 reference notes on a task
 - 0092 optional quests and evergreen tasks, a discovery
-- 0093 the task editor rebuild, starting with a design
+- 0093 the task editor rebuild, in progress on `design/0093-task-editor`
 - 0095 a Notes tab from Inbox, starting with a design
 - 20261111 reminder weight shipped in #150, #152 and #153. The phone check
   remains (20261111-alert-weight-device-check)

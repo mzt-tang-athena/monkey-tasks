@@ -301,7 +301,7 @@ function commonScenarios(input: "mouse" | "touch") {
       listTab(page, tabs.next),
       "the swipe turns the page, and the row's editor stays closed",
     ).toHaveAttribute("aria-selected", "true");
-    await expect(page).toHaveURL("/");
+    await expect(page.getByRole("dialog", { name: "Task" })).toHaveCount(0);
   });
 
   test("a short drag keeps its preview until the track rests", async ({ page }, testInfo) => {

@@ -18,7 +18,11 @@ export type IconName =
   | "grip-bars"
   | "settings"
   | "chevron-right"
-  | "chevron-down";
+  | "chevron-down"
+  | "bell"
+  | "note"
+  | "close"
+  | "check";
 
 /** How a glyph draws: a hollow stroke at rest, or a solid mark when the
     control it sits in is selected. */
@@ -197,10 +201,112 @@ function glyph(
           <View style={[styles.chevron, edge]} />
         </View>
       );
+    // The editor's alerts: a dome on a rim, with the clapper below.
+    case "bell":
+      return (
+        <View style={styles.bell}>
+          <View style={[styles.bellDome, edge]} />
+          <View style={[styles.bellRim, fill]} />
+          <View style={[styles.bellClapper, fill]} />
+        </View>
+      );
+    // The editor's note: a page with two lines of text.
+    case "note":
+      return (
+        <View style={[styles.note, edge]}>
+          <View style={[styles.noteLine, fill]} />
+          <View style={[styles.noteLine, styles.noteLineShort, fill]} />
+        </View>
+      );
+    // A clear or remove control: two crossed strokes.
+    case "close":
+      return (
+        <View style={styles.close}>
+          <View style={[styles.closeStroke, styles.closeLeft, fill]} />
+          <View style={[styles.closeStroke, styles.closeRight, fill]} />
+        </View>
+      );
+    // A chosen item: the two strokes of a turned corner.
+    case "check":
+      return (
+        <View style={styles.chevronBox}>
+          <View style={[styles.check, edge]} />
+        </View>
+      );
   }
 }
 
 const styles = StyleSheet.create({
+  bell: {
+    width: 14,
+    height: 14,
+    alignItems: "center",
+  },
+  bellDome: {
+    width: 10,
+    height: 9,
+    borderWidth: 1.5,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
+  },
+  bellRim: {
+    width: 13,
+    height: 1.5,
+    borderRadius: 1,
+  },
+  bellClapper: {
+    width: 3,
+    height: 2,
+    borderBottomLeftRadius: 1.5,
+    borderBottomRightRadius: 1.5,
+  },
+
+  note: {
+    width: 12,
+    height: 14,
+    borderWidth: 1.5,
+    borderRadius: 2,
+    paddingHorizontal: 2,
+    paddingTop: 3,
+    gap: 2,
+  },
+  noteLine: {
+    height: 1.5,
+    borderRadius: 1,
+  },
+  noteLineShort: {
+    width: 3,
+  },
+
+  close: {
+    width: 12,
+    height: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeStroke: {
+    position: "absolute",
+    width: 13,
+    height: 1.5,
+    borderRadius: 1,
+  },
+  closeLeft: {
+    transform: [{ rotate: "45deg" }],
+  },
+  closeRight: {
+    transform: [{ rotate: "-45deg" }],
+  },
+
+  // The bottom and right edges of a tall box, turned into a tick.
+  check: {
+    width: 5,
+    height: 9,
+    borderRightWidth: 1.5,
+    borderBottomWidth: 1.5,
+    transform: [{ translateY: -1.5 }, { rotate: "45deg" }],
+  },
+
   list: {
     height: 16,
     alignItems: "flex-start",

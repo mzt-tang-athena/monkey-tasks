@@ -5,40 +5,21 @@ import { Button } from "@/components/ui/button";
 import { measure, pageGutter, spacing } from "@/theme/tokens";
 
 /**
- * Cancel always. Save only where there is a task to write. The header
- * spans the window, and its row holds to the reading measure, so
- * Cancel and Save sit in the content column.
+ * The read-only note screen's header: one Close. A task has no screen
+ * of its own any more, so this header carries no Save (ADR
+ * 20261116-task-editor-sheet). The header spans the window, and its row
+ * holds to the reading measure, so Close sits in the content column.
  */
-export function EditorHeader({
-  saving = false,
-  canSave = false,
-  showSave = true,
-  onSave,
-}: {
-  saving?: boolean;
-  canSave?: boolean;
-  showSave?: boolean;
-  onSave?: () => void;
-}) {
+export function EditorHeader() {
   return (
     <View style={styles.row}>
       <Button
         variant="text"
         tone="muted"
-        label="Cancel"
-        accessibilityLabel="cancel editing"
+        label="Close"
+        accessibilityLabel="close note"
         onPress={() => router.back()}
       />
-      <View style={styles.spacer} />
-      {showSave ? (
-        <Button
-          label={saving ? "Saving" : "Save"}
-          accessibilityLabel="save task"
-          onPress={onSave}
-          disabled={saving || !canSave}
-          busy={saving}
-        />
-      ) : null}
     </View>
   );
 }
@@ -53,8 +34,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: pageGutter,
     paddingVertical: spacing.m,
     gap: spacing.s,
-  },
-  spacer: {
-    flex: 1,
   },
 });

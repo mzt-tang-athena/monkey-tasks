@@ -105,15 +105,19 @@ test("a single-line row has equal space above and below its name", async ({ page
   expect(below).toBeCloseTo(above, 0);
 });
 
-test("the editor saves a new name", async ({ page }) => {
+test("the editor writes a new name when the sheet closes", async ({ page }) => {
   await press(page, row(page, rename.from).getByRole("button", { name: rename.from }));
-  const name = page.getByRole("textbox", { name: "Name", exact: true });
+  const name = page.getByRole("textbox", { name: "Task name" });
   await expect(name).toHaveValue(rename.from);
 
   await name.fill(rename.to);
-  await page.getByRole("button", { name: "save task" }).click();
+  // The title writes on blur and on close, never per keystroke.
+  await page.getByRole("button", { name: "close the task" }).click();
 
   await expect(page).toHaveURL("/");
   await expect(row(page, rename.to)).toBeVisible();
   await expect(row(page, rename.from)).toHaveCount(0);
+  await expect
+    .poll(() => noteText(page, `Tasks/${rename.to}.md`))
+    .toContain(`title: ${rename.to}`);
 });

@@ -15,7 +15,7 @@ const spy = vi.hoisted(() => ({
   renders: {} as Record<string, number>,
   mounts: {} as Record<string, number>,
   screenRenders: 0,
-  push: vi.fn(),
+  open: vi.fn(),
   tasks: [] as unknown[],
   listeners: new Set<() => void>(),
   sortMode: "due" as "due" | "manual",
@@ -25,7 +25,9 @@ vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
-vi.mock("expo-router", () => ({ router: { push: spy.push } }));
+vi.mock("@/hooks/use-task-editor", () => ({
+  useTaskEditor: () => ({ open: spy.open, showing: false }),
+}));
 
 vi.mock("@/lib/settings", () => ({
   loadSettings: () => ({ taskForm: "rows", sortMode: spy.sortMode }),
@@ -203,7 +205,7 @@ beforeEach(() => {
   spy.renders = {};
   spy.mounts = {};
   spy.screenRenders = 0;
-  spy.push.mockClear();
+  spy.open.mockClear();
   spy.sortMode = "due";
 });
 
@@ -258,15 +260,13 @@ describe("ListsScreen", () => {
     expect(spy.mounts.Banana).toBe(1);
   });
 
-  it("still opens the editor from a row", () => {
+  it("opens the editor sheet from a row", () => {
     spy.tasks = [task("Apple")];
     render(<ListsScreen dock={dock} />);
 
     fireEvent.click(screen.getByLabelText("open Apple"));
 
-    expect(spy.push).toHaveBeenCalledWith(
-      `/task/${encodeURIComponent("content://vault/Tasks/Apple.md")}`,
-    );
+    expect(spy.open).toHaveBeenCalledWith("content://vault/Tasks/Apple.md");
   });
 
   it("holds a ticked row in its place for one beat", () => {

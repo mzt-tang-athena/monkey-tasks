@@ -18,6 +18,10 @@ const names: IconName[] = [
   "grip",
   "grip-bars",
   "chevron-down",
+  "bell",
+  "note",
+  "close",
+  "check",
 ];
 
 function rgb(hex: string): string {

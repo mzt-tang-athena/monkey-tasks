@@ -2,7 +2,6 @@ import * as React from "react";
 import { SectionList, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "@/types/task";
-import { openTask } from "@/lib/task-route";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { Pager } from "@/components/motion/pager";
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/list-states";
 import { useStableCallback } from "@/hooks/use-stable-callback";
 import { useCommandPane } from "@/hooks/use-command-pane";
+import { useTaskEditor } from "@/hooks/use-task-editor";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { useStoreMeta } from "@/stores/tasks/task-state";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
@@ -52,6 +52,7 @@ import type { ReorderEvent } from "@/components/motion/reorder";
 export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const { styles } = useThemedStyles(makeStyles);
   const { show: showCommands } = useCommandPane();
+  const editor = useTaskEditor();
   const { rootUri, status, readError } = useStoreMeta();
   const toggleTask = useToggleTask();
   const reorderSection = useReorderSection();
@@ -105,11 +106,10 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
     recordBreadcrumb("tick", task.data?.title ?? task.name);
     tickHold.toggle(task, held);
   });
-  // A row body press opens the task editor. The id is a SAF uri, so
-  // it rides one encoded path segment.
+  // A row body press opens the task editor sheet over this list.
   const onOpen = useStableCallback((task: TaskItem) => {
     recordBreadcrumb("open", task.data?.title ?? task.name);
-    openTask(task.id);
+    editor.open(task.id);
   });
 
   const renderSectionHeader = React.useCallback(
