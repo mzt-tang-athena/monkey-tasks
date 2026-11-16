@@ -41,12 +41,13 @@ export function WeekPane({
   );
 
   // The week index counts from the week this pane mounted. The pager
-  // reads it, and a landing selects the same weekday in the new week.
+  // reads it, and a landing keeps the picked weekday, so Tuesday stays
+  // Tuesday.
   const [origin] = React.useState(() => startOfWeek(day));
   const index = dayIndexBetween(origin.getTime(), startOfWeek(day).getTime()) / 7;
   const onPage = React.useCallback(
-    (next: number) => onSelect(addDays(origin, 7 * next)),
-    [onSelect, origin],
+    (next: number) => onSelect(addDays(day, 7 * (next - index))),
+    [onSelect, day, index],
   );
 
   return (
@@ -61,7 +62,7 @@ export function WeekPane({
               layout={weekLayout}
               tasks={openTasks}
               today={today}
-              selected={addDays(origin, 7 * page)}
+              selected={addDays(day, 7 * (page - index))}
               interactive={false}
             />
           </View>

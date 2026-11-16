@@ -452,6 +452,9 @@ function commonScenarios(input: "mouse" | "touch") {
       "the landed week is the one on screen",
     ).toBeVisible();
     // The landing picks the same weekday; it does not open the day.
+    await expect(page, "Monday stays picked in the new week").toHaveURL(
+      /day=2026-11-02/,
+    );
     await expect(page.getByTestId("day-heading")).toHaveCount(0);
     await expect(page).toHaveURL(/mode=week/);
   });
