@@ -195,9 +195,6 @@ test.describe("back", () => {
 });
 
 test.describe("accessibility", () => {
-  // Four palette scans run in one test. The default 30 second budget
-  // leaves no room for a loaded machine.
-  test.describe.configure({ timeout: 90_000 });
   test("the theme picker reads as a radio group in every palette", async ({
     page,
   }) => {
