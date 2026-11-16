@@ -20,6 +20,10 @@ export type IconName =
   | "chevron-right"
   | "chevron-down";
 
+/** How a glyph draws: a hollow stroke at rest, or a solid mark when the
+    control it sits in is selected. */
+export type GlyphWeight = "outline" | "fill";
+
 /**
  * The app's glyphs, built from views. There is no icon font. Each
  * glyph keeps the size it has where it first appeared, and takes its
@@ -29,28 +33,33 @@ export type IconName =
 export function Icon({
   name,
   color = "inkMuted",
+  weight = "outline",
 }: {
   name: IconName;
+  /** Only the sort and overflow glyphs carry a filled form. */
+  weight?: GlyphWeight;
   color?: keyof Palette;
 }) {
   const { colors } = useTheme();
   const tint = colors[color];
   const fill = { backgroundColor: tint };
   const edge = { borderColor: tint };
+  const solid = weight === "fill" && (name === "sort" || name === "more");
   return (
     <View
-      testID={`icon:${name}`}
+      testID={`icon:${name}${solid ? ":fill" : ""}`}
       aria-hidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
     >
-      {glyph(name, fill, edge, tint)}
+      {glyph(name, solid, fill, edge, tint)}
     </View>
   );
 }
 
 function glyph(
   name: IconName,
+  solid: boolean,
   fill: { backgroundColor: string },
   edge: { borderColor: string },
   tint: string,
@@ -101,18 +110,31 @@ function glyph(
     case "sort":
       return (
         <View style={styles.sort}>
-          <View style={[styles.sortBar, fill, { width: 16 }]} />
-          <View style={[styles.sortBar, fill, { width: 11 }]} />
-          <View style={[styles.sortBar, fill, { width: 6 }]} />
+          {[16, 11, 6].map((width) => (
+            <View
+              key={width}
+              style={[
+                styles.sortBar,
+                { width },
+                solid ? fill : [styles.sortOutline, edge],
+              ]}
+            />
+          ))}
         </View>
       );
     // The overflow control: three dots in a column.
     case "more":
       return (
         <View style={styles.more}>
-          <View style={[styles.moreDot, fill]} />
-          <View style={[styles.moreDot, fill]} />
-          <View style={[styles.moreDot, fill]} />
+          {[0, 1, 2].map((index) => (
+            <View
+              key={index}
+              style={[
+                styles.moreDot,
+                solid ? fill : [styles.moreOutline, edge],
+              ]}
+            />
+          ))}
         </View>
       );
     // The planner's list form.
@@ -274,22 +296,33 @@ const styles = StyleSheet.create({
   },
 
   sort: {
+    height: bottomBar.glyph,
     alignItems: "flex-end",
-    gap: 3,
+    gap: 2.5,
   },
+  // A 5pt stroke leaves room for the hollow form's 1.5pt border.
   sortBar: {
-    height: 2,
-    borderRadius: 1,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  sortOutline: {
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
   },
 
   more: {
+    height: bottomBar.glyph,
     alignItems: "center",
     gap: 2.5,
   },
   moreDot: {
-    width: 3.5,
-    height: 3.5,
-    borderRadius: 1.75,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  moreOutline: {
+    backgroundColor: "transparent",
+    borderWidth: 1.25,
   },
 
   rows: {
