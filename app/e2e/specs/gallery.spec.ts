@@ -448,9 +448,6 @@ test.describe("the gallery", () => {
     test(`${palette}: every state, name, target and axe, at 360 and 412`, async ({
       page,
     }, testInfo) => {
-      // Two widths of the whole gallery, each with a full-page axe
-      // scan. On a busy runner that outruns the suite's default.
-      test.setTimeout(90_000);
       for (const width of widths) {
         const where = `${palette} ${width}`;
         await openGallery(page, palette, width);
