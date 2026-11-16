@@ -15,7 +15,7 @@ ADR `20261116-task-editor-sheet` is the decision. Ticket 0093 built it.
 - `editor-due` picks a day and a time.
 - `editor-repeat` picks a preset or writes an RRULE in Advanced.
 - `editor-list` picks one list, or Main.
-- `editor-alerts` adds and removes reminders.
+- `editor-alerts` adds and removes reminders, and sets the alert weight.
 - `editor-note` edits the note body in a full height field.
 - `editor-failed` keeps the draft and offers Retry.
 - `editor-delete` removes the note, with Undo for five seconds.
@@ -38,20 +38,31 @@ Preconditions: a fresh page on `/`.
 - **List.** `change list, <name>` (the visible name is the list's), then
   the list's name writes `list`. `Main` removes the key.
 - **Alerts.** `add reminder`, then `save reminder`. Each reminder row has
-  `remove reminder <words>`.
+  `remove reminder <words>`. A timed due shows a plain `At due` row with
+  no remove control.
+- **Alert weight.** In the dialog `Alerts`, the tab list `Alert weight`
+  holds the tabs `Harsh` and `Quiet`. `Quiet` writes
+  `alert weight: quiet`, and the `change alerts` tile then ends in
+  "Quiet". `Harsh` takes the key off the note. The weight hides while a
+  reminder is in the add flow.
 - **Note.** `edit note` opens the dialog `Note`. `done with the note`
   writes the body.
 - **Title.** Fill `Task name`, then click `close the task`. The row
   reads the new name after a vault reread.
 - **Failure.** `failNextWrite(page, "<name>.md")` before a pick. The alert
-  `Not saved.` shows, with `retry save`. Retry writes the same draft.
+  `Not saved.` shows a plain line, never the raw error, with
+  `retry save`. Retry writes the same draft.
 - **Delete.** `task menu`, then the menuitem `Delete`. The alert
   `Task deleted` holds `undo delete`.
 - **Side effect.** `noteText` shows `due`, `recurrence`, `list`,
-  `reminders` and the body. Undo puts the exact text back.
-- **Proof.** Screenshot the sheet at rest, each picker, the failed row
-  and the toast. The journey `journeys/task-editor.journey.ts` does all
-  of it.
+  `reminders`, `alert weight` and the body. Undo puts the exact text
+  back.
+- **Width.** At 360 wide the four chips `add due date`, `add repeat`,
+  `add reminder` and `add note` fit inside the sheet. The testID
+  `strip-fade-end` shows only when a chip waits past the edge.
+- **Proof.** Screenshot the sheet at rest, each picker, the weight, the
+  failed row, the toast and the sheet at 360. The journey
+  `journeys/task-editor.journey.ts` takes every shot.
 
 ## Gotchas
 
@@ -59,7 +70,10 @@ Preconditions: a fresh page on `/`.
   editor shows. It comes back when the sheet closes.
 - A stacked picker draws in the sheet layer, above the editor. The
   editor panel is `covered` while a picker shows.
-- The editor has no route any more. `/task/<id>` serves only the
-  read-only note viewer for a note that is not a task.
+- The editor has no route of its own. An alert tap pushes
+  `/task/<id>`, which opens a task in the editor sheet and steps back.
+  For a note that is not a task, it serves the read-only viewer.
+- A picker body re-measures after its content changes. Wait about
+  300 ms before a screenshot, or the shot catches the old height.
 - The title writes on close, never per keystroke. A test that types and
   reads the note at once sees the write a moment later. Use `poll`.
