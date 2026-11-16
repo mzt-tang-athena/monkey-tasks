@@ -10,7 +10,7 @@ import { Overlay } from "@/components/ui/overlay-host";
 import type { Hit } from "@/lib/motion/drag-math";
 import { motion, type HoldKind } from "@/lib/motion/tokens";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
-import { shadows, type Palette } from "@/theme/tokens";
+import { radius, shadows, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { createBridgeGuard } from "./internal/bridge";
 import {
@@ -133,10 +133,19 @@ export function createDragSurface<P, T>() {
     );
   }
 
+  /**
+   * A drop zone cut into `columns` by `rows` equal cells. The hover
+   * mark comes in two kinds. `fill` tints the hovered cell's whole
+   * pitch under the children. `ring` draws nothing itself: each cell's
+   * own box renders a `Ring`, so the mark sits inside the box and never
+   * covers a gap. Cells that hold the same target object belong to one
+   * box, and the first of them owns its ring.
+   */
   function Grid({
     columns,
     rows,
     cells,
+    mark = "fill",
     style,
     testID,
     role,
@@ -146,6 +155,7 @@ export function createDragSurface<P, T>() {
     columns: number;
     rows: number;
     cells: readonly (T | null)[];
+    mark?: "fill" | "ring";
     style?: StyleProp<ViewStyle>;
     testID?: string;
     /** The grid's role and name, for the calendar's day cells. */
@@ -159,6 +169,10 @@ export function createDragSurface<P, T>() {
       [columns, rows, cells],
     );
     const { id, ref, hover } = useZone(cells, shape);
+    const rings = React.useMemo<GridRings>(
+      () => ({ id, hover, owners: cells.map((cell) => (cell === null ? -1 : cells.indexOf(cell))) }),
+      [id, hover, cells],
+    );
     const box = useAnimatedStyle(() => {
       const hit = hover.value;
       if (hit === null || hit.id !== id) {
@@ -183,9 +197,38 @@ export function createDragSurface<P, T>() {
         aria-label={label}
         style={style}
       >
-        <Animated.View pointerEvents="none" style={[styles.cell, styles.hover, box]} />
-        {children}
+        {mark === "fill" ? (
+          <Animated.View pointerEvents="none" style={[styles.cell, styles.hover, box]} />
+        ) : null}
+        <RingContext.Provider value={mark === "ring" ? rings : null}>{children}</RingContext.Provider>
       </Animated.View>
+    );
+  }
+
+  /**
+   * The hover mark of a `ring` grid's cell. It fills the box it renders
+   * in, inside the box's border, and shows while the finger is over
+   * any cell that `cell` owns. `cell` is the first cell of the box.
+   */
+  function Ring({ cell, testID }: { cell: number; testID?: string }) {
+    const { styles } = useThemedStyles(makeStyles);
+    const { id, hover, owners } = useRings();
+    const shown = useAnimatedStyle(() => {
+      const hit = hover.value;
+      const on = hit !== null && hit.id === id && owners[hit.cell] === cell;
+      return {
+        opacity: withTiming(on ? 1 : 0, {
+          duration: motion.ms.tap,
+          reduceMotion: ReduceMotion.System,
+        }),
+      };
+    });
+    return (
+      <Animated.View
+        pointerEvents="none"
+        testID={testID}
+        style={[styles.fill, styles.ring, shown]}
+      />
     );
   }
 
@@ -193,7 +236,25 @@ export function createDragSurface<P, T>() {
     return React.useContext(DraggingContext);
   }
 
-  return { Root, Source, Zone, Grid, useDragging };
+  return { Root, Source, Zone, Grid, Ring, useDragging };
+}
+
+/** What a `ring` grid tells its cells: its zone id, the hover, and the
+    cell that owns each cell's ring. */
+type GridRings = {
+  id: number;
+  hover: Session["ui"]["hover"];
+  owners: readonly number[];
+};
+
+const RingContext = React.createContext<GridRings | null>(null);
+
+function useRings(): GridRings {
+  const rings = React.useContext(RingContext);
+  if (rings === null) {
+    throw new Error('Ring must render inside a Grid with mark="ring".');
+  }
+  return rings;
 }
 
 /** A zone joins the session's registry for as long as it is mounted. */
@@ -256,6 +317,13 @@ const makeStyles = (colors: Palette) => ({
     },
     hover: {
       backgroundColor: colors.accentSoft,
+    },
+    // The selected-state ring (ticket 0082, direction C): ink, inside
+    // the box, with the box's own corner.
+    ring: {
+      borderRadius: radius,
+      borderWidth: 2,
+      borderColor: colors.ink,
     },
     ghost: {
       position: "absolute",
