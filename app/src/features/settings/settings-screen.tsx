@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Linking, StyleSheet, Text, View } from "react-native";
+import { Linking, Platform, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,16 @@ import { ThemePicker } from "./components/theme-picker";
 import { CrashLogCard } from "./components/crash-log-card";
 
 const REPO = "https://github.com/mzt-tang-athena/monkey-tasks";
+
+async function openNotificationPolicy(): Promise<void> {
+  try {
+    await Linking.sendIntent(
+      "android.settings.NOTIFICATION_POLICY_ACCESS_SETTINGS",
+    );
+  } catch {
+    await Linking.openSettings();
+  }
+}
 
 const sortOptions: Segment<SortMode>[] = [
   { key: "manual", label: "My order" },
@@ -107,6 +117,28 @@ export default function SettingsScreen() {
             </Text>
           </View>
         </Section>
+
+        {Platform.OS === "android" ? (
+          <Section label="Alerts">
+            <Pressable
+              role="button"
+              accessibilityLabel="Alerts past Do Not Disturb"
+              onPress={() => void openNotificationPolicy()}
+              style={({ pressed }) => [
+                styles.action,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.actionLabel}>Alerts past Do Not Disturb</Text>
+              <Icon name="chevron-right" color="inkFaint" />
+            </Pressable>
+            <View style={styles.field}>
+              <Text style={styles.fieldHint}>
+                A harsh alert stays below Do Not Disturb until you grant this.
+              </Text>
+            </View>
+          </Section>
+        ) : null}
 
         <Section label="Diagnostics">
           <CrashLogCard />

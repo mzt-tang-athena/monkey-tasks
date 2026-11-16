@@ -13,7 +13,8 @@
     "android": {
       "package": "dev.monkey.monkeytasks",
       "permissions": [
-        "SCHEDULE_EXACT_ALARM"
+        "SCHEDULE_EXACT_ALARM",
+        "ACCESS_NOTIFICATION_POLICY"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

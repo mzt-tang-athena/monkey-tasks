@@ -30,6 +30,7 @@ function recurring(
   return task({
     kind: "[[tasks]]",
     created: "2026-10-01",
+    "alert weight": "harsh",
     due,
     recurrence,
     ...(completed == null ? {} : { completed }),
@@ -99,6 +100,7 @@ describe("occursOn", () => {
     const once = task({
       kind: "[[tasks]]",
       created: "2026-10-01",
+      "alert weight": "harsh",
       due: "2026-10-22",
     });
     expect(occursOn(once, new Date(2026, 9, 22))).toBe(true);
@@ -107,7 +109,11 @@ describe("occursOn", () => {
   });
 
   it("never touches a day without a due date", () => {
-    const undated = task({ kind: "[[tasks]]", created: "2026-10-01" });
+    const undated = task({
+      kind: "[[tasks]]",
+      created: "2026-10-01",
+      "alert weight": "harsh",
+    });
     expect(occursOn(undated, new Date(2026, 9, 22))).toBe(false);
     expect(
       occurrencesBetween(

@@ -143,7 +143,12 @@ function task(name: string, due?: string): TaskItem {
     fileName: `${name}.md`,
     name,
     text: "",
-    data: { kind: "[[tasks]]", created: "2026-10-20", ...(due ? { due } : {}) },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+      ...(due ? { due } : {}),
+    },
     body: "",
   };
 }
@@ -161,6 +166,7 @@ function completed(name: string, list?: string): TaskItem {
       kind: "[[tasks]]",
       created: "2026-10-20",
       completed: "2026-10-26",
+      "alert weight": "harsh",
       ...(list == null ? {} : { list: `[[${list}]]` }),
     },
     body: "",
@@ -182,6 +188,7 @@ function listedTask(name: string): TaskItem {
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
+      "alert weight": "harsh",
       list: "[[Errands]]",
     },
     body: "",
@@ -249,6 +256,24 @@ describe("ListsScreen", () => {
 
     expect(spy.renders.Apple).toBe(before.Apple);
     expect(spy.renders.Cherry).toBe(before.Cherry);
+  });
+
+  it("keeps a warned task's row and names the warning", () => {
+    const warned: TaskItem = {
+      ...task("Descale the kettle"),
+      warnings: [
+        'alert weight "loud" is not harsh or quiet, so it rings harsh',
+      ],
+    };
+    spy.tasks = [warned, task("Banana")];
+    render(<ListsScreen dock={dock} />);
+
+    expect(screen.getByTestId("row:Descale the kettle")).toBeTruthy();
+    expect(
+      screen.getByText(
+        '• alert weight "loud" is not harsh or quiet, so it rings harsh',
+      ),
+    ).toBeTruthy();
   });
 
   it("mounts no row of a later group when a group above leaves", () => {

@@ -61,9 +61,12 @@ vi.mock("./load-vault", async (importOriginal) => {
 // The alarm code runs for real on a fake OS that schedules nothing.
 vi.mock("@/lib/notifications", () => ({
   ensureNotificationPermission: async () => true,
-  scheduleAt: async () => "alarm",
-  cancelAllScheduled: async () => undefined,
+  ensureChannels: async () => undefined,
+  scheduleRing: async () => "alarm",
   cancelScheduled: async () => undefined,
+  listScheduledDetailed: async () => [],
+  listDeliveredDetailed: async () => [],
+  dismissDelivered: async () => undefined,
 }));
 
 import { makeQueryClient } from "@/lib/react-query";
@@ -306,6 +309,7 @@ function spawnOf(body = "\nWater.\n"): string {
       recurrence: "FREQ=WEEKLY",
       list: null,
       reminders: [],
+      alertWeight: "harsh",
       body,
     },
     "2026-10-24",
@@ -511,6 +515,7 @@ describe("TasksProvider", () => {
         recurrence: null,
         list: "Focus",
         reminders: [],
+        alertWeight: "harsh",
         body: "\nNew body.\n",
       });
     });
@@ -544,6 +549,7 @@ describe("TasksProvider", () => {
           recurrence: null,
           list: null,
           reminders: [],
+          alertWeight: "harsh",
           body: before.body,
         }),
       ).rejects.toThrow("disk full");
@@ -572,6 +578,7 @@ describe("TasksProvider", () => {
         recurrence: null,
         list: "Focus",
         reminders: ["2026-10-30T09:00"],
+        alertWeight: before.data?.["alert weight"] ?? "harsh",
         body: "\nNew body.\n",
       });
     });

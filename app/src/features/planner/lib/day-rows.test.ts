@@ -12,7 +12,12 @@ function task(name: string, data: Partial<TaskFrontmatter> = {}): TaskItem {
     name,
     text: "",
     body: "",
-    data: { kind: "[[tasks]]", created: "2026-10-01", ...data },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-01",
+      "alert weight": "harsh",
+      ...data,
+    },
   };
 }
 

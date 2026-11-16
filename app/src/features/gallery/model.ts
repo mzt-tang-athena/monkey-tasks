@@ -39,7 +39,7 @@ export const GALLERY_SECTIONS = [
     title: "IconButton",
     states: [
       { id: "icon-button:rest", label: "rest" },
-      { id: "icon-button:active", label: "active" },
+      { id: "icon-button:selected", label: "selected" },
       { id: "icon-button:focused", label: "focused" },
     ],
   },

@@ -17,7 +17,11 @@ function item(overrides: Partial<TaskItem> = {}): TaskItem {
     fileName: "Call.md",
     name: "Call",
     text: "",
-    data: { kind: "[[tasks]]", created: "2026-10-20" },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+    },
     body: "\nOld body.\n",
     ...overrides,
   };
@@ -100,6 +104,7 @@ describe("draftOf", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
+        "alert weight": "harsh",
         title: "Call Mum: Sunday",
         due: "2026-10-26",
         recurrence: "FREQ=WEEKLY",
@@ -114,6 +119,7 @@ describe("draftOf", () => {
       recurrence: "FREQ=WEEKLY",
       list: "Focus",
       reminders: ["2026-10-26T09:00"],
+      alertWeight: "harsh",
       body: "\nOld body.\n",
     });
   });
@@ -125,8 +131,30 @@ describe("draftOf", () => {
       recurrence: null,
       list: null,
       reminders: [],
+      alertWeight: "harsh",
       body: "\nOld body.\n",
     });
+  });
+
+  it("reads a note with no weight as Harsh", () => {
+    const task = item({
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+      } as unknown as TaskItem["data"],
+    });
+    expect(draftOf(task).alertWeight).toBe("harsh");
+  });
+
+  it("reads a quiet note as Quiet", () => {
+    const task = item({
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "quiet",
+      },
+    });
+    expect(draftOf(task).alertWeight).toBe("quiet");
   });
 });
 

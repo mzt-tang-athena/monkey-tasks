@@ -2,8 +2,8 @@
 title: Alert weight in the editor
 created: 2026-11-11
 priority: normal
-assignee:
-pr:
+assignee: opencode
+pr: 152
 depends: ["20261111-alert-weight-schema"]
 ---
 
@@ -34,12 +34,31 @@ Build:
 
 ## Acceptance
 
-- [ ] The editor shows the current weight, with absent shown as Harsh.
-- [ ] Saving Quiet writes `alert weight: quiet` once, in place.
-- [ ] Saving Harsh removes the key and changes nothing else in the file.
-- [ ] A save with no change to the weight leaves the frontmatter untouched.
-- [ ] Lint, typecheck and the editor tests pass.
+- [x] The editor shows the current weight, with absent shown as Harsh.
+- [x] Saving Quiet writes `alert weight: quiet` once, in place.
+- [x] Saving Harsh removes the key and changes nothing else in the file.
+- [x] A save with no change to the weight leaves the frontmatter untouched.
+- [x] Lint, typecheck and the editor tests pass.
 
 ## Outcome
 
-(filled in before moving to done/)
+The task editor has an `Alert weight` control under Reminders. It shows
+the note's weight, and a note with no line shows Harsh. Saving Quiet
+writes `alert weight: quiet` once. Saving Harsh removes the line and
+leaves no blank line.
+
+The save compares the draft weight with the weight the note parses to.
+When they match it leaves the line alone, so an unknown value such as
+`loud` keeps its line and its warning. A save with no change writes the
+same bytes back.
+
+Every draft carries the weight, since `TaskEdit.alertWeight` has no
+optional mark. The repo has no dirty check to extend. Save stays
+enabled whenever the name is not empty.
+
+A web journey sets Quiet and reads the note. It reopens the note at
+Quiet, then sets Harsh and reads a note with no key. Axe reports no
+serious or critical issue on the editor, and each segment is at least
+44 by 44.
+
+PR: 152

@@ -55,6 +55,9 @@ export function ListsToolbar({
   const sortAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
   const moreAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
   const close = React.useCallback(() => setOpen(null), []);
+  // One filled mark covers both an open menu and a sort other than due.
+  const sortSelected = open === "sort" || sortMode !== "due";
+  const moreSelected = open === "more";
 
   const sortItems: MenuItem[] = sortOptions.map((option) => ({
     key: option.key,
@@ -103,7 +106,7 @@ export function ListsToolbar({
     setClear((current) => (current == null ? current : { ...current, open: false }));
 
   return (
-    <View style={styles.band}>
+    <View testID="lists-toolbar" style={styles.band}>
       <View style={styles.content}>
         <TabStrip
           tabs={tabs}
@@ -118,21 +121,27 @@ export function ListsToolbar({
         <View ref={sortAnchor} testID="sort-menu-anchor">
           <IconButton
             label="sort list"
-            active={open === "sort" || sortMode !== "due"}
             expanded={open === "sort"}
             onPress={() => setOpen(open === "sort" ? null : "sort")}
           >
-            <SortGlyph />
+            <Icon
+              name="sort"
+              weight={sortSelected ? "fill" : "outline"}
+              color={sortSelected ? "ink" : "inkMuted"}
+            />
           </IconButton>
         </View>
         <View ref={moreAnchor} testID="list-menu-anchor">
           <IconButton
             label="list menu"
-            active={open === "more"}
             expanded={open === "more"}
             onPress={() => setOpen(open === "more" ? null : "more")}
           >
-            <DotsGlyph />
+            <Icon
+              name="more"
+              weight={moreSelected ? "fill" : "outline"}
+              color={moreSelected ? "ink" : "inkMuted"}
+            />
           </IconButton>
         </View>
       </View>
@@ -167,30 +176,6 @@ export function ListsToolbar({
   );
 }
 
-/** Three bars that shorten: the sort glyph. */
-function SortGlyph() {
-  const { styles } = useThemedStyles(makeStyles);
-  return (
-    <View style={styles.sort}>
-      {[16, 11, 6].map((width) => (
-        <View key={width} style={[styles.sortBar, { width }]} />
-      ))}
-    </View>
-  );
-}
-
-/** Three dots: the overflow glyph. */
-function DotsGlyph() {
-  const { styles } = useThemedStyles(makeStyles);
-  return (
-    <View style={styles.dots}>
-      {[0, 1, 2].map((index) => (
-        <View key={index} style={styles.dot} />
-      ))}
-    </View>
-  );
-}
-
 const makeStyles = (colors: Palette) => ({
   styles: StyleSheet.create({
     // Fixed chrome above the scroller: a surface step above the paper,
@@ -212,25 +197,6 @@ const makeStyles = (colors: Palette) => ({
     },
     spacer: {
       flex: 1,
-    },
-    sort: {
-      alignItems: "flex-end",
-      gap: 3,
-    },
-    sortBar: {
-      height: 2,
-      borderRadius: 1,
-      backgroundColor: colors.inkMuted,
-    },
-    dots: {
-      alignItems: "center",
-      gap: 2.5,
-    },
-    dot: {
-      width: 3.5,
-      height: 3.5,
-      borderRadius: 1.75,
-      backgroundColor: colors.inkMuted,
     },
   }),
 });

@@ -224,7 +224,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing` and `MotionScrollView`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
-| `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
+| `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`. `lib/alerts` holds the ring shape and the acknowledged groups. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
 | `types` | Shared types, such as `TaskItem`. |
 | `utils` | Pure helpers: dates, YAML, schema errors. |
 | `theme` | Design tokens. |
@@ -374,8 +374,8 @@ The feature queue:
 - 0092 optional quests and evergreen tasks, a discovery
 - 0093 the task editor rebuild, starting with a design
 - 0095 a Notes tab from Inbox, starting with a design
-- 20261111 reminder weight, a discussion. Children: the schema, the alerts,
-  the editor, and the device check (20261111-alert-weight-*)
+- 20261111 reminder weight shipped in #150, #152 and #153. The phone check
+  remains (20261111-alert-weight-device-check)
 - 20261111 one list and a whole-tab order, decided. The children:
   - one list field on the task note
   - Main holds the unfiled tasks
@@ -431,7 +431,10 @@ Phases:
    rebuilds the alarm list after every successful vault read. A capture,
    a tick, or a drag leaves the schedule matching the vault. Ticking a
    recurring task completes the occurrence. It creates the next one as
-   its own note (ADR 0027).
+   its own note (ADR 0027). An alert uses its task's `alert weight`. A
+   harsh alert rings on the alarm stream and escalates at 1, 5 and 15
+   minutes. A quiet one rings once in silence. A tap or a tick clears
+   the group (ADR 20261111-reminder-weight).
 7. Later: deed vocabulary cleanup (0005), the quick-task and deed merge
    decision, and capture text highlighting (0008). Location triggers,
    MCP capture on athena, ntfy fallback, and the athena operational

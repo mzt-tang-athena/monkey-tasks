@@ -1,4 +1,4 @@
-import type { TaskFrontmatter } from "@monkey-tasks/schemas";
+import type { AlertWeight, TaskFrontmatter } from "@monkey-tasks/schemas";
 
 export type TaskItem = {
   /**
@@ -20,6 +20,11 @@ export type TaskItem = {
   body: string;
   /** Why the frontmatter failed, when it did. Absent on a valid note. */
   errors?: string[];
+  /**
+   * Why a value was read through a fallback, one message each. The row
+   * still shows, and Needs repair names it. Absent on a clean note.
+   */
+  warnings?: string[];
 };
 
 /** A list note, as the store exposes it: a tab name and its file. */
@@ -64,5 +69,6 @@ export type TaskEdit = {
   /** The one list by name; null means Main. */
   list: string | null;
   reminders: string[];
+  alertWeight: AlertWeight;
   body: string;
 };

@@ -117,9 +117,9 @@ export default function GalleryScreen() {
         <Icon name="sort" />
       </IconButton>
     ),
-    "icon-button:active": (
-      <IconButton label="sort tasks, active" active>
-        <Icon name="sort" color="accent" />
+    "icon-button:selected": (
+      <IconButton label="sort tasks, selected">
+        <Icon name="sort" weight="fill" color="ink" />
       </IconButton>
     ),
     "icon-button:focused": (

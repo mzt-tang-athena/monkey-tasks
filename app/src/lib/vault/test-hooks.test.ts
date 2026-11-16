@@ -84,6 +84,7 @@ describe("the browser's vault", () => {
 
     expect(Object.keys(globalThis.__vault?.files() ?? {})).toEqual([
       "Tasks/Broken note.md",
+      "Tasks/Descale the kettle.md",
       "Tasks/Lists/Garden.md",
     ]);
     await expect(

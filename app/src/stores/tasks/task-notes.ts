@@ -1,4 +1,4 @@
-import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
+import { taskFrontmatter, taskWarnings, validateNote } from "@monkey-tasks/schemas";
 import type { VaultAdapter } from "@/lib/vault/adapter";
 import { formatIssues } from "@/utils/schema-errors";
 import type { TaskItem } from "@/types/task";
@@ -13,16 +13,19 @@ export function taskFromText(
   text: string,
 ): TaskItem {
   const result = validateNote(base.fileName, text, taskFrontmatter);
-  return {
+  const row: TaskItem = {
     ...base,
     text,
     data: result.data,
     body: result.note.body,
     name: result.data?.title ?? base.name,
-    ...(result.errors == null
-      ? {}
-      : { errors: formatIssues(result.errors.issues) }),
   };
+  if (result.errors != null) {
+    return { ...row, errors: formatIssues(result.errors.issues) };
+  }
+  const warnings =
+    result.data == null ? [] : taskWarnings(result.note.values);
+  return warnings.length > 0 ? { ...row, warnings } : row;
 }
 
 export async function loadTasks(

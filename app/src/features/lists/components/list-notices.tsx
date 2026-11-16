@@ -35,9 +35,10 @@ export function VaultPrompt({ onGrant }: { onGrant: () => void }) {
 }
 
 /**
- * The notes that fail validation, with the file and each error, so
- * they can be fixed in the vault. The notice is the list's header, so
- * it scrolls away with the list and never takes room from the rows.
+ * The notes that fail validation, with the file and each reason, so
+ * they can be fixed in the vault. A warned note is here too, and keeps
+ * its row. The notice is the list's header, so it scrolls away with the
+ * list and never takes room from the rows.
  */
 export function RepairNotice({ repairs }: { repairs: Repair[] }) {
   const { styles } = useThemedStyles(makeStyles);
@@ -50,9 +51,9 @@ export function RepairNotice({ repairs }: { repairs: Repair[] }) {
         {repairs.map((item) => (
           <View key={item.uri} style={styles.repairItem}>
             <Text style={styles.repairName}>{item.name}.md</Text>
-            {item.errors.map((error, index) => (
-              <Text key={index} style={styles.repairError}>
-                {`• ${error}`}
+            {item.messages.map((message, index) => (
+              <Text key={index} style={styles.repairMessage}>
+                {`• ${message}`}
               </Text>
             ))}
           </View>
@@ -156,7 +157,7 @@ const makeStyles = (colors: Palette) => ({
       color: colors.ink,
       fontWeight: "600",
     },
-    repairError: {
+    repairMessage: {
       ...type.meta,
       color: colors.danger,
     },

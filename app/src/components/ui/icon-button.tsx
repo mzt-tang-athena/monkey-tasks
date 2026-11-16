@@ -4,16 +4,15 @@ import { Pressable } from "./pressable";
 import { radius, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 
-/** A quiet 44pt glyph button: hover, pressed, and active states. */
+/** A quiet 44pt glyph button. A hover or a press paints its ground; the
+    control's selected state lives in the glyph, not the box. */
 export function IconButton({
   label,
-  active,
   expanded,
   onPress,
   children,
 }: {
   label: string;
-  active?: boolean;
   /** The button opens a menu: whether that menu is showing. */
   expanded?: boolean;
   onPress?: () => void;
@@ -26,7 +25,6 @@ export function IconButton({
       style={({ pressed }) => [
         styles.iconButton,
         (hover || pressed) && styles.iconButtonHot,
-        active && styles.iconButtonActive,
       ]}
       onHoverIn={() => setHover(true)}
       onHoverOut={() => setHover(false)}
@@ -53,9 +51,6 @@ const makeStyles = (colors: Palette) => ({
     },
     iconButtonHot: {
       backgroundColor: colors.pressed,
-    },
-    iconButtonActive: {
-      backgroundColor: colors.accentSoft,
     },
   }),
 });

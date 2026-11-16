@@ -3,7 +3,8 @@ import * as React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { OverlayHost } from "@/components/ui/overlay-host";
-import { placeBox } from "@/testing/layout";
+import { placeBox, setWindowSize } from "@/testing/layout";
+import type { SortMode } from "@/lib/settings";
 import type { TaskItem } from "@/types/task";
 import { ListsToolbar } from "./lists-toolbar";
 
@@ -22,7 +23,7 @@ vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
-vi.mock("expo-router", () => ({ router: { push: () => undefined } }));
+vi.mock("expo-router", () => ({ router: { push: vi.fn() } }));
 
 function completed(name: string, list?: string): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;
@@ -36,6 +37,7 @@ function completed(name: string, list?: string): TaskItem {
       kind: "[[tasks]]",
       created: "2026-10-20",
       completed: "2026-10-26",
+      "alert weight": "harsh",
       ...(list == null ? {} : { list: `[[${list}]]` }),
     },
     body: "",
@@ -60,6 +62,22 @@ function renderToolbar(completedRows: TaskItem[]) {
   return onClear;
 }
 
+function Harness({ sortMode }: { sortMode: SortMode }) {
+  return (
+    <OverlayHost>
+      <ListsToolbar
+        tabs={["Main", "Errands"]}
+        tab="Main"
+        onSelectTab={() => undefined}
+        sortMode={sortMode}
+        onSortMode={() => undefined}
+        completed={[]}
+        onClearCompleted={() => undefined}
+      />
+    </OverlayHost>
+  );
+}
+
 async function openListMenu() {
   placeBox(screen.getByTestId("list-menu-anchor"), {
     x: 300,
@@ -76,7 +94,39 @@ async function finishMotion() {
   await act(() => new Promise<void>((resolve) => setTimeout(resolve, 320)));
 }
 
-const three = [completed("Buy stamps"), completed("Fix bike light"), completed("Water the fern")];
+const three = [
+  completed("Buy stamps"),
+  completed("Fix bike light"),
+  completed("Water the fern"),
+];
+
+describe("ListsToolbar", () => {
+  it("fills the sort glyph for a non-default order and an open menu", () => {
+    setWindowSize(390, 800);
+    const { rerender } = render(<Harness sortMode="due" />);
+    expect(screen.getByTestId("icon:sort")).toBeTruthy();
+
+    rerender(<Harness sortMode="manual" />);
+    expect(screen.getByTestId("icon:sort:fill")).toBeTruthy();
+
+    rerender(<Harness sortMode="due" />);
+    expect(screen.getByTestId("icon:sort")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "sort list" }));
+
+    expect(screen.getByTestId("icon:sort:fill")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "sort list" })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+
+    fireEvent.click(screen.getByRole("button", { name: "list menu" }));
+
+    expect(screen.getByTestId("icon:more:fill")).toBeTruthy();
+    expect(screen.getByTestId("icon:sort")).toBeTruthy();
+  });
+});
 
 describe("the list overflow menu", () => {
   it("leaves out the clear when the tab has nothing completed", async () => {
@@ -85,7 +135,9 @@ describe("the list overflow menu", () => {
     await openListMenu();
 
     expect(screen.getByRole("menuitem", { name: "Settings" })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: "Delete all completed tasks" })).toBeNull();
+    expect(
+      screen.queryByRole("menuitem", { name: "Delete all completed tasks" }),
+    ).toBeNull();
   });
 
   it("offers the clear on a tab with completed tasks", async () => {
@@ -109,7 +161,9 @@ describe("the list overflow menu", () => {
       name: "Delete completed tasks",
     });
     expect(dialog.textContent).toContain("Delete 3 completed tasks?");
-    expect(dialog.textContent).toContain("This removes their notes from the vault.");
+    expect(dialog.textContent).toContain(
+      "This removes their notes from the vault.",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 

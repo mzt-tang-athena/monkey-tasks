@@ -1,8 +1,8 @@
 import * as React from "react";
 import { SectionList, StyleSheet, View, useWindowDimensions } from "react-native";
-import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "@/types/task";
+import { openTask } from "@/lib/task-route";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { Pager } from "@/components/motion/pager";
@@ -125,7 +125,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   // it rides one encoded path segment.
   const onOpen = useStableCallback((task: TaskItem) => {
     recordBreadcrumb("open", task.data?.title ?? task.name);
-    router.push(`/task/${encodeURIComponent(task.id)}`);
+    openTask(task.id);
   });
 
   const renderSectionHeader = React.useCallback(
