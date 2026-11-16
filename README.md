@@ -249,7 +249,7 @@ documents its props, and each primitive has a component test.
 | `CommandPane` | A searchable command list that slides down from the top edge. The screen behind is inert. |
 | `Banner`, `Toast` | A danger or info message with role `alert`. A toast floats above every other layer. |
 | `LoadingState`, `EmptyState`, `ErrorState` | One look for a list that loads, holds nothing or fails. |
-| `SectionHeader` | An eyebrow label over a group, with a count and a tone. |
+| `SectionHeader` | An eyebrow label over a group, with a count and a tone. With `expanded` and `onPress`, the row is a 44pt disclosure that opens the group. |
 | `CardGroupRow` | One row of a group card, with its edges and an inset divider. |
 | `TabStrip`, `SegmentedControl` | Tabs that scroll, with a fade over an edge that hides more tabs, and segments. Every target is at least 44 by 44. |
 | `Pressable` | Every press target. React Native's press on the web, because it takes the browser click. A row that mounts or re-renders under the finger still presses. It needs no layout report. Gesture handler's on native, where a pan cancels it. A surface swallows the one click a pan activation leaves behind. A web keyboard focus draws the shared focus mark, in the active palette. |
@@ -394,6 +394,17 @@ them in 0088. The Lists tab shows Main and the list notes. Main holds
 the tasks with no list. Any other tab shows the tasks whose `list`
 carries that name. My order makes each tab one flat list (ADR 0015 and
 its 2026-11-11 amendment, `20261111-one-list-and-tab-order`).
+
+Each list tab folds its Completed group by default. The header keeps
+the count and opens or closes on a tap. It turns on the app's shared
+clock. The fold is session state per tab, so a restart folds every tab
+again (ADR `20261116-fold-and-clear-completed`).
+
+The list menu's Delete all completed tasks asks first and names the
+count. It removes the done notes of the tab it opened from, one note at
+a time. A note the app cannot delete comes back, and the banner says
+how many stayed. The app keeps no trash and no undo, so the delete is
+final. Obsidian sync sees the removed files and syncs the deletion.
 
 The vault now serves more than `Tasks/`. The journal appends to
 `Journal/Daily/YYYY-MM-DD.md`, and the reference picker reads
