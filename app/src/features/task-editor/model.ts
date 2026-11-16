@@ -25,6 +25,8 @@ export type Property = {
   wide: boolean;
   /** The tile's value in plain words. */
   words: (draft: TaskEdit, today: Date) => string;
+  /** A short muted word after the value, such as the quiet weight. */
+  aside?: (draft: TaskEdit) => string | null;
   /** The change the tile's clear button makes, or null for no button. */
   clear: (draft: TaskEdit) => Partial<TaskEdit> | null;
   /** Accessible names: the tile, its clear button, the chip. */
@@ -102,6 +104,8 @@ export const PROPERTIES: readonly Property[] = [
         ? lines.join(", ")
         : `${lines[0]} and ${lines.length - 1} more`;
     },
+    // Harsh is the default, so only the quiet weight earns a word.
+    aside: (draft) => (draft.alertWeight === "quiet" ? "Quiet" : null),
     // A timed due rings by itself. Only the reminders clear.
     clear: (draft) => (draft.reminders.length > 0 ? { reminders: [] } : null),
     names: { open: "change alerts", clear: "clear reminders", add: "add reminder" },

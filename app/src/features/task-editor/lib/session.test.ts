@@ -64,6 +64,14 @@ describe("the editor's write queue", () => {
     expect(state.sessions.a?.write).toEqual({ kind: "writing" });
   });
 
+  it("writes a change of the alert weight alone", () => {
+    const { jobs } = run([open, change({ alertWeight: "quiet" })]);
+
+    expect(jobs).toEqual([
+      { edit: draft({ alertWeight: "quiet" }), expected: OPENED },
+    ]);
+  });
+
   it("starts no write for a change that changes nothing", () => {
     const { jobs } = run([open, change({ due: null, name: "Call Mum" })]);
 

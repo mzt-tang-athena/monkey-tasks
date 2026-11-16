@@ -36,6 +36,7 @@ export function sameEdit(a: TaskEdit, b: TaskEdit): boolean {
     a.due === b.due &&
     a.recurrence === b.recurrence &&
     a.list === b.list &&
+    a.alertWeight === b.alertWeight &&
     a.body === b.body &&
     a.reminders.length === b.reminders.length &&
     a.reminders.every((value, at) => value === b.reminders[at])

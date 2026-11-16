@@ -4,29 +4,45 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { IconButton } from "@/components/ui/icon-button";
 import { Pressable } from "@/components/ui/pressable";
+import {
+  SegmentedControl,
+  type Segment,
+} from "@/components/ui/segmented-control";
+import type { AlertWeight } from "@monkey-tasks/schemas";
 import { startOfDay } from "@/utils/dates";
-import { radius, spacing, type, type Palette } from "@/theme/tokens";
+import { radius, spacing, touchTarget, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { clockOf, dayOf, storedOf, whenWords, type Clock } from "../lib/when";
 import { DateGrid, TimeFace } from "./date-pieces";
 import { DEFAULT_CLOCK } from "./due-picker";
 
+/** The words on screen are the vault's values (ADR 20261111-reminder-weight). */
+const weightSegments: Segment<AlertWeight>[] = [
+  { key: "harsh", label: "Harsh" },
+  { key: "quiet", label: "Quiet" },
+];
+
 /**
  * The Alerts picker: the timed due as "At due", then one row per
  * reminder with its remove control. Add reminder opens the same day
  * grid and time face as the Due picker, and the new reminder writes as
- * soon as it is added.
+ * soon as it is added. The weight under them covers every alert of the
+ * task, and writes as soon as it is picked.
  */
 export function AlertsPicker({
   reminders,
   due,
+  weight,
   today,
   onChange,
+  onWeight,
 }: {
   reminders: string[];
   due: string | null;
+  weight: AlertWeight;
   today: Date;
   onChange: (reminders: string[]) => void;
+  onWeight: (weight: AlertWeight) => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const [adding, setAdding] = React.useState(false);
@@ -50,10 +66,12 @@ export function AlertsPicker({
 
   return (
     <View style={styles.body}>
+      {/* The timed due rings by itself, so its row has no remove. */}
       {atDue ? (
-        <View style={styles.ringRow}>
-          <Icon name="bell" color="accent" />
-          <Text style={styles.ringText}>At due</Text>
+        <View style={[styles.reminder, styles.atDue]}>
+          <Icon name="bell" size={16} />
+          <Text style={styles.atDueText}>At due</Text>
+          <Text style={styles.atDueHint}>From the due time</Text>
         </View>
       ) : null}
       {sorted.length === 0 && !atDue ? (
@@ -61,7 +79,7 @@ export function AlertsPicker({
       ) : null}
       {sorted.map((at) => (
         <View key={at} style={styles.reminder}>
-          <Icon name="bell" />
+          <Icon name="bell" size={16} />
           <Text style={styles.reminderText}>{whenWords(at, today)}</Text>
           <IconButton
             label={`remove reminder ${whenWords(at, today)}`}
@@ -110,10 +128,25 @@ export function AlertsPicker({
           accessibilityRole="button"
           accessibilityLabel="add reminder"
         >
-          <Icon name="plus" color="accent" />
+          <Icon name="plus" color="accent" size={16} />
           <Text style={styles.addText}>Add reminder</Text>
         </Pressable>
       )}
+      <View style={styles.weight}>
+        <Text style={styles.weightLabel} aria-hidden>
+          Alert weight
+        </Text>
+        <SegmentedControl
+          label="Alert weight"
+          segments={weightSegments}
+          selected={weight}
+          onSelect={onWeight}
+          stretch
+        />
+        <Text style={styles.hint}>
+          Harsh rings on the alarm stream. Quiet is silent.
+        </Text>
+      </View>
     </View>
   );
 }
@@ -123,20 +156,6 @@ const makeStyles = (colors: Palette) => ({
     body: {
       gap: spacing.s,
     },
-    ringRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.s,
-      minHeight: 44,
-      paddingHorizontal: spacing.m,
-      borderRadius: radius,
-      backgroundColor: colors.accentSoft,
-    },
-    ringText: {
-      ...type.body,
-      fontWeight: "600",
-      color: colors.accent,
-    },
     empty: {
       ...type.meta,
       color: colors.inkMuted,
@@ -145,7 +164,7 @@ const makeStyles = (colors: Palette) => ({
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.s,
-      minHeight: 44,
+      minHeight: touchTarget,
       paddingLeft: spacing.m,
       borderRadius: radius,
       borderWidth: StyleSheet.hairlineWidth,
@@ -157,11 +176,23 @@ const makeStyles = (colors: Palette) => ({
       ...type.body,
       color: colors.ink,
     },
+    atDue: {
+      paddingRight: spacing.m,
+    },
+    atDueText: {
+      flex: 1,
+      ...type.body,
+      color: colors.inkMuted,
+    },
+    atDueHint: {
+      ...type.meta,
+      color: colors.inkMuted,
+    },
     addRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.s,
-      minHeight: 44,
+      minHeight: touchTarget,
       paddingHorizontal: spacing.m,
       borderRadius: radius,
       borderWidth: StyleSheet.hairlineWidth,
@@ -187,6 +218,20 @@ const makeStyles = (colors: Palette) => ({
     },
     spacer: {
       flex: 1,
+    },
+    weight: {
+      gap: spacing.xs,
+      paddingTop: spacing.s,
+    },
+    weightLabel: {
+      ...type.eyebrow,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+      color: colors.inkMuted,
+    },
+    hint: {
+      ...type.caption,
+      color: colors.inkMuted,
     },
   }),
 });

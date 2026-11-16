@@ -87,7 +87,7 @@ unset ones stay in the strip, so a bare task shows a short sheet.
 | Due | Date sheet: Today, Tomorrow, Next week chips, a month grid, then a time row | `due`, a date or a datetime |
 | Recurrence | Presets: Daily, Weekly, Monthly, Yearly, Weekdays. Advanced opens an RRULE field | `recurrence` |
 | List | The header control. A searchable single picker of list notes, with Main for none | `list`, one wikilink |
-| Reminders | Any number of date and time entries, with add and remove. One Rings or Quiet switch for the whole task | `reminders` and `alert weight` |
+| Reminders | Any number of date and time entries, with add and remove. One Harsh or Quiet control for the whole task | `reminders` and `alert weight` |
 | Reference | The picker from ticket 0091 | `## Reference` in the body |
 | Note | A full editor over the sheet | Body text |
 | Delete | The three-dot menu | The app removes the file |
@@ -172,12 +172,13 @@ the title, hand written dates and a note preview toggle.
 ### Build split
 
 On 2026-11-16 the operator asked for the build to ship from this ticket
-for the 1.0 release. One owner builds it on this branch. The two parts
-with their own groundwork stay out:
+for the 1.0 release. One owner builds it on this branch. Reference has
+its own groundwork, so it stays out. It waits for ticket 0091, and the
+strip gets its chip then.
 
-- Reference waits for ticket 0091. The strip gets its chip then.
-- Alert weight waits for the `20261111-alert-weight-*` tickets. The
-  Alerts tile gets its switch then.
+Alert weight is in. The `20261111-alert-weight-*` tickets landed on
+main first. The Alerts picker holds the Harsh and Quiet control under
+the reminders. The Alerts tile says Quiet when the task is quiet.
 
 The list picker from ticket `20261111-single-list-picker` lands here.
 
@@ -192,8 +193,7 @@ The list picker from ticket `20261111-single-list-picker` lands here.
 - [ ] A failed write keeps the draft and reports it.
 - [ ] 44pt targets, named controls, keyboard and TalkBack reach every
       control. axe clean.
-- [ ] The editor ships from this ticket, minus reference and alert
-      weight.
+- [ ] The editor ships from this ticket, minus reference.
 
 ## Outcome
 

@@ -344,8 +344,10 @@ export function EditorSheet({
         <AlertsPicker
           reminders={draft.reminders}
           due={draft.due}
+          weight={draft.alertWeight}
           today={today}
           onChange={(reminders) => onChange({ reminders })}
+          onWeight={(alertWeight) => onChange({ alertWeight })}
         />
       </PickerSheet>
 
@@ -382,6 +384,7 @@ function PropertyTile({
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const canClear = property.clear(draft) != null;
+  const aside = property.aside?.(draft) ?? null;
   return (
     <View style={[styles.tile, property.wide && styles.tileWide]}>
       <Pressable
@@ -396,6 +399,7 @@ function PropertyTile({
         </View>
         <Text style={styles.tileWords} numberOfLines={2}>
           {property.words(draft, today)}
+          {aside == null ? null : <Text style={styles.tileAside}>{` · ${aside}`}</Text>}
         </Text>
       </Pressable>
       {/* The clear control sits in the corner, so the value keeps the
@@ -510,6 +514,9 @@ const makeStyles = (colors: Palette) => ({
     tileWords: {
       ...type.control,
       color: colors.ink,
+    },
+    tileAside: {
+      color: colors.inkMuted,
     },
     stripScroll: {
       flexGrow: 0,

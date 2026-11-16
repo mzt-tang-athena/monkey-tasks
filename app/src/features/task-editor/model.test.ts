@@ -57,6 +57,11 @@ describe("alerts", () => {
     expect(alerts.words(held, today)).toBe("Tomorrow 9:00 AM and 2 more");
   });
 
+  it("adds Quiet after the alerts of a quiet task, and nothing for harsh", () => {
+    expect(alerts.aside?.(draft({ alertWeight: "quiet" }))).toBe("Quiet");
+    expect(alerts.aside?.(draft({ alertWeight: "harsh" }))).toBeNull();
+  });
+
   it("clears only the reminders, never a timed due", () => {
     expect(alerts.clear(draft({ due: "2026-10-27T09:00" }))).toBeNull();
     expect(

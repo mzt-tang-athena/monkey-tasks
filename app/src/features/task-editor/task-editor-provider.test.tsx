@@ -197,6 +197,49 @@ describe("the task editor sheet", () => {
     expect(written().due).toBeNull();
   });
 
+  it("shows the note's weight in the Alerts picker, then writes Quiet", async () => {
+    mount();
+    openTask();
+
+    fireEvent.click(screen.getByRole("button", { name: "add reminder" }));
+    const tab = (name: string) =>
+      screen.getByRole("tab", { name }).getAttribute("aria-selected");
+    expect(tab("Harsh")).toBe("true");
+    expect(tab("Quiet")).toBe("false");
+    expect(
+      screen.getByText("Harsh rings on the alarm stream. Quiet is silent."),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Quiet" }));
+
+    await waitFor(() => expect(store.edit).toHaveBeenCalledTimes(1));
+    expect(written().alertWeight).toBe("quiet");
+    expect(tab("Quiet")).toBe("true");
+  });
+
+  it("opens a quiet task at Quiet, and says so on its Alerts tile", () => {
+    store.tasks = [
+      task({
+        data: {
+          kind: "[[tasks]]",
+          created: "2026-10-20",
+          "alert weight": "quiet",
+          reminders: ["2026-10-28T09:00"],
+        },
+      }),
+    ];
+    mount();
+    openTask();
+
+    const tile = screen.getByRole("button", { name: "change alerts" });
+    expect(tile.textContent).toContain("Quiet");
+    fireEvent.click(tile);
+    expect(
+      screen.getByRole("tab", { name: "Quiet" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(store.edit).not.toHaveBeenCalled();
+  });
+
   it("keeps the value on screen and reports a failed write", async () => {
     store.edit.mockRejectedValueOnce(new Error("disk full"));
     mount();

@@ -284,9 +284,10 @@ matrix, and the Playwright spec walks the same list.
 through `hooks/use-task-editor.tsx` and the provider in
 `app/_layout.tsx`. It draws as a bottom sheet over the screen. It shows
 the list, the title, and one control per property. A property with a
-value is a tile. One without is a chip in the add strip. `model.ts` is the property registry: Due, Repeat, Alerts
-and Note. Reference (ticket 0091) and alert weight join it as one more
-entry each.
+value is a tile. One without is a chip in the add strip. `model.ts` is
+the property registry: Due, Repeat, Alerts and Note. Reference (ticket
+0091) joins it as one more entry. The Alerts picker also holds the
+task's alert weight, Harsh or Quiet.
 
 Each committed change writes at once. `lib/session.ts` is the session
 reducer and its queue: one write per task, last draft wins, and a

@@ -62,3 +62,19 @@ rename cannot leave a stale file.
 The session reducer and its queue are pure and tested. Reference
 (ticket 0091) and alert weight join the property registry as one more
 entry each.
+
+## Amendment 2026-11-16: alert weight joins the Alerts picker
+
+Main shipped the alert weight while this editor was on its branch.
+The old full-screen editor held its control.
+This branch removes that editor, so the control moved here.
+
+The Alerts picker shows a Harsh and Quiet control under the reminders.
+The weight covers the timed due and every reminder, so it shows once.
+A change writes at once, like every other property.
+The Alerts tile adds "Quiet" when the task is quiet.
+It adds nothing for harsh, the default.
+
+We kept the weight inside the Alerts picker.
+A tile or chip of its own was the alternative.
+That would show a weight on a task with no alert, where it does nothing.
