@@ -1,4 +1,5 @@
 import { expect, test } from "../../../../app/e2e/fixtures";
+import { smallTargets } from "../../../../app/e2e/targets";
 import { rename, undated } from "../../../../app/e2e/data";
 import { listTab, press, row } from "../../../../app/e2e/locators";
 import {
@@ -16,6 +17,12 @@ import {
  */
 
 const path = `Tasks/${undated.second}.md`;
+
+/** No target under 44pt in the open surface. axe runs in the app's
+    own a11y spec, which scans the same dialogs. */
+async function checkTargets(page: import("@playwright/test").Page, where: string) {
+  expect(await smallTargets(page, '[role="dialog"]'), `${where} keeps 44pt`).toEqual([]);
+}
 
 async function openEditor(page: import("@playwright/test").Page) {
   await page.goto("/");
@@ -36,6 +43,7 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
     page.screenshot({ path: info.outputPath(`${name}.png`) });
 
   const editor = await openEditor(page);
+  await checkTargets(page, "the sheet at rest");
   await shot("01-sheet-at-rest");
 
   // A due with a time: tomorrow at 9:00 AM.
@@ -43,6 +51,7 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   const due = page.getByRole("dialog", { name: "Due" });
   await expect(due).toBeVisible();
   await expect(due).toHaveCSS("opacity", "1");
+  await checkTargets(page, "the due picker");
   await shot("02-due-picker");
   await due.getByRole("button", { name: "Tomorrow" }).click();
   await due.getByRole("button", { name: "add a time" }).click();
@@ -61,6 +70,7 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   const repeat = page.getByRole("dialog", { name: "Repeat" });
   await expect(repeat).toBeVisible();
   await expect(repeat).toHaveCSS("opacity", "1");
+  await checkTargets(page, "the repeat picker");
   await shot("04-repeat-picker");
   await repeat.getByRole("button", { name: /^Weekly/ }).click();
   await expect(repeat).toHaveCount(0);
@@ -71,6 +81,7 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   const list = page.getByRole("dialog", { name: "List" });
   await expect(list).toBeVisible();
   await expect(list).toHaveCSS("opacity", "1");
+  await checkTargets(page, "the list picker");
   await shot("05-list-picker");
   await list.getByRole("button", { name: "Focus", exact: true }).click();
   await expect(list).toHaveCount(0);
@@ -84,6 +95,7 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await expect(alerts).toBeVisible();
   await expect(alerts).toHaveCSS("opacity", "1");
   await alerts.getByRole("button", { name: "add reminder" }).click();
+  await checkTargets(page, "the alerts picker");
   await shot("06-alerts-picker");
   await alerts.getByRole("button", { name: "save reminder" }).click();
   await expect(
@@ -100,10 +112,12 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await expect(note).toBeVisible();
   await expect(note).toHaveCSS("opacity", "1");
   await note.getByRole("textbox", { name: "Note" }).fill("Ask about the boiler");
+  await checkTargets(page, "the note editor");
   await shot("07-note-editor");
   await note.getByRole("button", { name: "done with the note" }).click();
   await expect(note).toHaveCount(0);
   await expect(editor.getByText("Ask about the boiler")).toBeVisible();
+  await checkTargets(page, "the sheet with its tiles");
   await shot("08-sheet-with-tiles");
 
   // A title, then close.
@@ -152,6 +166,7 @@ test("a failed write keeps the draft, and Retry saves it", async ({ page }, info
   await expect(
     editor.getByRole("button", { name: "change due date" }),
   ).toBeVisible();
+  await checkTargets(page, "the failed row");
   await shot("10-failed-row");
 
   await editor.getByRole("button", { name: "retry save" }).click();
@@ -181,6 +196,7 @@ test("delete shows a toast, and Undo puts the exact text back", async ({ page },
   await expect(editor).toHaveCount(0);
   await expect(row(page, undated.second)).toHaveCount(0);
   expect(await noteText(page, path)).toBeNull();
+  await checkTargets(page, "the list after the delete");
   await shot("13-deleted-toast");
 
   await page.getByRole("button", { name: "undo delete" }).click();

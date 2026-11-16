@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useKeyboardState } from "react-native-keyboard-controller";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { radius, spacing, type, type Palette } from "@/theme/tokens";
@@ -31,6 +32,9 @@ export function NoteEditor({
   const { styles, colors } = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const window = useWindowDimensions();
+  // The sheet lifts by the keyboard's height, so the surface gives that
+  // height back. The header stays on screen and the field scrolls.
+  const keyboard = useKeyboardState((state) => state.height);
   const { mounted, progress } = useSheetClock(open);
   // The field starts from the saved text each time it opens.
   const [draft, setDraft] = React.useState(text);
@@ -60,7 +64,12 @@ export function NoteEditor({
       <View
         style={[
           styles.fill,
-          { height: Math.max(240, window.height - insets.top - insets.bottom - 48) },
+          {
+            height: Math.max(
+              240,
+              window.height - keyboard - insets.top - insets.bottom - 48,
+            ),
+          },
         ]}
       >
         <View style={styles.header}>
