@@ -11,6 +11,7 @@ export const motion = {
     settle: 220,
     landing: 220,
     tickWash: 320,
+    celebrate: 520,
     landWash: 600,
     sheet: 220,
     menu: 140,

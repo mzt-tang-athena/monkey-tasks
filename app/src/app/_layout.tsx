@@ -8,6 +8,7 @@ import { makeQueryClient } from "@/lib/react-query";
 import { TasksProvider } from "@/stores/tasks/tasks-provider";
 import { VaultProvider } from "@/lib/vault/vault-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { CelebrationProvider } from "@/components/motion/celebration";
 import { OverlayHost } from "@/components/ui/overlay-host";
 import { CommandPaneProvider } from "@/features/command/command-pane-provider";
 import { ThemeProvider } from "@/theme/theme-provider";
@@ -48,15 +49,17 @@ export default function RootLayout() {
                   {/* Menus, sheets and toasts draw here, above every
                       screen, in one z order (ADR 0040). */}
                   <OverlayHost>
-                    <CommandPaneProvider>
-                      <Stack>
-                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                        <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
-                        {/* The screen draws its own back button, so the
-                            stack's header never covers the page. */}
-                        <Stack.Screen name="settings" options={{ headerShown: false }} />
-                      </Stack>
-                    </CommandPaneProvider>
+                    <CelebrationProvider>
+                      <CommandPaneProvider>
+                        <Stack>
+                          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                          <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
+                          {/* The screen draws its own back button, so the
+                              stack's header never covers the page. */}
+                          <Stack.Screen name="settings" options={{ headerShown: false }} />
+                        </Stack>
+                      </CommandPaneProvider>
+                    </CelebrationProvider>
                   </OverlayHost>
                 </TasksProvider>
               </VaultProvider>

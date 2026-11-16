@@ -5,6 +5,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import type { TaskItem } from "@/types/task";
+import { useCelebrate } from "@/components/motion/celebration";
 import { useProgress } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
 import { taskIsDone } from "@monkey-tasks/schemas";
@@ -19,6 +20,11 @@ import { TaskRowFace, taskRowLabel, useTaskRowFace } from "./task-row-face";
  * drives. Its completion ends the row's hold (ADR 0034), so no timer
  * runs beside the animation. A row already done at mount plays
  * nothing.
+ *
+ * A press on the open circle also asks for a burst at the circle's
+ * place (ADR 20261116-completion-celebration). The press decides, not
+ * the data: an undo, a sync or a reload never presses, so it never
+ * celebrates.
  */
 function TaskRowBase({
   task,
@@ -45,6 +51,8 @@ function TaskRowBase({
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const { faceStyles } = useTaskRowFace();
+  const celebrate = useCelebrate();
+  const tickRef = React.useRef<React.ComponentRef<typeof View>>(null);
   const [hot, setHot] = React.useState(false);
   // The store is optimistic: a tap flips this row's data in the same
   // frame. The row reads that data and nothing else, so a fast tick,
@@ -102,6 +110,11 @@ function TaskRowBase({
   }));
 
   const press = () => {
+    if (!done) {
+      tickRef.current?.measureInWindow((x, y, width, height) => {
+        celebrate({ x: x + width / 2, y: y + height / 2 });
+      });
+    }
     onToggle?.(task);
   };
 
@@ -110,7 +123,7 @@ function TaskRowBase({
   // beneath without moving it (Google Tasks' rule).
   const toggle = (
     <Animated.View style={pop}>
-      <View style={styles.tickSlot}>
+      <View ref={tickRef} style={styles.tickSlot}>
         <Pressable
         style={({ pressed }) => [
           styles.tickBox,

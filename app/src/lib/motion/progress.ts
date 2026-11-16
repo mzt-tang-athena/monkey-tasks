@@ -5,19 +5,27 @@ import {
   useSharedValue,
   withSpring,
   withTiming,
+  type EasingFunction,
+  type EasingFunctionFactory,
   type WithSpringConfig,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { motion } from "./tokens";
 
-/** A timing to `to` on the app's curve. `done` is a plain JS function.
-    It runs only when the animation finishes, and with reduced motion
-    that is at once. */
-export function timing(to: number, ms: number, done?: () => void) {
+/** A timing to `to`. `done` is a plain JS function, and it runs only
+    when the animation finishes. With reduced motion that is at once.
+    `easing` defaults to the app curve. A one-shot that shapes each
+    part on its own clock passes a linear one. */
+export function timing(
+  to: number,
+  ms: number,
+  done?: () => void,
+  easing: EasingFunction | EasingFunctionFactory = motion.easeOut,
+) {
   "worklet";
   return withTiming(
     to,
-    { duration: ms, easing: motion.easeOut, reduceMotion: ReduceMotion.System },
+    { duration: ms, easing, reduceMotion: ReduceMotion.System },
     (finished) => {
       "worklet";
       if (finished === true && done !== undefined) {

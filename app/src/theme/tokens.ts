@@ -62,6 +62,9 @@ export const type = {
  */
 export const layers = {
   content: 0,
+  /** A tick's burst: above the list, under every bar and surface that
+      takes a press. */
+  celebrate: 5,
   bottomBar: 10,
   dragGhost: 20,
   menuBackdrop: 30,
