@@ -164,7 +164,8 @@ const coveredProps: ViewProps = Platform.select<ViewProps>({
 });
 
 /** Moves focus to the first control in the panel, or the panel itself.
-    It lives inside the panel, so it mounts with the overlay's portal. */
+    It lives inside the panel, so it mounts with the overlay's portal.
+    It sits out of the flow, so the panel's gap never counts it. */
 function PanelFocus({ open }: { open: boolean }) {
   const ref = React.useRef<React.ComponentRef<typeof View>>(null);
   React.useEffect(() => {
@@ -181,8 +182,14 @@ function PanelFocus({ open }: { open: boolean }) {
     );
     (first ?? dialog).focus();
   }, [open]);
-  return <View ref={ref} />;
+  return <View ref={ref} style={focusMark.outOfFlow} />;
 }
+
+const focusMark = StyleSheet.create({
+  outOfFlow: {
+    position: "absolute",
+  },
+});
 
 const makeStyles = (colors: Palette) => ({
   styles: StyleSheet.create({
