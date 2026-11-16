@@ -14,7 +14,6 @@ import {
 } from "@/stores/tasks/reminder-sync";
 import type { TaskItem } from "@/types/task";
 
-/** The OS alarm list: ring id to task name. */
 const alarms = new Map<string, string>();
 let schedules = 0;
 

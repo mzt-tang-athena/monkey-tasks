@@ -1,6 +1,5 @@
 import type { AlertWeight } from "@monkey-tasks/schemas";
 
-/** One notification the OS delivers for a task alert. */
 export type AlertRing = {
   /** Deterministic, so a rebuild replaces this ring instead of adding one. */
   id: string;
@@ -30,7 +29,6 @@ export function alertRingId(uri: string, base: number, step: number): string {
   return `alert:${encodeURIComponent(uri)}:${base}:${step}`;
 }
 
-/** One ring at `base` plus `step` minutes. */
 export function alertRing(input: {
   uri: string;
   base: number;

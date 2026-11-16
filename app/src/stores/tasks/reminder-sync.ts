@@ -29,7 +29,6 @@ import { TASKS_KEY, type TaskListData } from "./query";
 /** A moment the OS should ring, and whether it is the task's due time. */
 type AlarmTime = { when: number; due: boolean };
 
-/** A scheduled notification, as the plan sees it. */
 export type ScheduledRing = {
   id: string;
   data: {
@@ -287,7 +286,6 @@ async function acknowledgeTaskNow(
   await dismissDelivered(delivered.map((entry) => entry.id));
 }
 
-/** Clear one group: the rings a task makes from one alarm minute. */
 export function acknowledgeRing(
   ring: Pick<AlertRing, "uri" | "base">,
 ): Promise<void> {
@@ -312,7 +310,6 @@ export function acknowledgeRing(
   });
 }
 
-/** Clear every group of one task. */
 export function acknowledgeTask(uri: string): Promise<void> {
   return inTurn(async () => {
     if (Platform.OS === "web") {

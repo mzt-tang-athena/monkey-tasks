@@ -40,7 +40,6 @@ export function pruneAcked(acked: AckedGroups, now: number): AckedGroups {
   return kept;
 }
 
-/** The map with these groups acknowledged at `now`. */
 export function withAcks(
   acked: AckedGroups,
   groups: readonly AckTarget[],
@@ -101,7 +100,6 @@ function writeRaw(next: AckedGroups): void {
   }
 }
 
-/** Every acknowledged group, pruned to the escalation window. */
 export function loadAcked(now: number = Date.now()): AckedGroups {
   const raw = readRaw();
   const next = pruneAcked(raw, now);
@@ -111,7 +109,6 @@ export function loadAcked(now: number = Date.now()): AckedGroups {
   return next;
 }
 
-/** Remember these groups so no rebuild rings them again. */
 export function recordAcks(
   groups: readonly AckTarget[],
   now: number = Date.now(),

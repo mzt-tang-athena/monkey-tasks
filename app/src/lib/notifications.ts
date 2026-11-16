@@ -13,7 +13,6 @@ import type { AlertRing } from "@/lib/alerts/rings";
  */
 export const alarmsSupported = true;
 
-/** What a scheduled ring carries, so a rebuild can identify it. */
 export type RingData = {
   uri: string;
   base: number;
@@ -23,7 +22,6 @@ export type RingData = {
 
 export type RingNotification = { id: string; data: RingData | null };
 
-/** The part of a tap the app acts on. */
 export type AlertResponse = { uri: string; base?: number };
 
 export type AlertResponseSubscription = { remove(): void };
@@ -58,9 +56,8 @@ let channels: Promise<void> | null = null;
 
 /**
  * Both channels, created once. The promise is kept so two rings in one
- * turn do not race the settings calls. The build also calls this at
- * startup, so the old `reminders` channel goes without waiting for an
- * alert.
+ * turn do not race the settings calls. The first vault read calls this,
+ * so the old `reminders` channel goes without waiting for an alert.
  */
 export function ensureChannels(): Promise<void> {
   channels ??= createChannels().catch((error: unknown) => {
@@ -145,7 +142,6 @@ export async function cancelScheduled(id: string): Promise<void> {
   await Notifications.cancelScheduledNotificationAsync(id);
 }
 
-/** Every scheduled ring, with the data a rebuild needs. */
 export async function listScheduledDetailed(): Promise<RingNotification[]> {
   const requests = await Notifications.getAllScheduledNotificationsAsync();
   return requests.map((request) => ({
@@ -154,7 +150,6 @@ export async function listScheduledDetailed(): Promise<RingNotification[]> {
   }));
 }
 
-/** Every ring still in the tray. */
 export async function listDeliveredDetailed(): Promise<RingNotification[]> {
   const shown = await Notifications.getPresentedNotificationsAsync();
   return shown.map((notification) => ({

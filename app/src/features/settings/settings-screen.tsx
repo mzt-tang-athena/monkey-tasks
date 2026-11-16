@@ -27,7 +27,6 @@ import { CrashLogCard } from "./components/crash-log-card";
 
 const REPO = "https://github.com/mzt-tang-athena/monkey-tasks";
 
-/** The system screen where the operator lets alerts pass Do Not Disturb. */
 async function openNotificationPolicy(): Promise<void> {
   try {
     await Linking.sendIntent(
