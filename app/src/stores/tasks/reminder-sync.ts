@@ -23,21 +23,12 @@ import {
   listDeliveredDetailed,
   listScheduledDetailed,
   scheduleRing,
+  type RingNotification,
 } from "@/lib/notifications";
 import { TASKS_KEY, type TaskListData } from "./query";
 
 /** A moment the OS should ring, and whether it is the task's due time. */
 type AlarmTime = { when: number; due: boolean };
-
-export type ScheduledRing = {
-  id: string;
-  data: {
-    uri: string;
-    base: number;
-    step: number;
-    weight: AlertWeight;
-  } | null;
-};
 
 /** What a rebuild must schedule and cancel to reach the wanted rings. */
 export type AlertPlan = { schedule: AlertRing[]; cancel: string[] };
@@ -155,7 +146,7 @@ export function planRings(
   tasks: readonly TaskItem[],
   now: number,
   acked: AckedGroups,
-  scheduled: readonly ScheduledRing[],
+  scheduled: readonly RingNotification[],
 ): AlertPlan {
   const byUri = new Map(tasks.map((task) => [task.uri, task]));
   const wanted = new Map<string, AlertRing>();
@@ -295,7 +286,7 @@ export function acknowledgeRing(
     }
     try {
       const now = Date.now();
-      const group = (entry: ScheduledRing) =>
+      const group = (entry: RingNotification) =>
         entry.data?.uri === ring.uri && entry.data.base === ring.base;
       const scheduled = (await listScheduledDetailed()).filter(group);
       const delivered = (await listDeliveredDetailed()).filter(group);
