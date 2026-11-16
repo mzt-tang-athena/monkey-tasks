@@ -38,28 +38,64 @@ export function Icon({
   name,
   color = "inkMuted",
   weight = "outline",
+  size,
 }: {
   name: IconName;
   /** Only the sort and overflow glyphs carry a filled form. */
   weight?: GlyphWeight;
   color?: keyof Palette;
+  /**
+   * A square box the glyph fills, centered, for a glyph that sits
+   * beside a line of text. Without it the glyph keeps its own size.
+   */
+  size?: number;
 }) {
   const { colors } = useTheme();
   const tint = colors[color];
   const fill = { backgroundColor: tint };
   const edge = { borderColor: tint };
   const solid = weight === "fill" && (name === "sort" || name === "more");
+  const drawn = glyph(name, solid, fill, edge, tint);
   return (
     <View
       testID={`icon:${name}${solid ? ":fill" : ""}`}
       aria-hidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
+      style={size == null ? undefined : [styles.box, { width: size, height: size }]}
     >
-      {glyph(name, solid, fill, edge, tint)}
+      {size == null ? (
+        drawn
+      ) : (
+        <View style={{ transform: [{ scale: size / extent[name] }] }}>{drawn}</View>
+      )}
     </View>
   );
 }
+
+/** How far each glyph reaches as drawn, so a sized icon can fill its box. */
+const extent: Record<IconName, number> = {
+  list: bottomBar.glyph,
+  calendar: bottomBar.glyph,
+  "calendar-mini": 11,
+  "clock-mini": 11,
+  plus: 18,
+  sort: bottomBar.glyph,
+  more: bottomBar.glyph,
+  rows: 14,
+  pill: 16,
+  // The arrow fills about 11 of the 14 point line.
+  repeat: 11,
+  grip: 15,
+  "grip-bars": 10,
+  settings: 18,
+  "chevron-right": 10,
+  "chevron-down": 10,
+  bell: 14,
+  note: 14,
+  close: 13,
+  check: 10,
+};
 
 function glyph(
   name: IconName,
@@ -237,6 +273,10 @@ function glyph(
 }
 
 const styles = StyleSheet.create({
+  box: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   bell: {
     width: 14,
     height: 14,

@@ -88,4 +88,17 @@ describe("Icon", () => {
     // No black default edge: every painted color is the token.
     expect([...colors].filter((color) => color !== rgb(THEMES.budget.danger))).toEqual([]);
   });
+
+  it("fills a sized box, centered, so it sits on a line of text", () => {
+    render(<Icon name="bell" size={16} />);
+
+    const icon = screen.getByTestId("icon:bell");
+    const box = getComputedStyle(icon);
+    expect(box.width).toBe("16px");
+    expect(box.height).toBe("16px");
+    expect(box.alignItems).toBe("center");
+    expect(box.justifyContent).toBe("center");
+    const glyph = icon.firstElementChild as HTMLElement;
+    expect(getComputedStyle(glyph).transform).toContain("scale(1.1428");
+  });
 });
