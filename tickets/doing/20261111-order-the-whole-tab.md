@@ -34,17 +34,38 @@ reorder commit, the grip's step actions, and the reorder e2e specs.
 
 ## Acceptance
 
-- [ ] In My order a tab is one flat list with no date headers.
-- [ ] A drag moves a row from the top of the tab to the bottom and
+- [x] In My order a tab is one flat list with no date headers.
+- [x] A drag moves a row from the top of the tab to the bottom and
       back.
-- [ ] A drop writes 1 to n across the tab, and only changed notes.
-- [ ] A task without `order` sits after the ordered ones, oldest
+- [x] A drop writes 1 to n across the tab, and only changed notes.
+- [x] A task without `order` sits after the ordered ones, oldest
       `created` first.
-- [ ] The Due sort still shows its date sections, and no drag starts
+- [x] The Due sort still shows its date sections, and no drag starts
       there.
-- [ ] e2e covers a drag across an old section boundary and reads the
+- [x] e2e covers a drag across an old section boundary and reads the
       notes back.
 
 ## Outcome
 
-(filled in before moving to done/)
+Built on 2026-11-16, to merge after the 1.0 tag.
+
+- My order returns one headerless group of every open row. A null
+  title marks it, so no empty string can pass for a header. Completed
+  keeps its group and header below.
+- A drop and a grip step renumber the open rows 1 to n. They write
+  only the rows whose number changed.
+- Equal orders break by `created`, then name. The old per-section
+  duplicates thus read in a stable order.
+- Due order keeps its date sections and its missing drag.
+- The sort switch remounts rows under a new group key. The old copy's
+  cleanup ran late and deleted the new entry, so the grip found no
+  rows. The reorder surface now records the mount that owns each entry,
+  and cleanup removes only its own. A unit test fails without the
+  guard.
+- e2e adds a grip drag across an old section boundary. It reads 1, 2,
+  3 and 12 back from the notes.
+- A second case moves the top row to the bottom and back, through the
+  grip's step actions.
+- tsc, eslint and 863 vitest tests pass. `reorder.spec.ts` passes 41
+  with 3 skipped. The verify journey reads My order, the drop, the
+  Completed group and a list tab, and screenshots each.
