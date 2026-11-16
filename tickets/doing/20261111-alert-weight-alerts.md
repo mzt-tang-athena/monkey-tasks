@@ -2,7 +2,7 @@
 title: Alert weight in the alerts
 created: 2026-11-11
 priority: high
-assignee:
+assignee: opencode
 pr:
 depends: ["20261111-alert-weight-schema", "20261111-a-timed-due-rings"]
 ---
