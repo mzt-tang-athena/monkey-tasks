@@ -392,7 +392,8 @@ The feature queue:
 - 0088 the journal tab, with 0089 and 0090
 - 0091 reference notes on a task
 - 0092 optional quests and evergreen tasks, a discovery
-- 0093 the task editor rebuild, in progress on `design/0093-task-editor`
+- 0093 the task editor rebuild, shipped in #155. The phone pass for
+  keyboard insets and Android back remains
 - 0095 a Notes tab from Inbox, starting with a design
 - 20261111 reminder weight shipped in #150, #152 and #153. The phone check
   remains (20261111-alert-weight-device-check)
@@ -400,7 +401,7 @@ The feature queue:
   - one list field on the task note
   - Main holds the unfiled tasks
   - order the whole tab
-  - pick one list in the editor
+  - pick one list in the editor, shipped in #155
 - 20261111 fold deeds into tasks, a spike
 
 Open feature tickets:
@@ -432,7 +433,8 @@ Phases:
    central contracts repo (0007, ADR 0007).
 4. MVP screens: focus list, upcoming reminders, calendar, task editor,
    note viewer (0003, children 0009 to 0013). In progress. Lists and
-   Planner exist. The task editor and note viewer do not.
+   Planner exist, and the task editor sheet shipped in #155. The note
+   viewer shows a note without edits.
 5. Capture: quick capture with offline natural language dates. It uses
    chrono-node and rrule.js. Unparsed lines go to athena agents later
    (0006). Done.
