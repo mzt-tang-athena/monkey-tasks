@@ -2,7 +2,7 @@
 title: Order the whole tab
 created: 2026-11-11
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: [20261111-main-holds-unfiled-tasks]
 ---
