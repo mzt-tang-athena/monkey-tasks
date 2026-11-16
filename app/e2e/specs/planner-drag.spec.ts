@@ -331,8 +331,11 @@ for (const input of inputs) {
       expect(Math.abs(((await top.boundingBox())?.height ?? 0) - bottomLimit)).toBeLessThanOrEqual(2);
       expect(Math.abs(((await bottom.boundingBox())?.height ?? 0) - floor)).toBeLessThanOrEqual(2);
       const lowGrip = await grip.boundingBox();
-      expect(lowGrip?.height).toBe(44);
-      expect((lowGrip?.y ?? 0) + (lowGrip?.height ?? 0)).toBeLessThanOrEqual(
+      if (lowGrip == null) {
+        throw new Error("the grip has no box");
+      }
+      expect(lowGrip.height).toBe(44);
+      expect(lowGrip.y + lowGrip.height).toBeLessThanOrEqual(
         splitBox.y + splitBox.height,
       );
 
@@ -346,8 +349,11 @@ for (const input of inputs) {
       await page.waitForTimeout(300);
       expect(Math.abs(((await top.boundingBox())?.height ?? 0) - floor)).toBeLessThanOrEqual(2);
       const highGrip = await grip.boundingBox();
-      expect(highGrip?.height).toBe(44);
-      expect(highGrip?.y ?? 0).toBeGreaterThanOrEqual(splitBox.y);
+      if (highGrip == null) {
+        throw new Error("the grip has no box");
+      }
+      expect(highGrip.height).toBe(44);
+      expect(highGrip.y).toBeGreaterThanOrEqual(splitBox.y);
 
       // The keyboard takes the same range, one row at a time.
       await grip.focus();
