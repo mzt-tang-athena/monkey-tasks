@@ -4,7 +4,7 @@ title: One recipe for selected and active states
 created: 2026-11-11
 priority: high
 assignee: opencode
-pr:
+pr: 148
 depends: []
 ---
 
