@@ -11,7 +11,13 @@ function task(name: string, due: string, completed?: string): TaskItem {
     name,
     text: "",
     body: "",
-    data: { kind: "[[tasks]]", created: "2026-10-01", due, ...(completed ? { completed } : {}) },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-01",
+      due,
+      "alert weight": "harsh",
+      ...(completed ? { completed } : {}),
+    },
   };
 }
 
