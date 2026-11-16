@@ -293,8 +293,9 @@ reducer and its queue: one write per task, last draft wins, and a
 failure keeps the draft. `lib/when.ts` and `lib/recurrence.ts` turn
 dates and rules into plain words. A picker is a second sheet stacked
 over the editor. Delete sits in the sheet's menu and shows a toast
-with Undo. The `/task/[id]` route now opens only the read-only note
-viewer for a note that is not a task.
+with Undo. An alert tap pushes the `/task/[id]` route. For a task, the
+route opens the editor sheet and steps back. For any other note, it
+shows the read-only viewer.
 
 `features/command` holds the command pane that ticket 0085 adds
 (ADR 20261111-command-pane). A downward pull on a header band, or the

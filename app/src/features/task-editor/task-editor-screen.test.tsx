@@ -1,26 +1,37 @@
 import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TaskEditorContext } from "@/hooks/use-task-editor";
 import type { TaskItem } from "@/types/task";
 import TaskEditorScreen from "./task-editor-screen";
 
 // The route reads the store for its id. A task has no screen of its
-// own any more: the editor is a sheet over the list.
+// own: the route hands it to the editor sheet and steps back.
 
-const state = vi.hoisted(() => ({ tasks: [] as TaskItem[] }));
+const state = vi.hoisted(() => ({
+  tasks: [] as TaskItem[],
+  status: "ready" as "loading" | "ready" | "error",
+  canGoBack: true,
+  nav: [] as string[],
+}));
 
 vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
 vi.mock("expo-router", () => ({
-  router: { back: () => undefined },
+  router: {
+    canGoBack: () => state.canGoBack,
+    back: () => state.nav.push("back"),
+    replace: (href: string) => state.nav.push(`replace ${href}`),
+  },
   Stack: { Screen: () => null },
   useLocalSearchParams: () => ({ id: "content://vault/Notes/Garden.md" }),
 }));
 
 vi.mock("@/stores/tasks/task-state", () => ({
   useTaskList: () => state.tasks,
+  useStoreMeta: () => ({ status: state.status }),
 }));
 
 const NOTE_ID = "content://vault/Notes/Garden.md";
@@ -45,8 +56,32 @@ function deed(): TaskItem {
   );
 }
 
+function taskNote(): TaskItem {
+  return note(
+    '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nOld body.\n',
+    { kind: "[[tasks]]", created: "2026-10-20", "alert weight": "harsh" },
+  );
+}
+
+/** Render under an editor that records each task it opens. */
+function renderWithEditor() {
+  const opened: string[] = [];
+  const view = () => (
+    <TaskEditorContext.Provider
+      value={{ open: (taskId) => opened.push(taskId), showing: false }}
+    >
+      <TaskEditorScreen />
+    </TaskEditorContext.Provider>
+  );
+  const { rerender } = render(view());
+  return { opened, rerender: () => rerender(view()) };
+}
+
 beforeEach(() => {
   state.tasks = [];
+  state.status = "ready";
+  state.canGoBack = true;
+  state.nav = [];
 });
 
 describe("TaskEditorScreen", () => {
@@ -83,17 +118,34 @@ describe("TaskEditorScreen", () => {
     expect(screen.queryByRole("button", { name: "save task" })).toBeNull();
   });
 
-  it("sends a task to the editor sheet rather than a screen of its own", () => {
-    state.tasks = [
-      note(
-        '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nOld body.\n',
-        { kind: "[[tasks]]", created: "2026-10-20", "alert weight": "harsh" },
-      ),
-    ];
-    render(<TaskEditorScreen />);
+  it("opens a task in the editor sheet and steps back to the screen below", () => {
+    state.tasks = [taskNote()];
+    const { opened } = renderWithEditor();
 
-    expect(screen.getByText(/opens in the editor over its list/)).toBeTruthy();
+    expect(opened).toEqual([NOTE_ID]);
+    expect(state.nav).toEqual(["back"]);
     expect(screen.queryAllByRole("textbox")).toHaveLength(0);
+  });
+
+  it("goes home under the sheet when the alert started the app", () => {
+    state.canGoBack = false;
+    state.tasks = [taskNote()];
+    const { opened } = renderWithEditor();
+
+    expect(opened).toEqual([NOTE_ID]);
+    expect(state.nav).toEqual(["replace /"]);
+  });
+
+  it("waits for the store, then opens the task", () => {
+    state.status = "loading";
+    const { opened, rerender } = renderWithEditor();
+    expect(screen.getByText("Loading note...")).toBeTruthy();
+    expect(opened).toEqual([]);
+
+    state.status = "ready";
+    state.tasks = [taskNote()];
+    rerender();
+    expect(opened).toEqual([NOTE_ID]);
   });
 
   it("says when the note is gone", () => {
