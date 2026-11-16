@@ -1,7 +1,13 @@
 import * as React from "react";
-import { StyleSheet, Text, type StyleProp, type TextStyle } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type TextStyle,
+} from "react-native";
 import type { TextSegment } from "@/lib/journal/format";
-import { type Palette } from "@/theme/tokens";
+import { journal, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 
 /**
@@ -68,6 +74,16 @@ const makeStyles = (colors: Palette) => ({
     link: {
       color: colors.accent,
       textDecorationLine: "underline",
+      // A link sits inside running text. Its box is the glyph box, which
+      // measures 17 at the body size, well under the ruled line. Vertical
+      // padding on an inline box paints outside the line box, so the
+      // press area covers the full 28pt rule without moving it. Native
+      // nested text measures padding into the line, which would push the
+      // rules apart, so the padding stays on web.
+      ...Platform.select({
+        web: { paddingVertical: (journal.line - 17) / 2 } as TextStyle,
+        default: {},
+      }),
     },
     tag: {
       color: colors.inkMuted,

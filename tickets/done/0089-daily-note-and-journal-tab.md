@@ -101,6 +101,13 @@ Opening the tab only reads. The journal store has its own query and shares
 the vault read gate and `VAULT_SCOPE` with the task writes. The sent block
 rises after the sheet leaves, and reduced motion keeps no travel.
 
-Verified with 876 unit and component tests, and the journal e2e in both
-motion projects. Axe passes on the page and the open composer. The web
-preview holds at 412 and 360 in light and midnight.
+Verified with 902 unit and component tests, and the journal e2e in both
+motion projects. Axe passes on the page and the open composer. The
+Journal tab and the open composer are in the 44 point and axe gates. Both
+run at 360 in the budget and midnight palettes.
+
+A release APK on the Android emulator created `Journal/Daily/` and the
+day's note through SAF. The vault had no `Journal/` folder. It then
+appended entries to a note that already held frontmatter and the
+`![[daily.base]]` embed. Every earlier byte stayed. A reference link's
+press area now covers its full 28 point rule.

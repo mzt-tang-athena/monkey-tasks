@@ -76,4 +76,8 @@ other tags byte for byte. The composer has a Food chip, and a quiet band
 above the bottom bar shows the count and the labels. A `[[name]]` opens
 a read-only preview of `References/<name>.md`.
 
+On a release APK through SAF, a food send wrote
+`- Ate: eggs on toast #food` under the current time. The note kept all
+earlier bytes and the trailing embed stayed last.
+
 The marker stays provisional until the operator uses it for a while.

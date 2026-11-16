@@ -188,6 +188,26 @@ test("a reference link opens its note, and a missing one says so", async ({
   ).toContainText("That reference note is missing.");
 });
 
+test("a reference link's press area covers its ruled line at 360", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 640 });
+  await openJournal(page);
+
+  // Inline links sit in running text, so the 44pt floor exempts them
+  // (WCAG 2.5.8). The press box still has to cover the whole 28pt rule.
+  const link = page.getByRole("link", { name: "open reference oatmeal" });
+  const box = await link.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.height).toBeGreaterThanOrEqual(27.5);
+
+  // The padded top edge is part of the press area.
+  await page.mouse.click(box!.x + 2, box!.y + 1);
+  await expect(
+    page.getByRole("dialog", { name: "Reference: oatmeal" }),
+  ).toBeVisible();
+});
+
 test.describe("axe", () => {
   test("the journal page and its open composer", async ({ page }) => {
     await openJournal(page);

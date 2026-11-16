@@ -109,6 +109,24 @@ means a task, so it stays inert on this tab.
 v1 does not edit or delete an entry. It does not count calories. The food
 marker stays provisional.
 
+## Amendment, 2026-11-16: inline link press area
+
+A `[[name]]` link renders inside running text. Its own box was 17 points
+tall, the glyph box at the body size. That is well under the app's 44
+point floor, and under the 28 point rule it sits on.
+
+On web the link now carries 5.5 points of vertical padding. Vertical
+padding on an inline box paints outside the line box. The press area
+covers the full rule and the writing does not move. Native nested text
+measures padding into the line. That would push the rules apart, so the
+padding stays on web only.
+
+The 44 point floor treats an inline link as exempt under WCAG 2.5.8. The
+rule lives in `app/e2e/targets.ts`. A link qualifies only when it renders
+inline with other words in its line. It also must not sit inside a button
+or another widget. A standalone link and a link inside a button still
+count. A probe shows both still fail the scan.
+
 ## Amendment, 2026-11-14: consequences of the first build
 
 New notes still look plainer than notes that Obsidian creates. The page
