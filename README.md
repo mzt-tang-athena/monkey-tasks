@@ -221,7 +221,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
 | `features/<name>` | The UI of one feature: `capture`, `command`, `diagnostics`, `lists`, `planner`, `task-editor`. |
 | `components` | Shared UI. `components/ui` holds the primitives. |
-| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing` and `MotionScrollView`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
+| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing`, `MotionScrollView` and the tick's `Celebration`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
 | `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
@@ -337,6 +337,10 @@ the 28th gets a month-end rule. That rule gives it a due date in every
 month (ADR 0042).
 
 ## Next
+
+Version 1.0 ships the week of 2026-11-16. A tick now draws a short
+burst above the list, in the active palette (ADR
+20261116-completion-celebration). It plays on a user's tick only.
 
 The design direction round started. `20261112-design-scale-guard`
 merged in `d26fcae`. It names the spacing and radius scale, moves
