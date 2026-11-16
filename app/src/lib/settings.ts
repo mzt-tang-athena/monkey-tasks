@@ -9,6 +9,8 @@ import { THEMES, type ThemeName } from "@/theme/tokens";
  */
 export type TaskForm = "rows" | "pills";
 export type SortMode = "due" | "manual";
+/** Week mode's body: day boxes in pairs, or seven stacked rows. */
+export type WeekLayout = "spread" | "rows";
 
 /** The name each sort order shows on screen. */
 export const SORT_LABELS: Record<SortMode, string> = {
