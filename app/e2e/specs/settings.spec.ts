@@ -198,9 +198,6 @@ test.describe("accessibility", () => {
   test("the theme picker reads as a radio group in every palette", async ({
     page,
   }) => {
-    // Four palettes, each with an axe scan. Slow gives it 90s on a
-    // shared machine; a dedicated runner still lands inside that.
-    test.slow();
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await openFromLists(page);
