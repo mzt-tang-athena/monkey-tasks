@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { act, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AlertRing } from "@/lib/alerts/rings";
 
 // The store's contract after ADR 0017 and ADR 0037: a tap changes the
 // row before any file I/O, every write is a mutation in one scope, and
@@ -56,13 +57,24 @@ vi.mock("./load-vault", async (importOriginal) => {
   };
 });
 
-// The alarm code runs for real on a fake OS that schedules nothing.
+// The alarm code runs for real on a fake OS that keeps a list of the
+// alarms it holds.
+const os = vi.hoisted(() => ({ alarms: new Map<string, AlertRing>() }));
 vi.mock("@/lib/notifications", () => ({
   ensureNotificationPermission: async () => true,
   ensureChannels: async () => undefined,
-  scheduleRing: async () => "alarm",
-  cancelScheduled: async () => undefined,
-  listScheduledDetailed: async () => [],
+  scheduleRing: async (ring: AlertRing) => {
+    os.alarms.set(ring.id, ring);
+    return ring.id;
+  },
+  cancelScheduled: async (id: string) => {
+    os.alarms.delete(id);
+  },
+  listScheduledDetailed: async () =>
+    [...os.alarms.values()].map((ring) => ({
+      id: ring.id,
+      data: { uri: ring.uri, base: ring.base, step: ring.step, weight: ring.weight },
+    })),
   listDeliveredDetailed: async () => [],
   dismissDelivered: async () => undefined,
 }));
@@ -319,6 +331,7 @@ beforeEach(() => {
   renameOnCreate = false;
   creates.length = 0;
   deletes.length = 0;
+  os.alarms.clear();
   latest = null;
   queryClient = null;
 });
@@ -583,6 +596,110 @@ describe("TasksProvider", () => {
     expect(vault.hooks.read("Tasks/Water the plants.md")).toBeNull();
     // A write never reads the vault again.
     expect(loadCalls).toBe(1);
+  });
+});
+
+describe("delete and Undo", () => {
+  const REMINDED_TEXT =
+    '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nreminders:\n  - 2099-01-01T09:00\n---\n\nBody.\n';
+
+  it("removes the note and its row, and gives the exact text for Undo", async () => {
+    await mount();
+    const before = row();
+    let deleted: Awaited<ReturnType<StoreSnapshot["remove"]>> | undefined;
+
+    await act(async () => {
+      deleted = await store().remove(before);
+    });
+    await flush();
+
+    expect(vault.hooks.read("Tasks/Call.md")).toBeNull();
+    expect(store().tasks.map((item) => item.fileName)).toEqual([]);
+    expect(deleted?.text).toBe(CALL_TEXT);
+    expect(failures()).toEqual([]);
+  });
+
+  it("puts the row back when the remove fails", async () => {
+    await mount();
+    const before = row();
+    deleteFails = true;
+
+    await act(async () => {
+      await expect(store().remove(before)).rejects.toThrow("locked");
+    });
+    await flush();
+
+    expect(row().text).toBe(CALL_TEXT);
+    expect(vault.hooks.read("Tasks/Call.md")).toBe(CALL_TEXT);
+  });
+
+  it("writes the exact text back to the same path on Undo", async () => {
+    await mount();
+    const before = row();
+
+    await act(async () => {
+      const deleted = await store().remove(before);
+      await store().restore(deleted);
+    });
+    await flush();
+
+    expect(vault.hooks.read("Tasks/Call.md")).toBe(CALL_TEXT);
+    expect(row().id).toBe(before.id);
+    expect(row().uri).toBe(before.uri);
+    expect(row().text).toBe(CALL_TEXT);
+  });
+
+  it("takes the row away again when the restore fails", async () => {
+    await mount();
+    const before = row();
+    let deleted: Awaited<ReturnType<StoreSnapshot["remove"]>> | undefined;
+    await act(async () => {
+      deleted = await store().remove(before);
+    });
+    createFails = true;
+
+    await act(async () => {
+      await expect(store().restore(deleted!)).rejects.toThrow("no space");
+    });
+    await flush();
+
+    expect(store().tasks).toEqual([]);
+    expect(vault.hooks.read("Tasks/Call.md")).toBeNull();
+  });
+
+  it("cancels a deleted task's alarm and rings it again after Undo", async () => {
+    await mount({ "Tasks/Call.md": REMINDED_TEXT });
+    // The first read schedules the reminder.
+    await act(async () => {
+      await store().edit(row(), {
+        name: "Call",
+        due: null,
+        recurrence: null,
+        list: null,
+        reminders: ["2099-01-02T09:00"],
+        alertWeight: "harsh",
+        body: "\nBody.\n",
+      });
+    });
+    await flush();
+    const ringing = () =>
+      [...os.alarms.values()]
+        .filter((ring) => ring.step === 0)
+        .map((ring) => ring.base);
+    expect(ringing()).toEqual([new Date(2099, 0, 2, 9, 0).getTime()]);
+
+    let deleted: Awaited<ReturnType<StoreSnapshot["remove"]>> | undefined;
+    await act(async () => {
+      deleted = await store().remove(row());
+    });
+    await flush();
+    expect(ringing()).toEqual([]);
+
+    await act(async () => {
+      await store().restore(deleted!);
+    });
+    await flush();
+    expect(ringing()).toEqual([new Date(2099, 0, 2, 9, 0).getTime()]);
   });
 });
 
