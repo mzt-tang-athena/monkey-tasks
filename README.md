@@ -270,9 +270,9 @@ layer order and the shadows (ADR 0040). `theme/theme-provider.tsx` owns
 the active palette (ADR 20261111-runtime-theme-provider). A component
 keeps its styles in a `makeStyles(palette)` factory. It reads them
 through `useThemedStyles`. A theme switch then repaints it in place.
-`lib/settings-store.ts` holds the live sort order and task form for the
-mounted Lists and Planner screens. `features/settings` is the one
-screen that writes the palette and both settings (ADR
+`lib/settings-store.ts` holds the live sort order, task form and week
+view for the mounted Lists and Planner screens. `features/settings` is
+the one screen that writes the palette and those settings (ADR
 20261111-settings-screen). Lists opens it from the list menu and Planner
 opens it from the gear beside the mode switch. Its Diagnostics section
 reads the crash log from app storage and offers Copy and Share (ticket
@@ -321,7 +321,9 @@ pickers.
 | `planner-layout.ts` | The shared frame and pane styles. Every other style sits next to its component. |
 | `components/planner-list-context.tsx` | What every task list shares: the source, the form and the row actions. |
 | `components/day/` | The day. It holds the spread, the page, the timeline and list panes, and the day split. It also holds the overdue group and the swipe preview. |
-| `components/week-pane.tsx`, `month-pane.tsx` | The week and month bodies. |
+| `components/week-pane.tsx`, `month-pane.tsx` | The week and month bodies. Week puts its day boxes in the shared pager. |
+| `components/week-view.tsx` | The week body in both layouts, Spread and Rows. A static twin draws the pager's neighbour page. |
+| `lib/week-body.ts` | The seven days, the chip count, and the table of each layout's grid cells. |
 | `lib/plan-drag.ts` | The planner's one drag surface: the targets, the ghost payload and the pure drop patch. |
 | `hooks/use-planner-gestures.ts` | The day and month shifts, until 0059 moves the pagers. |
 | `hooks/use-planner-source.ts` | The source and its chooser. |
@@ -329,8 +331,8 @@ pickers.
 
 `hooks/use-today` gives one start-of-day date that moves on at midnight
 and when the app returns to the foreground. The planner route and every
-period label read it. A week column shows the chips that fit and a
-"+N more" line (ADR 0041).
+period label read it. A week day box shows two chips and a "+N" count
+(ADR 0041, ADR 20261114-week-planner-fits-one-screen).
 
 ### Journal
 
