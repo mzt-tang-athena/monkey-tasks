@@ -45,5 +45,10 @@ describe("ListsToolbar", () => {
     expect(
       screen.getByRole("button", { name: "sort list" }).getAttribute("aria-expanded"),
     ).toBe("true");
+
+    fireEvent.click(screen.getByRole("button", { name: "list menu" }));
+
+    expect(screen.getByTestId("icon:more:fill")).toBeTruthy();
+    expect(screen.getByTestId("icon:sort")).toBeTruthy();
   });
 });
