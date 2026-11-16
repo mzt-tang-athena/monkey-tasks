@@ -113,13 +113,14 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   });
 
   const renderSectionHeader = React.useCallback(
-    ({ section }: { section: ListsSection }) => (
-      <ListSectionHeader
-        title={section.title}
-        count={section.data.length}
-        tone={section.tone}
-      />
-    ),
+    ({ section }: { section: ListsSection }) =>
+      section.title == null ? null : (
+        <ListSectionHeader
+          title={section.title}
+          count={section.data.length}
+          tone={section.tone}
+        />
+      ),
     [],
   );
 

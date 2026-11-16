@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, pauseClock, test } from "../fixtures";
-import { sections, supplements, undated } from "../data";
+import { sections, supplements, tomorrow, undated } from "../data";
 import {
   dragPx,
   expectTouchAction,
@@ -33,6 +33,13 @@ async function openMyOrder(page: Page) {
   await page.getByRole("button", { name: "sort list" }).click();
   await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
   await expectAbove(row(page, undated.first), row(page, undated.second));
+}
+
+/** The `order` a note carries, read back from the vault. */
+async function writtenOrder(page: Page, name: string): Promise<number | null> {
+  const text = await noteText(page, `Tasks/${name}.md`);
+  const match = /^order: (\d+)$/m.exec(text ?? "");
+  return match == null ? null : Number(match[1]);
 }
 
 /** The item's own translateY, in px. The surface animates only this. */
@@ -276,6 +283,59 @@ test.describe("the drop", () => {
     await expect
       .poll(() => noteText(page, `Tasks/${undated.first}.md`))
       .toContain("order: 2");
+  });
+
+  test("a drop across an old date section renumbers the whole tab", async ({
+    page,
+  }) => {
+    await openMyOrder(page);
+    // Dentist appointment used to sit under "Tomorrow", and Book train
+    // tickets home under "No date". My order draws one group, so the
+    // drop lands anywhere and numbers the open rows 1 to n.
+    await holdDrag(
+      page,
+      page.getByTestId(`reorder-grip:${tomorrow.task}`),
+      row(page, undated.first),
+      { at: "upper", holdMs: 0 },
+    );
+
+    await expectAbove(row(page, tomorrow.task), row(page, undated.first));
+    await expectAbove(row(page, undated.first), row(page, undated.second));
+
+    await expect.poll(() => writtenOrder(page, tomorrow.task)).toBe(1);
+    await expect.poll(() => writtenOrder(page, undated.first)).toBe(2);
+    await expect.poll(() => writtenOrder(page, undated.second)).toBe(3);
+    await expect
+      .poll(
+        () => writtenOrder(page, "Water the plants"),
+        "the last open row closes the tab at n",
+      )
+      .toBe(12);
+  });
+
+  test("a row moves from the top of the tab to the bottom and back", async ({
+    page,
+  }) => {
+    await openMyOrder(page);
+    // The 12 open rows and the repair notice do not all fit above the
+    // Completed group at 412x915, so the long move uses the grip's step
+    // actions. Each step sends the same ReorderEvent a drop does.
+    const grip = page.getByRole("slider", { name: `reorder ${undated.first}` });
+    await grip.focus();
+
+    for (let place = 2; place <= 12; place += 1) {
+      await page.keyboard.press("ArrowDown");
+      await expect(grip).toHaveAttribute("aria-valuenow", String(place));
+    }
+    await expectAbove(row(page, "Water the plants"), row(page, undated.first));
+    await expect.poll(() => writtenOrder(page, undated.first)).toBe(12);
+
+    for (let place = 11; place >= 1; place -= 1) {
+      await page.keyboard.press("ArrowUp");
+      await expect(grip).toHaveAttribute("aria-valuenow", String(place));
+    }
+    await expectAbove(row(page, undated.first), row(page, tomorrow.task));
+    await expect.poll(() => writtenOrder(page, undated.first)).toBe(1);
   });
 });
 
