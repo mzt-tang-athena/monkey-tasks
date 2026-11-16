@@ -2,7 +2,7 @@
 title: The week planner fits one screen and offers two layouts
 created: 2026-11-14
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: [0084]
 ---
