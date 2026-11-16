@@ -9,8 +9,9 @@ import {
   alarmsSupported,
   listScheduled,
   exactAlarmState,
-  scheduleAt,
+  scheduleRing,
 } from "@/lib/notifications";
+import { alertRing } from "@/lib/alerts/rings";
 import { insightLines, useInsights } from "@/features/diagnostics/hooks/use-insights";
 import { THEMES, radius, spacing, type ThemeName, type Palette } from "@/theme/tokens";
 import { useTheme, useThemedStyles } from "@/theme/theme-provider";
@@ -58,10 +59,16 @@ export default function DevScreen() {
 
   const test = async () => {
     try {
-      const id = await scheduleAt(
-        new Date(Date.now() + 10_000),
-        "monkey-tasks",
-        "10s test fired",
+      const at = Date.now() + 10_000;
+      const id = await scheduleRing(
+        alertRing({
+          uri: "diagnostics://test",
+          base: at,
+          step: 0,
+          weight: "harsh",
+          title: "monkey-tasks",
+          body: "10s test fired",
+        }),
       );
       setMessage(`Scheduled ${id.slice(0, 8)} in 10s`);
     } catch (error) {
