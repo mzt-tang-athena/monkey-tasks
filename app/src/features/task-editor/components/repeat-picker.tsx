@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
 import { TextField } from "@/components/ui/text-field";
 import { nextAfter, ruleWords, upcoming } from "@/lib/recurrence";
-import { isoOf } from "@/utils/dates";
+import { addDays, isoOf } from "@/utils/dates";
 import { radius, spacing, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { whenWords } from "../lib/when";
@@ -20,12 +20,13 @@ export const PRESETS = [
 ] as const;
 
 /**
- * The due a repeat starts from when the task has none: its first
- * occurrence from today on. A repeat needs a day to count from.
+ * The due a repeat starts from when the task has none: the rule's first
+ * occurrence from today on. A repeat needs a day to count from, and a
+ * weekday rule that skips today starts on its next day.
  */
 export function startFor(rule: string, today: Date): string {
-  const day = isoOf(today);
-  return nextAfter(rule, day) ?? day;
+  const first = nextAfter(rule, isoOf(addDays(today, -1)));
+  return first ?? isoOf(today);
 }
 
 /**

@@ -187,6 +187,15 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
     [apply, session, tasks],
   );
 
+
+  // A task can leave the list while its sheet shows, from another app or
+  // the same one. The sheet then has no row to write to, so it closes.
+  React.useEffect(() => {
+    if (openId != null && row == null) {
+      apply({ type: "close" });
+    }
+  }, [apply, openId, row]);
+
   /** Wait for the write in flight, then run the work that follows. */
   const settled = async (): Promise<void> => {
     const run = inFlight.current;
