@@ -169,16 +169,13 @@ export const touchTarget = 44;
 export const menuWidth = 216;
 
 /**
- * The bottom bar's rhythm: a taller row, a 44pt nav target, and a
- * 48pt Add control that reads as the primary action.
+ * The bottom bar's rhythm: a 48pt row, a 44pt nav target, and a 48pt
+ * Add control that reads as the primary action.
  */
 export const bottomBar = {
-  row: 52,
+  row: 48,
   tabWidth: 56,
   add: 48,
-  glyph: 20,
-  labelSize: 12,
-  labelLine: 16,
   addLabelSize: 16,
   addLabelLine: 22,
 } as const;

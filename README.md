@@ -246,7 +246,7 @@ documents its props, and each primitive has a component test.
 |---|---|
 | `Button` | A solid or quiet pill, a round send control, or a `text` label at least 44 pt high. |
 | `IconButton`, `Pill` | An icon in a 44 pt target. A control pill, or a `chip` that reads a parsed field. |
-| `Icon` | Every glyph the app draws, by `name` and color token. An optional `size` centers it in a square box beside text. The app has no icon font. |
+| `Icon` | Every glyph the app draws, from Phosphor's path data (ADR 20261117-phosphor-glyphs). `name`, a palette color and an optional `size` that centers it in a square box beside text. Every name has an outline and a fill drawing, so a selected control can switch weight. |
 | `OverlayHost`, `Overlay` | The root portal in `app/_layout.tsx`. An overlay draws above every screen at its layer. A `modal` overlay hides the screen from assistive tech. |
 | `Menu`, `placeMenu` | A menu that opens from an anchor. It flips above near the bottom bar and stays inside the page gutter. |
 | `Sheet` | A scrim, a dock that rides the keyboard, and a panel. The scrim and Android back close it. A `stacked` sheet draws over another sheet, and a `covered` one waits under it. |
@@ -282,7 +282,22 @@ gallery.
 `features/gallery` draws every primitive in every state, in the active
 palette (ADR 20261112-component-gallery). Its route is `/gallery`. A
 reviewer reaches it from Diagnostics only. `model.ts` holds the state
-matrix, and the Playwright spec walks the same list.
+matrix, and the Playwright spec walks the same list. Its Icons section
+draws every glyph in both weights at its real size.
+
+### Icons
+
+`components/ui/icon.tsx` draws Phosphor's path data through
+`react-native-svg`. The generator writes the table in
+`components/ui/glyphs.ts`.
+Add a glyph to the map in `scripts/icons/build.ts`, then run this from
+`app`:
+
+```bash
+npm run icons:build
+```
+
+A test fails when the table is out of date with `@phosphor-icons/react`.
 
 `features/task-editor` is the task editor (ADR
 20261116-task-editor-sheet). A row press on Lists or Planner opens it,
@@ -452,6 +467,7 @@ The feature queue:
   - order the whole tab
   - pick one list in the editor, shipped in #155
 - 20261111 fold deeds into tasks, a spike
+- 20261117 Phosphor glyphs and an icon-only nav, in review
 
 Open feature tickets:
 
@@ -459,7 +475,9 @@ Open feature tickets:
 - 0065 the list menu actions
 - 0003, 0005 and 0008 carry the larger ideas.
 
-The app has three tabs today, Lists, Planner and Journal. The Lists tab
+The app has three tabs today, Lists, Planner and Journal. The bar
+carries no labels; each tab's name lives in its accessibility label
+(ADR 20261117-phosphor-glyphs). The Lists tab
 shows Main and the list notes. Main holds the tasks with no list. Any
 other tab shows the tasks whose `list` carries that name. My order makes
 each tab one flat list (ADR 0015 and its 2026-11-11 amendment,
