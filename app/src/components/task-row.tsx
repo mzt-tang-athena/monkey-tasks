@@ -5,6 +5,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import type { TaskItem } from "@/types/task";
+import { useTickBurst } from "@/components/motion/celebration";
 import { useProgress } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
 import { taskIsDone } from "@monkey-tasks/schemas";
@@ -19,6 +20,11 @@ import { TaskRowFace, taskRowLabel, useTaskRowFace } from "./task-row-face";
  * drives. Its completion ends the row's hold (ADR 0034), so no timer
  * runs beside the animation. A row already done at mount plays
  * nothing.
+ *
+ * A press on the open circle also asks for a burst at the circle's
+ * place (ADR 20261116-completion-celebration). The press decides, not
+ * the data: an undo, a sync or a reload never presses, so it never
+ * celebrates.
  */
 function TaskRowBase({
   task,
@@ -50,6 +56,7 @@ function TaskRowBase({
   // frame. The row reads that data and nothing else, so a fast tick,
   // untick, tick sequence has one source of truth.
   const done = task.data != null && taskIsDone(task.data);
+  const { ref: tickRef, play: celebrate } = useTickBurst(done);
 
   // `active` marks a tick that started after mount. It keeps an untick
   // from playing the tick backwards, and keeps a row that mounts done
@@ -102,6 +109,7 @@ function TaskRowBase({
   }));
 
   const press = () => {
+    celebrate();
     onToggle?.(task);
   };
 
@@ -110,7 +118,7 @@ function TaskRowBase({
   // beneath without moving it (Google Tasks' rule).
   const toggle = (
     <Animated.View style={pop}>
-      <View style={styles.tickSlot}>
+      <View ref={tickRef} style={styles.tickSlot}>
         <Pressable
         style={({ pressed }) => [
           styles.tickBox,

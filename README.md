@@ -224,7 +224,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
 | `features/<name>` | The UI of one feature: `capture`, `command`, `diagnostics`, `journal`, `lists`, `planner`, `task-editor`. |
 | `components` | Shared UI. `components/ui` holds the primitives. |
-| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing` and `MotionScrollView`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
+| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing`, `MotionScrollView` and the tick's `Celebration`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
 | `stores/journal` | The daily note query, the reference read and the append mutation. It shares the vault scope and reads no task state. |
@@ -396,6 +396,11 @@ the 28th gets a month-end rule. That rule gives it a due date in every
 month (ADR 0042).
 
 ## Next
+
+Version 1.0 ships the week of 2026-11-16. A tick now draws a short
+burst from the checkbox, in the active palette (ADR
+20261116-completion-celebration). Every tick control plays it, the
+editor sheet's included, and only when the press marks the task done.
 
 The design direction round started. `20261112-design-scale-guard`
 merged in `d26fcae`. It names the spacing and radius scale, moves

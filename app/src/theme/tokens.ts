@@ -62,12 +62,18 @@ export const type = {
  */
 export const layers = {
   content: 0,
+  /** A tick's burst: above the list, under every bar and surface that
+      takes a press. */
+  celebrate: 5,
   bottomBar: 10,
   dragGhost: 20,
   menuBackdrop: 30,
   menu: 40,
   sheetScrim: 50,
   sheet: 60,
+  /** A tick's burst from inside the sheet: over that sheet, under the
+      toast. A press in a sheet is the only tick that can ask for it. */
+  celebrateSheet: 65,
   toast: 70,
 } as const;
 
