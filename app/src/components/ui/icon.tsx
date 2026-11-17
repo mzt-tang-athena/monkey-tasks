@@ -82,6 +82,7 @@ const extent: Record<IconName, number> = {
   "clock-mini": 11,
   plus: 18,
   sort: bottomBar.glyph,
+  journal: bottomBar.glyph,
   more: bottomBar.glyph,
   rows: 14,
   pill: 16,
