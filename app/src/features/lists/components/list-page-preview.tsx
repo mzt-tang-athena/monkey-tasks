@@ -26,10 +26,14 @@ function previewSections(
   let left = Math.max(0, height - spacing.m - (repairs > 0 ? 72 : 0));
   const out: { section: ListsSection; data: ListsSection["data"] }[] = [];
   for (const section of sections) {
+    // A headerless group owes no header space: its rows start at the
+    // page's own top padding.
     const header =
-      spacing.xl +
-      16 +
-      (section.tone === "faint" ? spacing.xs : spacing.s);
+      section.title == null
+        ? 0
+        : spacing.xl +
+          16 +
+          (section.tone === "faint" ? spacing.xs : spacing.s);
     if (left < header) {
       break;
     }
@@ -61,7 +65,8 @@ function previewSections(
  * still. It is a picture of the page's first screenful, so nothing
  * here takes input and nothing scrolls. It draws the same
  * `SectionHeader`, `CardGroupRow` and `TaskRowFace` as the live list,
- * through the shared group header and the still row.
+ * through the shared group header and the still row. A headerless
+ * group, as My order draws, gets no header here either.
  */
 export function ListPagePreview({
   tab,
@@ -86,11 +91,13 @@ export function ListPagePreview({
         ) : null}
         {visible.map(({ section, data }) => (
           <View key={section.key}>
-            <ListSectionHeader
-              title={section.title}
-              count={section.data.length}
-              tone={section.tone}
-            />
+            {section.title == null ? null : (
+              <ListSectionHeader
+                title={section.title}
+                count={section.data.length}
+                tone={section.tone}
+              />
+            )}
             {data.map((task, index) => (
               <CardGroupRow
                 key={task.uri}
