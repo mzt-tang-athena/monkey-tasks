@@ -79,3 +79,43 @@ test("the timeline tick is a checkbox named by its task", async ({ page }) => {
     }),
   ).toHaveAttribute("aria-checked", "true");
 });
+
+test.describe("the week on a 360pt screen", () => {
+  test.use({ viewport: { width: 360, height: 640 } });
+
+  for (const layout of ["spread", "rows"] as const) {
+    test(`shows all seven days in ${layout}, with no sideways scroll`, async ({ page }) => {
+      await page.addInitScript((value) => {
+        globalThis.localStorage.setItem("monkey-tasks.week-view", value);
+      }, layout);
+      await page.goto("/planner");
+      await page.getByRole("tab", { name: "Week", exact: true }).click();
+      await expect(page.getByTestId(`week-view:${layout}`)).toBeVisible();
+
+      const days = page.getByTestId(/^week-day:/);
+      await expect(days).toHaveCount(7);
+      for (let index = 0; index < 7; index += 1) {
+        await expect(days.nth(index)).toBeVisible();
+      }
+
+      // Saturday stands on screen with no scroll, inside the window.
+      const saturday = await page.getByTestId("week-day:2026-10-31").boundingBox();
+      expect(saturday).not.toBeNull();
+      expect(saturday!.x).toBeGreaterThanOrEqual(0);
+      expect(saturday!.x + saturday!.width).toBeLessThanOrEqual(360);
+
+      // Nothing overflows the page or the pager sideways.
+      const widths = await page.evaluate(() => {
+        const pager = document.querySelector('[data-testid="week-pager"]');
+        return {
+          page: document.documentElement.scrollWidth,
+          window: window.innerWidth,
+          pager: pager?.scrollWidth ?? 0,
+          pagerBox: pager?.clientWidth ?? 0,
+        };
+      });
+      expect(widths.page).toBeLessThanOrEqual(widths.window);
+      expect(widths.pager).toBeLessThanOrEqual(widths.pagerBox);
+    });
+  }
+});

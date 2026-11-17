@@ -46,3 +46,19 @@ chips and a "+N" count. `weekChipCount` stays the one place to change.
 The old text that gives 4 chips and 3 chips plus the line described a
 144pt column. That width no longer exists. ADR 20261114 decides the
 layout.
+
+## Amendment, 2026-11-16: two chips, then a count
+
+The fitted week settled the count. Both layouts draw two chips at
+most. A day with more tasks shows a "+N" count for the rest.
+
+The count is its own press. It opens the day and does not select it.
+In Spread it sits in the header's right corner. In Rows it sits at the
+end of the line. `weekChipCount` returns `Math.min(count, 2)`.
+
+The old text gives a "+N more" line under the chips in Spread. The
+shipped Spread puts the count in the header instead. The box then
+keeps one header line and two chip rows.
+
+Each layout keeps one chip height, 18pt in Spread and 24pt in Rows.
+The count no longer depends on that height, because it caps at two.

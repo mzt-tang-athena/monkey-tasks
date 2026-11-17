@@ -1,263 +1,544 @@
-import { StyleSheet, Text, View } from "react-native";
+import * as React from "react";
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import type { TaskItem } from "@/types/task";
+import type { WeekLayout } from "@/lib/settings";
 import { Pressable } from "@/components/ui/pressable";
-import { MotionScrollView } from "@/components/motion/scroll-view";
-import { addDays, isoOf, startOfDay } from "@/utils/dates";
-import { sortDay } from "@/features/planner/lib/day-rows";
-import { PlanDrag } from "@/features/planner/lib/plan-drag";
-import {
-  hasTime,
-  startOfWeek,
-  tasksForDay,
-  timeOf,
-} from "@/features/planner/model";
+import { PlanDrag, type PlanTarget } from "@/features/planner/lib/plan-drag";
+import { hasTime, timeOf } from "@/features/planner/model";
 import { WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
-import { fonts, pageGutter, radius, spacing, weekCanvasHeight, weekColWidth, type Palette } from "@/theme/tokens";
+import {
+  rowsLine,
+  spreadBox,
+  weekCells,
+  weekChipCount,
+  weekDays,
+  weekLayouts,
+  weekRows,
+  type WeekDay,
+  type WeekSlot,
+} from "@/features/planner/lib/week-body";
+import { fonts, radius, spacing, touchTarget, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 
-/*
- * A column has a fixed height, so it shows the chips that fit and a
- * "+N more" line for the rest. Every chip is two text lines tall, so
- * the count is arithmetic and needs no layout pass. A name past two
- * lines ends in an ellipsis; the day view shows it whole.
+/** What a day box gets from the body around it. */
+type DayProps = {
+  day: WeekDay;
+  /** The first grid cell the box owns: its drop ring's cell. */
+  cell: number;
+  /** How many grid columns the box spans. */
+  span: number;
+  /** False for the pager's neighbour page: it draws, it takes no press
+      and no drop. */
+  interactive: boolean;
+  onSelect?: (date: Date) => void;
+  onOpenDay?: (date: Date) => void;
+};
+
+/** Each layout's grid rows and its day box. The rest of the body is
+    the same for both. */
+const faces: Record<
+  WeekLayout,
+  { slots: WeekSlot[][]; Day: (props: DayProps) => React.ReactNode }
+> = {
+  spread: { slots: weekRows(weekLayouts.spread), Day: SpreadDay },
+  rows: { slots: weekRows(weekLayouts.rows), Day: RowsDay },
+};
+
+/**
+ * The week body: seven day boxes on one screen, in the layout the
+ * operator picked in Settings. The live page is one drop grid, and
+ * each box rings itself while a drag hovers it. The pager's neighbour
+ * page draws the same boxes with `interactive={false}`.
  */
-const chipLines = 2;
-const chipLineHeight = 15;
-const chipHeight = chipLines * chipLineHeight + 2 * spacing.xs;
-const chipGap = spacing.xs;
-const moreHeight = 44;
-// The column's height inside the canvas padding, less its own padding,
-// the day's name and number, and the rule under them.
-const columnHeight = weekCanvasHeight - 2 * spacing.xs;
-const headHeight = 14 + 24 + 2 * spacing.s + 1;
-const chipSpace = columnHeight - 2 * spacing.s - headHeight;
-
-/** How many chips of `count` a column draws. When they all fit, all of
-    them. Otherwise the ones that fit beside the "+N more" line. */
-export function weekChipCount(count: number): number {
-  const fit = (space: number) => Math.floor((space + chipGap) / (chipHeight + chipGap));
-  if (count <= fit(chipSpace)) {
-    return count;
-  }
-  return fit(chipSpace - moreHeight - chipGap);
-}
-
-/** F's week body: day columns with real content, one swipe away. */
 export function WeekView({
+  layout,
   tasks,
   today,
   selected,
+  interactive,
   onSelect,
   onOpenDay,
 }: {
+  layout: WeekLayout;
   tasks: TaskItem[];
   today: Date;
   selected: Date;
-  onSelect: (date: Date) => void;
-  /** The "+N more" line opens that day in the day view. */
-  onOpenDay: (date: Date) => void;
+  interactive: boolean;
+  onSelect?: (date: Date) => void;
+  /** The "+N" count opens that day in the day view. */
+  onOpenDay?: (date: Date) => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
-  const todayStart = startOfDay(today).getTime();
-  // The strip picks the week; its seven columns start on Sunday.
-  const weekStart = startOfWeek(selected);
-  const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(weekStart, offset));
+  const days = React.useMemo(
+    () => weekDays({ tasks, selected, today }),
+    [tasks, selected, today],
+  );
+  const geometry = weekLayouts[layout];
+  // One target object per day: Saturday's two Spread cells share it.
+  const cells = React.useMemo(() => {
+    const targets = days.map((day): PlanTarget => ({ kind: "day", iso: day.iso }));
+    return weekCells(geometry, targets);
+  }, [days, geometry]);
+  const { slots, Day } = faces[layout];
+
+  const grid = slots.map((row) => (
+    <View key={row[0].cell} style={styles.row}>
+      {row.map((slot) => (
+        <Day
+          key={slot.day}
+          day={days[slot.day]}
+          cell={slot.cell}
+          span={slot.span}
+          interactive={interactive}
+          onSelect={onSelect}
+          onOpenDay={onOpenDay}
+        />
+      ))}
+    </View>
+  ));
+  const body: StyleProp<ViewStyle> = [
+    styles.grid,
+    layout === "spread" && styles.spreadGrid,
+    { height: geometry.height },
+  ];
+
   return (
-    <MotionScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.scroller}
-      contentContainerStyle={styles.canvas}
+    <View
+      testID={interactive ? `week-view:${layout}` : undefined}
+      aria-hidden={!interactive}
+      style={layout === "rows" && styles.card}
     >
-      <PlanDrag.Grid
-        columns={7}
-        rows={1}
-        cells={days.map((day) => ({ kind: "day", iso: isoOf(day) }))}
-        style={styles.columns}
-      >
-        {days.map((day) => {
-          const items = sortDay(tasksForDay(tasks, day));
-          const shown = weekChipCount(items.length);
-          const hidden = items.length - shown;
-          const isToday = startOfDay(day).getTime() === todayStart;
-          const isSelected =
-            startOfDay(day).getTime() === startOfDay(selected).getTime();
-          return (
-            // The day name and number carry non-breaking spaces, so the
-            // column's name keeps its words apart from the task text.
-            <Pressable
-              key={day.getTime()}
-              style={({ pressed }) => [
-                styles.col,
-                isSelected && !isToday && styles.colSelected,
-                isToday && styles.colToday,
-                pressed && styles.pressed,
-              ]}
-              onPress={() => onSelect(day)}
-              accessibilityRole="button"
-            >
-              <Text style={styles.dayName}>
-                {isToday ? "Today" : WEEKDAYS[day.getDay()]}
-              </Text>
-              <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>
-                {`\u00a0${day.getDate()}\u00a0`}
-              </Text>
-              <View style={styles.ruleSlot}>
-                <View style={styles.rule} />
-              </View>
-              {items.length > 0 ? (
-                <View style={styles.tasks}>
-                  {items.slice(0, shown).map((task) => (
-                    <PlanDrag.Source
-                      key={task.id}
-                      payload={task}
-                      hold="row"
-                      testID={`week-task:${task.name}`}
-                      style={styles.task}
-                    >
-                      <View style={styles.bar} />
-                      <Text style={styles.taskText} numberOfLines={chipLines}>
-                        {hasTime(task) ? `${timeOf(task)}  ` : ""}
-                        {task.name}
-                      </Text>
-                    </PlanDrag.Source>
-                  ))}
-                  {hidden > 0 ? (
-                    <Pressable
-                      style={styles.more}
-                      onPress={() => onOpenDay(day)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`+${hidden} more on ${WEEKDAYS_FULL[day.getDay()]} ${day.getDate()}, open the day`}
-                    >
-                      <Text style={styles.moreText}>{`+${hidden} more`}</Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              ) : (
-                <Text style={styles.free}>free</Text>
-              )}
-            </Pressable>
-          );
-        })}
-      </PlanDrag.Grid>
-    </MotionScrollView>
+      {interactive ? (
+        <PlanDrag.Grid
+          columns={geometry.columns}
+          rows={geometry.rows}
+          cells={cells}
+          mark="ring"
+          style={body}
+        >
+          {grid}
+        </PlanDrag.Grid>
+      ) : (
+        <View style={body}>{grid}</View>
+      )}
+    </View>
+  );
+}
+
+/**
+ * A day box. The box draws, the day press fills it, and the "+N" press
+ * and the ring sit over it as siblings. A button may not nest inside
+ * another button, and the count opens the day instead of selecting it.
+ */
+function DayBox({
+  day,
+  interactive,
+  onSelect,
+  style,
+  content,
+  more,
+  ring,
+  children,
+}: {
+  day: WeekDay;
+  interactive: boolean;
+  onSelect?: (date: Date) => void;
+  style: StyleProp<ViewStyle>;
+  /** The press's own layout, over the box's fill. */
+  content: StyleProp<ViewStyle>;
+  more?: React.ReactNode;
+  ring?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const { styles } = useThemedStyles(makeStyles);
+  return (
+    <View style={style}>
+      {interactive ? (
+        <Pressable
+          testID={`week-day:${day.iso}`}
+          style={({ pressed }) => [styles.fill, content, pressed && styles.pressed]}
+          onPress={() => onSelect?.(day.date)}
+          accessibilityRole="button"
+        >
+          {children}
+        </Pressable>
+      ) : (
+        <View style={[styles.fill, content]}>{children}</View>
+      )}
+      {more}
+      {ring}
+    </View>
+  );
+}
+
+/** One task, one line. A live chip lifts into a drag after its hold. */
+function Chip({
+  task,
+  interactive,
+  style,
+}: {
+  task: TaskItem;
+  interactive: boolean;
+  style: StyleProp<ViewStyle>;
+}) {
+  const { styles } = useThemedStyles(makeStyles);
+  const face = (
+    <>
+      <View style={styles.bar} />
+      <Text style={styles.chipText} numberOfLines={1}>
+        {hasTime(task) ? `${timeOf(task)}  ` : ""}
+        {task.name}
+      </Text>
+    </>
+  );
+  if (!interactive) {
+    return <View style={[styles.chip, style]}>{face}</View>;
+  }
+  return (
+    <PlanDrag.Source
+      payload={task}
+      hold="row"
+      testID={`week-task:${task.name}`}
+      style={[styles.chip, style]}
+    >
+      {face}
+    </PlanDrag.Source>
+  );
+}
+
+/** The hidden-task count. Live, it is its own 44pt press that opens
+    the day and does not select it. */
+function More({
+  day,
+  hidden,
+  interactive,
+  onOpenDay,
+  style,
+}: {
+  day: WeekDay;
+  hidden: number;
+  interactive: boolean;
+  onOpenDay?: (date: Date) => void;
+  style: StyleProp<ViewStyle>;
+}) {
+  const { styles } = useThemedStyles(makeStyles);
+  const text = <Text style={styles.moreText}>{`+${hidden}`}</Text>;
+  if (!interactive) {
+    return <View style={[styles.more, style]}>{text}</View>;
+  }
+  return (
+    <Pressable
+      style={[styles.more, style]}
+      onPress={() => onOpenDay?.(day.date)}
+      accessibilityRole="button"
+      accessibilityLabel={`+${hidden} more on ${WEEKDAYS_FULL[day.date.getDay()]} ${day.date.getDate()}, open the day`}
+    >
+      {text}
+    </Pressable>
+  );
+}
+
+/** The box's drop ring, on the live page only. */
+function DropRing({ day, cell, interactive }: { day: WeekDay; cell: number; interactive: boolean }) {
+  return interactive ? <PlanDrag.Ring cell={cell} testID={`week-ring:${day.iso}`} /> : null;
+}
+
+/**
+ * A Spread box: the day's name and date over two chips. The "+N" count
+ * sits at the header's right, and its 44pt press keeps the chips clear
+ * of it. The name and the date carry non-breaking spaces, so the box's
+ * accessible name keeps its words apart from the task text.
+ */
+function SpreadDay({ day, cell, span, interactive, onSelect, onOpenDay }: DayProps) {
+  const { styles } = useThemedStyles(makeStyles);
+  const shown = weekChipCount(day.items.length);
+  const hidden = day.items.length - shown;
+  return (
+    <DayBox
+      day={day}
+      interactive={interactive}
+      onSelect={onSelect}
+      style={[
+        styles.box,
+        { flex: span },
+        day.isSelected && styles.boxSelected,
+        day.isToday && styles.boxToday,
+      ]}
+      content={styles.boxContent}
+      more={
+        hidden > 0 ? (
+          <More
+            day={day}
+            hidden={hidden}
+            interactive={interactive}
+            onOpenDay={onOpenDay}
+            style={styles.spreadMore}
+          />
+        ) : null
+      }
+      ring={<DropRing day={day} cell={cell} interactive={interactive} />}
+    >
+      <View style={styles.head}>
+        <Text style={[styles.caption, day.isToday && styles.captionToday]}>
+          {day.isToday ? "Today" : WEEKDAYS[day.date.getDay()]}
+        </Text>
+        <Text style={[styles.headDate, day.isToday && styles.dateToday]}>
+          {`\u00a0${day.date.getDate()}\u00a0`}
+        </Text>
+      </View>
+      <View style={[styles.spreadChips, hidden > 0 && styles.spreadChipsBesideMore]}>
+        {day.items.slice(0, shown).map((task) => (
+          <Chip key={task.id} task={task} interactive={interactive} style={styles.spreadChip} />
+        ))}
+      </View>
+    </DayBox>
+  );
+}
+
+/**
+ * A Rows line: the date block, two chips side by side, then the "+N"
+ * count. Every line keeps both chip slots and the count's slot, so the
+ * chips line up down the card.
+ */
+function RowsDay({ day, cell, interactive, onSelect, onOpenDay }: DayProps) {
+  const { styles } = useThemedStyles(makeStyles);
+  const shown = weekChipCount(day.items.length);
+  const hidden = day.items.length - shown;
+  const chips = day.items.slice(0, shown);
+  return (
+    <DayBox
+      day={day}
+      interactive={interactive}
+      onSelect={onSelect}
+      style={[styles.line, day.isToday && styles.lineToday]}
+      content={styles.lineContent}
+      more={
+        hidden > 0 ? (
+          <More
+            day={day}
+            hidden={hidden}
+            interactive={interactive}
+            onOpenDay={onOpenDay}
+            style={styles.lineMore}
+          />
+        ) : null
+      }
+      ring={<DropRing day={day} cell={cell} interactive={interactive} />}
+    >
+      {cell > 0 ? <View style={styles.rule} /> : null}
+      <View style={styles.dateBlock}>
+        <Text style={styles.caption}>{WEEKDAYS[day.date.getDay()]}</Text>
+        <Text style={[styles.lineDate, day.isToday && styles.dateToday]}>
+          {`\u00a0${day.date.getDate()}\u00a0`}
+        </Text>
+      </View>
+      <View style={styles.lineChips}>
+        {[0, 1].map((slot) =>
+          chips[slot] === undefined ? (
+            <View key={`empty-${slot}`} style={styles.lineSlot} />
+          ) : (
+            <Chip
+              key={chips[slot].id}
+              task={chips[slot]}
+              interactive={interactive}
+              style={[styles.lineSlot, styles.lineChip]}
+            />
+          ),
+        )}
+      </View>
+      <View style={styles.moreSlot} />
+      {day.isSelected || day.isToday ? (
+        <View pointerEvents="none" style={[styles.fill, styles.edge]} />
+      ) : null}
+    </DayBox>
   );
 }
 
 const makeStyles = (colors: Palette) => ({
   styles: StyleSheet.create({
-    // The scroller bleeds to the screen's edges: columns cut at the
-    // display, not the page gutter, and scroll till the last one clears
-    // it. The bounded height keeps tall viewports from stretching the
-    // columns into the bottom section's space.
-    scroller: {
-      flexGrow: 0,
-      flexShrink: 0,
-      height: weekCanvasHeight,
+    fill: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
     },
-    canvas: {
-      paddingVertical: spacing.xs,
-      paddingLeft: pageGutter,
-      paddingRight: pageGutter,
+    grid: {
+      flexDirection: "column",
     },
-    // The seven columns are one grid, so a drop reads the cell under the
-    // finger from the grid's own rect.
-    columns: {
+    spreadGrid: {
+      gap: spreadBox.gap,
+    },
+    row: {
+      flex: 1,
       flexDirection: "row",
-      alignItems: "flex-start",
-      gap: spacing.s,
+      gap: spreadBox.gap,
     },
     pressed: {
       backgroundColor: colors.pressed,
     },
-    col: {
-      width: weekColWidth,
-      height: columnHeight,
+    caption: {
+      ...type.caption,
+      color: colors.inkMuted,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    captionToday: {
+      color: colors.accent,
+      fontWeight: "700",
+    },
+    dateToday: {
+      color: colors.accent,
+      fontWeight: "700",
+    },
+    chip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingHorizontal: spacing.xs,
+      backgroundColor: colors.paper,
+      borderRadius: radius,
+    },
+    bar: {
+      width: 3,
+      height: 10,
+      borderRadius: 1.5,
+      backgroundColor: colors.accent,
+    },
+    chipText: {
+      ...type.caption,
+      flex: 1,
+      color: colors.ink,
+    },
+    more: {
+      width: touchTarget,
+      height: touchTarget,
+    },
+    moreText: {
+      ...type.caption,
+      color: colors.accent,
+      fontWeight: "600",
+    },
+
+    // Spread: boxes in pairs, and the gap between them stays paper.
+    box: {
+      height: spreadBox.height,
       overflow: "hidden",
       backgroundColor: colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.hairline,
       borderRadius: radius,
-      padding: spacing.s,
     },
-    colSelected: {
+    boxContent: {
+      gap: spacing.xs,
+      padding: spacing.xs,
+    },
+    boxSelected: {
       borderColor: colors.accent,
     },
-    colToday: {
+    boxToday: {
       backgroundColor: colors.accentSoft,
       borderColor: colors.accent,
     },
-    dayName: {
-      fontSize: 11,
-      lineHeight: 14,
-      fontFamily: fonts.body,
-      color: colors.inkMuted,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
+    head: {
+      height: spreadBox.header,
+      flexDirection: "row",
+      alignItems: "baseline",
     },
-    dayNum: {
-      fontSize: 18,
-      lineHeight: 24,
+    headDate: {
+      fontSize: 13,
+      lineHeight: spreadBox.header,
       fontFamily: fonts.display,
       color: colors.ink,
     },
-    dayNumToday: {
-      color: colors.accent,
-      fontWeight: "700",
+    spreadChips: {
+      gap: spacing.xs,
     },
-    // The rule under the day's name, a step clear of the name and the
-    // tasks.
-    ruleSlot: {
-      paddingVertical: spacing.s,
+    // The count's press takes the box's top right corner, so the chips
+    // end where it starts.
+    spreadChipsBesideMore: {
+      paddingRight: touchTarget - spacing.xs,
     },
+    spreadChip: {
+      height: spreadBox.chip,
+    },
+    spreadMore: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      alignItems: "flex-end",
+      paddingTop: spacing.xs,
+      paddingRight: spacing.xs,
+    },
+
+    // Rows: seven lines in one card, split by hairlines.
+    card: {
+      overflow: "hidden",
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      borderRadius: radius,
+    },
+    line: {
+      flex: 1,
+      height: rowsLine.height,
+    },
+    lineToday: {
+      backgroundColor: colors.accentSoft,
+    },
+    lineContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+      paddingLeft: spacing.s,
+    },
+    // The rule draws over the line's top edge and takes no height, so
+    // every line keeps one touch target.
     rule: {
-      height: 1,
+      position: "absolute",
+      top: 0,
+      right: 0,
+      left: 0,
+      height: StyleSheet.hairlineWidth,
       backgroundColor: colors.hairline,
     },
-    tasks: {
-      gap: chipGap,
-    },
-    task: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: spacing.xs,
-      height: chipHeight,
-      backgroundColor: colors.paper,
+    // The picked day's edge draws over the line, so it moves nothing.
+    edge: {
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.accent,
       borderRadius: radius,
-      padding: spacing.xs,
     },
-    bar: {
-      alignSelf: "stretch",
-      width: 3,
-      borderRadius: 1.5,
-      backgroundColor: colors.accent,
+    dateBlock: {
+      width: rowsLine.date,
+      alignItems: "center",
     },
-    taskText: {
-      flex: 1,
-      fontSize: 11,
-      lineHeight: chipLineHeight,
-      fontFamily: fonts.body,
+    lineDate: {
+      fontSize: 15,
+      lineHeight: 18,
+      fontFamily: fonts.display,
       color: colors.ink,
     },
-    more: {
-      height: moreHeight,
-      minHeight: 44,
+    lineChips: {
+      flex: 1,
+      flexDirection: "row",
+      gap: spacing.xs,
+    },
+    lineSlot: {
+      flex: 1,
+      minWidth: 0,
+    },
+    lineChip: {
+      height: rowsLine.chip,
+    },
+    moreSlot: {
+      width: touchTarget,
+    },
+    lineMore: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      alignItems: "center",
       justifyContent: "center",
-      borderRadius: radius,
-    },
-    moreText: {
-      fontSize: 11,
-      lineHeight: 14,
-      fontFamily: fonts.body,
-      color: colors.accent,
-      fontWeight: "600",
-    },
-    free: {
-      fontSize: 12,
-      lineHeight: 16,
-      fontFamily: fonts.body,
-      color: colors.inkFaint,
-      textAlign: "center",
     },
   }),
 });
