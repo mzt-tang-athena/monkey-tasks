@@ -1,13 +1,14 @@
 import * as React from "react";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet } from "react-native";
 import { Pressable } from "@/components/ui/pressable";
-import { bottomBar, fonts, radius, spacing, touchTarget, type Palette } from "@/theme/tokens";
+import { bottomBar, radius, spacing, touchTarget, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { Icon, type IconName } from "@/components/ui/icon";
 
 /**
- * One nav item of the bottom bar: the icon over its label. Weight and
- * color carry the selection, with no dot.
+ * One nav item of the bottom bar: the glyph alone. The fill weight and
+ * the accent color carry the selection, with no dot and no label. The
+ * label stays as the name assistive tech reads.
  */
 export function NavTab({
   label,
@@ -29,19 +30,21 @@ export function NavTab({
       accessibilityLabel={label}
       aria-selected={active}
     >
-      <Icon name={icon} color={active ? "accent" : "inkMuted"} />
-      <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
+      <Icon
+        name={icon}
+        weight={active ? "fill" : "outline"}
+        color={active ? "accent" : "inkMuted"}
+      />
     </Pressable>
   );
 }
 
 const makeStyles = (colors: Palette) => ({
   styles: StyleSheet.create({
-    // The icon over its label, one small step apart.
+    // The glyph sits centered on a 44pt target.
     tab: {
       alignItems: "center",
       justifyContent: "center",
-      gap: 3,
       minHeight: touchTarget,
       minWidth: bottomBar.tabWidth,
       paddingHorizontal: spacing.xs,
@@ -49,16 +52,6 @@ const makeStyles = (colors: Palette) => ({
     },
     tabPressed: {
       backgroundColor: colors.pressed,
-    },
-    label: {
-      fontSize: bottomBar.labelSize,
-      lineHeight: bottomBar.labelLine,
-      fontFamily: fonts.body,
-      color: colors.inkMuted,
-    },
-    labelActive: {
-      color: colors.accent,
-      fontWeight: "600",
     },
   }),
 });
