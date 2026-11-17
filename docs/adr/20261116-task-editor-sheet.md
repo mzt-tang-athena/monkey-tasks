@@ -78,3 +78,42 @@ It adds nothing for harsh, the default.
 We kept the weight inside the Alerts picker.
 A tile or chip of its own was the alternative.
 That would show a weight on a task with no alert, where it does nothing.
+
+## Amendment 2026-11-17: a drag down closes the sheet
+
+Ticket 0093 promised that a drag down closes the sheet.
+The shared sheet did not have that drag. It does now.
+
+A new surface, `SheetDrag`, moves the panel with the finger.
+A surface is a shared motion component in `src/components/motion` (ADR 0046).
+The panel moves on the UI thread, the thread that draws frames (ADR 0036).
+
+A drag starts only on a grab area.
+The sheet draws a small handle in its top padding.
+The editor, each picker and the note editor make their header row a grab area too.
+A tap on a control in the header still presses it.
+
+A release past 80 px closes the sheet.
+A downward flick faster than 500 px a second also closes it.
+Both numbers match the page swipe.
+Any other release springs the panel back.
+An upward drag stretches at most 48 px, then returns.
+
+We rejected a drag from anywhere on the panel.
+The editor body scrolls up and down.
+The title is a text field, where a drag selects text.
+The chip strip scrolls sideways.
+Each one would have to hand the drag to the sheet at the right moment.
+The browser preview cannot test that hand-over, so a fault would first show on the phone.
+A handle and a header hold nothing that scrolls, so they need no hand-over.
+The cost: a drag on the body scrolls the body and never closes the sheet.
+
+Every sheet gets the drag, with no opt-in.
+The capture sheet has no header, so only its handle grabs.
+Its panel moves inside the keyboard lift, so the drag and the keyboard never share one style.
+A drag on a stacked picker closes only that picker.
+
+With reduced motion the panel still follows the finger.
+The spring back and the slide out then land at once.
+Screen readers skip the handle.
+The scrim button and Android back stay as the accessible ways to close.

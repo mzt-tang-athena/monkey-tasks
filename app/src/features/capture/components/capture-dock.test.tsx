@@ -2,6 +2,7 @@ import * as React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BackHandler, Platform, Text } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import type { CaptureTarget, ParsedCapture } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import { OverlayHost } from "@/components/ui/overlay-host";
@@ -51,20 +52,24 @@ function Behind() {
   return <Text>screen content</Text>;
 }
 
+// The app's root wraps every screen in the gesture root, and the
+// sheet's handle needs it on a phone.
 function Screen() {
   return (
-    <OverlayHost>
-      <Behind />
-      <BottomBar
-        action={
-          <CaptureDock
-            targets={targets}
-            defaultTargetIndex={1}
-            dueDay="2026-10-27"
-          />
-        }
-      />
-    </OverlayHost>
+    <GestureHandlerRootView>
+      <OverlayHost>
+        <Behind />
+        <BottomBar
+          action={
+            <CaptureDock
+              targets={targets}
+              defaultTargetIndex={1}
+              dueDay="2026-10-27"
+            />
+          }
+        />
+      </OverlayHost>
+    </GestureHandlerRootView>
   );
 }
 

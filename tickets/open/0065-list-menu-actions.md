@@ -1,6 +1,6 @@
 ---
 id: 0065
-title: List menu actions rename, delete and clear completed
+title: List menu actions rename and delete
 created: 2026-10-26
 priority: low
 assignee:
@@ -13,8 +13,12 @@ depends: [0052, 0055]
 The Lists overflow menu showed Rename list, Delete list and Delete all
 completed tasks. None of the three did anything
 (`src/app/(tabs)/index.tsx:1022-1047` at commit `b2c0b10`). Ticket 0055
-hid them. This ticket builds the three actions through the mutation
+hid them. This ticket builds rename and delete through the mutation
 layer from ticket 0052 and shows the items again.
+
+Delete all completed tasks moved to
+`tickets/done/20261116-fold-and-clear-completed.md`. It ships with the
+folded Completed group.
 
 A list is a note with `kind: "[[lists]]"` in the vault's `Tasks/Lists/`
 folder. Its file name is the tab name (`features/lists/query.ts:28-47`).
@@ -46,13 +50,7 @@ A task joins a list through a `[[Name]]` entry in its `lists` property.
 
 ### Delete all completed tasks
 
-- Act on the completed tasks that the current tab shows. Hide the item
-  when the tab shows no completed task.
-- Ask first, with the count: "Delete 7 completed tasks? This removes
-  their notes from the vault."
-- A completed recurring occurrence is history, and the next occurrence
-  links to it through `recurrence previous` (ADR 0027). The delete ADR
-  below decides what happens to those links.
+Moved to `tickets/done/20261116-fold-and-clear-completed.md`.
 
 ### Shared rules
 
@@ -69,19 +67,17 @@ A task joins a list through a `[[Name]]` entry in its `lists` property.
 ## Acceptance
 
 - [ ] An ADR records how a delete leaves the vault and what happens to `recurrence previous` links.
-- [ ] The overflow menu shows all three items again.
+- [ ] The overflow menu shows Rename list and Delete list again.
 - [ ] Rename list and Delete list show on list tabs only.
-- [ ] Delete all completed tasks shows only when the tab shows a completed task.
 - [ ] Rename refuses an empty name, a name that `safeFileName` changes and a name in use, each with a message.
 - [ ] After a rename, the vault holds the list note under the new file name, and every member task lists `[[New]]`.
 - [ ] After a rename, the tab shows the new name in the same place and stays selected.
 - [ ] After a list delete, the vault no longer holds the list note, and no task lists `[[Name]]`.
 - [ ] After a list delete, the former members show in Main, and the screen shows Main.
-- [ ] Delete all completed tasks removes the completed tasks that the tab showed and leaves every open task.
 - [ ] Each action asks first, and Cancel changes nothing.
 - [ ] A failed write rolls back the optimistic change and shows a `Banner` with the failed count.
 - [ ] Mutation tests run against the vault adapter fake from ticket 0051.
-- [ ] A Playwright test runs rename, list delete and clear completed on the web mock vault.
+- [ ] A Playwright test runs rename and list delete on the web mock vault.
 - [ ] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
 
 ## Outcome

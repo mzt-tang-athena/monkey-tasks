@@ -96,7 +96,9 @@ export function TabStrip({
               aria-selected={active}
             >
               <Text style={[styles.text, active && styles.textActive]}>{name}</Text>
-              <View style={[styles.rule, active && styles.ruleActive]} />
+              {/* A rule that paints nothing would flatten on Android and
+                  lose its rounded ends when it turns active. */}
+              <View collapsable={false} style={[styles.rule, active && styles.ruleActive]} />
             </Pressable>
           );
         })}

@@ -11,6 +11,7 @@ export const motion = {
     settle: 220,
     landing: 220,
     tickWash: 320,
+    celebrate: 520,
     landWash: 600,
     sheet: 220,
     menu: 140,
@@ -47,7 +48,10 @@ export const motion = {
     slop: 8,
   },
   split: {
-    minPane: 150,
+    /** The shortest either pane may go: one 44pt row, which is also
+        the list's section head and the grip's own target. It keeps a
+        pane legible and the grip whole at either edge. */
+    minPane: 44,
   },
 } as const;
 

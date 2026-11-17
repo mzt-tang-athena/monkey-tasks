@@ -1,5 +1,6 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTickBurst } from "@/components/motion/celebration";
 import { Pressable } from "@/components/ui/pressable";
 import type { TaskItem } from "@/types/task";
 import { formatTime, parseStoredDate } from "@/utils/dates";
@@ -101,16 +102,20 @@ function HourTask({ task, copy }: { task: TaskItem; copy: boolean }) {
   const { styles } = useThemedStyles(makeStyles);
   const { toggle } = usePlannerList();
   const done = isDone(task);
+  const { ref: tickRef, play: celebrate } = useTickBurst(done);
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
   // The chip body is selection only (no-op for now); its circle is
   // the done toggle. Done tasks stay in their slot, struck.
   const face = (
     <>
       <View style={[styles.bar, done && styles.barDone]} />
-      <View style={styles.tickSlot}>
+      <View ref={tickRef} style={styles.tickSlot}>
         <Pressable
         style={({ pressed }) => [styles.tickBox, pressed && styles.tickPressed]}
-        onPress={() => toggle(task)}
+        onPress={() => {
+          celebrate();
+          toggle(task);
+        }}
         accessibilityLabel={task.name}
         accessibilityRole="checkbox"
         aria-checked={done}

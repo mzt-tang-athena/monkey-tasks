@@ -88,6 +88,8 @@ export function useListSections(tab: string, sortMode: SortMode) {
     shown,
     repairs,
     sections,
+    /** The tab's completed rows, sorted by name: what a clear deletes. */
+    completed,
     /** The tab has done tasks and no open ones. */
     onlyCompleted: open.length === 0 && completed.length > 0,
   };

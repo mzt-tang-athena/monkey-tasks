@@ -62,12 +62,18 @@ export const type = {
  */
 export const layers = {
   content: 0,
+  /** A tick's burst: above the list, under every bar and surface that
+      takes a press. */
+  celebrate: 5,
   bottomBar: 10,
   dragGhost: 20,
   menuBackdrop: 30,
   menu: 40,
   sheetScrim: 50,
   sheet: 60,
+  /** A tick's burst from inside the sheet: over that sheet, under the
+      toast. A press in a sheet is the only tick that can ask for it. */
+  celebrateSheet: 65,
   toast: 70,
 } as const;
 
@@ -131,13 +137,11 @@ export const radii = { pill: 999 } as const;
 
 /**
  * Day-spread drag physics: pointer travel that promotes a press into
- * a drag, and how small either pane of the split may go. Each value
- * comes from the motion tokens. The port that removes the last user
- * deletes this.
+ * a drag. Each value comes from the motion tokens. The port that
+ * removes the last user deletes this.
  */
 export const drag = {
   threshold: motion.hold.slop,
-  minPane: motion.split.minPane,
   /** Touch pickups wait out this hold; scrolling never gets hijacked. */
   pickMs: motion.hold.row,
   /** The pills row has free space to scroll from, so its pickup is

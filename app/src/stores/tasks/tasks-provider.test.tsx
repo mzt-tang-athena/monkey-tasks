@@ -31,6 +31,8 @@ let loadGate: Promise<void> | null = null;
 let createGate: Promise<void> | null = null;
 let createFails = false;
 let deleteFails = false;
+/** Fail the remove of this file name alone. */
+let deleteFailsOn: string | null = null;
 let renameOnCreate = false;
 const creates: { fileName: string; content: string }[] = [];
 const deletes: string[] = [];
@@ -101,6 +103,23 @@ const TASKS = `${MEMORY_ROOT}/Tasks`;
 const CALL_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nBody.\n';
 const FOCUS_TEXT = '---\nkind: "[[lists]]"\ncreated: 2026-10-20\n---\n';
 
+/** A done task note, for the clear tests. */
+const DONE_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ncompleted: 2026-10-25\n---\n\nBody.\n';
+
+/** The same note after another app removed its completion line. */
+const REOPENED_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nBody.\n';
+
+/** Three done notes beside the open Call note. */
+function doneVault(): VaultSeed {
+  return {
+    "Tasks/Call.md": CALL_TEXT,
+    "Tasks/Buy stamps.md": DONE_TEXT,
+    "Tasks/Fix bike light.md": DONE_TEXT,
+    "Tasks/Water the fern.md": DONE_TEXT,
+    "Tasks/Lists/Focus.md": FOCUS_TEXT,
+  };
+}
+
 /** The vault the store runs on: Call, and the Focus list. */
 let vault: MemoryVault;
 
@@ -141,7 +160,7 @@ function instrumented(inner: MemoryVault): VaultAdapter {
       return made;
     },
     async remove(uri) {
-      if (deleteFails) {
+      if (deleteFails || (deleteFailsOn != null && uri.endsWith(deleteFailsOn))) {
         throw new Error("locked");
       }
       deletes.push(uri);
@@ -328,6 +347,7 @@ beforeEach(() => {
   createGate = null;
   createFails = false;
   deleteFails = false;
+  deleteFailsOn = null;
   renameOnCreate = false;
   creates.length = 0;
   deletes.length = 0;
@@ -1092,5 +1112,148 @@ describe("recurring completion", () => {
     const [notice] = store().failures;
     expect(notice.kind).toBe("notice");
     expect(notice.message).toContain("edited");
+  });
+
+  it("deletes exactly the done notes it was handed, then reads the vault", async () => {
+    await mount(doneVault());
+    const before = loadCalls;
+
+    await act(async () => {
+      await store().clear([byFile("Buy stamps.md"), byFile("Water the fern.md")]);
+    });
+    await flush();
+
+    expect(deletes.sort()).toEqual([
+      `${TASKS}/Buy stamps.md`,
+      `${TASKS}/Water the fern.md`,
+    ]);
+    expect(vault.hooks.read("Tasks/Buy stamps.md")).toBeNull();
+    expect(vault.hooks.read("Tasks/Water the fern.md")).toBeNull();
+    expect(vault.hooks.read("Tasks/Fix bike light.md")).not.toBeNull();
+    expect(store().tasks.map((item) => item.fileName).sort()).toEqual([
+      "Call.md",
+      "Fix bike light.md",
+    ]);
+    expect(loadCalls).toBe(before + 1);
+    expect(failures()).toEqual([]);
+  });
+
+  it("puts back the notes that stayed and names how many", async () => {
+    await mount(doneVault());
+    deleteFailsOn = "Fix bike light.md";
+
+    await act(async () => {
+      await store().clear([
+        byFile("Buy stamps.md"),
+        byFile("Fix bike light.md"),
+        byFile("Water the fern.md"),
+      ]);
+    });
+    await flush();
+
+    expect(deletes.sort()).toEqual([
+      `${TASKS}/Buy stamps.md`,
+      `${TASKS}/Water the fern.md`,
+    ]);
+    expect(byFile("Fix bike light.md")).toBeDefined();
+    expect(store().tasks.map((item) => item.fileName).sort()).toEqual([
+      "Call.md",
+      "Fix bike light.md",
+    ]);
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toContain("1 of 3 completed tasks stayed");
+  });
+
+  it("rolls back a clear that deleted nothing and lists a retry", async () => {
+    await mount(doneVault());
+    deleteFails = true;
+
+    await act(async () => {
+      await store().clear([byFile("Buy stamps.md"), byFile("Fix bike light.md")]);
+    });
+    await flush();
+
+    expect(deletes).toEqual([]);
+    expect(store().tasks.map((item) => item.fileName).sort()).toEqual([
+      "Buy stamps.md",
+      "Call.md",
+      "Fix bike light.md",
+      "Water the fern.md",
+    ]);
+    expect(failures()).toEqual([
+      "clear completed: 2 of 2 completed tasks stayed: locked",
+    ]);
+  });
+
+  it("keeps a note another app reopened while the confirmation was up", async () => {
+    await mount(doneVault());
+    // The sheet froze three done rows. Another app reopens one of them.
+    vault.hooks.write("Tasks/Fix bike light.md", REOPENED_TEXT);
+
+    await act(async () => {
+      await store().clear([
+        byFile("Buy stamps.md"),
+        byFile("Fix bike light.md"),
+        byFile("Water the fern.md"),
+      ]);
+    });
+    await flush();
+
+    expect(deletes.sort()).toEqual([
+      `${TASKS}/Buy stamps.md`,
+      `${TASKS}/Water the fern.md`,
+    ]);
+    expect(vault.hooks.read("Tasks/Buy stamps.md")).toBeNull();
+    expect(vault.hooks.read("Tasks/Water the fern.md")).toBeNull();
+    expect(vault.hooks.read("Tasks/Fix bike light.md")).toBe(REOPENED_TEXT);
+    expect(byFile("Fix bike light.md").data?.completed).toBeUndefined();
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toBe("1 of 3 completed tasks stayed: it was reopened");
+  });
+
+  it("reports a clear whose notes were all reopened as a notice, not a retry", async () => {
+    await mount(doneVault());
+    vault.hooks.write("Tasks/Buy stamps.md", REOPENED_TEXT);
+
+    await act(async () => {
+      await store().clear([byFile("Buy stamps.md")]);
+    });
+    await flush();
+
+    expect(deletes).toEqual([]);
+    expect(vault.hooks.read("Tasks/Buy stamps.md")).toBe(REOPENED_TEXT);
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toBe("1 of 1 completed tasks stayed: it was reopened");
+  });
+
+  it("keeps a note that left the vault while the confirmation was up", async () => {
+    await mount(doneVault());
+    // Obsidian deletes or moves the note, so its read now fails.
+    const seed = doneVault();
+    delete seed["Tasks/Fix bike light.md"];
+    vault.hooks.reset(seed);
+
+    await act(async () => {
+      await store().clear([
+        byFile("Buy stamps.md"),
+        byFile("Fix bike light.md"),
+        byFile("Water the fern.md"),
+      ]);
+    });
+    await flush();
+
+    expect(deletes.sort()).toEqual([
+      `${TASKS}/Buy stamps.md`,
+      `${TASKS}/Water the fern.md`,
+    ]);
+    expect(vault.hooks.read("Tasks/Fix bike light.md")).toBeNull();
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toBe(
+      "1 of 3 completed tasks stayed: its note is missing or unreadable",
+    );
   });
 });

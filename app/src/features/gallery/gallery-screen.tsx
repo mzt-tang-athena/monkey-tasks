@@ -250,6 +250,24 @@ export default function GalleryScreen() {
     ),
     "section-header:muted": <SectionHeader label="Done" tone="muted" />,
     "section-header:faint": <SectionHeader label="Archived" tone="faint" />,
+    "section-header:expanded": (
+      <SectionHeader
+        label="Completed"
+        count={7}
+        tone="faint"
+        expanded
+        onPress={noop}
+      />
+    ),
+    "section-header:collapsed": (
+      <SectionHeader
+        label="Completed"
+        count={7}
+        tone="faint"
+        expanded={false}
+        onPress={noop}
+      />
+    ),
 
     "card-group-row:group": (
       <View style={styles.wide}>

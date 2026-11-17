@@ -15,6 +15,7 @@ import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
 import { bottomBar, spacing } from "@/theme/tokens";
 import type { TaskEdit } from "@/types/task";
+import { taskIsDone } from "@monkey-tasks/schemas";
 import { EditorSheet } from "./components/editor-sheet";
 import { useSheetClock } from "./hooks/use-sheet-clock";
 import { draftOf, findTask, isTaskNote } from "./lib/draft";
@@ -253,6 +254,7 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
           open={session != null}
           progress={progress}
           draft={session.draft}
+          done={row.data != null && taskIsDone(row.data)}
           today={new Date()}
           lists={lists}
           write={session.write}

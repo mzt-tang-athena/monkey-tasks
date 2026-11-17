@@ -184,6 +184,19 @@ walk took 37 to 76 s. A rerun on a running emulator skips the boot and
 an unchanged APK. `MOTION=off` starts with the three animation scales
 at 0.
 
+Wrap launch in `flock -o`:
+
+```sh
+flock -o /tmp/monkey-tasks-emulator.lock .claude/skills/verify-monkey-tasks/scripts/android-launch.sh
+```
+
+The emulator and the adb server outlive the launch. A plain `flock`
+passes its open lock file to the command. A process that keeps a copy
+holds the lock for its whole life, so every later `flock` waits forever.
+`-o` closes that copy before the command starts. The script also
+closes every inherited file handle above 2 itself. A wrapper that
+forgets `-o` then still releases the lock when launch exits.
+
 ### Doctor
 
 ```sh

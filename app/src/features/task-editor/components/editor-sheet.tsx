@@ -14,6 +14,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useKeyboardState } from "react-native-keyboard-controller";
 import { MotionScrollView } from "@/components/motion/scroll-view";
+import { useTickBurst } from "@/components/motion/celebration";
+import { SheetGrab } from "@/components/motion/sheet-drag";
 import { Banner } from "@/components/ui/banner";
 import { EdgeFade, fadedEdges } from "@/components/ui/edge-fade";
 import { Icon } from "@/components/ui/icon";
@@ -62,6 +64,7 @@ export function EditorSheet({
   open,
   progress,
   draft,
+  done,
   today,
   lists,
   write,
@@ -74,6 +77,8 @@ export function EditorSheet({
   open: boolean;
   progress: Progress;
   draft: TaskEdit;
+  /** The task is already done, so the tick reopens it. */
+  done: boolean;
   today: Date;
   lists: string[];
   write: WriteState;
@@ -84,6 +89,7 @@ export function EditorSheet({
   onToggle: () => void;
 }) {
   const { styles, colors } = useThemedStyles(makeStyles);
+  const { ref: tickRef, play: celebrate } = useTickBurst(done, "sheet");
   const insets = useSafeAreaInsets();
   const window = useWindowDimensions();
   const keyboard = useKeyboardState((state) => state.height);
@@ -174,47 +180,58 @@ export function EditorSheet({
             <Text style={styles.failedLine}>{failedWords[write.reason]}</Text>
           </Banner>
         ) : null}
-        <View style={styles.header}>
-          <Pressable
-            style={({ pressed }) => [styles.listButton, pressed && styles.pressed]}
-            onPress={() => {
-              commitTitle();
-              setPicker("list");
-            }}
-            accessibilityRole="button"
-            // The visible name is the list's, so the control's name
-            // carries it (WCAG 2.5.3).
-            accessibilityLabel={`change list, ${draft.list ?? "Main"}`}
-          >
-            <Icon name="list" color="inkMuted" />
-            <Text style={styles.listName} numberOfLines={1}>
-              {draft.list ?? "Main"}
-            </Text>
-            <Icon name="chevron-down" />
-          </Pressable>
-          <View ref={menuAnchor} collapsable={false} testID="task-menu-anchor">
-            <IconButton
-              label="task menu"
-              expanded={menu}
-              onPress={() => setMenu(true)}
+        {/* Only the header row grabs: the body below scrolls and keeps
+            its own drags. */}
+        <SheetGrab>
+          <View style={styles.header}>
+            <Pressable
+              style={({ pressed }) => [styles.listButton, pressed && styles.pressed]}
+              onPress={() => {
+                commitTitle();
+                setPicker("list");
+              }}
+              accessibilityRole="button"
+              // The visible name is the list's, so the control's name
+              // carries it (WCAG 2.5.3).
+              accessibilityLabel={`change list, ${draft.list ?? "Main"}`}
             >
-              <Icon name="more" />
-            </IconButton>
+              <Icon name="list" color="inkMuted" />
+              <Text style={styles.listName} numberOfLines={1}>
+                {draft.list ?? "Main"}
+              </Text>
+              <Icon name="chevron-down" />
+            </Pressable>
+            <View ref={menuAnchor} collapsable={false} testID="task-menu-anchor">
+              <IconButton
+                label="task menu"
+                expanded={menu}
+                onPress={() => setMenu(true)}
+              >
+                <Icon name="more" />
+              </IconButton>
+            </View>
           </View>
-        </View>
+        </SheetGrab>
         <View style={styles.titleRow}>
           <Pressable
             style={styles.tick}
-            onPress={onToggle}
+            onPress={() => {
+              celebrate();
+              onToggle();
+            }}
             accessibilityRole="button"
-            accessibilityLabel="mark done"
+            accessibilityLabel={done ? "mark not done" : "mark done"}
           >
             <View
+              ref={tickRef}
               style={[
                 styles.tickRing,
-                draft.name === "" && styles.tickRingEmpty,
+                done && styles.tickRingDone,
+                !done && draft.name === "" && styles.tickRingEmpty,
               ]}
-            />
+            >
+              {done ? <Text style={styles.tickCheck}>{"✓"}</Text> : null}
+            </View>
           </Pressable>
           <TextInput
             value={title ?? draft.name}
@@ -524,9 +541,21 @@ const makeStyles = (colors: Palette) => ({
       borderRadius: radii.pill,
       borderWidth: 1.5,
       borderColor: colors.inkFaint,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    tickRingDone: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
     },
     tickRingEmpty: {
       borderColor: colors.hairline,
+    },
+    tickCheck: {
+      color: colors.onAccent,
+      fontSize: 12,
+      lineHeight: 14,
+      fontWeight: "600",
     },
     title: {
       flex: 1,

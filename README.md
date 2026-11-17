@@ -112,6 +112,9 @@ Android asks once for permission to install from the browser or file
 manager. The build is a release: JavaScript rides inside the APK, so
 the app runs without Metro.
 
+`CHANGELOG.md` lists what each release adds or changes, in plain words.
+Each GitHub release repeats its section.
+
 ### Develop against a phone without rebuilding
 
 The release APK takes about 45 minutes and cannot load code from Metro.
@@ -221,7 +224,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
 | `features/<name>` | The UI of one feature: `capture`, `command`, `diagnostics`, `journal`, `lists`, `planner`, `task-editor`. |
 | `components` | Shared UI. `components/ui` holds the primitives. |
-| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing` and `MotionScrollView`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
+| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing`, `MotionScrollView` and the tick's `Celebration`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
 | `stores/journal` | The daily note query, the reference read and the append mutation. It shares the vault scope and reads no task state. |
@@ -250,7 +253,7 @@ documents its props, and each primitive has a component test.
 | `CommandPane` | A searchable command list that slides down from the top edge. The screen behind is inert. |
 | `Banner`, `Toast` | A danger or info message with role `alert`. A toast floats above every other layer. |
 | `LoadingState`, `EmptyState`, `ErrorState` | One look for a list that loads, holds nothing or fails. |
-| `SectionHeader` | An eyebrow label over a group, with a count and a tone. |
+| `SectionHeader` | An eyebrow label over a group, with a count and a tone. With `expanded` and `onPress`, the row is a 44pt disclosure that opens the group. |
 | `CardGroupRow` | One row of a group card, with its edges and an inset divider. |
 | `TabStrip`, `SegmentedControl` | Tabs that scroll, with a fade over an edge that hides more tabs, and segments. Every target is at least 44 by 44. |
 | `EdgeFade` | The stepped fade over the edge of a sideways strip that hides more items. The tab strip and the editor's add strip share it. |
@@ -409,6 +412,11 @@ month (ADR 0042).
 
 ## Next
 
+Version 1.0 ships the week of 2026-11-16. A tick now draws a short
+burst from the checkbox, in the active palette (ADR
+20261116-completion-celebration). Every tick control plays it, the
+editor sheet's included, and only when the press marks the task done.
+
 The design direction round started. `20261112-design-scale-guard`
 merged in `d26fcae`. It names the spacing and radius scale, moves
 fifteen stray values onto it, and adds a vitest guard. The guard fails a
@@ -470,6 +478,19 @@ other tab shows the tasks whose `list` carries that name. My order makes
 each tab one flat list (ADR 0015 and its 2026-11-11 amendment,
 `20261111-one-list-and-tab-order`). The Journal tab shows today's note
 and appends to it.
+
+Each list tab folds its Completed group by default. The header keeps
+the count and opens or closes on a tap. It turns on the app's shared
+clock. The fold is session state per tab, so a restart folds every tab
+again (ADR `20261116-fold-and-clear-completed`).
+
+The list menu's Delete all completed tasks asks first and names the
+count. It removes the done notes of the tab it opened from, one note at
+a time. It reads each note again before the delete, so a note another
+app reopened while the sheet was up stays. A note the app cannot delete
+comes back too, and the banner says how many stayed. The app keeps no
+trash and no undo, so the delete is final. Obsidian sync sees the
+removed files and syncs the deletion.
 
 The vault now serves more than `Tasks/`. The journal appends to
 `Journal/Daily/YYYY-MM-DD.md`, and the reference picker reads

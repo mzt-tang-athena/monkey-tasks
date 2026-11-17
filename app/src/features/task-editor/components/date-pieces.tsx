@@ -107,7 +107,11 @@ function DayCell({
       accessibilityLabel={`${dayName(day)}${today ? ", today" : ""}`}
       aria-pressed={picked}
     >
-      <View style={[styles.dot, picked && styles.dotPicked]}>
+      {/* An unpicked dot paints nothing, so Android would flatten it
+          away. A pick then makes its native view mid-life, and that
+          view drew square. A real view from the first frame keeps the
+          radius it mounted with. */}
+      <View collapsable={false} style={[styles.dot, picked && styles.dotPicked]}>
         <Text
           style={[
             styles.dayText,
