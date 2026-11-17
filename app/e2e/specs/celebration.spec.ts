@@ -1,7 +1,7 @@
 import type { Page, TestInfo } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { completedNotes, undated } from "../data";
-import { press, row } from "../locators";
+import { openCompleted, press, row } from "../locators";
 
 type Watched = { burstSeen?: boolean };
 
@@ -61,6 +61,9 @@ test.describe("completion celebration", () => {
       name: undated.second,
     });
     await expect(tick).toHaveAttribute("aria-checked", "false");
+    // Completed folds by default, so open it and the ticked row stays on
+    // the page while the burst plays.
+    await openCompleted(page);
     await watchBurst(page);
 
     await press(page, tick);
@@ -73,6 +76,9 @@ test.describe("completion celebration", () => {
     page,
   }, testInfo) => {
     await page.goto("/");
+    // Open the group first: the sheet is modal, so the page behind it
+    // takes no press, and the row must stay on the page after the tick.
+    await openCompleted(page);
     const target = row(page, undated.first);
     await press(page, target.getByRole("button", { name: undated.first }));
     const editor = page.getByRole("dialog", { name: "Task" });
@@ -93,6 +99,8 @@ test.describe("completion celebration", () => {
     page,
   }) => {
     await page.goto("/");
+    // A done task sits in the folded Completed group until it opens.
+    await openCompleted(page);
     const target = row(page, completedNotes.timed);
     await press(page, target.getByRole("button", { name: completedNotes.timed }));
     const editor = page.getByRole("dialog", { name: "Task" });
