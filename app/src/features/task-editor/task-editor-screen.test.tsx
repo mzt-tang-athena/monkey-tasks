@@ -1,15 +1,18 @@
 import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TaskEditorContext } from "@/hooks/use-task-editor";
 import type { TaskItem } from "@/types/task";
 import TaskEditorScreen from "./task-editor-screen";
 
-// The route and the store are the screen's two inputs: a task id
-// selects the row, and the list holds it.
+// The route reads the store for its id. A task has no screen of its
+// own: the route hands it to the editor sheet and steps back.
 
 const state = vi.hoisted(() => ({
   tasks: [] as TaskItem[],
   status: "ready" as "loading" | "ready" | "error",
+  canGoBack: true,
+  nav: [] as string[],
 }));
 
 vi.mock("react-native-safe-area-context", () => ({
@@ -17,17 +20,13 @@ vi.mock("react-native-safe-area-context", () => ({
 }));
 
 vi.mock("expo-router", () => ({
-  router: { back: () => undefined },
+  router: {
+    canGoBack: () => state.canGoBack,
+    back: () => state.nav.push("back"),
+    replace: (href: string) => state.nav.push(`replace ${href}`),
+  },
   Stack: { Screen: () => null },
   useLocalSearchParams: () => ({ id: "content://vault/Notes/Garden.md" }),
-}));
-
-// The keyboard controller has no keyboard in jsdom. The mock marks the
-// view that lifts its content above the keyboard.
-vi.mock("react-native-keyboard-controller", () => ({
-  KeyboardAwareScrollView: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="keyboard-aware">{children}</div>
-  ),
 }));
 
 vi.mock("@/stores/tasks/task-state", () => ({
@@ -35,100 +34,123 @@ vi.mock("@/stores/tasks/task-state", () => ({
   useStoreMeta: () => ({ status: state.status }),
 }));
 
-vi.mock("@/stores/tasks/mutations/use-edit-task", () => ({
-  useEditTask: () => async () => undefined,
-}));
-
 const NOTE_ID = "content://vault/Notes/Garden.md";
 
-function deed(): TaskItem {
+function note(text: string, data: TaskItem["data"]): TaskItem {
   return {
     id: NOTE_ID,
     uri: NOTE_ID,
     fileName: "Garden.md",
     name: "Garden",
-    text: '---\nkind: "[[deeds]]"\nstatus: "[[active]]"\ncreated: 2026-10-20\n---\n\nWater the beds.\n',
-    // The task schema rejects a deed, so the loader leaves data null.
-    data: null,
+    text,
+    data,
     body: "\nWater the beds.\n",
   };
 }
 
-function task(): TaskItem {
-  return {
-    id: NOTE_ID,
-    uri: NOTE_ID,
-    fileName: "Call.md",
-    name: "Call",
-    text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nOld body.\n',
-    data: { kind: "[[tasks]]", created: "2026-10-20" },
-    body: "\nOld body.\n",
-  };
+function deed(): TaskItem {
+  return note(
+    '---\nkind: "[[deeds]]"\nstatus: "[[active]]"\ncreated: 2026-10-20\n---\n\nWater the beds.\n',
+    // The task schema rejects a deed, so the loader leaves data null.
+    null,
+  );
 }
 
-function mount(item: TaskItem) {
-  state.tasks = [item];
-  render(<TaskEditorScreen />);
+function taskNote(): TaskItem {
+  return note(
+    '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nOld body.\n',
+    { kind: "[[tasks]]", created: "2026-10-20", "alert weight": "harsh" },
+  );
+}
+
+/** Render under an editor that records each task it opens. */
+function renderWithEditor() {
+  const opened: string[] = [];
+  const view = () => (
+    <TaskEditorContext.Provider
+      value={{ open: (taskId) => opened.push(taskId), showing: false }}
+    >
+      <TaskEditorScreen />
+    </TaskEditorContext.Provider>
+  );
+  const { rerender } = render(view());
+  return { opened, rerender: () => rerender(view()) };
 }
 
 beforeEach(() => {
   state.tasks = [];
   state.status = "ready";
+  state.canGoBack = true;
+  state.nav = [];
 });
 
 describe("TaskEditorScreen", () => {
   it("opens a deed note read-only with its frontmatter and body", () => {
-    mount(deed());
+    state.tasks = [deed()];
+    render(<TaskEditorScreen />);
 
-    // The note name, the body below the fences, and every key with
-    // the value the file carries.
     expect(screen.getByText("Garden")).toBeTruthy();
     expect(screen.getByText("Water the beds.")).toBeTruthy();
     expect(screen.getByText("kind")).toBeTruthy();
     expect(screen.getByText("[[deeds]]")).toBeTruthy();
     expect(screen.getByText("status")).toBeTruthy();
     expect(screen.getByText("[[active]]")).toBeTruthy();
-    expect(screen.getByText("created")).toBeTruthy();
     expect(screen.getByText("2026-10-20")).toBeTruthy();
     expect(screen.getByText(/not a task/)).toBeTruthy();
 
-    // No editor: no Save, and no task fields to type into.
-    expect(screen.queryByRole("button", { name: "save task" })).toBeNull();
+    // No editor: no task fields to type into, and no Save.
     expect(screen.queryAllByRole("textbox")).toHaveLength(0);
-    expect(screen.getByRole("button", { name: "cancel editing" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "save task" })).toBeNull();
+    expect(screen.getByRole("button", { name: "close note" })).toBeTruthy();
   });
 
   it("stays read-only when the parsed data is not a task", () => {
-    mount({
-      ...deed(),
-      data: {
+    state.tasks = [
+      note(deed().text, {
         kind: "[[deeds]]",
         status: "[[active]]",
         created: "2026-10-20",
-      } as unknown as TaskItem["data"],
-    });
+      } as unknown as TaskItem["data"]),
+    ];
+    render(<TaskEditorScreen />);
 
     expect(screen.getByText("Water the beds.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "save task" })).toBeNull();
   });
 
-  it("keeps the editor for a task note", () => {
-    mount(task());
+  it("opens a task in the editor sheet and steps back to the screen below", () => {
+    state.tasks = [taskNote()];
+    const { opened } = renderWithEditor();
 
-    expect(screen.getByText("Name")).toBeTruthy();
-    expect(screen.getByText("Due")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "save task" })).toBeTruthy();
-    expect(screen.getByText("Save")).toBeTruthy();
-    expect(screen.getAllByRole("textbox").length).toBeGreaterThan(0);
+    expect(opened).toEqual([NOTE_ID]);
+    expect(state.nav).toEqual(["back"]);
+    expect(screen.queryAllByRole("textbox")).toHaveLength(0);
   });
 
-  it("scrolls the form in a keyboard-aware view, so Body clears the keyboard", () => {
-    mount(task());
+  it("goes home under the sheet when the alert started the app", () => {
+    state.canGoBack = false;
+    state.tasks = [taskNote()];
+    const { opened } = renderWithEditor();
 
-    // Android runs edge to edge and never resizes the window for the
-    // keyboard (ADR 0014), so a plain ScrollView lets it cover Body.
-    const form = screen.getByTestId("keyboard-aware");
-    expect(form.contains(screen.getByRole("textbox", { name: "Body" }))).toBe(true);
-    expect(form.contains(screen.getByRole("textbox", { name: "Reminders" }))).toBe(true);
+    expect(opened).toEqual([NOTE_ID]);
+    expect(state.nav).toEqual(["replace /"]);
+  });
+
+  it("waits for the store, then opens the task", () => {
+    state.status = "loading";
+    const { opened, rerender } = renderWithEditor();
+    expect(screen.getByText("Loading note...")).toBeTruthy();
+    expect(opened).toEqual([]);
+
+    state.status = "ready";
+    state.tasks = [taskNote()];
+    rerender();
+    expect(opened).toEqual([NOTE_ID]);
+  });
+
+  it("says when the note is gone", () => {
+    render(<TaskEditorScreen />);
+
+    expect(screen.getByText(/no longer here/)).toBeTruthy();
   });
 });

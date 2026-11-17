@@ -44,20 +44,20 @@ Out of scope: merges, retries, an `updatedAt` property.
 
 `writeNoteIfUnchanged` reads the file again and writes only when it
 still holds the text the caller started from. The store queue, the
-editor and a rename all pass that text. A file that cannot be read back
-is its own error.
+editor and a rename all pass that text. A failed read-back is its own
+error.
 
-The first cut still let a save overwrite an Obsidian edit: the editor
-seeded its draft at mount but compared against the store's text at save
-time, which a foreground refresh had already replaced. The draft now
-carries the text it was seeded from.
+The first cut still let a save overwrite an Obsidian edit. The editor
+seeded its draft at mount. At save time it compared against the store's
+text, which a foreground refresh had already replaced. The draft now
+carries the text that seeded it.
 
-A second hole: a vault read that started before a save could resolve
-after it and put the old text back in the row. The editor's whole
-read-modify-write now joins the per-note queue, and a read that
-overlapped a queued write reads again.
+A second hole involved a vault read that started before a save. That
+read could resolve after the save and put the old text back in the row.
+The editor's whole read, edit and write cycle now joins the per-note
+queue. A read that overlapped a queued write reads again.
 
-Confirmed on the phone with the reported steps: editing the note in
-Obsidian and saving in the app now refuses with "the note changed on
-disk" and keeps the draft. `tsc` clean, 199 tests in 26 files, eslint 0
+Confirmed on the phone with the reported steps, an Obsidian edit to the
+note, then a save in the app. The save now refuses with "the note
+changed on disk" and keeps the draft. `tsc` clean, 199 tests in 26 files, eslint 0
 errors.

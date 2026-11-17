@@ -14,9 +14,9 @@ decision record. The tickets in `tickets/` are the work queue.
    `tickets/README.md`.
 2. Write an ADR the same day a decision carries a trade-off. That means
    an alternative existed, and a future agent could plausibly reopen it.
-   Copy `docs/adr/adr-template.md` and take the next free number. Record
+   Copy `docs/adr/adr-template.md` to `YYYYMMDD-short-title.md`. Record
    later changes as dated amendments at the bottom of the same file
-   (never rewrite the original decision). Adjustments with no real
+   (never rewrite the original decision). A legacy `NNNN` file keeps its name. Adjustments with no real
    alternative only need a commit.
 3. Write docs in the ADR template's plain style: short sentences, active
    voice, plain words, no em dashes.

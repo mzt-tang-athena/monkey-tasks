@@ -23,7 +23,7 @@ export function captureContent(
     lines.push(`due: ${parsed.due}`);
   }
   if (listName) {
-    lines.push("lists:", serializeValue([`[[${listName}]]`]));
+    lines.push(`list: ${serializeValue(`[[${listName}]]`)}`);
   }
   if (parsed.reminders?.length) {
     lines.push("reminders:", serializeValue(parsed.reminders));
@@ -63,8 +63,9 @@ export function captureDraft(
     data: {
       kind: "[[tasks]]",
       created,
+      "alert weight": "harsh",
       ...(due ? { due } : {}),
-      ...(listName ? { lists: [`[[${listName}]]`] } : {}),
+      ...(listName ? { list: `[[${listName}]]` } : {}),
       ...(parsed.reminders?.length ? { reminders: parsed.reminders } : {}),
       ...(recurrence ? { recurrence } : {}),
     },

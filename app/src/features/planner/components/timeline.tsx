@@ -1,12 +1,14 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTickBurst } from "@/components/motion/celebration";
 import { Pressable } from "@/components/ui/pressable";
 import type { TaskItem } from "@/types/task";
 import { formatTime, parseStoredDate } from "@/utils/dates";
 import { hourOf, isDone, minuteOf } from "@/features/planner/model";
 import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { labelHour } from "@/features/planner/lib/labels";
-import { colors, fonts, radii, radius, spacing } from "@/theme/tokens";
+import { fonts, radii, radius, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { usePlannerList } from "./planner-list-context";
 
 /** First and last hour shown by the ruler. */
@@ -36,6 +38,7 @@ export function Timeline({
       not, so the id stays unique. */
   testID?: string;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const hours: TaskItem[][] = [];
   for (let h = RULER_START; h <= RULER_END; h++) {
     hours[h] = [];
@@ -96,18 +99,23 @@ export function Timeline({
 }
 
 function HourTask({ task, copy }: { task: TaskItem; copy: boolean }) {
+  const { styles } = useThemedStyles(makeStyles);
   const { toggle } = usePlannerList();
   const done = isDone(task);
+  const { ref: tickRef, play: celebrate } = useTickBurst(done);
   const due = task.data?.due ? parseStoredDate(task.data.due) : null;
   // The chip body is selection only (no-op for now); its circle is
   // the done toggle. Done tasks stay in their slot, struck.
   const face = (
     <>
       <View style={[styles.bar, done && styles.barDone]} />
-      <View style={styles.tickSlot}>
+      <View ref={tickRef} style={styles.tickSlot}>
         <Pressable
         style={({ pressed }) => [styles.tickBox, pressed && styles.tickPressed]}
-        onPress={() => toggle(task)}
+        onPress={() => {
+          celebrate();
+          toggle(task);
+        }}
         accessibilityLabel={task.name}
         accessibilityRole="checkbox"
         aria-checked={done}
@@ -146,6 +154,7 @@ function HourTask({ task, copy }: { task: TaskItem; copy: boolean }) {
 }
 
 function NowLine() {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View style={styles.nowRow}>
       <View style={styles.nowDot} />
@@ -154,131 +163,133 @@ function NowLine() {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    minHeight: 44,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.hairline,
-  },
-  mark: {
-    width: 56,
-    fontSize: 11,
-    lineHeight: 16,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    fontVariant: ["tabular-nums"],
-    paddingTop: spacing.xs,
-  },
-  slot: {
-    flex: 1,
-    paddingVertical: spacing.xs,
-    gap: spacing.xs,
-  },
-  // The circle, the accent bar and the text share one center line.
-  task: {
-    flexDirection: "row",
-    alignItems: "center",
-    minHeight: 44,
-    backgroundColor: colors.surface,
-    borderRadius: radius,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    padding: spacing.s,
-    gap: spacing.s,
-  },
-  bar: {
-    width: 3,
-    borderRadius: 1.5,
-    backgroundColor: colors.accent,
-    minHeight: 20,
-  },
-  barDone: {
-    backgroundColor: colors.inkFaint,
-  },
-  body: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-  },
-  name: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 19,
-    fontFamily: fonts.body,
-    color: colors.ink,
-  },
-  nameDone: {
-    color: colors.inkFaint,
-    textDecorationLine: "line-through",
-  },
-  time: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    fontVariant: ["tabular-nums"],
-  },
-  timeDone: {
-    color: colors.inkFaint,
-  },
-  // The chip's done target: a 44 box around the 18pt circle, with the
-  // margins folded back so the chip keeps its height and its gaps.
-  tickSlot: {
-    width: 18,
-    height: 18,
-    position: "relative",
-  },
-  tickBox: {
-    position: "absolute",
-    left: -13,
-    top: -13,
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tickPressed: {
-    opacity: 0.7,
-  },
-  // The chip's own circle is the done toggle.
-  tick: {
-    width: 18,
-    height: 18,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.inkFaint,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tickDone: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  tickCheck: {
-    color: colors.onAccent,
-    fontSize: 11,
-    lineHeight: 13,
-    fontWeight: "600",
-  },
-  nowRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    minHeight: 18,
-  },
-  nowDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.danger,
-  },
-  nowLine: {
-    flex: 1,
-    height: 1.5,
-    backgroundColor: colors.danger,
-    borderRadius: 1,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      minHeight: 44,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.hairline,
+    },
+    mark: {
+      width: 56,
+      fontSize: 11,
+      lineHeight: 16,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+      fontVariant: ["tabular-nums"],
+      paddingTop: spacing.xs,
+    },
+    slot: {
+      flex: 1,
+      paddingVertical: spacing.xs,
+      gap: spacing.xs,
+    },
+    // The circle, the accent bar and the text share one center line.
+    task: {
+      flexDirection: "row",
+      alignItems: "center",
+      minHeight: 44,
+      backgroundColor: colors.surface,
+      borderRadius: radius,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      padding: spacing.s,
+      gap: spacing.s,
+    },
+    bar: {
+      width: 3,
+      borderRadius: 1.5,
+      backgroundColor: colors.accent,
+      minHeight: 20,
+    },
+    barDone: {
+      backgroundColor: colors.inkFaint,
+    },
+    body: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+    },
+    name: {
+      flex: 1,
+      fontSize: 14,
+      lineHeight: 19,
+      fontFamily: fonts.body,
+      color: colors.ink,
+    },
+    nameDone: {
+      color: colors.inkFaint,
+      textDecorationLine: "line-through",
+    },
+    time: {
+      fontSize: 12,
+      lineHeight: 16,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+      fontVariant: ["tabular-nums"],
+    },
+    timeDone: {
+      color: colors.inkFaint,
+    },
+    // The chip's done target: a 44 box around the 18pt circle, with the
+    // margins folded back so the chip keeps its height and its gaps.
+    tickSlot: {
+      width: 18,
+      height: 18,
+      position: "relative",
+    },
+    tickBox: {
+      position: "absolute",
+      left: -13,
+      top: -13,
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    tickPressed: {
+      opacity: 0.7,
+    },
+    // The chip's own circle is the done toggle.
+    tick: {
+      width: 18,
+      height: 18,
+      borderRadius: radii.pill,
+      borderWidth: 1.5,
+      borderColor: colors.inkFaint,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    tickDone: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    tickCheck: {
+      color: colors.onAccent,
+      fontSize: 11,
+      lineHeight: 13,
+      fontWeight: "600",
+    },
+    nowRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      minHeight: 18,
+    },
+    nowDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.danger,
+    },
+    nowLine: {
+      flex: 1,
+      height: 1.5,
+      backgroundColor: colors.danger,
+      borderRadius: 1,
+    },
+  }),
 });

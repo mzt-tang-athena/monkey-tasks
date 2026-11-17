@@ -40,18 +40,18 @@ describe("captureContent", () => {
     );
   });
 
-  it("emits the lists property natively for a list target", () => {
+  it("writes the list as one scalar for a list target", () => {
     const text = captureContent(sample, "Focus");
-    expect(text).toContain("lists:");
-    expect(text).toContain('  - "[[Focus]]"');
-    expect(text.indexOf("lists:")).toBeGreaterThan(
+    expect(text).toContain('list: "[[Focus]]"');
+    expect(text).not.toContain("lists");
+    expect(text.indexOf("list:")).toBeGreaterThan(
       text.indexOf("due:"),
     );
     expect(text.trimEnd().endsWith("---")).toBe(true);
   });
 
-  it("writes no lists property for the Main target", () => {
-    expect(captureContent(sample)).not.toContain("lists:");
+  it("writes no list property for the Main target", () => {
+    expect(captureContent(sample)).not.toContain("list:");
   });
 
   it("reads back through js-yaml as the values the row holds", () => {
@@ -60,7 +60,7 @@ describe("captureContent", () => {
       kind: "[[tasks]]",
       created: CREATED,
       due: "2026-10-21T07:30",
-      lists: ["[[Focus]]"],
+      list: "[[Focus]]",
       reminders: ["2026-10-21T07:30"],
       recurrence: "FREQ=DAILY;INTERVAL=2",
     });
@@ -78,7 +78,7 @@ describe("captureContent", () => {
       { ...sample, reminders: ["2026-10-21T07:30", "2026-10-21T19:00"] },
       "Focus",
     );
-    expect(parsed(text).lists).toEqual(["[[Focus]]"]);
+    expect(parsed(text).list).toBe("[[Focus]]");
     expect(parsed(text).reminders).toEqual([
       "2026-10-21T07:30",
       "2026-10-21T19:00",

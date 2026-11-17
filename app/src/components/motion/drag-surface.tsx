@@ -9,7 +9,9 @@ import Animated, {
 import { Overlay } from "@/components/ui/overlay-host";
 import type { Hit } from "@/lib/motion/drag-math";
 import { motion, type HoldKind } from "@/lib/motion/tokens";
-import { colors, shadows } from "@/theme/tokens";
+import { recordBreadcrumb } from "@/lib/breadcrumbs";
+import { radius, shadows, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { createBridgeGuard } from "./internal/bridge";
 import {
   ClipContext,
@@ -55,6 +57,7 @@ export function createDragSurface<P, T>() {
         if (!guard.pickup(generation)) {
           return;
         }
+        recordBreadcrumb("drag-start");
         picked.current = source;
         setActive({ payload: self.payloads.get(source) as P });
       },
@@ -62,6 +65,7 @@ export function createDragSurface<P, T>() {
         if (!guard.settle(generation)) {
           return;
         }
+        recordBreadcrumb("drag-drop");
         const payload = self.payloads.get(picked.current) as P | undefined;
         setActive(null);
         const target = targetOf(self, hit);
@@ -113,6 +117,7 @@ export function createDragSurface<P, T>() {
     testID?: string;
     children?: React.ReactNode;
   }) {
+    const { styles } = useThemedStyles(makeStyles);
     const { id, ref, hover } = useZone(target, null);
     const tint = useAnimatedStyle(() => ({
       opacity: withTiming(hover.value?.id === id ? 1 : 0, {
@@ -128,10 +133,19 @@ export function createDragSurface<P, T>() {
     );
   }
 
+  /**
+   * A drop zone cut into `columns` by `rows` equal cells. The hover
+   * mark comes in two kinds. `fill` tints the hovered cell's whole
+   * pitch under the children. `ring` draws nothing itself: each cell's
+   * own box renders a `Ring`, so the mark sits inside the box and never
+   * covers a gap. Cells that hold the same target object belong to one
+   * box, and the first of them owns its ring.
+   */
   function Grid({
     columns,
     rows,
     cells,
+    mark = "fill",
     style,
     testID,
     role,
@@ -141,6 +155,7 @@ export function createDragSurface<P, T>() {
     columns: number;
     rows: number;
     cells: readonly (T | null)[];
+    mark?: "fill" | "ring";
     style?: StyleProp<ViewStyle>;
     testID?: string;
     /** The grid's role and name, for the calendar's day cells. */
@@ -148,11 +163,16 @@ export function createDragSurface<P, T>() {
     "aria-label"?: string;
     children?: React.ReactNode;
   }) {
+    const { styles } = useThemedStyles(makeStyles);
     const shape = React.useMemo(
       () => ({ columns, rows, cells: cells.map((cell, i) => (cell === null ? null : i)) }),
       [columns, rows, cells],
     );
     const { id, ref, hover } = useZone(cells, shape);
+    const rings = React.useMemo<GridRings>(
+      () => ({ id, hover, owners: cells.map((cell) => (cell === null ? -1 : cells.indexOf(cell))) }),
+      [id, hover, cells],
+    );
     const box = useAnimatedStyle(() => {
       const hit = hover.value;
       if (hit === null || hit.id !== id) {
@@ -177,9 +197,38 @@ export function createDragSurface<P, T>() {
         aria-label={label}
         style={style}
       >
-        <Animated.View pointerEvents="none" style={[styles.cell, styles.hover, box]} />
-        {children}
+        {mark === "fill" ? (
+          <Animated.View pointerEvents="none" style={[styles.cell, styles.hover, box]} />
+        ) : null}
+        <RingContext.Provider value={mark === "ring" ? rings : null}>{children}</RingContext.Provider>
       </Animated.View>
+    );
+  }
+
+  /**
+   * The hover mark of a `ring` grid's cell. It fills the box it renders
+   * in, inside the box's border, and shows while the finger is over
+   * any cell that `cell` owns. `cell` is the first cell of the box.
+   */
+  function Ring({ cell, testID }: { cell: number; testID?: string }) {
+    const { styles } = useThemedStyles(makeStyles);
+    const { id, hover, owners } = useRings();
+    const shown = useAnimatedStyle(() => {
+      const hit = hover.value;
+      const on = hit !== null && hit.id === id && owners[hit.cell] === cell;
+      return {
+        opacity: withTiming(on ? 1 : 0, {
+          duration: motion.ms.tap,
+          reduceMotion: ReduceMotion.System,
+        }),
+      };
+    });
+    return (
+      <Animated.View
+        pointerEvents="none"
+        testID={testID}
+        style={[styles.fill, styles.ring, shown]}
+      />
     );
   }
 
@@ -187,7 +236,25 @@ export function createDragSurface<P, T>() {
     return React.useContext(DraggingContext);
   }
 
-  return { Root, Source, Zone, Grid, useDragging };
+  return { Root, Source, Zone, Grid, Ring, useDragging };
+}
+
+/** What a `ring` grid tells its cells: its zone id, the hover, and the
+    cell that owns each cell's ring. */
+type GridRings = {
+  id: number;
+  hover: Session["ui"]["hover"];
+  owners: readonly number[];
+};
+
+const RingContext = React.createContext<GridRings | null>(null);
+
+function useRings(): GridRings {
+  const rings = React.useContext(RingContext);
+  if (rings === null) {
+    throw new Error('Ring must render inside a Grid with mark="ring".');
+  }
+  return rings;
 }
 
 /** A zone joins the session's registry for as long as it is mounted. */
@@ -219,6 +286,7 @@ function targetOf(session: Session, hit: Hit | null): unknown {
 /** The ghost under the finger. It renders in the overlay, outside the
     screen's providers, so it takes the session as a prop. */
 function Ghost({ session, children }: { session: Session; children: React.ReactNode }) {
+  const { styles } = useThemedStyles(makeStyles);
   const { x, y, grab } = session.ui;
   const place = useAnimatedStyle(() => ({
     width: grab.value.width,
@@ -235,24 +303,33 @@ function Ghost({ session, children }: { session: Session; children: React.ReactN
   );
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-  cell: {
-    position: "absolute",
-  },
-  hover: {
-    backgroundColor: colors.accentSoft,
-  },
-  ghost: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    ...shadows.lifted,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    fill: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    },
+    cell: {
+      position: "absolute",
+    },
+    hover: {
+      backgroundColor: colors.accentSoft,
+    },
+    // The selected-state ring (ticket 0082, direction C): ink, inside
+    // the box, with the box's own corner.
+    ring: {
+      borderRadius: radius,
+      borderWidth: 2,
+      borderColor: colors.ink,
+    },
+    ghost: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      ...shadows.lifted,
+    },
+  }),
 });

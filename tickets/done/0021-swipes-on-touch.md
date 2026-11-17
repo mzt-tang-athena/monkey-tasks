@@ -11,7 +11,8 @@ depends: []
 ## Spec
 
 The list tab, the day planner, and the month planner all had a
-left/right swipe on the desktop preview and none on the phone.
+left/right swipe on the desktop preview. None of them had one on the
+phone.
 
 Two causes:
 

@@ -19,19 +19,32 @@ function headerTone(tone: SectionTone | "faint"): HeaderTone {
  * `SectionList` has no gap between sections, so the header slot sets
  * it. The live list and the swipe preview both draw it, so they line
  * up.
+ *
+ * `expanded` makes the Completed header a disclosure. The still
+ * preview passes it without `onToggle`, so both draw the same row.
  */
 export function ListSectionHeader({
   title,
   count,
   tone,
+  expanded,
+  onToggle,
 }: {
   title: string;
   count: number;
   tone: SectionTone | "faint";
+  expanded?: boolean;
+  onToggle?: () => void;
 }) {
   return (
     <View style={[styles.slot, tone === "faint" && styles.slotFaint]}>
-      <SectionHeader label={title} count={count} tone={headerTone(tone)} />
+      <SectionHeader
+        label={title}
+        count={count}
+        tone={headerTone(tone)}
+        expanded={expanded}
+        onPress={onToggle}
+      />
     </View>
   );
 }

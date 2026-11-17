@@ -14,6 +14,8 @@ export const tabs = {
   main: "Main",
   /** The tab after Main. No sample task sits on it. */
   next: "Errands",
+  /** The tab that holds the sample task with a typo in its weight. */
+  focus: "Focus",
 } as const;
 
 /** The section headers on Main under TODAY. */
@@ -37,13 +39,26 @@ export const supplements = "Supplements";
     the one it makes for the next date. */
 export const supplementsTick = {
   note: "Tasks/Supplements.md",
-  completed: "2026-10-26",
+  /** A tick writes the moment, so the minute follows the date. */
+  completedPrefix: "completed: 2026-10-26T",
   next: "Tasks/Supplements 2026-10-27.md",
   nextDue: "2026-10-27T19:00",
 } as const;
 
+/** Sample notes already done, one with a time and one with a date. */
+export const completedNotes = {
+  timed: "Water the fern",
+  dated: "Buy stamps",
+} as const;
+
 /** A task note that fails validation. It never renders as a row. */
 export const broken = "Broken note";
+
+export const warnedWeight = {
+  name: "Descale the kettle",
+  path: "Tasks/Descale the kettle.md",
+  warning: 'alert weight "loud" is not harsh or quiet, so it rings harsh',
+} as const;
 
 /** An overdue task with no time: due yesterday. */
 export const overdue = {
@@ -97,6 +112,12 @@ export const outsideNote = {
   name: "Added in Obsidian",
   path: "Tasks/Added in Obsidian.md",
   text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-26T09:00\n---\n',
+} as const;
+
+/** A sample note whose kind is the bare value, not the link form. */
+export const bareKindNote = {
+  name: "Read the meter",
+  path: "Tasks/Read the meter.md",
 } as const;
 
 /** The editor rename. */

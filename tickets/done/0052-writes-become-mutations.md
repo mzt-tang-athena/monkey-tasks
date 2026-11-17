@@ -10,11 +10,12 @@ depends: [0051]
 
 ## Spec
 
-ADR 0017 made every write local first: the row changes at once, and the
-note is written behind it. ADR 0023 moved the read into TanStack Query
-but kept the write path by hand. The task store holds a promise queue
-per note, a ref that mirrors the cache, a write counter that makes a
-read retry, one shared error string, and a context of actions. An
+ADR 0017 made every write local first. The row changes at once, and the
+write to the note follows behind it. ADR 0023 moved the read into
+TanStack Query but kept the write path by hand. The task store holds a
+promise queue per note and a ref that mirrors the cache. It also holds
+a write counter that makes a read retry, one shared error string, and
+a context of actions. An
 audit on 2026-10-26 found the bugs in the table below. Most of them
 come from those hand-made parts.
 
@@ -53,7 +54,7 @@ one is an `it.fails` that asserts the behaviour we want, so it passes
 only while the bug is there. A fix turns its test into a plain `it`. A
 fixed bug that keeps `it.fails` fails the suite, so no fix goes
 unnoticed. When a step deletes the API a test drives, rewrite the test
-against the new hook first, still failing, then fix.
+against the new hook first. Keep the rewritten test failing, then fix.
 
 ### Bugs this fixes
 
@@ -62,22 +63,22 @@ against the new hook first, still failing, then fix.
 | A capture made while a read runs vanishes from the list. Capture never touches the write counter, so the read does not retry. | `store/tasks.tsx:817-846`, `:233-255` | "keeps a capture made while a read is in flight" |
 | Every tap runs a full alarm rebuild, because each optimistic `setQueryData` gives `vault.data` a new identity. Two rebuilds, or a rebuild and a per-task sync, interleave and schedule one reminder twice. | `store/tasks.tsx:470-476`, `reminders/sync.ts:55-149` | "rebuilds alarms only after a vault read", and both tests in `reminders-race.test.ts` |
 | A recurring tick waits for the create before the row moves. A second tap spawns a second successor, the compensation deletes it, and the banner shows `NoteChangedError`. | `store/tasks.tsx:642-646`, `:484-543` | "shows a recurring tick before the new note lands", "takes a double tap on a recurring task without an error" |
-| The third read attempt neither waits for writes nor checks the counter, so it can land old text over a newer row. | `store/tasks.tsx:250` | "never lands a read that overlapped a write" |
+| The third read attempt neither waits for writes nor checks the counter. As a result, it can land old text over a newer row. | `store/tasks.tsx:250` | "never lands a read that overlapped a write" |
 | The first write's result replaces the row after a second tap moved it on. The row flickers back. | `store/tasks.tsx:662`, `:712` | "never shows an earlier tap over a later one" |
-| A tap between a read landing and the ref effect writes a list built from the stale ref, which drops the read. | `store/tasks.tsx:301-331` | "keeps a read that lands just before a tap" |
+| A tap between a read landing and the ref effect writes a list built from the stale ref. That write drops the read. | `store/tasks.tsx:301-331` | "keeps a read that lands just before a tap" |
 | One error string serves every action. The next success clears an earlier failure. | `store/tasks.tsx:214` and each `setLastError(null)` | "keeps a failure on screen after an unrelated success" |
-| A reorder drop writes one row at a time and rolls back only the failed row, so the section ends with mixed numbers. | `app/(tabs)/index.tsx:486-495` | "rolls back a whole reorder drop when one write fails" |
-| A captured row takes the uri as its id on the next read, so an open editor loses it and shows "That task is no longer here." | `store/tasks.tsx:804-816`, `features/tasks/query.ts:59`, `TaskEditorScreen.tsx:97-123` | "keeps a captured row's id across a read" |
-| A tap or a drag on a row whose file is still being created does nothing, with no message. | `store/tasks.tsx:629-631`, `:702-704` | "lands a tick on a row whose file is still being created" |
+| A reorder drop writes one row at a time and rolls back only the failed row. As a result, the section ends with mixed numbers. | `app/(tabs)/index.tsx:486-495` | "rolls back a whole reorder drop when one write fails" |
+| A captured row takes the uri as its id on the next read. As a result, an open editor loses it and shows "That task is no longer here." | `store/tasks.tsx:804-816`, `features/tasks/query.ts:59`, `TaskEditorScreen.tsx:97-123` | "keeps a captured row's id across a read" |
+| A tap or a drag on a row whose file create is still in flight does nothing, with no message. | `store/tasks.tsx:629-631`, `:702-704` | <!-- vale off -->"lands a tick on a row whose file is still being created"<!-- vale on --> |
 | When the note on disk no longer parses, the conflict retry writes it back unchanged and reports success. | `store/tasks.tsx:384-389`, `features/tasks/patch.ts:18-20` | "reports a tick that could not land on a broken note" |
 | The compensation removes the new row even when its delete failed, so a live note hides until the next read. | `store/tasks.tsx:529-532` | "keeps showing a successor whose delete failed" |
 
-Two cleanups ride along. The query client sets no `networkMode`, so a
-future NetInfo hookup would pause every vault write while offline
-(ADR 0003); set `networkMode: "always"` for queries and mutations in
-`store/query-client.ts:30-50`. The comment on `setBlockList` in
-`task-editor/save.ts:118-129` describes a bug that
-`vault/notes.ts:143-149` already fixed; drop the double call. Ticket
+Two cleanups ride along. The query client sets no `networkMode`.
+Without it, a future NetInfo hookup would pause every vault write while
+offline (ADR 0003). Set `networkMode: "always"` for queries and
+mutations in `store/query-client.ts:30-50`. The comment on
+`setBlockList` in `task-editor/save.ts:118-129` describes a bug that
+`vault/notes.ts:143-149` already fixed. Drop the double call. Ticket
 0048 renamed the config to `vitest.config.mts` and set
 `IS_REACT_ACT_ENVIRONMENT` for the component project. The store test
 prints no act warning today. Keep it that way.
@@ -212,7 +213,7 @@ first id.
 
 `reminder-sync.ts` runs `syncReminders` and `syncTaskReminders` on one
 promise chain, so two calls never interleave. `useReminderSync()`
-subscribes to the query cache and queues a full rebuild only on an
+subscribes to the query cache. It queues a full rebuild only on an
 `updated` event whose action is `success` and not `manual` for the
 tasks key. That is a read from disk. A `setQueryData` never triggers
 it. Delete the effect at `store/tasks.tsx:467-476`.
@@ -222,10 +223,10 @@ it. Delete the effect at `store/tasks.tsx:467-476`.
 `useVaultFailures()` reads `useMutationState` with the filter
 `mutationKey: ["vault"]`. It lists each mutation whose status is
 `error`, and each that succeeded with a `notice` in its result. Each
-entry has the label, the message, `dismiss()` (removes it from the
-mutation cache) and, for a failure, `retry()` (runs a
+entry has the label, the message, and `dismiss()`, which removes it
+from the mutation cache. A failure entry also has `retry()`. It runs a
 `MutationObserver` with the same options and variables, then removes
-the old entry). The query client's `MutationCache` `onSuccess`
+the old entry. The query client's `MutationCache` `onSuccess`
 removes a successful vault mutation with no notice, so the cache does
 not grow. A read error stays on the query. The banner on the Lists
 screen (`app/(tabs)/index.tsx:939-958`) renders the list.
@@ -241,8 +242,8 @@ Land this as three PRs into `epic/0047-rebuild`, in this order.
    "keeps a captured row's id across a read".
 2. **Writes become mutations.** `read-gate.ts`, `rows.ts`, the
    wrapper and the five hooks. The actions context stays for now, as a
-   thin layer that calls the hooks, so the screens do not change except
-   the reorder drop. Its `lastError` shows the newest failure. Delete
+   thin layer that calls the hooks. That way the screens do not change
+   except the reorder drop. Its `lastError` shows the newest failure. Delete
    `tasksRef` (`store/tasks.tsx:216-219`, `:316-320`), the queue,
    `writeSeq`, `readVault`'s loop, `queueWrite`, `queuePatch`,
    `applyTasks` and `patchOne`. Flip every other store repro test
@@ -271,10 +272,10 @@ Land this as three PRs into `epic/0047-rebuild`, in this order.
       tasks key.
 - [x] A test shows that a tap reads no notes: the vault read count
       stays at one.
-- [x] A test shows two quick taps on one note chain: the second builds
+- [x] A test shows two quick taps on one note chain. The second builds
       on the first, and the writes land in order.
-- [x] A test shows a failed write rolls back only its own row, and
-      leaves a later tap on the same row alone.
+- [x] A test shows a failed write rolls back only its own row. It also
+      shows the failed write leaves a later tap on the same row alone.
 - [x] A test shows a read that starts during a write waits for it.
 - [x] A test shows a read cancelled by a write runs again once the last
       write settles.
@@ -282,17 +283,17 @@ Land this as three PRs into `epic/0047-rebuild`, in this order.
       keeps its id after the file lands.
 - [x] A test shows a full alarm rebuild runs after a read from disk and
       after no cache write.
-- [x] A test shows a failure stays listed until it is dismissed or
-      retried.
+- [x] A test shows a failure stays listed until a dismiss or a
+      retry.
 - [x] A test shows a retry runs the same write again.
 - [x] The query client sets `networkMode: "always"` for queries and
       mutations.
 - [x] A run of the store tests prints no act warning.
 - [x] The Playwright suite (`npm run e2e`) passes after each of the
       three PRs.
-- [ ] On the phone: tick, untick, a recurring tick and untick, capture,
-      a drag to schedule, a reorder drop and an editor save all land in
-      Obsidian, and each reminder rings once.
+- [ ] On the phone, tick, untick, and a recurring tick and untick all
+      land in Obsidian. Capture, a drag to schedule, a reorder drop and
+      an editor save land there too. Each reminder rings once.
 
 ## Outcome
 
@@ -337,7 +338,7 @@ ADR 0037 has a 2026-11-03 amendment for the first five.
   reads the row from the cache to pick a tick's direction and to make
   the successor id.
 - A toggle whose note already holds the asked state writes nothing
-  and puts up no row. So a Retry on a tick that a later tap landed
+  and puts up no row. As a result, a Retry on a tick that a later tap landed
   makes no second next occurrence. A retry after a
   failed take-back keeps the next note the first try made, and makes
   no other. Store tests show both. A Playwright test covers only the
@@ -360,19 +361,19 @@ ADR 0037 has a 2026-11-03 amendment for the first five.
   tick and an untick changed the note. A test now checks the round
   trip.
 - `TaskRow` kept a wash and a shrunken circle on a row whose write
-  failed at once, because the press set the tick's start values before
-  the data flipped. The tick now starts from the data. A Playwright
-  frame trace in the browser shows a failed tick at rest, and a good
-  tick that starts on the frame its circle fills.
+  failed at once. The cause was that the press set the tick's start
+  values before the data flipped. The tick now starts from the data. A
+  Playwright frame trace in the browser shows a failed tick at rest. It
+  also shows a good tick that starts on the frame its circle fills.
 - `notifications.web.ts` makes each alarm call a no-op on the web, so
   `/dev` logs no error. The web bundle no longer loads
   expo-notifications, so its two load warnings went too. The layout no
   longer sets the notification handler twice.
 - The `selectSections` comment in `selectors.ts` sits on its function.
-- The three 0051 review notes: one scope for folder creation with a
-  test, the no-folder refresh test checks `readError` and the failure
-  list, and ADR 0039 has a 2026-11-03 amendment for the sample note
-  names.
+- The three 0051 review notes. Folder creation uses one scope, and a
+  test covers it. The no-folder refresh test checks `readError` and the
+  failure list. ADR 0039 has a 2026-11-03 amendment for the sample
+  note names.
 
 ### Left open
 

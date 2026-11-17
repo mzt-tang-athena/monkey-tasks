@@ -56,6 +56,23 @@ async function trackX(page: Page): Promise<number> {
   });
 }
 
+/**
+ * The live page's offset from its pager's box, in px. The track moves
+ * through page space now, so it stands at `-page * width` at rest. The
+ * live page carries its own share of that offset, and the sum is 0.
+ */
+async function liveOffset(
+  page: Page,
+  testID: string,
+): Promise<{ x: number; y: number }> {
+  const host = await page.getByTestId(testID).boundingBox();
+  const live = await page.getByTestId("pager-live").boundingBox();
+  if (host == null || live == null) {
+    throw new Error("the pager or its live page has no box");
+  }
+  return { x: Math.round(live.x - host.x), y: Math.round(live.y - host.y) };
+}
+
 /** The deepest scrolled element on the page. */
 function scrollTop(page: Page): Promise<number> {
   return page.evaluate(() =>
@@ -216,7 +233,7 @@ async function seedErrand(page: Page) {
   await putNote(
     page,
     "Tasks/Preview errand.md",
-    '---\nkind: "[[tasks]]"\ncreated: 2026-10-01T09:00\nlists:\n  - "[[Errands]]"\n---\n',
+    '---\nkind: "[[tasks]]"\ncreated: 2026-10-01T09:00\nlist: "[[Errands]]"\n---\n',
   );
   await returnToTab(page);
 }
@@ -228,7 +245,7 @@ async function seedFinance(page: Page) {
   await putNote(
     page,
     "Tasks/Finance page two.md",
-    '---\nkind: "[[tasks]]"\ncreated: 2026-10-01T09:00\nlists:\n  - "[[Finance]]"\n---\n',
+    '---\nkind: "[[tasks]]"\ncreated: 2026-10-01T09:00\nlist: "[[Finance]]"\n---\n',
   );
   await returnToTab(page);
   await listTab(page, finance).click();
@@ -284,7 +301,7 @@ function commonScenarios(input: "mouse" | "touch") {
       listTab(page, tabs.next),
       "the swipe turns the page, and the row's editor stays closed",
     ).toHaveAttribute("aria-selected", "true");
-    await expect(page).toHaveURL("/");
+    await expect(page.getByRole("dialog", { name: "Task" })).toHaveCount(0);
   });
 
   test("a short drag keeps its preview until the track rests", async ({ page }, testInfo) => {
@@ -386,12 +403,12 @@ function commonScenarios(input: "mouse" | "touch") {
     await frame(page, 60);
 
     const x = await trackX(page);
-    expect(Math.abs(x), "the track is between the pages").toBeGreaterThan(1);
-    expect(Math.abs(x)).toBeLessThan(width - 1);
+    expect(x, "the track is between the pages").toBeLessThan(-1);
+    expect(x).toBeGreaterThan(-width + 1);
     await page.clock.runFor(500);
-    // The commit moves the live page to the track's origin, so the
-    // track rests at 0 with the new page in place.
-    await expect.poll(() => trackX(page)).toBe(0);
+    // The track rests in page space; the live page sits at the host's
+    // origin, where its preview drew it.
+    await expect.poll(async () => (await liveOffset(page, "list-pager")).x).toBe(0);
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
     await page.clock.resume();
   });
@@ -408,11 +425,38 @@ function commonScenarios(input: "mouse" | "touch") {
     }
     await frame(page);
 
-    await expect.poll(() => trackX(page)).toBe(0);
+    await expect.poll(async () => (await liveOffset(page, "list-pager")).x).toBe(0);
     await expect(page.getByTestId("preview:1")).toHaveCount(0);
     await expect(page.getByTestId("preview:2")).toHaveCount(0);
     await expect(listTab(page, focus)).toHaveAttribute("aria-selected", "true");
     await page.clock.resume();
+  });
+
+  test("a swipe on the week body turns the week and the rail follows", async ({ page }) => {
+    await page.goto("/planner");
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
+    await expect(page.getByTestId("week-view:spread")).toBeVisible();
+    const rail = page.getByRole("tablist", { name: "weeks" });
+    await expect(
+      rail.getByRole("tab", { name: /week of Oct 25-31/ }),
+    ).toHaveAttribute("aria-selected", "true");
+
+    await turn(page, page.getByTestId("week-pager"));
+
+    await expect(
+      rail.getByRole("tab", { name: /week of Nov 1-7/ }),
+      "the rail moves to the landed week",
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      page.getByTestId("week-day:2026-11-02"),
+      "the landed week is the one on screen",
+    ).toBeVisible();
+    // The landing picks the same weekday; it does not open the day.
+    await expect(page, "Monday stays picked in the new week").toHaveURL(
+      /day=2026-11-02/,
+    );
+    await expect(page.getByTestId("day-heading")).toHaveCount(0);
+    await expect(page).toHaveURL(/mode=week/);
   });
 
   test("a swipe on a month cell opens no day", async ({ page }) => {
@@ -440,8 +484,8 @@ type Hold = (
  * The two screenshot pairs the day owes: a swipe onto a day with a
  * recurring task, and a swipe back onto today. The timeline is
  * scrolled to its middle first, so a kept live cell would land there.
- * The preview and the landed page must draw from the top, from the
- * same rows and the same `now`.
+ * The preview and the landed page must draw at the same scroll, from
+ * the same rows and the same `now`.
  */
 async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
   await page.goto("/planner");
@@ -455,6 +499,7 @@ async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
   await page.mouse.move(pager.x + pager.width / 2, pager.y + 120);
   await page.mouse.wheel(0, 300);
   await expect.poll(() => scrollTop(page)).toBeGreaterThan(0);
+  const kept = await pagerScrollTop(page, "day-pager");
   await pauseClock(page);
   let preview: Buffer | null = null;
   let previewX = Number.NaN;
@@ -481,8 +526,9 @@ async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
   await expect(page.getByTestId("day-heading")).toContainText(tomorrow.heading);
   await expect(row(page, tomorrow.task)).toBeVisible();
   await page.waitForTimeout(500);
-  // The landed day mounts at its top, as its preview drew it.
-  expect(await pagerScrollTop(page, "day-pager")).toBe(0);
+  // A day starts at its top the first time it shows, as its preview
+  // drew it.
+  expect(await pagerScrollTop(page, "day-pager"), "the new day starts at its top").toBe(0);
   await expectSamePicture(
     page,
     testInfo,
@@ -493,9 +539,10 @@ async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
   );
 
   // Swipe back onto today: the preview draws the overdue block and the
-  // now line from the same `now` as the live day.
+  // now line from the same `now` as the live day, at today's saved
+  // scroll. Tomorrow scrolls on its own and does not move today.
   await page.mouse.move(pager.x + pager.width / 2, pager.y + 120);
-  await page.mouse.wheel(0, 300);
+  await page.mouse.wheel(0, 80);
   await expect.poll(() => scrollTop(page)).toBeGreaterThan(0);
   await pauseClock(page);
   let back: Buffer | null = null;
@@ -523,7 +570,8 @@ async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
   await expect(page.getByTestId("day-heading")).toContainText("Monday 26");
   await expect(row(page, supplements)).toBeVisible();
   await page.waitForTimeout(500);
-  expect(await pagerScrollTop(page, "day-pager")).toBe(0);
+  // Today returns to the offset it had before the swipe.
+  expect(await pagerScrollTop(page, "day-pager"), "today keeps its scroll").toBe(kept);
   await expectSamePicture(
     page,
     testInfo,
@@ -535,7 +583,7 @@ async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
 }
 
 test.describe("with the mouse", () => {
-  test("the three pager hosts take a vertical pan", async ({ page }) => {
+  test("the four pager hosts take a vertical pan", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await expectTouchAction(page.getByTestId("list-pager"), "pan-y");
@@ -543,6 +591,10 @@ test.describe("with the mouse", () => {
     await page.goto("/planner");
     await expect(page.getByTestId("day-heading")).toBeVisible();
     await expectTouchAction(page.getByTestId("day-pager"), "pan-y");
+
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
+    await expect(page.getByTestId("week-view:spread")).toBeVisible();
+    await expectTouchAction(page.getByTestId("week-pager"), "pan-y");
 
     await page.getByRole("tab", { name: "Month", exact: true }).click();
     await expect(page.getByTestId("month-title")).toHaveText(months.current);
@@ -574,7 +626,7 @@ test.describe("with the mouse", () => {
     await expect.poll(() => trackX(page)).toBe(0);
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
     await press(page, row(page, undated.second).getByRole("button", { name: undated.second }));
-    await expect(page).toHaveURL(/\/task\//);
+    await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
   });
 
   test("the list preview matches the landed page", async ({ page }, testInfo) => {
@@ -631,6 +683,36 @@ test.describe("with the mouse", () => {
     );
   });
 
+  test("the still split grip sits where the live one does", async ({ page }, testInfo) => {
+    test.skip(!isMotion(testInfo), "reduce motion never mounts a preview");
+    await page.goto("/planner");
+    await expect(page.getByTestId("day-heading")).toBeVisible();
+    const pager = await pagerBox(page, "day-pager");
+
+    await pauseClock(page);
+    await mouseHold(
+      page,
+      page.getByTestId("day-pager"),
+      -Math.round(pager.width * holdShare),
+      async () => {
+        await frame(page);
+        await expect(page.getByTestId("preview:1")).toBeVisible();
+        const centre = async (root: string, bar: string) => {
+          const box = await page.getByTestId(root).boundingBox();
+          const mark = await page.getByTestId(bar).boundingBox();
+          if (box == null || mark == null) {
+            throw new Error(`${bar} has no box`);
+          }
+          return mark.x + mark.width / 2 - box.x;
+        };
+        const still = await centre("day-preview-split", "day-preview-split:bar");
+        const live = await centre("day-split", "day-split:bar");
+        expect(Math.abs(still - live), "the preview and the live grip share a centre").toBeLessThanOrEqual(1);
+      },
+    );
+    await page.clock.resume();
+  });
+
   test("the day preview matches the landed page", async ({ page }, testInfo) => {
     test.skip(!isMotion(testInfo), "reduce motion never mounts a preview");
     await dayScreenshots(page, testInfo, (target, dx, side, during) =>
@@ -650,7 +732,7 @@ test.describe("with the mouse", () => {
     });
     await frame(page, 32);
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
-    await expect.poll(() => trackX(page)).toBe(0);
+    await expect.poll(async () => (await liveOffset(page, "list-pager")).x).toBe(0);
     await page.clock.resume();
   });
 
@@ -662,7 +744,7 @@ test.describe("with the mouse", () => {
     await pauseClock(page);
     await listTab(page, tabs.next).click();
     await frame(page);
-    await expect.poll(() => trackX(page)).toBe(0);
+    await expect.poll(async () => (await liveOffset(page, "list-pager")).x).toBe(0);
     await page.clock.resume();
   });
 
@@ -704,7 +786,7 @@ test.describe("with the mouse", () => {
 test.describe("with a touch screen", () => {
   test.use({ hasTouch: true, isMobile: true });
 
-  test("the three pager hosts take a vertical pan", async ({ page }) => {
+  test("the four pager hosts take a vertical pan", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await expectTouchAction(page.getByTestId("list-pager"), "pan-y");
@@ -712,6 +794,10 @@ test.describe("with a touch screen", () => {
     await page.goto("/planner");
     await expect(page.getByTestId("day-heading")).toBeVisible();
     await expectTouchAction(page.getByTestId("day-pager"), "pan-y");
+
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
+    await expect(page.getByTestId("week-view:spread")).toBeVisible();
+    await expectTouchAction(page.getByTestId("week-pager"), "pan-y");
 
     await page.getByRole("tab", { name: "Month", exact: true }).click();
     await expect(page.getByTestId("month-title")).toHaveText(months.current);
@@ -816,9 +902,127 @@ test.describe("with a touch screen", () => {
     });
     await frame(page, 32);
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
-    await expect.poll(() => trackX(page)).toBe(0);
+    await expect.poll(async () => (await liveOffset(page, "list-pager")).x).toBe(0);
     await page.clock.resume();
   });
+});
+
+/** What one frame of a settle shows. */
+type FrameState = { preview: number; x: number; text: string | null; scroll: number };
+
+/** Steps 20 frames of the settle and reads each one. */
+async function settleFrames(
+  page: Page,
+  testID: string,
+  headingID: string,
+  previewID: string,
+): Promise<FrameState[]> {
+  const frames: FrameState[] = [];
+  for (let i = 0; i < 20; i++) {
+    await frame(page);
+    const [preview, offset, text, scroll] = await Promise.all([
+      page.getByTestId(previewID).count(),
+      liveOffset(page, testID),
+      page.getByTestId(headingID).textContent(),
+      pagerScrollTop(page, testID),
+    ]);
+    frames.push({ preview, x: offset.x, text, scroll });
+  }
+  return frames;
+}
+
+/**
+ * The commit swaps the content, the place and the scroll in one frame:
+ * from the first frame that shows `next`, the live page sits at the
+ * pager's origin, no preview covers it, the saved scroll stands, and
+ * the old page never comes back. No frame is blank: each one shows the
+ * neighbour or the live page in place.
+ */
+function expectOneFrameCommit(frames: FrameState[], next: string, scroll?: number) {
+  const commit = frames.findIndex((frame) => frame.text?.includes(next) ?? false);
+  expect(commit, `a frame shows ${next}`).toBeGreaterThanOrEqual(0);
+  for (const [index, frame] of frames.entries()) {
+    expect(
+      frame.preview > 0 || frame.x === 0,
+      `frame ${index} shows the neighbour or the live page in place`,
+    ).toBe(true);
+    if (index < commit) {
+      continue;
+    }
+    expect(frame.text, `frame ${index} shows the new page`).toContain(next);
+    expect(frame.x, `frame ${index} sits at the pager's origin`).toBe(0);
+    expect(frame.preview, `frame ${index} holds no preview`).toBe(0);
+    if (scroll !== undefined) {
+      expect(frame.scroll, `frame ${index} holds the page's scroll`).toBe(scroll);
+    }
+  }
+}
+
+test("a day swipe swaps the page, its place and its scroll in one frame", async ({ page }) => {
+  await page.goto("/planner");
+  await expect(page.getByTestId("day-heading")).toBeVisible();
+  const box = await pagerBox(page, "day-pager");
+  const atTop = { x: box.x + box.width / 2, y: box.y + 120 };
+
+  // Today to tomorrow, from a scrolled today.
+  await page.mouse.move(atTop.x, atTop.y);
+  await page.mouse.wheel(0, 300);
+  await expect.poll(() => pagerScrollTop(page, "day-pager")).toBeGreaterThan(0);
+  const kept = await pagerScrollTop(page, "day-pager");
+
+  await pauseClock(page);
+  await mouseHold(
+    page,
+    page.getByTestId("day-pager"),
+    -Math.round(box.width * holdShare),
+    async () => {
+      await frame(page);
+    },
+  );
+  const forward = await settleFrames(page, "day-pager", "day-heading", "preview:1");
+  await page.clock.resume();
+  expectOneFrameCommit(forward, tomorrow.heading, 0);
+
+  // Tomorrow to today. Today's saved scroll returns with the content.
+  await page.mouse.move(atTop.x, atTop.y);
+  await page.mouse.wheel(0, 80);
+  await expect.poll(() => pagerScrollTop(page, "day-pager")).toBeGreaterThan(0);
+
+  await pauseClock(page);
+  await mouseHold(
+    page,
+    page.getByTestId("day-pager"),
+    Math.round(box.width * holdShare),
+    async () => {
+      await frame(page);
+    },
+  );
+  const back = await settleFrames(page, "day-pager", "day-heading", "preview:0");
+  await page.clock.resume();
+  expectOneFrameCommit(back, "Monday 26", kept);
+  await expect(page.getByTestId("day-heading")).toContainText("Monday 26");
+});
+
+test("a month swipe swaps the page and its place in one frame", async ({ page }) => {
+  await page.goto("/planner");
+  await page.getByRole("tab", { name: "Month", exact: true }).click();
+  await expect(page.getByTestId("month-title")).toHaveText(months.current);
+  const box = await pagerBox(page, "month-pager");
+
+  await pauseClock(page);
+  await mouseHold(
+    page,
+    page.getByTestId("month-pager"),
+    -Math.round(box.width * holdShare),
+    async () => {
+      await frame(page);
+    },
+  );
+  const frames = await settleFrames(page, "month-pager", "month-title", "preview:1");
+  await page.clock.resume();
+
+  expectOneFrameCommit(frames, months.next);
+  await expect(page.getByTestId("month-title")).toHaveText(months.next);
 });
 
 test("a page lays out at the pager's origin, so Android can read it", async ({ page }) => {
@@ -838,4 +1042,12 @@ test("a page lays out at the pager's origin, so Android can read it", async ({ p
   await press(page, listTab(page, focus));
   await expect(listTab(page, focus)).toHaveAttribute("aria-selected", "true");
   expect(await layoutX()).toBe(0);
+  // The live page must not ride in the moving track. A transformed
+  // ancestor puts its layout box off screen, and Android then skips
+  // every child, so the rows go missing again (ticket 20261117).
+  expect(
+    await page
+      .getByTestId("pager-live")
+      .evaluate((element) => element.parentElement?.getAttribute("data-testid")),
+  ).not.toBe("pager-track");
 });

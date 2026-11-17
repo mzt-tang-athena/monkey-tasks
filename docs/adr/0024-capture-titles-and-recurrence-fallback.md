@@ -18,10 +18,10 @@ instead of moving forward.
 
 **Title the task with the date phrase, sentence case.** "tomorrow"
 becomes "Tomorrow". Only the first letter changes, so "next friday"
-becomes "Next friday" and a phrase that already starts with a digit is
-left alone. A line whose only match is a recurrence word keeps its own
-text, because chrono does not read it as a date and there is no date
-phrase to borrow.
+becomes "Next friday". A phrase that already starts with a digit stays
+unchanged. A line whose only match is a recurrence word keeps its own
+text. In that case chrono does not read it as a date, and no date
+phrase exists to borrow.
 
 **Anchor a recurrence on now when the due date is missing or
 unparseable.** The rule advances from today, so ticking never finishes a
@@ -31,12 +31,12 @@ recurring, and the task completes as before.
 ## Consequences
 
 A date-only capture produces a task that reads like a title and keeps
-its due date. The name is a guess about intent, so it is deliberately
+its due date. The name is a guess about intent, so we keep it deliberately
 plain: the phrase the user typed, capitalised.
 
 The recurrence fallback makes the tick path forgiving. A note with a
-broken due value still moves forward, which is better than a task that
-silently disappears from the list.
+broken due value still moves forward. That beats a task that silently
+disappears from the list.
 
 ## Alternatives
 

@@ -8,19 +8,40 @@ import type * as Native from "./notifications";
  */
 export const alarmsSupported = false;
 
+export type {
+  AlertResponse,
+  AlertResponseSubscription,
+  RingData,
+  RingNotification,
+} from "./notifications";
+
 export const ensureNotificationPermission: typeof Native.ensureNotificationPermission =
   async () => false;
 
-export const scheduleAt: typeof Native.scheduleAt = async () => {
+export const ensureChannels: typeof Native.ensureChannels = async () =>
+  undefined;
+
+export const scheduleRing: typeof Native.scheduleRing = async () => {
   throw new Error("alarms are not available on the web");
 };
 
-export const cancelAllScheduled: typeof Native.cancelAllScheduled = async () =>
+export const cancelScheduled: typeof Native.cancelScheduled = async () =>
   undefined;
 
-export const cancelScheduled: typeof Native.cancelScheduled = async () =>
+export const listScheduledDetailed: typeof Native.listScheduledDetailed =
+  async () => [];
+
+export const listDeliveredDetailed: typeof Native.listDeliveredDetailed =
+  async () => [];
+
+export const dismissDelivered: typeof Native.dismissDelivered = async () =>
   undefined;
 
 export const listScheduled: typeof Native.listScheduled = async () => [];
 
 export const exactAlarmState: typeof Native.exactAlarmState = async () => false;
+
+export const takeAlertResponse: typeof Native.takeAlertResponse = () => null;
+
+export const addAlertResponseListener: typeof Native.addAlertResponseListener =
+  () => ({ remove() {} });

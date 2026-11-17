@@ -22,7 +22,7 @@ symmetric, equal on both sides. Text flows use the same rule.
 Rows, cards, and panels get space from one place: their container.
 Removing a child never leaves a hole. Symmetric padding keeps text
 centered, which is what the row critiques kept asking for. An ESLint
-rule warns when a child declares a bottom or right margin; it becomes
+rule warns when a child declares a bottom or right margin. It becomes
 an error after the cleanup pass. Prettier only formats text, so it
 cannot enforce this; the rule lives in ESLint.
 
@@ -38,7 +38,7 @@ The rule covers every margin a child sets outside itself:
 well. After 0048 the wider selector matches 30 top, left and vertical
 sites in 10 files, and 2 horizontal bleeds. Phase 3 of 0047 rebuilds
 most of those files. Ticket 0054 widens the selector at `error` and
-clears these sites. We add no `warn` level in between, for the reason
+clears these sites. We add no interim `warn` level, for the reason
 above.
 
 A `FlatList` cannot put a gap between its header slot and its first
@@ -56,7 +56,8 @@ in one of three ways:
 
 - A `gap` on the container. Most sites took this.
 - A slot with symmetric padding, where a rule or a group of lines sat
-  between two blocks: the week column's rule, the skeleton lines.
+  between two blocks. The week column's rule and the skeleton lines
+  took this.
 - A frame with no gutter, for a scroller that runs to the screen's
   edges. The week and month frame drops its side padding, and each
   block in it takes the gutter itself. The period rail and the week

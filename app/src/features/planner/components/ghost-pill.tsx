@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
-import { colors, fonts, radiusFloating, spacing } from "@/theme/tokens";
+import { fonts, radiusFloating, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /**
  * The chip the drag surface carries under the finger in every planner
@@ -8,6 +9,7 @@ import { colors, fonts, radiusFloating, spacing } from "@/theme/tokens";
  * the look, with no animation of its own.
  */
 export function GhostPill({ task }: { task: TaskItem }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View pointerEvents="none" style={styles.chip}>
       <View style={styles.bar} />
@@ -18,28 +20,30 @@ export function GhostPill({ task }: { task: TaskItem }) {
   );
 }
 
-const styles = StyleSheet.create({
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    backgroundColor: colors.accent,
-    borderRadius: radiusFloating,
-    paddingHorizontal: spacing.m,
-    paddingVertical: spacing.s,
-  },
-  bar: {
-    width: 3,
-    borderRadius: 1.5,
-    backgroundColor: colors.onAccent,
-    minHeight: 20,
-  },
-  text: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.onAccent,
-    fontWeight: "600",
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    chip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+      backgroundColor: colors.accent,
+      borderRadius: radiusFloating,
+      paddingHorizontal: spacing.m,
+      paddingVertical: spacing.s,
+    },
+    bar: {
+      width: 3,
+      borderRadius: 1.5,
+      backgroundColor: colors.onAccent,
+      minHeight: 20,
+    },
+    text: {
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.onAccent,
+      fontWeight: "600",
+    },
+  }),
 });

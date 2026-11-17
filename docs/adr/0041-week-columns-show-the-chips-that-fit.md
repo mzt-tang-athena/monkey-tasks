@@ -5,9 +5,9 @@
 
 ## Context
 
-A week column had a minimum height and grew with its chips. The canvas
-around the columns has a fixed height (`weekCanvasHeight`), so a column
-with 8 tasks ran past it and the canvas cut it off. The cut showed no
+A week column had a height floor and grew with its chips. The canvas
+around the columns has a fixed height (`weekCanvasHeight`). A column
+with 8 tasks ran past it, and the canvas cut it off. The cut showed no
 sign that tasks were missing. Ticket 0056 (bug 2) asks for the chips
 that fit and a "+N more" line that opens the day.
 
@@ -35,3 +35,30 @@ name sits in a chip with room for two. The week looks more even, and it
 shows fewer tasks than before on a column with short names. If the
 fixed height proves too coarse, a later ticket can measure the chips.
 `weekChipCount` is the one place to change.
+
+## Amendment, 2026-11-14: the week fits one screen
+
+Week mode draws day boxes now, not scrolling columns. A box still shows
+the chips that fit, and the count still comes from arithmetic on one
+fixed chip height. Spread fits two chips and a "+N" line. Rows fits two
+chips and a "+N" count. `weekChipCount` stays the one place to change.
+
+The old text that gives 4 chips and 3 chips plus the line described a
+144pt column. That width no longer exists. ADR 20261114 decides the
+layout.
+
+## Amendment, 2026-11-16: two chips, then a count
+
+The fitted week settled the count. Both layouts draw two chips at
+most. A day with more tasks shows a "+N" count for the rest.
+
+The count is its own press. It opens the day and does not select it.
+In Spread it sits in the header's right corner. In Rows it sits at the
+end of the line. `weekChipCount` returns `Math.min(count, 2)`.
+
+The old text gives a "+N more" line under the chips in Spread. The
+shipped Spread puts the count in the header instead. The box then
+keeps one header line and two chip rows.
+
+Each layout keeps one chip height, 18pt in Spread and 24pt in Rows.
+The count no longer depends on that height, because it caps at two.

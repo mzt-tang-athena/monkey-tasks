@@ -1,7 +1,10 @@
 import { Alert, Platform } from "react-native";
+import { reportCrash } from "@/lib/crash-log";
 
 type ErrorUtilsLike = {
-  setGlobalHandler: (handler: (error: unknown) => void) => void;
+  setGlobalHandler: (
+    handler: (error: unknown, isFatal?: boolean) => void,
+  ) => void;
 };
 
 /**
@@ -9,8 +12,10 @@ type ErrorUtilsLike = {
  * A release build otherwise closes on the first exception and the
  * report is "it crashed", which is not enough to fix anything.
  *
- * The dialog names the error and the first frames of the stack. The app
- * keeps running, so the user can carry on after dismissing it.
+ * The dialog names the error and the first frames of the stack. The
+ * app keeps running, so the user can carry on after dismissing it.
+ * The same error goes to the crash log first, so the report survives
+ * the dialog.
  */
 export function installErrorAlert(): void {
   if (Platform.OS === "web") {
@@ -23,9 +28,10 @@ export function installErrorAlert(): void {
   if (utils == null) {
     return;
   }
-  utils.setGlobalHandler((error: unknown) => {
+  utils.setGlobalHandler((error: unknown, isFatal?: boolean) => {
     const message = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? (error.stack ?? "") : "";
+    reportCrash({ kind: "js", message, stack, fatal: isFatal });
     Alert.alert(
       "Something broke",
       `${message}\n\n${stack.split("\n").slice(0, 6).join("\n")}`,

@@ -12,12 +12,12 @@ depends: [0023]
 
 Two reports from the phone.
 
-**Drops wrote nothing.** A drag started and the ghost followed, but
+**Drops wrote nothing.** A drag started and the ghost followed. But
 releasing over a day, a month cell, or an hour wrote no note.
 
 Zone refs are inline arrows, so React re-invokes them with null on every
-render. `DropZoneMap.set(id, null)` deleted the measured rect, so the
-rects were wiped after the first move. `hit()` returned null,
+render. `DropZoneMap.set(id, null)` deleted the measured rect, so no
+rects remained after the first move. `hit()` returned null,
 `hoveredDay` and `hoverHour` went null, and both drop handlers skip the
 write when their hover is null.
 
@@ -29,23 +29,23 @@ Also in the drag path:
 
 - `updateTask` becomes a stable callback, so the day drag stops
   rebuilding its gesture object on every move
-- the screen root's pointer move and up handlers are attached on web
-  only; on native they can fire for a gesture-owned touch
+- the screen root attaches its pointer move and up handlers on web
+  only. On native they can fire for a gesture-owned touch
 - a move writes the hover ref synchronously with the state, so a drop
   never reads a value one commit behind
-- the hour clip is measured directly at pickup, so one stalled measure
+- pickup measures the hour clip directly, so one stalled measure
   cannot leave it null
 - rows key by a stable `id`, not the uri, so the provisional row does
   not remount when its file lands
 
 **Capture felt slow and the keyboard and sheet left at different
-speeds.** The sheet waited for the file write before closing, three
+speeds.** The sheet waited for the file write before closing. Three
 separate mechanisms drove the exit, and the input stayed focused until
 it unmounted.
 
 Fix: close first, write behind. The tap blurs the input and closes the
-sheet in the same frame; the store inserts the row before the write;
-the sheet and keyboard share one clock; a failure shows a toast with
+sheet in the same frame. The store inserts the row before the write.
+The sheet and keyboard share one clock. A failure shows a toast with
 Retry and never reopens the sheet.
 
 ## Acceptance
@@ -61,7 +61,7 @@ Retry and never reopens the sheet.
 ## Outcome
 
 The drop path from 0023 covers the write and the highlight. Capture
-closes in the tap's frame: the sheet rides `useKeyboardAnimation`'s
+closes in the tap's frame. The sheet rides `useKeyboardAnimation`'s
 continuous height, unmounts from the animation callback, and parses
 after the close. A failed write shows a toast with Retry (ADR 0021).
 

@@ -12,7 +12,12 @@ function task(name: string, data: Partial<TaskFrontmatter> = {}): TaskItem {
     name,
     text: "",
     body: "",
-    data: { kind: "[[tasks]]", created: "2026-10-01", ...data },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-01",
+      "alert weight": "harsh",
+      ...data,
+    },
   };
 }
 
@@ -90,7 +95,7 @@ describe("tasksOnDay", () => {
 describe("dayRows", () => {
   const overdue = task("Late", { due: "2026-10-24" });
   const dueToday = task("Due today", { due: "2026-10-26T10:00" });
-  const focus = task("On focus", { lists: ["[[Focus]]"] });
+  const focus = task("On focus", { list: "[[Focus]]" });
   const all = [overdue, dueToday, focus];
   const base = { tasks: all, day: today, today, source: "due-period" } as const;
 

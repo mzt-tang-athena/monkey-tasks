@@ -8,6 +8,7 @@ import {
   pointOn,
   press,
   scrollTopOf,
+  swipe,
   touchFlick,
   type Input,
 } from "../gestures";
@@ -79,6 +80,50 @@ async function expectGhostOnPointer(page: Page, point: { x: number; y: number },
       ),
     )
     .toBeLessThanOrEqual(4);
+}
+
+/** Saturday 31 October 2026: the last day of the sample week, and the
+    one a sideways scroll used to hide. */
+const saturday = "2026-10-31";
+
+/** The dentist task on Tuesday 27, at 2:30 PM. */
+const dentist = {
+  name: "Dentist appointment",
+  path: "Tasks/Dentist appointment.md",
+} as const;
+
+async function openWeek(page: Page, layout: "spread" | "rows") {
+  await page.addInitScript((value) => {
+    globalThis.localStorage.setItem("monkey-tasks.week-view", value);
+  }, layout);
+  await page.goto("/planner");
+  await expect(page.getByTestId("day-heading")).toBeVisible();
+  await page.getByRole("tab", { name: "Week", exact: true }).click();
+  await expect(page.getByTestId(`week-view:${layout}`)).toBeVisible();
+}
+
+/** The day's drop ring shows, and it sits inside the day's own box. */
+async function expectRingInsideDay(page: Page, iso: string) {
+  await expect
+    .poll(
+      () =>
+        page.getByTestId(`week-ring:${iso}`).evaluate((element) => {
+          const ring = element.getBoundingClientRect();
+          const day = element.parentElement?.getBoundingClientRect();
+          if (day == null) {
+            return "no day box";
+          }
+          const shown = Number(getComputedStyle(element).opacity) > 0.9;
+          const inside =
+            ring.left >= day.left &&
+            ring.top >= day.top &&
+            ring.right <= day.right &&
+            ring.bottom <= day.bottom;
+          return shown && inside ? "inside" : `shown ${shown} inside ${inside}`;
+        }),
+      { message: "the ring shows inside the day box" },
+    )
+    .toBe("inside");
 }
 
 async function hoverOpacity(page: Page, testID: string): Promise<number> {
@@ -218,7 +263,9 @@ for (const input of inputs) {
         .getByRole("checkbox")
         .click();
 
-      await expect.poll(() => noteText(page, overdueNote)).toContain("completed: 2026-10-26");
+      await expect
+        .poll(() => noteText(page, overdueNote))
+        .toContain("completed: 2026-10-26T");
     });
 
     test("a drop back on its own row opens no editor", async ({ page }) => {
@@ -297,15 +344,20 @@ for (const input of inputs) {
       );
     });
 
-    test("the grabber follows the finger and stops at its limit", async ({ page }) => {
+    test("the grabber follows the finger and stops at its floor", async ({ page }) => {
       await openPlanner(page);
       const split = page.getByTestId("day-split");
       const top = page.getByTestId("day-split:top");
+      const bottom = page.getByTestId("day-split:bottom");
       const grip = page.getByTestId("day-split:grip");
       const splitBox = await split.boundingBox();
       if (splitBox == null) {
         throw new Error("the split has no box");
       }
+      // motion.split.minPane. One row, so a pane still reads.
+      const floor = 44;
+      const divider = 28;
+      const usable = splitBox.height - divider;
       const start = (await top.boundingBox())?.height ?? 0;
       const point = await pointOn(page, grip);
 
@@ -314,17 +366,84 @@ for (const input of inputs) {
       await expect.poll(async () => ((await top.boundingBox())?.height ?? 0) - start).toBeGreaterThan(100);
 
       await pointer.moveTo({ x: point.x, y: point.y + 1200 });
-      const limit = splitBox.height - 28 - 150;
+      const bottomLimit = usable - floor;
       await expect
-        .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - limit))
+        .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - bottomLimit))
         .toBeLessThanOrEqual(2);
       await pointer.up();
 
       await page.waitForTimeout(300);
-      expect(Math.abs(((await top.boundingBox())?.height ?? 0) - limit)).toBeLessThanOrEqual(2);
+      expect(Math.abs(((await top.boundingBox())?.height ?? 0) - bottomLimit)).toBeLessThanOrEqual(2);
+      expect(Math.abs(((await bottom.boundingBox())?.height ?? 0) - floor)).toBeLessThanOrEqual(2);
+      const lowGrip = await grip.boundingBox();
+      if (lowGrip == null) {
+        throw new Error("the grip has no box");
+      }
+      expect(lowGrip.height).toBe(44);
+      expect(lowGrip.y + lowGrip.height).toBeLessThanOrEqual(
+        splitBox.y + splitBox.height,
+      );
+
+      const up = await press(page, input, grip, { holdMs: 0 });
+      await up.moveTo({ x: point.x, y: splitBox.y - 200 });
+      await expect
+        .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - floor))
+        .toBeLessThanOrEqual(2);
+      await up.up();
+
+      await page.waitForTimeout(300);
+      expect(Math.abs(((await top.boundingBox())?.height ?? 0) - floor)).toBeLessThanOrEqual(2);
+      const highGrip = await grip.boundingBox();
+      if (highGrip == null) {
+        throw new Error("the grip has no box");
+      }
+      expect(highGrip.height).toBe(44);
+      expect(highGrip.y).toBeGreaterThanOrEqual(splitBox.y);
+
+      // The keyboard takes the same range, one row at a time.
+      await grip.focus();
+      for (let i = 0; i < 40; i++) {
+        await page.keyboard.press("ArrowUp");
+      }
+      await expect
+        .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - bottomLimit))
+        .toBeLessThanOrEqual(2);
+      for (let i = 0; i < 60; i++) {
+        await page.keyboard.press("ArrowDown");
+      }
+      await expect
+        .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - floor))
+        .toBeLessThanOrEqual(2);
     });
   });
 }
+
+test("a shorter screen keeps both panes above their floor", async ({ page }) => {
+  await openPlanner(page);
+  const top = page.getByTestId("day-split:top");
+  const bottom = page.getByTestId("day-split:bottom");
+  const grip = page.getByTestId("day-split:grip");
+  // motion.split.minPane: one row.
+  const floor = 44;
+  const box = (await grip.boundingBox())!;
+
+  const pointer = await press(page, "mouse", grip, { holdMs: 0 });
+  await pointer.moveTo({ x: box.x + box.width / 2, y: 0 });
+  await pointer.up();
+  await expect
+    .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - floor))
+    .toBeLessThanOrEqual(2);
+  expect(Number(await grip.getAttribute("aria-valuenow"))).toBeLessThan(10);
+
+  await page.setViewportSize({ width: 360, height: 640 });
+  await expect
+    .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - floor))
+    .toBeLessThanOrEqual(2);
+  expect(((await bottom.boundingBox())?.height ?? 0)).toBeGreaterThan(floor);
+  await expect
+    .poll(async () => Number(await grip.getAttribute("aria-valuenow")))
+    .toBeGreaterThan(10);
+});
 
 test("a touch that moves before its hold scrolls the pane and lifts nothing", async ({ page }) => {
   await openPlanner(page);
@@ -418,3 +537,65 @@ test("a touch drag that ends in touchCancel writes nothing", async ({ page }) =>
   await expect(page.getByTestId("drag-ghost")).toHaveCount(0);
   expect(await noteText(page, overdueNote)).toBe(before);
 });
+
+test.describe("a drop on Saturday", () => {
+  for (const layout of ["spread", "rows"] as const) {
+    test(`a pool row dropped on Saturday in ${layout} takes that day, and the ring sits inside the box`, async ({
+      page,
+    }) => {
+      await openWeek(page, layout);
+      const source = page.getByTestId(`task-source:${undated.second}`);
+      await source.scrollIntoViewIfNeeded();
+      const box = page.getByTestId(`week-day:${saturday}`);
+
+      const pointer = await press(page, "mouse", source, { holdMs: 400 });
+      await pointer.moveTo(await pointOn(page, box));
+      await expectRingInsideDay(page, saturday);
+      await pointer.up();
+
+      await expect
+        .poll(() => noteText(page, "Tasks/Call Mum.md"))
+        .toContain(`due: ${saturday}`);
+      await expect(box.getByText(undated.second)).toBeVisible();
+    });
+  }
+
+  test("a touch drag drops on Saturday too", async ({ page }) => {
+    await openWeek(page, "spread");
+    const source = page.getByTestId(`task-source:${undated.second}`);
+    await source.scrollIntoViewIfNeeded();
+    const box = page.getByTestId(`week-day:${saturday}`);
+
+    const pointer = await press(page, "touch", source, { holdMs: 400 });
+    await pointer.moveTo(await pointOn(page, box));
+    await expectRingInsideDay(page, saturday);
+    await pointer.up();
+
+    await expect
+      .poll(() => noteText(page, "Tasks/Call Mum.md"))
+      .toContain(`due: ${saturday}`);
+  });
+});
+
+test("a chip dragged across the week moves the task and turns no page", async ({ page }) => {
+  await openWeek(page, "spread");
+  const chip = page.getByTestId(`week-task:${dentist.name}`);
+
+  await dragWith(page, "mouse", chip, page.getByTestId("week-day:2026-10-29"));
+
+  await expect
+    .poll(() => noteText(page, dentist.path))
+    .toContain("due: 2026-10-29T14:30");
+  await expect(page.getByTestId("week-day:2026-11-02")).toHaveCount(0);
+  await expect(page.getByTestId(`week-task:${dentist.name}`)).toBeVisible();
+});
+
+  test("a swipe on a chip turns the week and writes nothing", async ({ page }) => {
+    await openWeek(page, "spread");
+    const before = await noteText(page, dentist.path);
+
+    await swipe(page, page.getByTestId(`week-task:${dentist.name}`), "left");
+
+    await expect(page.getByTestId("week-day:2026-11-02")).toBeVisible();
+    expect(await noteText(page, dentist.path)).toBe(before);
+  });

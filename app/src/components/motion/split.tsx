@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/refs -- the worklet reads the animated
    ref when the gesture runs, not during render. */
 import * as React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import Animated, {
   measure,
@@ -9,9 +9,12 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
-import { colors, touchTarget } from "@/theme/tokens";
+import { radius, touchTarget, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
+import { clampFraction, clampTop } from "@/lib/motion/split-math";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
+import { useArrowKeys } from "./internal/keys";
 import { usePressCancel } from "./internal/press-cancel";
 
 const dividerHeight = 28;
@@ -32,7 +35,9 @@ export type SplitProps = {
  * `flexGrow` from the fraction, so the first frame needs no layout
  * report and no px default. A grabber drag moves the split on the UI
  * thread, clamped to `minTop` and `minBottom` against the height it
- * measured at pickup, and one `onResize` reports the release.
+ * measured at pickup, and one `onResize` reports the release. A new
+ * height re-clamps the stored share, so a valid split stays valid when
+ * the screen shrinks.
  */
 export function Split({
   fraction,
@@ -43,6 +48,7 @@ export function Split({
   bottom,
   testID,
 }: SplitProps) {
+  const { styles, colors } = useThemedStyles(makeStyles);
   const self = useAnimatedRef<View>();
   const grow = useSharedValue(fraction);
   const box = useSharedValue(0);
@@ -53,55 +59,53 @@ export function Split({
   const pressCancel = usePressCancel();
   const gripRef = React.useRef<React.ComponentRef<typeof Animated.View>>(null);
   const height = React.useRef(0);
+  // A key press can land before the root's first layout report, when
+  // its height is still unknown. The step waits in this slot and runs
+  // on that report, so the press is not lost.
+  const pendingStep = React.useRef<1 | -1 | null>(null);
 
   // One hour row of the timeline is one touch target tall. Keyboard
   // arrows and TalkBack's increment and decrement move the split by
   // that row, so the grabber has a non-drag path.
-  const step = React.useCallback(
+  const applyStep = React.useCallback(
     (direction: 1 | -1) => {
       const usable = height.current - dividerHeight;
       if (usable <= 0) {
         return;
       }
-      const limit = Math.max(usable - minBottom, minTop);
-      const top = Math.min(
-        Math.max(fraction * usable + direction * touchTarget, minTop),
-        limit,
+      const top = clampTop(
+        fraction * usable + direction * touchTarget,
+        usable,
+        minTop,
+        minBottom,
       );
       onResize(top / usable);
     },
     [fraction, minTop, minBottom, onResize],
   );
 
-  React.useEffect(() => {
-    if (Platform.OS !== "web") {
-      return;
-    }
-    // The listener sits on the document. The grip's ref is not always
-    // attached when this effect runs, so the handler checks the focus
-    // at key time instead.
-    const onKeyDown = (event: KeyboardEvent) => {
-      const node = gripRef.current as unknown as HTMLElement | null;
-      if (node == null || document.activeElement !== node) {
+  const step = React.useCallback(
+    (direction: 1 | -1) => {
+      if (height.current - dividerHeight <= 0) {
+        pendingStep.current = direction;
         return;
       }
-      if (event.key === "ArrowUp" || event.key === "ArrowRight") {
-        event.preventDefault();
-        step(1);
-      } else if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
-        event.preventDefault();
-        step(-1);
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [step]);
+      applyStep(direction);
+    },
+    [applyStep],
+  );
+
+  useArrowKeys(gripRef, step);
 
   // A new fraction from the screen, before paint: the panes never show
-  // a frame between the release and the state that carries it.
+  // a frame between the release and the state that carries it. A share
+  // the current height no longer allows lands on its floor instead.
   React.useLayoutEffect(() => {
-    grow.set(fraction);
-  }, [fraction, grow]);
+    const usable = height.current - dividerHeight;
+    grow.set(
+      usable > 0 ? clampFraction(fraction, usable, minTop, minBottom) : fraction,
+    );
+  }, [fraction, grow, minTop, minBottom]);
 
   const gesture = usePanGesture(
     withTouchAction("none", {
@@ -128,11 +132,7 @@ export function Split({
           return;
         }
         const raw = startTop.value + (e.absoluteY - startY.value);
-        const clamped = Math.min(
-          Math.max(raw, minTop),
-          Math.max(usable - minBottom, minTop),
-        );
-        grow.set(clamped / usable);
+        grow.set(clampTop(raw, usable, minTop, minBottom) / usable);
       },
       onFinalize: () => {
         "worklet";
@@ -157,6 +157,21 @@ export function Split({
       style={styles.root}
       onLayout={(event) => {
         height.current = event.nativeEvent.layout.height;
+        if (pendingStep.current != null) {
+          const direction = pendingStep.current;
+          pendingStep.current = null;
+          applyStep(direction);
+          return;
+        }
+        const usable = height.current - dividerHeight;
+        if (usable <= 0) {
+          return;
+        }
+        const next = clampFraction(fraction, usable, minTop, minBottom);
+        if (Math.abs(next - fraction) * usable > 0.5) {
+          grow.set(next);
+          onResize(next);
+        }
       }}
     >
       <Animated.View
@@ -199,7 +214,10 @@ export function Split({
                 onHoverOut: () => setHot(false),
               } as object)}
             >
-            <Animated.View style={[styles.bar, barStyle]} />
+            <Animated.View
+              testID={testID == null ? undefined : `${testID}:bar`}
+              style={[styles.bar, barStyle]}
+            />
             </Animated.View>
           </GestureDetector>
         </View>
@@ -216,6 +234,7 @@ export function Split({
 
 /** The same split held still: a preview of a day the swipe reveals. */
 export function SplitStill(props: Omit<SplitProps, "onResize">) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View testID={props.testID} style={styles.root}>
       <View
@@ -226,8 +245,13 @@ export function SplitStill(props: Omit<SplitProps, "onResize">) {
       </View>
       <View style={styles.divider}>
         <View style={styles.line} />
-        <View style={styles.grip}>
-          <View style={[styles.bar, styles.barRest]} />
+        <View style={styles.gripSlot}>
+          <View style={styles.grip}>
+            <View
+              testID={props.testID == null ? undefined : `${props.testID}:bar`}
+              style={[styles.bar, styles.barRest]}
+            />
+          </View>
         </View>
       </View>
       <View
@@ -240,58 +264,60 @@ export function SplitStill(props: Omit<SplitProps, "onResize">) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    overflow: "hidden",
-  },
-  pane: {
-    flexBasis: 0,
-    overflow: "hidden",
-  },
-  divider: {
-    height: dividerHeight,
-    justifyContent: "center",
-  },
-  line: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 13,
-    borderTopWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: colors.hairline,
-  },
-  lineHot: {
-    borderTopColor: colors.accent,
-  },
-  // The divider keeps its 28pt height; the grabber's box is 44 tall,
-  // centered on it, so small fingers still reach it.
-  gripSlot: {
-    alignSelf: "center",
-    width: 72,
-    height: dividerHeight,
-    position: "relative",
-  },
-  grip: {
-    position: "absolute",
-    top: (dividerHeight - touchTarget) / 2,
-    left: 0,
-    width: 72,
-    height: touchTarget,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 6,
-  },
-  gripHot: {
-    backgroundColor: colors.pressed,
-  },
-  bar: {
-    width: 44,
-    height: 6,
-    borderRadius: 3,
-  },
-  barRest: {
-    backgroundColor: colors.inkFaint,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    root: {
+      flex: 1,
+      overflow: "hidden",
+    },
+    pane: {
+      flexBasis: 0,
+      overflow: "hidden",
+    },
+    divider: {
+      height: dividerHeight,
+      justifyContent: "center",
+    },
+    line: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 13,
+      borderTopWidth: 1.5,
+      borderStyle: "dashed",
+      borderColor: colors.hairline,
+    },
+    lineHot: {
+      borderTopColor: colors.accent,
+    },
+    // The divider keeps its 28pt height; the grabber's box is 44 tall,
+    // centered on it, so small fingers still reach it.
+    gripSlot: {
+      alignSelf: "center",
+      width: 72,
+      height: dividerHeight,
+      position: "relative",
+    },
+    grip: {
+      position: "absolute",
+      top: (dividerHeight - touchTarget) / 2,
+      left: 0,
+      width: 72,
+      height: touchTarget,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: radius,
+    },
+    gripHot: {
+      backgroundColor: colors.pressed,
+    },
+    bar: {
+      width: 44,
+      height: 6,
+      borderRadius: 3,
+    },
+    barRest: {
+      backgroundColor: colors.inkFaint,
+    },
+  }),
 });

@@ -11,7 +11,11 @@ function task(text: string): TaskItem {
     name: "Call",
     text,
     body: "",
-    data: { kind: "[[tasks]]", created: "2026-10-20" },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+    },
   };
 }
 
@@ -64,8 +68,7 @@ kind: "[[tasks]]"
 created: 2026-10-23
 due: 2026-10-23T07:00
 recurrence: FREQ=WEEKLY
-lists:
-  - [[Main]]
+list: "[[Main]]"
 reminders:
   - 2026-10-23T07:00
 ---

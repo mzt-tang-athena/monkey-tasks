@@ -22,6 +22,31 @@ export function listTab(page: Page, name: string): Locator {
   return page.getByRole("tab", { name, exact: true });
 }
 
+/** The Completed group's disclosure, by the name its count gives it. */
+export function completedToggle(page: Page): Locator {
+  return page.getByRole("button", { name: /^Completed \d+ tasks?$/ });
+}
+
+/** Show the Completed rows when they are folded. */
+export async function openCompleted(page: Page) {
+  const toggle = completedToggle(page);
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-expanded")) === "false") {
+    await press(page, toggle);
+  }
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+}
+
+/** Fold the Completed rows again. */
+export async function closeCompleted(page: Page) {
+  const toggle = completedToggle(page);
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-expanded")) === "true") {
+    await press(page, toggle);
+  }
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+}
+
 /** The top edge of an element, in page order. */
 async function topOf(target: Locator): Promise<number> {
   const box = await target.boundingBox();
@@ -80,4 +105,21 @@ export async function expectBefore(first: Locator, second: Locator) {
  */
 export async function press(page: Page, target: Locator) {
   await target.click();
+}
+
+/**
+ * Press Tab until the control holds focus. A browser holds focus on one
+ * control, so a keyboard walk is the only way to see a real focus ring,
+ * and it keeps the input modality the browser reports.
+ */
+export async function tabTo(page: Page, target: Locator, limit = 40) {
+  for (let step = 0; step < limit; step++) {
+    await page.keyboard.press("Tab");
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
+      return;
+    }
+  }
+  throw new Error("the tab walk never reached the control");
 }

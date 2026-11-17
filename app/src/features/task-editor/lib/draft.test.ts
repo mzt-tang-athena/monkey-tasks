@@ -6,9 +6,6 @@ import {
   findTask,
   frontmatterEntries,
   isTaskNote,
-  listName,
-  parseLists,
-  parseReminders,
 } from "./draft";
 
 function item(overrides: Partial<TaskItem> = {}): TaskItem {
@@ -18,47 +15,15 @@ function item(overrides: Partial<TaskItem> = {}): TaskItem {
     fileName: "Call.md",
     name: "Call",
     text: "",
-    data: { kind: "[[tasks]]", created: "2026-10-20" },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+    },
     body: "\nOld body.\n",
     ...overrides,
   };
 }
-
-describe("listName", () => {
-  it("strips the wikilink brackets", () => {
-    expect(listName("[[Focus]]")).toBe("Focus");
-  });
-
-  it("passes a bare value through, trimmed", () => {
-    expect(listName("  Errands ")).toBe("Errands");
-  });
-
-  it("keeps a value with one bracket pair half open", () => {
-    expect(listName("[[Focus")).toBe("[[Focus");
-  });
-});
-
-describe("parseLists", () => {
-  it("reads one list per line and drops blank lines", () => {
-    expect(parseLists("Focus\n\n[[Errands]]\r\n  \nHome")).toEqual([
-      "Focus",
-      "Errands",
-      "Home",
-    ]);
-  });
-
-  it("returns nothing for empty text", () => {
-    expect(parseLists("")).toEqual([]);
-  });
-});
-
-describe("parseReminders", () => {
-  it("trims each line and drops blank ones", () => {
-    expect(
-      parseReminders(" 2026-10-21T09:00 \n\n2026-10-21T18:30\r\n"),
-    ).toEqual(["2026-10-21T09:00", "2026-10-21T18:30"]);
-  });
-});
 
 describe("decode", () => {
   it("decodes a percent escape", () => {
@@ -115,10 +80,11 @@ describe("draftOf", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
+        "alert weight": "harsh",
         title: "Call Mum: Sunday",
         due: "2026-10-26",
         recurrence: "FREQ=WEEKLY",
-        lists: ["[[Focus]]", "Errands"],
+        list: "[[Focus]]",
         reminders: ["2026-10-26T09:00"],
       },
     });
@@ -127,8 +93,9 @@ describe("draftOf", () => {
       name: "Call Mum: Sunday",
       due: "2026-10-26",
       recurrence: "FREQ=WEEKLY",
-      lists: ["Focus", "Errands"],
+      list: "Focus",
       reminders: ["2026-10-26T09:00"],
+      alertWeight: "harsh",
       body: "\nOld body.\n",
     });
   });
@@ -138,10 +105,32 @@ describe("draftOf", () => {
       name: "Call",
       due: null,
       recurrence: null,
-      lists: [],
+      list: null,
       reminders: [],
+      alertWeight: "harsh",
       body: "\nOld body.\n",
     });
+  });
+
+  it("reads a note with no weight as Harsh", () => {
+    const task = item({
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+      } as unknown as TaskItem["data"],
+    });
+    expect(draftOf(task).alertWeight).toBe("harsh");
+  });
+
+  it("reads a quiet note as Quiet", () => {
+    const task = item({
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "quiet",
+      },
+    });
+    expect(draftOf(task).alertWeight).toBe("quiet");
   });
 });
 

@@ -527,3 +527,38 @@ export async function touchHold(
   await send("touchEnd");
   await cdp.detach();
 }
+
+/**
+ * The vertical drags the sheet scenarios send, in px. The sheet closes
+ * past the 80 px commit (`motion.swipe` in `src/lib/motion/tokens.ts`).
+ */
+export const sheetPx = {
+  /** Past the commit, so the sheet closes. */
+  close: 200,
+  /** Under the commit and slow, so the sheet springs back. */
+  short: 40,
+} as const;
+
+/**
+ * A steady downward pull of `dy` px that starts on `target`, with the
+ * chosen input. A touch pull needs a context with `hasTouch`.
+ *
+ * No helper sends a flick. Chrome sends one pointer move per frame,
+ * 20 to 50 ms apart on a busy runner, so gesture handler's web velocity
+ * lands near the 500 px/s flick line and the verdict flips by load.
+ */
+export async function pullDown(page: Page, input: Input, target: Locator, dy: number) {
+  const start = await dragStart(target, "center");
+  if (input === "touch") {
+    await touchPath(page, start, { x: start.x, y: start.y + dy }, "touchEnd");
+    return;
+  }
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  for (let i = 1; i <= swipeSteps; i++) {
+    await page.mouse.move(start.x, start.y + (dy * i) / swipeSteps);
+    // One frame between moves, as a hand sends them.
+    await page.waitForTimeout(16);
+  }
+  await page.mouse.up();
+}

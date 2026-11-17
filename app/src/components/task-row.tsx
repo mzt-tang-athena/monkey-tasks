@@ -5,12 +5,14 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import type { TaskItem } from "@/types/task";
+import { useTickBurst } from "@/components/motion/celebration";
 import { useProgress } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { colors } from "@/theme/tokens";
+import { spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { Pressable } from "./ui/pressable";
-import { faceStyles, TaskRowFace, taskRowLabel } from "./task-row-face";
+import { TaskRowFace, taskRowLabel, useTaskRowFace } from "./task-row-face";
 
 /**
  * The live task row: `TaskRowFace` with the toggle, the open press,
@@ -18,6 +20,11 @@ import { faceStyles, TaskRowFace, taskRowLabel } from "./task-row-face";
  * drives. Its completion ends the row's hold (ADR 0034), so no timer
  * runs beside the animation. A row already done at mount plays
  * nothing.
+ *
+ * A press on the open circle also asks for a burst at the circle's
+ * place (ADR 20261116-completion-celebration). The press decides, not
+ * the data: an undo, a sync or a reload never presses, so it never
+ * celebrates.
  */
 function TaskRowBase({
   task,
@@ -42,11 +49,14 @@ function TaskRowBase({
       copy carries no test id, so the id finds the live row only. */
   copy?: boolean;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
+  const { faceStyles } = useTaskRowFace();
   const [hot, setHot] = React.useState(false);
   // The store is optimistic: a tap flips this row's data in the same
   // frame. The row reads that data and nothing else, so a fast tick,
   // untick, tick sequence has one source of truth.
   const done = task.data != null && taskIsDone(task.data);
+  const { ref: tickRef, play: celebrate } = useTickBurst(done);
 
   // `active` marks a tick that started after mount. It keeps an untick
   // from playing the tick backwards, and keeps a row that mounts done
@@ -99,6 +109,7 @@ function TaskRowBase({
   }));
 
   const press = () => {
+    celebrate();
     onToggle?.(task);
   };
 
@@ -107,7 +118,7 @@ function TaskRowBase({
   // beneath without moving it (Google Tasks' rule).
   const toggle = (
     <Animated.View style={pop}>
-      <View style={styles.tickSlot}>
+      <View ref={tickRef} style={styles.tickSlot}>
         <Pressable
         style={({ pressed }) => [
           styles.tickBox,
@@ -186,54 +197,56 @@ function TaskRowBase({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  body: {
-    flex: 1,
-  },
-  wash: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: colors.accentSoft,
-  },
-  // The circle's 24pt slot in the row, and the 44pt press box that
-  // centers on it without widening the row.
-  tickSlot: {
-    width: 24,
-    height: 24,
-    position: "relative",
-  },
-  tickBox: {
-    position: "absolute",
-    left: -10,
-    top: -10,
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tickBoxPressed: {
-    opacity: 0.7,
-  },
-  circleHot: {
-    backgroundColor: colors.pressed,
-  },
-  // The row's vertical padding moves here, so the press box is 44 tall
-  // for a one-line name and the row keeps its height.
-  bodyTarget: {
-    minHeight: 44,
-    paddingVertical: 12,
-    justifyContent: "center",
-  },
-  bodyPressed: {
-    opacity: 0.6,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    body: {
+      flex: 1,
+    },
+    wash: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      backgroundColor: colors.accentSoft,
+    },
+    // The circle's 24pt slot in the row, and the 44pt press box that
+    // centers on it without widening the row.
+    tickSlot: {
+      width: 24,
+      height: 24,
+      position: "relative",
+    },
+    tickBox: {
+      position: "absolute",
+      left: -10,
+      top: -10,
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    tickBoxPressed: {
+      opacity: 0.7,
+    },
+    circleHot: {
+      backgroundColor: colors.pressed,
+    },
+    // The row's vertical padding moves here, so the press box is 44 tall
+    // for a one-line name and the row keeps its height.
+    bodyTarget: {
+      minHeight: 44,
+      paddingVertical: spacing.m,
+      justifyContent: "center",
+    },
+    bodyPressed: {
+      opacity: 0.6,
+    },
+  }),
 });
 
 /**

@@ -7,8 +7,9 @@ export function draftOf(task: TaskItem): TaskEdit {
     name: task.data?.title ?? task.name,
     due: task.data?.due ?? null,
     recurrence: task.data?.recurrence ?? null,
-    lists: (task.data?.lists ?? []).map(listName),
+    list: task.data?.list == null ? null : listName(task.data.list),
     reminders: task.data?.reminders ?? [],
+    alertWeight: task.data?.["alert weight"] ?? "harsh",
     body: task.body,
   };
 }
@@ -19,14 +20,6 @@ export function listName(link: string): string {
   return trimmed.startsWith("[[") && trimmed.endsWith("]]")
     ? trimmed.slice(2, -2)
     : trimmed;
-}
-
-/** The per-line input back to plain list names. */
-export function parseLists(text: string): string[] {
-  return text
-    .split(/\r?\n/)
-    .map(listName)
-    .filter((name) => name !== "");
 }
 
 /** Reminder datetimes, one per line. */

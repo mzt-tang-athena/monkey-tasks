@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   cardPosition,
+  dropSpan,
   hitZone,
   slotForY,
+  slotIndexes,
   slotTops,
+  stepSpan,
   type GridRect,
   type ZoneRect,
 } from "./drag-math";
@@ -38,6 +41,59 @@ describe("slotTops", () => {
 
   it("keeps the measured tops for the same order", () => {
     expect(slotTops([0, 1, 2], rows, 8)).toEqual([100, 148, 216]);
+  });
+});
+
+describe("dropSpan", () => {
+  it("reads a full group's mount positions as its data indexes", () => {
+    expect(dropSpan(1, 3, [0, 1, 2, 3])).toEqual({ from: 1, to: 3 });
+    expect(dropSpan(1, 0, [0, 1, 2, 3])).toEqual({ from: 1, to: 0 });
+  });
+
+  it("reads a scrolled group's mount positions by their data indexes", () => {
+    // The group's first rows are off screen, so mount position 0 holds
+    // data index 3.
+    expect(dropSpan(1, 0, [3, 4])).toEqual({ from: 4, to: 3 });
+    expect(dropSpan(0, 1, [3, 4])).toEqual({ from: 3, to: 4 });
+    expect(dropSpan(0, 2, [3, 4])).toEqual({ from: 3, to: 5 });
+  });
+
+  it("has no span with no mounted row", () => {
+    expect(dropSpan(0, 0, [])).toBeNull();
+    expect(dropSpan(-1, 0, [3, 4])).toBeNull();
+    expect(dropSpan(2, 0, [3, 4])).toBeNull();
+  });
+});
+
+describe("stepSpan", () => {
+  it("moves one place as the data indexes a drop writes", () => {
+    // Down one place lands the row before the item after its neighbour.
+    expect(stepSpan(1, 4, 1)).toEqual({ from: 1, to: 3 });
+    expect(stepSpan(1, 4, -1)).toEqual({ from: 1, to: 0 });
+  });
+
+  it("holds at the group's edges", () => {
+    expect(stepSpan(0, 4, -1)).toBeNull();
+    expect(stepSpan(3, 4, 1)).toBeNull();
+    expect(stepSpan(0, 1, 1)).toBeNull();
+    expect(stepSpan(0, 1, -1)).toBeNull();
+  });
+});
+
+describe("slotIndexes", () => {
+  it("moves each row's data index the way the mount order moves", () => {
+    expect(slotIndexes(1, 3, [0, 1, 2, 3])).toEqual([0, 2, 1, 3]);
+    expect(slotIndexes(3, 0, [0, 1, 2, 3])).toEqual([1, 2, 3, 0]);
+    expect(slotIndexes(1, 1, [0, 1, 2, 3])).toEqual([0, 1, 2, 3]);
+  });
+
+  it("starts from the mounted rows' own data indexes", () => {
+    expect(slotIndexes(1, 0, [3, 4])).toEqual([4, 3]);
+    expect(slotIndexes(0, 2, [3, 4])).toEqual([4, 3]);
+  });
+
+  it("leaves every index be with no picked row", () => {
+    expect(slotIndexes(-1, 0, [3, 4])).toEqual([3, 4]);
   });
 });
 

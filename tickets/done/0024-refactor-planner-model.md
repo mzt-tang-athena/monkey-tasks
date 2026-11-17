@@ -14,16 +14,16 @@ The planner route was 3,505 lines: screen, UI components, styles and
 domain helpers in one file. A review against the Bulletproof React
 practices found the route owning business logic that nothing tested.
 
-Move the pure scheduling helpers into `features/planner/model.ts`:
-source cycling and labels, pill filtering, done checks, open-first sort,
-day and week indexes, the day task sets, and the time rules
-(`withTime`, `withKeptTime`, `hasTime`, `timeOf`, `hourOf`, `minuteOf`,
+Move the pure scheduling helpers into `features/planner/model.ts`.
+They cover source cycling and labels, pill filtering, done checks, and
+open-first sort. They also cover day and week indexes and the day task
+sets. The time rules move too (`withTime`, `withKeptTime`, `hasTime`, `timeOf`, `hourOf`, `minuteOf`,
 `isoOf`, `startOfWeek`, `startOfMonth`, `isoWeek`).
 
 Also in this pass:
 
 - the planner error state says "Pull to retry" on a screen with no pull
-  to refresh; it gets a real retry button wired to `store.refresh()`
+  to refresh. It gets a real retry button wired to `store.refresh()`
 - an error boundary wraps the route stack, so a render error shows a
   retry panel instead of a blank app
 - `lib` may not import `features` or `app`, enforced in eslint
@@ -32,7 +32,7 @@ Also in this pass:
 
 ## Acceptance
 
-- [ ] The helpers live in `features/planner/model.ts` and are imported by the route.
+- [ ] The helpers live in `features/planner/model.ts`, and the route imports them.
 - [ ] `model.test.ts` covers the time and ordering rules.
 - [ ] The planner error state retries.
 - [ ] A render error shows the boundary panel.
@@ -41,12 +41,12 @@ Also in this pass:
 ## Outcome
 
 The pure helpers live in `features/planner/model.ts` with 13 tests. The
-route is a one-line re-export, the planner container is 639 lines, and
-the capture sheet has its own component and hook. The store exposes
+route is a one-line re-export, and the planner container is 639 lines.
+The capture sheet has its own component and hook. The store exposes
 three hooks and its actions object is stable across ticks. `lib` cannot
 import a feature. The planner error state retries, and an error boundary
 wraps the stack.
 
 Verified: `tsc --noEmit` clean, 124 tests across 17 files, eslint 0
-errors. Device parity for the moved UI is checked on the next build.
+errors. Device parity for the moved UI gets its check on the next build.
 

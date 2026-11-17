@@ -27,6 +27,15 @@ const fileSystemPath = {
   message:
     'Only src/lib/vault/adapters/saf.ts imports it. Use the VaultAdapter from useVault() (ADR 0037).',
 };
+// The palette reaches a component through the provider, never as a
+// module constant (ADR 20261111-runtime-theme-provider). A baked sheet
+// cannot repaint.
+const colorsPath = {
+  name: '@/theme/tokens',
+  importNames: ['colors'],
+  message:
+    'Read the palette from useTheme or useThemedStyles (ADR 20261111-runtime-theme-provider).',
+};
 
 // Motion lives in surfaces (ADR 0046). Each list below is one ban, and
 // the blocks further down combine them by folder.
@@ -109,7 +118,7 @@ const featurePattern = {
 
 /** The `no-restricted-imports` options for one folder. */
 function importBans({ fileSystem = true, internal = true, worklets = true, feature = null }) {
-  const paths = [...oldMotionPaths];
+  const paths = [colorsPath, ...oldMotionPaths];
   if (fileSystem) {
     paths.push(fileSystemPath);
   }
@@ -256,7 +265,9 @@ module.exports = defineConfig([
     },
   },
   {
-    files: ['src/app/_layout.tsx'],
+    // The root layout wraps the app in the gesture root, and a feature
+    // test that renders a sheet on Android wraps its screen the same way.
+    files: ['src/app/_layout.tsx', 'src/features/**/*.test.tsx'],
     rules: {
       'no-restricted-imports': importBans({
         feature: { allowGestures: ['GestureHandlerRootView'] },

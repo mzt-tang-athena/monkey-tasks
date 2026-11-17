@@ -16,8 +16,8 @@ package name `@monkey-tasks/schemas`, the Zod models, `VOCABULARY.md`,
 and the tests, including the live-vault sweep. Consumers depend on the
 package through a git submodule plus a `file:` dependency (ADR 0007).
 
-In monkey-tasks: add `contracts` as a git submodule at `contracts/`,
-replace the workspace package with the `file:` dependency, and keep
+In monkey-tasks, add `contracts` as a git submodule at `contracts/`.
+Replace the workspace package with the `file:` dependency, and keep
 tests and typecheck green. Tag the contracts commit `v0.1.0` and pin
 the submodule to it.
 
@@ -33,9 +33,9 @@ the submodule to it.
 
 Done, PR 3. `mzt-tang-athena/contracts` exists (private) with
 `packages/schemas` moved unchanged, tagged `v0.1.0`, and pinned as the
-submodule in monkey-tasks at `contracts/`. The root workspaces wrapper
-was replaced by a `file:` dependency. All 21 tests pass in both repos,
+submodule in monkey-tasks at `contracts/`. A `file:` dependency
+replaced the root workspaces wrapper. All 21 tests pass in both repos,
 including the live-vault sweep running from the new home. ADR 0007
-records the decision; ADR 0005 carries the amendment. The package name
-stays `@monkey-tasks/schemas` for now; renaming to domain-wide names
+records the decision. ADR 0005 carries the amendment. The package name
+stays `@monkey-tasks/schemas` for now. Renaming to domain-wide names
 (`@monkey/notes`) can happen when the second package arrives.

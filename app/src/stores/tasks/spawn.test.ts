@@ -32,8 +32,9 @@ const sample: SpawnInput = {
   previous: "Call Mum 2026-10-18",
   due: "2026-10-25",
   recurrence: "FREQ=WEEKLY",
-  lists: ["[[Focus]]", "[[Home]]"],
+  list: "[[Focus]]",
   reminders: ["2026-10-25T09:00", "2026-10-25T18:30"],
+  alertWeight: "quiet",
   body: "Ring her about the weekend.\n",
 };
 
@@ -96,8 +97,9 @@ describe("spawnContent", () => {
       title: "Call Mum",
       due: "2026-10-25",
       recurrence: "FREQ=WEEKLY",
-      lists: ["[[Focus]]", "[[Home]]"],
+      list: "[[Focus]]",
       reminders: ["2026-10-25T09:00", "2026-10-25T18:30"],
+      "alert weight": "quiet",
       "recurrence previous": "[[Call Mum 2026-10-18]]",
     });
   });
@@ -110,8 +112,9 @@ describe("spawnContent", () => {
       "title:",
       "due:",
       "recurrence:",
-      "lists:",
+      "list:",
       "reminders:",
+      "alert weight:",
       "recurrence previous:",
     ];
     const positions = order.map((key) => text.indexOf(key));
@@ -129,10 +132,23 @@ describe("spawnContent", () => {
       title: "Call Mum",
       due: "2026-10-25",
       recurrence: "FREQ=WEEKLY",
-      lists: ["[[Focus]]", "[[Home]]"],
+      list: "[[Focus]]",
       reminders: ["2026-10-25T09:00", "2026-10-25T18:30"],
+      "alert weight": "quiet",
       "recurrence previous": "[[Call Mum 2026-10-18]]",
     });
+  });
+
+  it("writes no weight for a harsh task, which reads harsh", () => {
+    const harsh = { ...sample, alertWeight: "harsh" } as const;
+    const text = spawnContent(harsh, created);
+
+    expect(frontmatter(text)).not.toHaveProperty("alert weight");
+    expect(
+      validateNote("Call Mum 2026-10-25.md", text, taskFrontmatter).data?.[
+        "alert weight"
+      ],
+    ).toBe("harsh");
   });
 
   it("copies the body unchanged", () => {
@@ -162,27 +178,30 @@ describe("isUntouchedSpawn", () => {
     ).toBe(false);
   });
 
-  it("rejects changed lists", () => {
+  it("rejects a changed list", () => {
     const item = spawnItem(sample);
     expect(
       isUntouchedSpawn(
-        { ...item, data: { ...item.data!, lists: ["[[Later]]"] } },
+        { ...item, data: { ...item.data!, list: "[[Later]]" } },
         sample,
       ),
     ).toBe(false);
   });
 
-  it("rejects lists in another order", () => {
+  it("rejects a cleared list", () => {
     const item = spawnItem(sample);
+    const cleared = { ...item.data! };
+    delete cleared.list;
     expect(
-      isUntouchedSpawn(
-        {
-          ...item,
-          data: { ...item.data!, lists: ["[[Home]]", "[[Focus]]"] },
-        },
-        sample,
-      ),
+      isUntouchedSpawn({ ...item, data: cleared }, sample),
     ).toBe(false);
+  });
+
+  it("accepts an absent list when the spawn wrote none", () => {
+    const unlisted = { ...sample, list: null };
+    const item = spawnItem(unlisted);
+    expect(item.data?.list).toBeUndefined();
+    expect(isUntouchedSpawn(item, unlisted)).toBe(true);
   });
 
   it("rejects a changed due date", () => {
@@ -219,5 +238,20 @@ describe("isUntouchedSpawn", () => {
         sample,
       ),
     ).toBe(false);
+  });
+
+  it("compares the alert weight the spawn wrote", () => {
+    const quiet = spawnItem(sample);
+    expect(quiet.data?.["alert weight"]).toBe("quiet");
+
+    const madeLoud = {
+      ...quiet,
+      data: { ...quiet.data!, "alert weight": "harsh" as const },
+    };
+    expect(isUntouchedSpawn(madeLoud, sample)).toBe(false);
+
+    const harsh = { ...sample, alertWeight: "harsh" } as const;
+    expect(isUntouchedSpawn(spawnItem(harsh), harsh)).toBe(true);
+    expect(isUntouchedSpawn(quiet, harsh)).toBe(false);
   });
 });

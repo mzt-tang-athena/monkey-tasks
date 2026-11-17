@@ -32,14 +32,15 @@ later, the external storage provider opens "w" without truncating. Mode
 "wt" truncates. The web preview and the tests use the memory adapter,
 so they never see it.
 
-Fix the write in `app/src/lib/vault/adapters/saf.ts`. Options: write
-through an API that truncates (the new `expo-file-system` `File` API, or
-a patch that opens "wt"), or write to a new file and swap it in. Pick
+Fix the write in `app/src/lib/vault/adapters/saf.ts`. One option
+writes through an API that truncates (the new `expo-file-system` `File`
+API, or a patch that opens "wt"). Another writes to a new file and swaps
+it in. Pick
 one in an ADR, since each has a trade-off.
 
 ## Acceptance
 
-- [x] `journeys/android-list-swipe.sh` in the verification skill passes on the emulator: the note after the untick matches the note before the tick, byte for byte.
+- [x] `journeys/android-list-swipe.sh` in the verification skill passes on the emulator. The note after the untick matches the note before the tick, byte for byte.
 - [x] A test pins the truncating write for the SAF adapter.
 - [ ] The owner's phone shows the same round trip.
 
@@ -54,7 +55,7 @@ contract case, "leaves no old tail when a write is shorter", failed on
 the old adapter and passes now.
 
 On the emulator, the journey failed on an APK from 4828d9c with the
-`leted:` tail, and passed on an APK from this branch. The phone check
+`leted:` tail. It passed on an APK from this branch. The phone check
 waits for the owner.
 
 ### The same bug on main, 2026-11-09
@@ -65,7 +66,7 @@ there in `writeNote` in `app/src/features/vault/notes.ts`, with the
 same `File.open(FileMode.Truncate)` write. An APK from `2d7178b` left
 the tail; an APK from that branch wrote the note back byte for byte.
 
-The epic then moved the vault code into `app/src/lib/vault`, so the
-main file is gone on this branch and the adapter owns the write. Only
-one fix remains in the code, and it is the adapter's. Both emulator
-runs are recorded above.
+The epic then moved the vault code into `app/src/lib/vault`. As a
+result, this branch no longer has the main file, and the adapter owns
+the write. Only one fix remains in the code, in the adapter. Both
+emulator runs appear above.

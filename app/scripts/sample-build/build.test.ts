@@ -15,20 +15,26 @@ describe("the sample notes", () => {
 
   it("pass vault:check in the default seed", () => {
     expect(checkVault(join(sampleDir, "default"))).toEqual({
-      notes: 25,
+      notes: 30,
       findings: [],
     });
   });
 
   it("break in the repair seed the way the repair block shows", () => {
     expect(checkVault(join(sampleDir, "repair"))).toEqual({
-      notes: 2,
+      notes: 3,
       findings: [
         {
           file: "Tasks/Broken note.md",
           line: 2,
           kind: "invalid",
           reason: "created: Invalid input: expected string, received undefined",
+        },
+        {
+          file: "Tasks/Descale the kettle.md",
+          line: 5,
+          kind: "warning",
+          reason: 'alert weight "loud" is not harsh or quiet, so it rings harsh',
         },
         {
           file: "Tasks/Lists/Garden.md",

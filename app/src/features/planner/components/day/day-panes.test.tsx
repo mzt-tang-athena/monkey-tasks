@@ -19,7 +19,12 @@ function task(name: string, due: string): TaskItem {
     name,
     text: "",
     body: "",
-    data: { kind: "[[tasks]]", created: "2026-10-01", due },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-01",
+      "alert weight": "harsh",
+      due,
+    },
   };
 }
 

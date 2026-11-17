@@ -48,6 +48,10 @@ export default defineConfig({
         find: "expo-file-system/legacy",
         replacement: `${src}/testing/expo-file-system-stub.ts`,
       },
+      {
+        find: /^expo-clipboard$/,
+        replacement: `${src}/testing/expo-clipboard-stub.ts`,
+      },
     ],
   },
   test: {
@@ -84,7 +88,20 @@ export default defineConfig({
         extends: true,
         plugins: [worklets],
         resolve: {
-          alias: [{ find: /^react-native$/, replacement: "react-native-web" }],
+          alias: [
+            { find: /^react-native$/, replacement: "react-native-web" },
+            {
+              find: /^react-native-svg$/,
+              replacement: path.resolve(
+                import.meta.dirname,
+                "node_modules/react-native-svg/lib/module/index.js",
+              ),
+            },
+            {
+              find: /^@react-native\/assets-registry\/registry$/,
+              replacement: `${src}/testing/asset-registry-stub.ts`,
+            },
+          ],
           // Metro's web build picks a `.web` file over its sibling.
           // The component project resolves the same way, so a library
           // with a web build (gesture handler, safe area) loads it.

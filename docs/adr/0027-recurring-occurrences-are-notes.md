@@ -20,15 +20,15 @@ A completed occurrence is never rewritten. The tick writes
 `completed` on that note and leaves its due date alone. A new note
 holds the next occurrence.
 
-The new note is named `<title> <YYYY-MM-DD>.md`, carries
+The new note takes the name `<title> <YYYY-MM-DD>.md`, carries
 `title: <display name>`, and carries
 `recurrence previous: "[[<completed note>]]"`. The date comes from the
-original schedule, not the completion day. The body, lists and
-reminders are copied.
+original schedule, not the completion day. The new note copies the
+body, lists and reminders.
 
 The Lists screen hides a note that has `recurrence previous` and a due
 date after today. The planner shows it, because the planner is the
-calendar surface. The rule is derived on read, so no hidden flag and
+calendar surface. The app derives the rule on read, so no hidden flag and
 no background job.
 
 We rejected a UUID property. It does not fix the file name, and
@@ -42,7 +42,7 @@ also fails, two open occurrences remain, and the repair block shows
 them. A failure can leave a visible duplicate, never a lost series.
 
 Unticking clears `completed` first. If the new note is still the text
-we created, we delete it. If it was edited or completed, we leave both
+we created, we delete it. If an edit or a completion changed it, we leave both
 and say so.
 
 The editor shows `title` when present. Renaming a titled note changes

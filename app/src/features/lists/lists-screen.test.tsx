@@ -2,6 +2,8 @@ import * as React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskItem } from "@/types/task";
+import { setCompletedOpen } from "@/lib/folded-completed";
+import { selectList } from "@/lib/selected-list";
 import { placeBox, setWindowSize } from "@/testing/layout";
 import { todayIso } from "@/utils/dates";
 import ListsScreen from "./lists-screen";
@@ -15,8 +17,9 @@ const spy = vi.hoisted(() => ({
   renders: {} as Record<string, number>,
   mounts: {} as Record<string, number>,
   screenRenders: 0,
-  push: vi.fn(),
+  open: vi.fn(),
   tasks: [] as unknown[],
+  completed: [] as string[],
   listeners: new Set<() => void>(),
   sortMode: "due" as "due" | "manual",
 }));
@@ -25,7 +28,9 @@ vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
-vi.mock("expo-router", () => ({ router: { push: spy.push } }));
+vi.mock("@/hooks/use-task-editor", () => ({
+  useTaskEditor: () => ({ open: spy.open, showing: false }),
+}));
 
 vi.mock("@/lib/settings", () => ({
   loadSettings: () => ({ taskForm: "rows", sortMode: spy.sortMode }),
@@ -35,10 +40,12 @@ vi.mock("@/lib/settings", () => ({
 vi.mock("@/components/bottom-bar/bottom-bar", () => ({ BottomBar: () => null }));
 
 // The toolbar renders only when the screen renders, so its count is
-// the screen's count. The pager's own state sits below it.
+// the screen's count. The pager's own state sits below it. The stub
+// records the completed rows the toolbar would act on.
 vi.mock("./components/lists-toolbar", () => {
-  const Toolbar = () => {
+  const Toolbar = ({ completed }: { completed?: TaskItem[] }) => {
     spy.screenRenders += 1;
+    spy.completed = (completed ?? []).map((task) => task.name);
     return null;
   };
   return { ListsToolbar: Toolbar };
@@ -76,6 +83,9 @@ vi.mock("@/stores/tasks/mutations/use-toggle-task", () => ({
 }));
 vi.mock("@/stores/tasks/mutations/use-reorder-section", () => ({
   useReorderSection: () => async () => undefined,
+}));
+vi.mock("@/stores/tasks/mutations/use-clear-completed", () => ({
+  useClearCompleted: () => async () => undefined,
 }));
 vi.mock("@/stores/tasks/use-vault-read", () => ({
   useGrantFolder: () => async () => undefined,
@@ -135,13 +145,46 @@ function task(name: string, due?: string): TaskItem {
     fileName: `${name}.md`,
     name,
     text: "",
-    data: { kind: "[[tasks]]", created: "2026-10-20", ...(due ? { due } : {}) },
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+      ...(due ? { due } : {}),
+    },
+    body: "",
+  };
+}
+
+/** A done task. A `list` files it on that tab. */
+function completed(name: string, list?: string): TaskItem {
+  const uri = `content://vault/Tasks/${name}.md`;
+  return {
+    id: uri,
+    uri,
+    fileName: `${name}.md`,
+    name,
+    text: "",
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      completed: "2026-10-26",
+      "alert weight": "harsh",
+      ...(list == null ? {} : { list: `[[${list}]]` }),
+    },
     body: "",
   };
 }
 
 const tick = (name: string) => fireEvent.click(screen.getByLabelText(`tick ${name}`));
 const holdBeat = () => act(() => void vi.advanceTimersByTime(400));
+
+function doneTask(name: string): TaskItem {
+  const item = task(name);
+  return {
+    ...item,
+    data: { ...item.data!, completed: "2026-10-26T10:00:00" },
+  };
+}
 
 /** A task on the Errands tab, so a preview of it has rows. */
 function listedTask(name: string): TaskItem {
@@ -155,7 +198,8 @@ function listedTask(name: string): TaskItem {
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
-      lists: ["[[Errands]]"],
+      "alert weight": "harsh",
+      list: "[[Errands]]",
     },
     body: "",
   };
@@ -197,8 +241,12 @@ beforeEach(() => {
   spy.renders = {};
   spy.mounts = {};
   spy.screenRenders = 0;
-  spy.push.mockClear();
+  spy.open.mockClear();
   spy.sortMode = "due";
+  spy.completed = [];
+  selectList("Main");
+  setCompletedOpen("Main", false);
+  setCompletedOpen("Errands", false);
 });
 
 afterEach(() => {
@@ -220,6 +268,24 @@ describe("ListsScreen", () => {
     expect(spy.renders.Cherry).toBe(before.Cherry);
   });
 
+  it("keeps a warned task's row and names the warning", () => {
+    const warned: TaskItem = {
+      ...task("Descale the kettle"),
+      warnings: [
+        'alert weight "loud" is not harsh or quiet, so it rings harsh',
+      ],
+    };
+    spy.tasks = [warned, task("Banana")];
+    render(<ListsScreen dock={dock} />);
+
+    expect(screen.getByTestId("row:Descale the kettle")).toBeTruthy();
+    expect(
+      screen.getByText(
+        '• alert weight "loud" is not harsh or quiet, so it rings harsh',
+      ),
+    ).toBeTruthy();
+  });
+
   it("mounts no row of a later group when a group above leaves", () => {
     // Bug 5: a section with no key made SectionList key each row by the
     // section's index, so every row below a vanished group remounted.
@@ -234,29 +300,98 @@ describe("ListsScreen", () => {
     expect(spy.mounts.Banana).toBe(1);
   });
 
-  it("still opens the editor from a row", () => {
+  it("opens the editor sheet from a row", () => {
     spy.tasks = [task("Apple")];
     render(<ListsScreen dock={dock} />);
 
     fireEvent.click(screen.getByLabelText("open Apple"));
 
-    expect(spy.push).toHaveBeenCalledWith(
-      `/task/${encodeURIComponent("content://vault/Tasks/Apple.md")}`,
-    );
+    expect(spy.open).toHaveBeenCalledWith("content://vault/Tasks/Apple.md");
+  });
+
+  it("draws My order as one headerless group above Completed", () => {
+    spy.sortMode = "manual";
+    spy.tasks = [
+      task("Banana", todayIso()),
+      task("Apple"),
+      doneTask("Cherry"),
+    ];
+    render(<ListsScreen dock={dock} />);
+
+    // Completed starts folded, so its one row stays out of the page and
+    // the header carries the count.
+    expect(
+      screen.getAllByTestId(/^row:/).map((node) => node.dataset.testid),
+    ).toEqual(["row:Apple", "row:Banana"]);
+    expect(screen.queryByText(/^Today\s+\d+$/)).toBeNull();
+    expect(screen.queryByText(/^No date\s+\d+$/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Completed 1 task" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Completed 1 task" }));
+
+    expect(
+      screen.getAllByTestId(/^row:/).map((node) => node.dataset.testid),
+    ).toEqual(["row:Apple", "row:Banana", "row:Cherry"]);
   });
 
   it("holds a ticked row in its place for one beat", () => {
-    spy.tasks = [task("Apple", todayIso()), task("Banana")];
+    spy.tasks = [task("Apple", todayIso()), task("Banana"), completed("Archived")];
     render(<ListsScreen dock={dock} />);
+    fireEvent.click(screen.getByRole("button", { name: "Completed 1 task" }));
 
     tick("Apple");
 
     // The store already says done, and the row is still above Banana.
     const order = () =>
       screen.getAllByTestId(/^row:/).map((node) => node.dataset.testid);
-    expect(order()).toEqual(["row:Apple", "row:Banana"]);
+    expect(order()).toEqual(["row:Apple", "row:Banana", "row:Archived"]);
     holdBeat();
-    expect(order()).toEqual(["row:Banana", "row:Apple"]);
+    expect(order()).toEqual(["row:Banana", "row:Apple", "row:Archived"]);
+  });
+
+  it("starts with Completed folded and opens and closes on its header", () => {
+    spy.tasks = [task("Apple", todayIso()), completed("Archived")];
+    render(<ListsScreen dock={dock} />);
+
+    const header = () =>
+      screen.getByRole("button", { name: "Completed 1 task" });
+    expect(header().getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByTestId("row:Archived")).toBeNull();
+
+    fireEvent.click(header());
+    expect(header().getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByTestId("row:Archived")).toBeTruthy();
+
+    fireEvent.click(header());
+    expect(header().getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByTestId("row:Archived")).toBeNull();
+  });
+
+  it("folds a ticked row away after its wash", () => {
+    // The row holds while the circle plays, then joins the folded
+    // group, so a done task leaves the page without a second tap.
+    spy.tasks = [task("Apple", todayIso()), task("Banana")];
+    render(<ListsScreen dock={dock} />);
+
+    tick("Apple");
+    expect(screen.getByTestId("row:Apple")).toBeTruthy();
+    holdBeat();
+
+    expect(screen.queryByTestId("row:Apple")).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "Completed 1 task" })
+        .getAttribute("aria-expanded"),
+    ).toBe("false");
+  });
+
+  it("hands the clear only the current tab's completed rows", () => {
+    spy.tasks = [completed("Main done"), completed("Errands done", "Errands")];
+    render(<ListsScreen dock={dock} />);
+    expect(spy.completed).toEqual(["Main done"]);
+
+    act(() => selectList("Errands"));
+    expect(spy.completed).toEqual(["Errands done"]);
   });
 
   it("renders no row and no screen while a grip crosses three slots", async () => {

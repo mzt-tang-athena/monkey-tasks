@@ -35,29 +35,29 @@ command pane, in its own ticket.
 ## Acceptance
 
 - [ ] A valid list note in `Tasks/Lists/` shows as a tab on the next
-      vault read: foreground return or pull to refresh, no restart.
+      vault read, with no restart. That read is a foreground return or
+      a pull to refresh.
 - [ ] A note that fails validation shows its file name under a
       `Needs repair` heading above the list, with one bullet per error.
       It never hides the other tabs.
-- [ ] The repair block names the file so the note can be fixed in
+- [ ] The repair block names the file to make the note fixable in
       Obsidian.
 - [ ] The tab bar scrolls horizontally when the lists outgrow the
-      width, and the sort and menu buttons stay fixed and clear of the
+      width. The sort and menu buttons stay fixed and clear of the
       chips.
-- [ ] The header is separated from the list body by a hairline rule on
-      the surface fill, using theme tokens only.
+- [ ] A hairline rule separates the header from the list body on the
+      surface fill, using theme tokens only.
 - [ ] Focus is a tab derived from `Tasks/Lists/Focus.md` like any other
       list, and a task on Focus also appears on Main.
-- [ ] The loader is tested against the device's percent-encoded
-      document uri, not only a plain path.
-- [ ] A list note's body is untouched by every app path, and a test
-      pins it.
+- [ ] Loader tests cover the device's percent-encoded document uri
+      as well as a plain path.
+- [ ] No app path touches a list note's body, and a test pins it.
 
 ## Outcome
 
 The empty `created:` was the cause. The loader now returns the notes
-that fail validation alongside the valid ones, the store carries both,
-and the Lists screen shows a Needs repair block naming the file and
+that fail validation alongside the valid ones. The store carries both.
+The Lists screen shows a Needs repair block naming the file and
 each error. The app still never writes a list note, so a body with a
 `list.base` block is safe.
 
@@ -69,8 +69,8 @@ are siblings of the strip.
 Main shows every task. Focus is a normal list note and appears when
 `Tasks/Lists/Focus.md` exists. ADR 0015 carries the dated amendment.
 
-Verified on the phone: eleven tabs, the strip follows a swipe, the
-repair block renders a deliberately broken note, Focus filters, Main
-shows everything. Verified in the browser at 390px: the strip scrolled
+Verified on the phone: eleven tabs, and the strip follows a swipe.
+Also on the phone, the repair block renders a deliberately broken note,
+Focus filters, and Main shows everything. Verified in the browser at 390px: the strip scrolled
 to 221px after tapping a clipped chip. `tsc` clean, 185 tests in 26
 files, eslint 0 errors.

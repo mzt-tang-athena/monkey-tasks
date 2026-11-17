@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TaskItem } from "@/types/task";
-import type { ListsSection } from "./list-sections";
+import { myOrderKey, type ListsSection } from "./list-sections";
 import { applyTickHold, startTickHold, type TickHold } from "./tick-hold";
 
 function task(name: string, completed?: string): TaskItem {
@@ -15,6 +15,7 @@ function task(name: string, completed?: string): TaskItem {
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
+      "alert weight": "harsh",
       ...(completed ? { completed } : {}),
     },
   };
@@ -24,8 +25,9 @@ function group(
   key: string,
   data: TaskItem[],
   tone: ListsSection["tone"] = "muted",
+  title: string | null = key,
 ): ListsSection {
-  return { key, title: key, tone, data };
+  return { key, title, tone, data };
 }
 
 const done = "2026-10-26T10:00:00";
@@ -40,10 +42,12 @@ function hold(
   tone: ListsSection["tone"] = "muted",
   after: TaskItem | null = null,
   before: TaskItem | null = null,
+  title: string | null = section,
 ): TickHold {
   return {
     uri: target.uri,
     section,
+    title,
     tone,
     sectionIndex,
     after: after?.uri ?? null,
@@ -78,6 +82,19 @@ describe("applyTickHold", () => {
     const next = applyTickHold(sections, [held], [b]);
 
     expect(names(next)).toEqual(["Today:A,B,C"]);
+  });
+
+  it("holds a row completed with a date alone", () => {
+    const b = task("B", "2026-10-26");
+    const sections = [
+      group("Today", [task("A")]),
+      group("Completed", [b], "faint"),
+    ];
+    const held = hold(b, "Today", 0, 1);
+
+    expect(names(applyTickHold(sections, [held], [b]))).toEqual([
+      "Today:A,B",
+    ]);
   });
 
   it("brings back a group that left, at the place it held", () => {
@@ -188,6 +205,39 @@ describe("applyTickHold", () => {
       names(applyTickHold(sections, holds, [a, b, task("C")])),
     ).toEqual(["Today:A", "No date:B,C"]);
   });
+
+  it("keeps a ticked row in the single My order group", () => {
+    const b = task("B", done);
+    const sections = [
+      group(myOrderKey, [task("A"), task("C")], "ink", null),
+      group("Completed", [b], "faint"),
+    ];
+    const held = hold(
+      b,
+      myOrderKey,
+      0,
+      1,
+      "ink",
+      task("A"),
+      task("C"),
+      null,
+    );
+
+    expect(names(applyTickHold(sections, [held], [b]))).toEqual([
+      `${myOrderKey}:A,B,C`,
+    ]);
+  });
+
+  it("brings back the headerless group with no header", () => {
+    const a = task("A", done);
+    const sections = [group("Completed", [a], "faint")];
+    const held = hold(a, myOrderKey, 0, 0, "ink", null, null, null);
+
+    const next = applyTickHold(sections, [held], [a]);
+
+    expect(names(next)).toEqual([`${myOrderKey}:A`]);
+    expect(next[0].title).toBeNull();
+  });
 });
 
 describe("startTickHold", () => {
@@ -200,6 +250,7 @@ describe("startTickHold", () => {
     expect(startTickHold(sections, task("C"))).toEqual({
       uri: task("C").uri,
       section: "No date",
+      title: "No date",
       tone: "muted",
       sectionIndex: 1,
       after: task("B").uri,
@@ -212,5 +263,13 @@ describe("startTickHold", () => {
     const a = task("A", done);
 
     expect(startTickHold([group("Completed", [a], "faint")], a)).toBeNull();
+  });
+
+  it("reads the headerless My order group", () => {
+    const sections = [
+      group(myOrderKey, [task("A"), task("B")], "ink", null),
+    ];
+
+    expect(startTickHold(sections, task("B"))?.title).toBeNull();
   });
 });

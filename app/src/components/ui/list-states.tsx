@@ -1,6 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text, View, type DimensionValue } from "react-native";
-import { colors, radii, spacing, type } from "@/theme/tokens";
+import { radii, spacing, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { Button } from "./button";
 
 /** Skeleton line widths: three lines of uneven length. */
@@ -14,6 +15,7 @@ const lines: DimensionValue[] = ["40%", "70%", "55%"];
 
 /** The rows are on their way: skeleton lines where they will land. */
 export function LoadingState({ label = "Loading" }: { label?: string }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View
       style={styles.holder}
@@ -32,6 +34,7 @@ export function LoadingState({ label = "Loading" }: { label?: string }) {
 
 /** The list holds nothing: one centered line. */
 export function EmptyState({ label }: { label: string }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View style={styles.holder}>
       <Text style={styles.label}>{label}</Text>
@@ -50,6 +53,7 @@ export function ErrorState({
   /** The name assistive tech reads for the Retry button. */
   retryLabel?: string;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View style={styles.holder} role="alert">
       <Text style={styles.label}>{message}</Text>
@@ -60,28 +64,30 @@ export function ErrorState({
   );
 }
 
-const styles = StyleSheet.create({
-  holder: {
-    minHeight: 160,
-    justifyContent: "center",
-    gap: spacing.m,
-    paddingVertical: spacing.xl,
-  },
-  skeletons: {
-    gap: spacing.xl,
-    paddingVertical: spacing.m,
-  },
-  skeleton: {
-    height: 14,
-    borderRadius: radii.pill,
-    backgroundColor: colors.hairline,
-  },
-  label: {
-    ...type.body,
-    color: colors.inkMuted,
-    textAlign: "center",
-  },
-  action: {
-    alignItems: "center",
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    holder: {
+      minHeight: 160,
+      justifyContent: "center",
+      gap: spacing.m,
+      paddingVertical: spacing.xl,
+    },
+    skeletons: {
+      gap: spacing.xl,
+      paddingVertical: spacing.m,
+    },
+    skeleton: {
+      height: 14,
+      borderRadius: radii.pill,
+      backgroundColor: colors.hairline,
+    },
+    label: {
+      ...type.body,
+      color: colors.inkMuted,
+      textAlign: "center",
+    },
+    action: {
+      alignItems: "center",
+    },
+  }),
 });

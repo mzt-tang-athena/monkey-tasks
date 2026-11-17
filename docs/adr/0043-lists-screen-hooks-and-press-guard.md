@@ -24,11 +24,11 @@ components (ADR 0022). Four choices came with it.
    keep stable.
 2. **A group's key is its title.** `SectionList` keys each row from its
    section key. A title such as "Today" or "Fri, 30 Oct" names the
-   group for the whole session, so a row keeps its mount when a group
+   group for the whole session. A row then keeps its mount when a group
    above it comes or goes.
 3. **One press guard serves every gesture.** `usePressGuard` in
    `src/hooks/` arms when a gesture passes its slop and releases when
-   it ends. A press that follows the release is blocked once. The swipe
+   it ends. The guard then blocks the next press once. The swipe
    controller reports both moments to the pager, and the reorder drop
    arms the same guard. We rejected a guard inside `TaskRow`, because
    the planner needs the same rule and `TaskRow` does not know the
@@ -45,8 +45,8 @@ nothing is worse than no item.
 
 A tick re-renders the ticked row only. A slot crossing in a drag
 re-renders only the rows whose corners or divider change. A swipe never
-opens a row. A user who scrolls past the repair notice no longer sees it,
-and finds it again at the top of the list.
+opens a row. A user who scrolls past the repair notice no longer sees it.
+They find it again at the top of the list.
 
 The tab strip fades an edge where more tabs wait. The fade is a stepped
 set of views, because the app has no gradient library. It paints the

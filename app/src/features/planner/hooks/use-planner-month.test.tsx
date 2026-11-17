@@ -31,6 +31,7 @@ describe("usePlannerMonth monthRows", () => {
         task("water plants", {
           kind: "[[tasks]]",
           created: "2026-09-20",
+          "alert weight": "harsh",
           due: "2026-09-28",
           recurrence: "FREQ=WEEKLY;BYDAY=MO",
         }),
@@ -47,6 +48,7 @@ describe("usePlannerMonth monthRows", () => {
         task("pay rent", {
           kind: "[[tasks]]",
           created: "2026-08-01",
+          "alert weight": "harsh",
           due: "2026-09-01",
         }),
       ],
@@ -62,15 +64,16 @@ describe("usePlannerMonth monthRows", () => {
         task("water plants", {
           kind: "[[tasks]]",
           created: "2026-09-20",
+          "alert weight": "harsh",
           due: "2026-09-28",
           recurrence: "FREQ=WEEKLY;BYDAY=MO",
-          lists: ["[[Focus]]"],
+          list: "[[Focus]]",
         }),
         task("pay rent", {
           kind: "[[tasks]]",
           created: "2026-09-20",
+          "alert weight": "harsh",
           due: "2026-10-02",
-          lists: ["[[Main]]"],
         }),
       ],
       "Focus",

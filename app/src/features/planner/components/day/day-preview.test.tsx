@@ -19,6 +19,7 @@ function task(name: string, data: TaskFrontmatter): TaskItem {
 const weekly = task("Water the plants", {
   kind: "[[tasks]]",
   created: "2026-10-01",
+  "alert weight": "harsh",
   due: "2026-10-20",
   recurrence: "FREQ=WEEKLY",
 });
@@ -32,6 +33,7 @@ function preview(tasks: TaskItem[]) {
         tasks={tasks}
         now={new Date(2026, 9, 27, 9, 5)}
         fraction={0.51}
+        scroll={{ timeline: 0, list: 0 }}
       />
     </TestPlannerList>,
   );
@@ -55,12 +57,14 @@ describe("DayPreview", () => {
     const evening = task("Supplements", {
       kind: "[[tasks]]",
       created: "2026-10-01",
+      "alert weight": "harsh",
       due: "2026-10-26T19:00",
       recurrence: "FREQ=DAILY",
     });
     const afternoon = task("Dentist appointment", {
       kind: "[[tasks]]",
       created: "2026-10-01",
+      "alert weight": "harsh",
       due: "2026-10-27T14:30",
     });
     preview([evening, afternoon]);

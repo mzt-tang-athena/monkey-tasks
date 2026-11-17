@@ -3,6 +3,12 @@
 
 export const sampleNotes: Record<string, Record<string, string>> = {
   "default": {
+    "Journal/Daily/2026-10-26.md":
+      "---\nbanner_image: Attachments/Banners/office.jpg\nbanner_position: 20\n---\n\n**To-do**\n\n- [ ] Reply to the plumber\n- [ ] Send the meter reading\n\n8:05\n- Woke up early, before the alarm\n- Walked to the bakery and back\n\n12:40\n- Ate: [[oatmeal]] with milk and brown sugar #food\n- Ate: [[chinese-steamed-eggs]] #food #protein\n\n16:20\n- Paid the water bill\n- Fixed the monkey-budget category and groups issues\n\n19:52\n- Went out for dessert with others\n- Plan the weekend hike\n\n![[daily.base]]\n",
+    "References/chinese-steamed-eggs.md":
+      "---\nkind: \"[[foods]]\"\n---\n\nSteamed eggs with a splash of soy.\n",
+    "References/oatmeal.md":
+      "---\nkind: \"[[foods]]\"\n---\n\nRolled oats with milk and brown sugar. The usual breakfast on a\nworking day.\n",
     "Tasks/Book train tickets home.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\n---\n",
     "Tasks/Buy stamps.md":
@@ -10,7 +16,7 @@ export const sampleNotes: Record<string, Record<string, string>> = {
     "Tasks/Call Mum.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\n---\n",
     "Tasks/Clear vault inbox.md":
-      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\nlists:\n  - \"[[Focus]]\"\n---\n",
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\nlist: \"[[Focus]]\"\n---\n",
     "Tasks/Dentist appointment.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ndue: 2026-10-27T14:30\n---\n",
     "Tasks/Fix bike light.md":
@@ -36,11 +42,13 @@ export const sampleNotes: Record<string, Record<string, string>> = {
     "Tasks/Lists/Work.md":
       "---\nkind: \"[[lists]]\"\ncreated: 2026-10-26\n---\n",
     "Tasks/Order printer paper.md":
-      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\nlists:\n  - \"[[Focus]]\"\ndue: 2026-10-29\n---\n",
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\nlist: \"[[Focus]]\"\ndue: 2026-10-29\n---\n",
     "Tasks/Pay water bill.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ndue: 2026-10-28\n---\n",
     "Tasks/Plan weekend hike.md":
-      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\nlists:\n  - \"[[Focus]]\"\ndue: 2026-10-26\n---\n",
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\nlist: \"[[Focus]]\"\ndue: 2026-10-26\n---\n",
+    "Tasks/Read the meter.md":
+      "---\nkind: tasks\ncreated: 2026-10-26T09:00\n---\n",
     "Tasks/Renew bike insurance.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ndue: 2026-10-30\n---\n",
     "Tasks/Return library books.md":
@@ -51,12 +59,16 @@ export const sampleNotes: Record<string, Record<string, string>> = {
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ndue: 2026-10-26T19:00\nrecurrence: FREQ=DAILY\n---\n",
     "Tasks/Water heater maintenance request.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ndue: 2026-10-23\n---\n",
+    "Tasks/Water the fern.md":
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\ncompleted: 2026-10-26T18:08\n---\n",
     "Tasks/Water the plants.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\n---\n",
   },
   "repair": {
     "Tasks/Broken note.md":
       "---\nkind: \"[[tasks]]\"\n---\n\nNo created date.\n",
+    "Tasks/Descale the kettle.md":
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\nlist: \"[[Focus]]\"\nalert weight: loud\n---\n",
     "Tasks/Lists/Garden.md":
       "---\nkind: \"[[list]]\"\n---\n\n# Garden\n",
   },

@@ -6,6 +6,8 @@ export type TickHold = {
   uri: string;
   /** The key of the group the row sat in. */
   section: string;
+  /** The group's header label, or null for a headerless group. */
+  title: string | null;
   tone: ListsSection["tone"];
   /** The group's place among the groups. */
   sectionIndex: number;
@@ -73,7 +75,7 @@ export function applyTickHold(
       const copy = next.slice();
       copy.splice(Math.min(hold.sectionIndex, copy.length), 0, {
         key: hold.section,
-        title: hold.section,
+        title: hold.title,
         tone: hold.tone,
         data: [task],
       });
@@ -133,6 +135,7 @@ export function startTickHold(
   return {
     uri: task.uri,
     section: section.key,
+    title: section.title,
     tone: section.tone,
     sectionIndex,
     after: section.data[index - 1]?.uri ?? null,

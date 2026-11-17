@@ -27,10 +27,10 @@ A user who plans a day, checks a list, and comes back loses their place.
 The planner should keep its picked day for as long as the app runs.
 
 The cause is in shared code, so the phone does the same. The tab stays
-mounted. The picked day lives only in the `day` URL param:
+mounted. The picked day lives only in the `day` URL param.
 `src/features/planner/hooks/use-planner-route.ts` reads it with
-`useLocalSearchParams`, sets it with `router.setParams`, and falls back
-to today when it is missing. The bottom bar's Planner tab
+`useLocalSearchParams`. It sets it with `router.setParams`. When the
+param is missing, it falls back to today. The bottom bar's Planner tab
 (`src/components/bottom-bar.tsx`) calls `router.navigate("/planner")`
 with no params, so each return drops `?day=`.
 

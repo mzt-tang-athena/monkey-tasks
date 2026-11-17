@@ -16,7 +16,7 @@ suite that drives the real app through those rewrites and catches a
 regression the day it lands. ADR 0038 records the decision.
 
 The browser preview serves the in-memory sample set from
-`src/lib/mock.ts` when no vault folder is granted
+`src/lib/mock.ts` when no vault folder grant exists
 (`src/store/tasks.tsx:275-284`). Playwright drives that preview. 0051
 later replaces the mock with the memory adapter, seeded from `.md`
 fixture notes. The suite must pass on both sides of that change.
@@ -78,7 +78,7 @@ Confirm on a phone browser when 0059 lands.
 **B3. Selected and checked states do not reach the web.**
 React Native Web 0.21.4 maps `aria-*` props and drops the
 `accessibilityState` object. On web, no list tab reports which list is
-open, and no tick reports whether it is done. Seven sites use the
+open, and no tick reports whether its task is complete. Seven sites use the
 dropped prop:
 
 - `src/app/(tabs)/index.tsx:868` (list tabs) and `:1002` (sort options)
@@ -100,7 +100,8 @@ label, so a screen reader and a test cannot find it. Add
 ### Selectors
 
 The app has no `testID` today. Each list shows 11 buttons named "mark
-done" and 11 named "open task", so a test cannot pick one row by role.
+done" and 11 named "open task". As a result, a test cannot pick one row
+by role.
 React Native Web turns `testID` into `data-testid`,
 `accessibilityLabel` into `aria-label`, and `accessibilityRole` into
 `role`. Add these test ids:
@@ -269,7 +270,7 @@ export async function touchSwipe(page: Page, from: { x: number; y: number }, dx:
 | 7 | planner | "Month" tab, swipe left on `month-pager` | `month-title` goes from "October 2026" to "November 2026" |
 | 8 | planner | hold-drag "Return library books" onto `timeline-hour:10` | the row shows "10:00 AM" |
 | 9 | tasks | open "Call Mum", rename it, "save task" | the list shows the new name, URL is `/` |
-| 10 | motion | swipe the list | reduced motion: "Errands" is selected at mouse up. Motion: "Main" stays selected at mouse up and "Errands" wins within 500 ms |
+| 10 | motion | swipe the list | reduced motion: "Errands" holds the selection at mouse up. Motion: "Main" stays selected at mouse up and "Errands" wins within 500 ms |
 
 Known bugs, each with `test.fail()` and a comment that names its ticket:
 
@@ -355,24 +356,24 @@ Also:
 Landed in PR 72:
 
 - `app/e2e` with the config, fixtures, data, gestures and locators from
-  the spec, and five specs: 18 tests, run in the `motion` and
+  the spec. Five specs hold 18 tests, run in the `motion` and
   `reduced-motion` projects. Scenarios 1 to 10 pass in both. 360 of 360
   runs passed with `--repeat-each=10`. A `CI=1` run with two workers
   took 39 s. `e2e:dev` passed against `npx expo start --web`, run on
   port 8094 through `E2E_BASE_URL`.
 - B1 carries `test.fail()` in the `motion` project only. With reduced
-  motion the page turns at pointer up, so the row is gone before the
-  click lands and the editor never opens. 0055 guards the click and
+  motion the page turns at pointer up. As a result, the row disappears
+  before the click lands and the editor never opens. 0055 guards the click and
   0059 fixes the pager. Both tickets now say that the first to land
   removes the mark. B2 fails in both projects, as found.
 - B3: the seven sites send `aria-*` props. The `lists` spec failed on
   `aria-selected` first, and a `TaskRow` component test failed on
   `aria-checked` first.
 - B4: the grip is a button named "reorder handle". It failed on its
-  role first. It is no tab stop until 0063 adds keyboard actions.
-- The test ids from the table. A still copy (the day swipe preview, the
-  drag ghost, the month beside the live one) carries none, because
-  Playwright fails at once on two matches. ADR 0038 has an amendment.
+  role first. The grip has no tab stop until 0063 adds keyboard actions.
+- The test ids from the table. A still copy carries none, because
+  Playwright fails at once on two matches. The still copies are the day
+  swipe preview, the drag ghost and the month beside the live one. ADR 0038 has an amendment.
 - Specs name a swipe by direction and length. `gestures.ts` holds every
   pixel value.
 
@@ -383,8 +384,8 @@ Found and fixed on the way, each with a failing test first:
   worker failed. It now takes 128.
 - The planner listed "Broken note" as a task row in the week list. It
   now drops notes that fail validation, as the Lists screen does.
-- A week column sorted a recurring occurrence by its stored day, so
-  7:00 PM sat above 2:30 PM on Tuesday. `sortByTimeOfDay` fixes it.
+- A week column sorted a recurring occurrence by its stored day. As a
+  result, 7:00 PM sat above 2:30 PM on Tuesday. `sortByTimeOfDay` fixes it.
 - The `motion` spec read the tabs after the release in two round
   trips. On a loaded machine the round trips took longer than the
   220 ms slide, and the test failed. A 300 ms wait after the release
@@ -399,7 +400,7 @@ Left:
 - The `e2e-web` CI job and the CI lint over `e2e`. The agent token has
   no `workflow` scope, so GitHub refuses the change. Ticket 0068 holds
   one diff for the owner with the triggers, the lint limit and the
-  job, and the two CI acceptance lines moved there. Locally, a failing
+  job. The two CI acceptance lines moved there. Locally, a failing
   `CI=1` run wrote the HTML report with the trace zip.
 - The suite runs the browser preview's sample set. 0051 swaps it for
   the memory adapter. Then only `e2e/data.ts` changes.

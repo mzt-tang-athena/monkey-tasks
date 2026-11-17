@@ -25,9 +25,10 @@ One swipe tripwire, fed by the platform's native events:
 
 Touch events bubble to a parent while a child scroller scrolls, so a
 swipe over a list reaches the tripwire. The tripwire arms only on travel
-of 80 points or more that is 1.6 times more horizontal than vertical, so
-a scroll never changes the page. A drag or a resize calls `claim()` when
-it starts, which disables the tripwire for the rest of that gesture.
+of 80 points or more. That travel must be 1.6 times more horizontal than
+vertical. That way, a scroll never changes the page. A drag or a resize
+calls `claim()` when it starts, which disables the tripwire for the rest
+of that gesture.
 
 ## Consequences
 
@@ -36,7 +37,7 @@ without changing the scrollers. The tripwire runs on the JS thread, which
 is the same thread the browser path already used.
 
 The gesture handler library is still the right tool for drags and the
-split resize. Those start on a single element and are long presses, not
+split resize. Those start on a single element as long presses, with no
 travel over a scroller.
 
 ## Alternatives
@@ -47,29 +48,29 @@ change. It also leaves the swipe competing with the drag gestures in the
 same tree.
 
 **A pager component.** `react-native-pager-view` would give native page
-transitions, but the list is one FlatList, not pages, and the planner
-panes are not pages either.
+transitions. The list, though, is one FlatList rather than pages. The
+planner panes are not pages either.
 
 ## Amendment 2026-10-22: the responder system, not touch props
 
 The first version read `onTouchStart`, `onTouchMove`, and `onTouchEnd`.
 On the device the day and month swipes crashed the app. The touch props
-are part of the View contract but not a path this app should lean on
-over a scroller.
+are part of the View contract. They are not a path this app should lean
+on over a scroller.
 
-We now use `PanResponder`. It is the same tripwire, fed by the responder
-system instead of raw touch props. The capture phase is what takes the
-touch away from the scroller: `onMoveShouldSetPanResponderCapture`
+We now use `PanResponder`. The tripwire stays the same, fed by the
+responder system instead of raw touch props. The capture phase takes the
+touch away from the scroller. `onMoveShouldSetPanResponderCapture`
 returns true only for travel that is 12 points long and 1.6 times more
-horizontal than vertical. The start point is recorded in
-`onStartShouldSetPanResponderCapture`, which returns false so the touch
-keeps flowing until the swipe is clear.
+horizontal than vertical. `onStartShouldSetPanResponderCapture` records
+the start point. It returns false so the touch keeps flowing until the
+swipe is clear.
 
-The grabber changed with it. It was a `Pressable` with pointer handlers
-inside a gesture detector. A `Pressable` takes the responder, so the
-native pan never saw the drag, and the pointer handlers never fired on
-Android. It is a plain `View` now: the pan resizes, the pointer path
-reserves the same gesture on web.
+The grabber changed with it. The old grabber was a `Pressable` with pointer
+handlers inside a gesture detector. A `Pressable` takes the responder, so
+the native pan never saw the drag, and the pointer handlers never fired on
+Android. Now the grabber is a plain `View`. The pan resizes, and the
+pointer path reserves the same gesture on web.
 
 The root layout installs a global error handler. A release build closes
 on the first uncaught error, and a closed app reports nothing. The
@@ -81,7 +82,7 @@ ADR 0036 replaces the tripwire with a gesture handler pan on the UI
 thread. The premise above does not hold. On Android the gesture
 handler's root view hands every touch to its orchestrator before the
 view tree sees it. It cancels a JS callback gesture only when a native
-view calls `requestDisallowInterceptTouchEvent`, and a vertical
+view calls `requestDisallowInterceptTouchEvent`. A vertical
 scroller makes that call only when it starts to scroll. A horizontal
 pan on the parent of a list does see the moves.
 
@@ -90,6 +91,6 @@ The pan this ADR replaced failed for other reasons. It had no
 found throws. Its `failOffsetY` of 24 against an `activeOffsetX` of 80
 also failed most thumb swipes.
 
-The responder version had a fault of its own: a terminated or
+The responder version had a fault of its own. A terminated or
 cancelled gesture counted as a release, so a cancel could change the
 page. Ticket 0059 removes it.

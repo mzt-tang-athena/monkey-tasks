@@ -5,19 +5,27 @@ import {
   useSharedValue,
   withSpring,
   withTiming,
+  type EasingFunction,
+  type EasingFunctionFactory,
   type WithSpringConfig,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { motion } from "./tokens";
 
-/** A timing to `to` on the app's curve. `done` is a plain JS function.
-    It runs only when the animation finishes, and with reduced motion
-    that is at once. */
-export function timing(to: number, ms: number, done?: () => void) {
+/** A timing to `to`. `done` is a plain JS function, and it runs only
+    when the animation finishes. With reduced motion that is at once.
+    `easing` defaults to the app curve. A one-shot that shapes each
+    part on its own clock passes a linear one. */
+export function timing(
+  to: number,
+  ms: number,
+  done?: () => void,
+  easing: EasingFunction | EasingFunctionFactory = motion.easeOut,
+) {
   "worklet";
   return withTiming(
     to,
-    { duration: ms, easing: motion.easeOut, reduceMotion: ReduceMotion.System },
+    { duration: ms, easing, reduceMotion: ReduceMotion.System },
     (finished) => {
       "worklet";
       if (finished === true && done !== undefined) {
@@ -50,14 +58,24 @@ export type Progress = { readonly value: number; readonly [progressBrand]: true 
 
 /**
  * The one clock that React drives. It runs from where it stands to
- * `target` over `ms`. `onSettled(at)` runs once per run, when it
- * finishes or at unmount. A new target before the end supersedes the
- * run, and the old run's `onSettled` never runs. The first value is
- * the target, with no run. With reduced motion every run lands at once.
+ * `target` over `ms`, or on a spring when the caller gives one.
+ * `onSettled(at)` runs once per run, when it finishes or at unmount. A
+ * new target before the end supersedes the run, and the old run's
+ * `onSettled` never runs. The first value is the target, with no run.
+ * With reduced motion every run lands at once.
  */
 export function useProgress(
   target: boolean,
-  { ms, onSettled }: { ms: number; onSettled?: (at: 0 | 1) => void },
+  {
+    ms,
+    spring: config,
+    onSettled,
+  }: {
+    ms?: number;
+    /** A spring to the target; takes the place of `ms`. */
+    spring?: WithSpringConfig;
+    onSettled?: (at: 0 | 1) => void;
+  },
 ): Progress {
   const to = target ? 1 : 0;
   const value = useSharedValue(to);
@@ -93,8 +111,12 @@ export function useProgress(
       settle(id);
       return;
     }
-    value.set(timing(to, ms, () => settle(id)));
-  }, [to, ms, reduced, value, settle]);
+    if (config !== undefined) {
+      value.set(spring(to, config, () => settle(id)));
+      return;
+    }
+    value.set(timing(to, ms ?? motion.ms.settle, () => settle(id)));
+  }, [to, ms, config, reduced, value, settle]);
 
   React.useEffect(
     () => () => {

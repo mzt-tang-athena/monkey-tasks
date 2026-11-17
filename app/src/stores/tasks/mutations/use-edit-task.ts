@@ -46,17 +46,23 @@ const spec: VaultMutationSpec<EditVariables, Written, undefined> = {
 
 /**
  * Save the editor's fields to the note. No optimistic step: the editor
- * waits, and the promise rejects when the save fails.
+ * shows its draft itself. The promise gives the row as written, whose
+ * text the next save expects, and rejects when the save fails.
  */
 export function useEditTask(): (
   task: TaskItem,
   edit: TaskEdit,
   expected?: string,
-) => Promise<void> {
+) => Promise<TaskItem> {
   const { mutateAsync } = useVaultMutation(spec);
   return React.useCallback(
     async (task, edit, expected) => {
-      await mutateAsync({ id: task.id, edit, expected: expected ?? task.text });
+      const { after } = await mutateAsync({
+        id: task.id,
+        edit,
+        expected: expected ?? task.text,
+      });
+      return after;
     },
     [mutateAsync],
   );

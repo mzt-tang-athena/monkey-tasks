@@ -35,13 +35,13 @@ reads as no lists, so the task leaves its Focus tab with no message.
 Open it in the editor and save any change. The editor seeds its draft
 from the parsed lists (`TaskEditorScreen.tsx:54`), so it saves an
 empty list, and `saveTaskEdit` (`task-editor/save.ts:146-151`) deletes
-the `lists` property. With no indent the save is worse: it removes the
+the `lists` property. With no indent the save is worse. It removes the
 `lists:` line and leaves the item behind, which breaks the note's
 YAML.
 
 Fix: a line that matches `/^[ \t]*- (.*)$/` is an item of the current
-key when that key has no value on its own line or already holds a
-list. Frontmatter stays flat, as today: a nested key is out of scope.
+key. That holds when the key has no value on its own line or already
+holds a list. Frontmatter stays flat, as today: a nested key is out of scope.
 
 ### Bug 2: a quoted value with an escape does not read back
 
@@ -72,8 +72,8 @@ in the editor has the same gap (`task-editor/save.ts:102-104`).
 
 Fix: write `title` when the final file name, without `.md`, differs
 from the name the user typed. Add a dated amendment to ADR 0028 for the
-wider rule. A note that gets a title this way is a titled note, so a
-later rename in the editor changes the title, not the file
+wider rule. A note that gets a title this way is a titled note. A
+later rename in the editor then changes the title instead of the file
 (`save.ts:154-162`).
 
 After ticket 0050 these app files live under `app/src/lib/vault/`.
@@ -88,7 +88,8 @@ the bug is there. A fix turns its test into a plain `it`.
 
 | Bug | Repro test |
 |---|---|
-| 1 | "reads items with no indent", "reads items at four spaces", "reads items after a tab", "keeps a four-space list through an editor save" |
+| 1 | "reads items with no indent", "reads items at four spaces" |
+| 1 | "reads items after a tab", "keeps a four-space list through an editor save" |
 | 2 | "reads back a title that starts with a quote", "reads back a quoted title that holds a backslash" |
 | 3 | "shows the typed name after the next read" |
 
@@ -98,7 +99,7 @@ the bug is there. A fix turns its test into a plain `it`.
    `packages/schemas/src/frontmatter.ts`, with tests in
    `packages/schemas/test/`. Merge it when its checks pass.
 2. A PR here into `epic/0047-rebuild` moves the `contracts` submodule
-   to that merge commit and flips the bug 1 and bug 2 repro tests.
+   to that merge commit. It also flips the bug 1 and bug 2 repro tests.
 3. The same PR, or a second one, fixes bug 3 in the app and flips its
    repro test.
 
@@ -121,7 +122,7 @@ the bug is there. A fix turns its test into a plain `it`.
 - [x] A capture of "Pay bill: water" shows "Pay bill: water" after the
       next read.
 - [x] ADR 0028 has a dated amendment for the wider title rule.
-- [x] The contracts PR is merged, and the submodule points at its
+- [x] The contracts PR has merged, and the submodule points at its
       merge commit.
 
 ## Outcome
@@ -135,15 +136,15 @@ Landed in PR #69 into `epic/0047-rebuild`, with contracts PR #1
   ADR 0002 records that choice and the rejected YAML library. 48 new
   tests cover the indents, each escape, single quotes and one-sided
   quotes.
-- **Bug 1.** `updateProperty` also finds items with no indent, so an
+- **Bug 1.** `updateProperty` also finds items with no indent. That way an
   editor save keeps a list at any indent and leaves no item behind.
 - **Bug 2.** `serializeValue` escapes every character YAML refuses raw.
   31 tricky titles round-trip through the app's parser and `js-yaml`.
 - **Bug 3.** `keepTypedName` writes `title` when the final file name
-  differs from the typed name: on a capture, on a rename, and on an
-  editor save with no rename. ADR 0028 has the amendment.
-- **vault:check** finds a list item's key at any indent. A note that
-  `js-yaml` cannot parse is reported at the line where it stopped.
+  differs from the typed name. It does so on a capture, on a rename,
+  and on an editor save with no rename. ADR 0028 has the amendment.
+- **vault:check** finds a list item's key at any indent. It reports a
+  note that `js-yaml` cannot parse at the line where it stopped.
 
 Each repro test failed on the old parser or the old title rule before
 it passed. The typed-name test reads the folder back through
@@ -158,13 +159,13 @@ Left open, on purpose or for others:
   has an amendment for the choice.
 - The contracts PR merge is the reviewer's step. After the merge, move
   the `contracts` submodule from the PR head (`f87f877`) to the merge
-  commit. Contracts CI cannot run on that private repo while Actions
-  is blocked on billing, so its gates ran locally: 74 passed and 1
+  commit. Contracts CI cannot run on that private repo while billing
+  blocks Actions. That is why its gates ran locally: 74 passed and 1
   skipped, typecheck clean, and no prose alerts.
 - The web preview cannot show the typed name after a read. Its mock
   store never writes or reads a note, so the preview looks the same
   before and after this ticket. Ticket 0051 gives the preview a memory
-  adapter, and it now carries an acceptance line for "Pay bill: water"
+  adapter. That ticket now carries an acceptance line for "Pay bill: water"
   after a refresh.
 - The phone pass for capture, rename and editor save waits for the
   epic's dev client build.

@@ -17,8 +17,8 @@ The second tab: a Carnet-inspired planner over due dates, per the
   today.
 - Day spread: tasks with `due` that day (timed ones showing their
   time), ordered by time then title. Swipe left and right to move
-  between days; capture from a day preselects that day as `due`
-  (list stays Main) - the drag-to-day gesture in miniature.
+  between days. Capture from a day preselects that day as `due` (list
+  stays Main), the drag-to-day gesture in miniature.
 - Week view: seven day columns, the week visualization.
 - Month view: grid; tapping a day shows that day's tasks.
 - Recurring tasks expand by their RRULE for the visible range
@@ -32,7 +32,7 @@ The second tab: a Carnet-inspired planner over due dates, per the
       moves `due` forward on a tick; the planner never expands it.
 - [x] Week and Month views render; day tap lists the day
 
-Remaining work: expand a recurrence across the visible range, so a
-weekly task shows on each matching day, not only on its stored due
+Remaining work: expand a recurrence across the visible range. That way
+a weekly task shows on each matching day, not only on its stored due
 date.
 

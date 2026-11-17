@@ -17,8 +17,9 @@ Add a pre-commit hook and close the CI gap.
 
 - `.githooks/pre-commit` runs ESLint on the staged app code and Vale on
   the staged docs. Only staged files, so a commit stays fast.
-- `make hooks` points `core.hooksPath` at the folder. It is per clone,
-  not committed state, because hooks are not cloned by default.
+- `make hooks` points `core.hooksPath` at the folder. The setting lives per
+  clone rather than in committed state, because a clone does not include
+  hooks by default.
 - CI runs `npx eslint src`, which it never did.
 - CI lints every tracked markdown file, not just the README and the ADR
   folder, and fails on warnings. Vale exits zero on warnings, so the
@@ -41,7 +42,7 @@ time and lints every tracked markdown file, failing on warnings.
 
 Verified: the hook blocked a staged passive sentence and a clean commit
 passed in 2.9 seconds. The first CI run of the new prose gate caught one
-warning in AGENTS.md, which is fixed.
+warning in AGENTS.md, now fixed.
 
 The ESLint gate blocks on errors only. The config leaves warnings such
 as `import/first` in test files, and they do not fail CI.

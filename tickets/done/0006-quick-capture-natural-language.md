@@ -18,41 +18,41 @@ Parsing is offline and deterministic, no LLM involved:
   Dates plugin.
 - rrule.js parses recurrence ("repeat monthly") into a standard
   iCalendar RRULE string for `repeat`.
-- Matched text is stripped from the typed line; the remainder becomes
-  the task name and filename.
+- The typed line loses its matched text, and the rest becomes the task
+  name and filename.
 
 A line the parser cannot date still creates a task note with no `due`,
 so capture never fails or blocks. A later athena agent may interpret
 unparsed lines and write structured tasks back into the vault
-(ADR 0003); that is out of scope here.
+(ADR 0003). That is out of scope here.
 
 ## Acceptance
 
 - [x] "call the dentist tuesday 3pm repeat monthly" creates a task
-      named "call the dentist" with `due` and `repeat` set
-      (verified on device: due 2026-10-28T14:00, reminders set)
+      named "call the dentist" with `due` and `repeat` set.
+      Verified on device: due 2026-10-28T14:00, reminders set.
 - [x] an undateable line still creates a task note
 - [x] parsing runs fully offline with airplane mode on
 
 ## Outcome
 
-Done, PR 5. `app/capture.ts` parses a typed line offline: chrono-node
-for dates and times, keyword map and patterns for recurrence
-("repeat monthly", "recurring monthly", "every Wednesday",
-"every other day"), "remind me to" prefix stripped, matched text
-removed, remainder is the task name. A typed time becomes a reminder
+Done, PR 5. `app/capture.ts` parses a typed line offline. It uses
+chrono-node for dates and times. It uses a keyword map and patterns for
+recurrence ("repeat monthly", "recurring monthly", "every Wednesday",
+"every other day"). It strips a "remind me to" prefix and removes the
+matched text. The rest is the task name. A typed time becomes a reminder
 automatically. 9 tests cover it, including the acceptance example.
 
 Device findings folded in during testing:
 
-- SAF document URIs carry full relative paths in the last segment;
-  name parsing fixed, so folder matching and the Notes list show
+- SAF document URIs carry full relative paths in the last segment.
+  After the name parsing fix, folder matching and the Notes list show
   short names.
 - The app creates the `Tasks` folder itself when missing
   (SAF makeDirectoryAsync), so capture works on a fresh vault.
 - Captured notes have an empty body: the filename is the task.
 - The Tasks folder was missing on the phone because dotfile-only
-  folders do not propagate through Obsidian sync; capture now
+  folders do not propagate through Obsidian sync. Capture now
   self-heals instead of depending on a seeded folder.
 
 Deferred: highlighting the parsed keywords in the capture box

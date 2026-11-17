@@ -1,28 +1,32 @@
 import * as React from "react";
-import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type ViewProps,
+} from "react-native";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
 } from "react-native-reanimated";
+import { SheetDrag, SheetGrab } from "@/components/motion/sheet-drag";
 import { useDismiss } from "@/hooks/use-dismiss";
 import type { Progress } from "@/lib/motion/progress";
-import {
-  colors,
-  measure,
-  radiusFloating,
-  shadows,
-  sheetGap,
-  spacing,
-} from "@/theme/tokens";
+import { measure, radiusFloating, shadows, sheetGap, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { Overlay } from "./overlay-host";
 import { Pressable } from "./pressable";
+import { useOpenerFocus } from "./use-opener-focus";
 
 /**
  * A floating sheet: a scrim over the page, a dock that rides the
  * keyboard, and the panel with the caller's content. A press on the
- * scrim and Android back close it. While it shows, the screen under it
- * is hidden from assistive tech.
+ * scrim, Android back and a downward drag on the handle close it. A
+ * caller wraps its header row in `SheetGrab` to make it a handle too.
+ * While the sheet shows, the screen under it is hidden from assistive
+ * tech.
  *
  * The caller owns the clock. It passes a `Progress`, which drives the
  * scrim, the panel and the bar. With `rideKeyboard`, the dock follows
@@ -37,6 +41,8 @@ export function Sheet({
   progress,
   rideKeyboard = false,
   scrim = false,
+  stacked = false,
+  covered = false,
   children,
 }: {
   open: boolean;
@@ -51,9 +57,21 @@ export function Sheet({
   rideKeyboard?: boolean;
   /** Draws the scrim. The page is hidden from assistive tech either way. */
   scrim?: boolean;
+  /**
+   * The sheet opens over another sheet. Its scrim then draws in the
+   * sheet layer, above the sheet under it, which it dims and blocks.
+   */
+  stacked?: boolean;
+  /**
+   * A stacked sheet covers this one. The panel takes no focus and no
+   * press, and assistive tech skips it, until the cover goes.
+   */
+  covered?: boolean;
   children: React.ReactNode;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   useDismiss(open, onDismiss);
+  useOpenerFocus(open);
 
   const window = useWindowDimensions();
   const keyboard = useReanimatedKeyboardAnimation();
@@ -85,32 +103,19 @@ export function Sheet({
   // closing panel must let the bar take the press, as it does natively,
   // so the whole panel is inert while it closes.
   const panelRef = React.useRef<React.ComponentRef<typeof Animated.View>>(null);
-  // The control that opened the sheet, so a close puts focus back.
-  const opener = React.useRef<HTMLElement | null>(null);
   React.useLayoutEffect(() => {
     if (Platform.OS !== "web") {
       return;
     }
     const node = panelRef.current as unknown as HTMLElement | null;
     if (node != null) {
-      node.inert = !open;
+      node.inert = !open || covered;
     }
-  }, [open]);
-  React.useEffect(() => {
-    if (Platform.OS !== "web" || !open) {
-      return;
-    }
-    opener.current = document.activeElement as HTMLElement | null;
-    return () => {
-      const target = opener.current;
-      opener.current = null;
-      target?.focus?.();
-    };
-  }, [open]);
+  }, [open, covered]);
 
   return (
     <>
-      <Overlay layer="sheetScrim" modal={open}>
+      <Overlay layer={stacked ? "sheet" : "sheetScrim"} modal={open}>
         {scrim ? (
           <Animated.View
             pointerEvents={open ? "auto" : "none"}
@@ -133,18 +138,30 @@ export function Sheet({
           style={[styles.lift, { height: window.height }, lift]}
         >
           <Animated.View pointerEvents="box-none" style={styles.dock}>
-            <Animated.View
-              ref={panelRef}
-              role="dialog"
-              aria-modal
-              aria-label={label}
-              tabIndex={-1}
-              pointerEvents={open ? "auto" : "none"}
-              style={[styles.panel, panel]}
-            >
-              <PanelFocus open={open} />
-              {children}
-            </Animated.View>
+            <SheetDrag open={open} onDismiss={onDismiss}>
+              <Animated.View
+                ref={panelRef}
+                role="dialog"
+                aria-modal
+                aria-label={label}
+                tabIndex={-1}
+                pointerEvents={open && !covered ? "auto" : "none"}
+                style={[styles.panel, panel]}
+                {...(covered ? coveredProps : null)}
+              >
+                <PanelFocus open={open} />
+                {children}
+                {/* The handle sits in the panel's top padding, so it
+                    adds no height. It is a cue for the drag, which the
+                    scrim and back already offer, so assistive tech
+                    skips it. */}
+                <SheetGrab>
+                  <View testID="sheet-handle" style={styles.handle} {...hiddenProps}>
+                    <View style={styles.handleBar} />
+                  </View>
+                </SheetGrab>
+              </Animated.View>
+            </SheetDrag>
           </Animated.View>
         </Animated.View>
       </Overlay>
@@ -152,8 +169,24 @@ export function Sheet({
   );
 }
 
+/** Hides a covered panel from assistive tech on a phone. The web uses
+    `inert`, set in the layout effect. */
+const coveredProps: ViewProps = Platform.select<ViewProps>({
+  web: {},
+  android: { importantForAccessibility: "no-hide-descendants" },
+  default: { accessibilityElementsHidden: true },
+});
+
+/** Hides a decoration from assistive tech on every platform. */
+const hiddenProps: ViewProps = {
+  accessibilityElementsHidden: true,
+  importantForAccessibility: "no-hide-descendants",
+  "aria-hidden": true,
+};
+
 /** Moves focus to the first control in the panel, or the panel itself.
-    It lives inside the panel, so it mounts with the overlay's portal. */
+    It lives inside the panel, so it mounts with the overlay's portal.
+    It sits out of the flow, so the panel's gap never counts it. */
 function PanelFocus({ open }: { open: boolean }) {
   const ref = React.useRef<React.ComponentRef<typeof View>>(null);
   React.useEffect(() => {
@@ -170,42 +203,66 @@ function PanelFocus({ open }: { open: boolean }) {
     );
     (first ?? dialog).focus();
   }, [open]);
-  return <View ref={ref} />;
+  return <View ref={ref} style={focusMark.outOfFlow} />;
 }
 
-const styles = StyleSheet.create({
-  scrim: {
+const focusMark = StyleSheet.create({
+  outOfFlow: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.scrim,
   },
-  lift: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  // The dock spans the window and centers the panel, which holds to
-  // the reading measure (ADR 0010).
-  dock: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: spacing.s,
-    paddingHorizontal: spacing.m,
-    alignItems: "center",
-  },
-  panel: {
-    width: "100%",
-    maxWidth: measure,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    borderRadius: radiusFloating,
-    padding: spacing.m,
-    gap: sheetGap,
-    ...shadows.floating,
-  },
+});
+
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    scrim: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.scrim,
+    },
+    lift: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    // The dock spans the window and centers the panel, which holds to
+    // the reading measure (ADR 0010).
+    dock: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: spacing.s,
+      paddingHorizontal: spacing.m,
+      alignItems: "center",
+    },
+    panel: {
+      width: "100%",
+      maxWidth: measure,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      borderRadius: radiusFloating,
+      overflow: "hidden",
+      padding: spacing.m,
+      gap: sheetGap,
+      ...shadows.floating,
+    },
+    handle: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: spacing.m,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    handleBar: {
+      width: 32,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.inkFaint,
+    },
+  }),
 });

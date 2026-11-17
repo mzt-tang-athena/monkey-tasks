@@ -18,7 +18,7 @@ to kebab-case, so look for the same code under its new name.
 
 ### Capture dock
 
-`src/components/BottomBar.tsx` (557 lines) is shared UI, but it imports
+`src/components/BottomBar.tsx` (557 lines) belongs to shared UI, but it imports
 the capture feature at runtime (`BottomBar.tsx:14-15`). It also owns the
 capture sheet's open state, its animation clock and the failure toast
 (`BottomBar.tsx:56-176`). The target layout forbids that edge:
@@ -118,25 +118,26 @@ What landed:
   alternative.
 - The editor split into the six files of the spec. The form scrolls in
   `KeyboardAwareScrollView`.
-- Bug 1: the sheet runs on `Sheet`, so back and Escape close it and the
-  screen under it is hidden from assistive tech. The pill reads
+- Bug 1: the sheet runs on `Sheet`. As a result, back and Escape close
+  it, and the screen under it stays hidden from assistive tech. The pill reads
   `target list: <target>`.
 - Bug 3: the bar row, the sheet, the toast and the editor header hold to
   the 720 measure. The bar surface spans the window.
-- Toast scope: the overlay host sits above the whole stack, so the
-  toast drew over the editor and over the other tab. The dock now draws
-  the toast only while its tab is focused (`useIsFocused`). The draft
+- Toast scope: the overlay host sits above the whole stack. As a
+  result, the toast drew over the editor and over the other tab. The dock now draws
+  the toast only while its tab has focus (`useIsFocused`). The draft
   and the toast state stay, so the toast returns with the tab. A
   component test and an e2e test cover it: fail a capture, open a task,
   and find no alert.
-- Sheet scope: for the same reason, the sheet stayed open over the
-  Planner or the editor when a nav tab or a row took focus by keyboard.
+- Sheet scope: the sheet stayed open over the Planner or the editor for
+  the same reason. That happened when a nav tab or a row took focus by
+  keyboard.
   The sheet now closes when its tab loses focus. A component test and
   three e2e tests cover it, one from the Planner. ADR 0040 has an
   amendment, with `inert` on the hidden screen as the alternative left
   to ticket 0063.
 - The row path drops the draft. On the base, a row reached by keyboard
-  opened the editor, and the sheet stayed open under it with the draft.
+  opened the editor. The sheet stayed open under it with the draft.
   Now the sheet closes with its tab, and the next open starts empty.
 - The bar comes back. The first focus close played the sheet's exit
   while the sheet left the tree. Animated stopped the sheet's clock when
@@ -156,10 +157,10 @@ Left:
 
 - The phone check that Body stays above the keyboard. jsdom has no
   keyboard. The epic's phone pass owns it.
-- The editor Name field is now named by its label, `Name`, and no longer
-  by its placeholder. `e2e/specs/tasks.spec.ts` follows.
+- The editor Name field now takes its name from its label, `Name`, and
+  no longer from its placeholder. `e2e/specs/tasks.spec.ts` follows.
 - On a wide window the sheet and toast edges sit 20 px outside the card
-  edges, because the sheet gutter is `spacing.m` and the page gutter is
+  edges. That is because the sheet gutter is `spacing.m` and the page gutter is
   `pageGutter`. Ticket 0063 can unify them.
 - On the Planner, the picked day resets to today after any tab round
-  trip. The base does the same. It is outside this ticket.
+  trip. The base does the same. That falls outside this ticket.

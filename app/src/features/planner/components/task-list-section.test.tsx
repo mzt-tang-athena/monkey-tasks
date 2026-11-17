@@ -14,7 +14,7 @@ function task(name: string): TaskItem {
     fileName: `${name}.md`,
     name,
     text: "",
-    data: { kind: "[[tasks]]", created: "2026-10-20" },
+    data: { kind: "[[tasks]]", created: "2026-10-20", "alert weight": "harsh" },
     body: "",
   };
 }

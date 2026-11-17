@@ -11,8 +11,8 @@ depends: [0021, 0023]
 ## Spec
 
 The app works. These animations make it feel like it does. Every one
-runs under 200 ms, because a task app that waits on its own motion is
-worse than one with none.
+runs under 200 ms. The reason is that a task app that waits on its own
+motion is worse than one with none.
 
 - Swiping the list tab or the day planner follows the finger, then
   settles on the next page. A short swipe springs back.
@@ -42,13 +42,13 @@ end states apply immediately.
 ## Outcome
 
 The list and the planner day page follow the finger. The tripwire
-reports its travel, the page rides a translate, and a release settles
+reports its travel, and the page rides a translate. A release settles
 on the next page in 160 ms or springs back. The offset resets in a
-layout effect keyed on the page, so the next page paints in place
-instead of flashing the old one.
+layout effect keyed on the page. That way, the next page paints in
+place instead of flashing the old one.
 
-The tick shows at once: the circle pops and the row dims while the
-note is written, and the data wins again as soon as it agrees. The
+The tick shows at once. The circle pops and the row dims while the
+write to the note runs. The data wins again as soon as it agrees. The
 hold shakes the source once when the drag arms. A capture rises into
 place on the lists screen, in the planner rows, and in the pills.
 

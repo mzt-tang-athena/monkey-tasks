@@ -1,8 +1,8 @@
 VALE_STYLES = .vale/styles
 
-.PHONY: lint ensure-styles hooks
+.PHONY: lint ensure-styles hooks check-records test-check-records
 
-lint: ensure-styles
+lint: check-records ensure-styles
 	npx vale-rules sync
 	vale README.md docs/adr/*.md tickets/README.md
 
@@ -12,3 +12,9 @@ ensure-styles:
 hooks:
 	git config core.hooksPath .githooks
 	@echo "pre-commit hook installed for this clone"
+
+check-records:
+	@scripts/check-records.sh
+
+test-check-records:
+	@bash scripts/test-check-records.sh

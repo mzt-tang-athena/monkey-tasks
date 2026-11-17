@@ -1,9 +1,9 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Banner } from "@/components/ui/banner";
-import { Pressable } from "@/components/ui/pressable";
 import { useVaultFailures } from "@/stores/tasks/use-vault-failures";
-import { colors, measure, pageGutter, spacing, type } from "@/theme/tokens";
+import { measure, pageGutter, spacing, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import type { Repair } from "../hooks/use-list-sections";
 
 function sentence(text: string): string {
@@ -11,33 +11,13 @@ function sentence(text: string): string {
 }
 
 /**
- * The prompt to pick the vault folder. It shows once the store knows
- * it has no folder, or when the folder stopped reading.
- */
-export function VaultPrompt({ onGrant }: { onGrant: () => void }) {
-  return (
-    <View style={styles.slot}>
-      <Pressable
-        style={({ pressed }) => [styles.prompt, pressed && styles.pressed]}
-        onPress={onGrant}
-        accessibilityRole="button"
-        accessibilityLabel="connect vault folder"
-      >
-        <Text style={styles.promptTitle}>Connect your vault folder</Text>
-        <Text style={styles.promptHint}>
-          Pick the Obsidian vault to use this app with real tasks.
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
-
-/**
- * The notes that fail validation, with the file and each error, so
- * they can be fixed in the vault. The notice is the list's header, so
- * it scrolls away with the list and never takes room from the rows.
+ * The notes that fail validation, with the file and each reason, so
+ * they can be fixed in the vault. A warned note is here too, and keeps
+ * its row. The notice is the list's header, so it scrolls away with the
+ * list and never takes room from the rows.
  */
 export function RepairNotice({ repairs }: { repairs: Repair[] }) {
+  const { styles } = useThemedStyles(makeStyles);
   if (repairs.length === 0) {
     return null;
   }
@@ -47,9 +27,9 @@ export function RepairNotice({ repairs }: { repairs: Repair[] }) {
         {repairs.map((item) => (
           <View key={item.uri} style={styles.repairItem}>
             <Text style={styles.repairName}>{item.name}.md</Text>
-            {item.errors.map((error, index) => (
-              <Text key={index} style={styles.repairError}>
-                {`• ${error}`}
+            {item.messages.map((message, index) => (
+              <Text key={index} style={styles.repairMessage}>
+                {`• ${message}`}
               </Text>
             ))}
           </View>
@@ -67,6 +47,7 @@ export function RepairNotice({ repairs }: { repairs: Repair[] }) {
  * kept an edited next occurrence.
  */
 export function FailureBanner() {
+  const { styles } = useThemedStyles(makeStyles);
   const failures = useVaultFailures();
   if (failures.length === 0) {
     return null;
@@ -112,47 +93,34 @@ export function FailureBanner() {
   );
 }
 
-const styles = StyleSheet.create({
-  // A fixed notice sits on the page grid above the list.
-  slot: {
-    maxWidth: measure,
-    alignSelf: "center",
-    width: "100%",
-    paddingHorizontal: pageGutter,
-    paddingTop: spacing.m,
-  },
-  failures: {
-    gap: spacing.s,
-  },
-  prompt: {
-    gap: 2,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  promptTitle: {
-    ...type.control,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  promptHint: {
-    ...type.meta,
-    color: colors.inkMuted,
-  },
-  // The list header sits on the list's own grid, with a step below it.
-  repairs: {
-    paddingBottom: spacing.xs,
-  },
-  repairItem: {
-    gap: 2,
-  },
-  repairName: {
-    ...type.control,
-    color: colors.ink,
-    fontWeight: "600",
-  },
-  repairError: {
-    ...type.meta,
-    color: colors.danger,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // A fixed notice sits on the page grid above the list.
+    slot: {
+      maxWidth: measure,
+      alignSelf: "center",
+      width: "100%",
+      paddingHorizontal: pageGutter,
+      paddingTop: spacing.m,
+    },
+    failures: {
+      gap: spacing.s,
+    },
+    // The list header sits on the list's own grid, with a step below it.
+    repairs: {
+      paddingBottom: spacing.xs,
+    },
+    repairItem: {
+      gap: 2,
+    },
+    repairName: {
+      ...type.control,
+      color: colors.ink,
+      fontWeight: "600",
+    },
+    repairMessage: {
+      ...type.meta,
+      color: colors.danger,
+    },
+  }),
 });

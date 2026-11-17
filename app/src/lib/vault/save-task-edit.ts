@@ -1,4 +1,4 @@
-import { taskFrontmatter, validateNote } from "@monkey-tasks/schemas";
+import { taskFrontmatter, taskWarnings, validateNote } from "@monkey-tasks/schemas";
 import type { VaultAdapter } from "@/lib/vault/adapter";
 import { keepTypedName, writeNoteIfUnchanged } from "@/lib/vault/notes";
 import {
@@ -44,11 +44,25 @@ export async function saveTaskEdit(
   let text = expected;
   text = updateProperty(text, "due", edit.due);
   text = updateProperty(text, "recurrence", recurrenceToWrite(item, edit));
+  // An unknown value reads as harsh, so an unchanged weight keeps its
+  // line and its warning.
+  const weight = item.data?.["alert weight"] ?? "harsh";
+  if (edit.alertWeight !== weight) {
+    text = updateProperty(
+      text,
+      "alert weight",
+      edit.alertWeight === "quiet" ? "quiet" : null,
+    );
+  }
   text = setBlockList(text, "reminders", edit.reminders);
-  text = setBlockList(
+  // A note that still carries the old `lists` would promote its first
+  // link on the next read and put the task back on its old tab, so a
+  // save drops it before writing the one list.
+  text = updateProperty(text, "lists", null);
+  text = updateProperty(
     text,
-    "lists",
-    edit.lists.map((name) => `[[${name}]]`),
+    "list",
+    edit.list == null || edit.list === "" ? null : `[[${edit.list}]]`,
   );
   text = replaceBody(text, edit.body);
 
@@ -86,6 +100,7 @@ export async function saveTaskEdit(
   }
 
   const note = validateNote(fileName, written, taskFrontmatter);
+  const warnings = note.data == null ? [] : taskWarnings(note.note.values);
   return {
     // The row keeps its identity: a rename changes the uri, not which
     // row the list is showing.
@@ -96,5 +111,6 @@ export async function saveTaskEdit(
     text: written,
     data: note.data,
     body: note.note.body,
+    ...(warnings.length > 0 ? { warnings } : {}),
   };
 }

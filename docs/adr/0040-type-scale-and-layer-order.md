@@ -7,14 +7,14 @@
 
 The screens set text size by hand. At commit `b2c0b10` they held 86
 `fontSize` literals in 11 sizes, from 10 to 26. The eyebrow label over
-a group came in five forms: 12 or 11 pt, weight 600 or 700, and letter
+a group came in five forms. It used 12 or 11 pt, weight 600 or 700, and letter
 spacing 0.5, 1 or 1.2. Nothing said which size a new label should take.
 
 Surfaces that float had no order either. The drag ghosts, the menus,
 the toast and the capture sheet stack in tree order. One ghost sets
 `zIndex: 20`. The `elevation` values reorder the rest, on Android only.
-A menu's backdrop sits under the Lists page body, so a tap outside the
-menu reaches the row under it on the web.
+A menu's backdrop sits under the Lists page body. On the web, a tap
+outside the menu then reaches the row under it.
 
 Ticket 0054 adds the shared UI primitives that the screen tickets
 (0055 to 0057) adopt. They need one scale and one order to build on.
@@ -38,12 +38,12 @@ is a size and its line height:
 A style spreads a step and adds its own color and weight. The eyebrow
 is a whole form, so it carries its weight, spacing and case. The scale
 drops 10, 15 and 18. When a screen adopts the scale, a 10 becomes a
-caption, a 15 becomes body, and the week view's 18 pt serif day number
+caption and a 15 becomes body. The week view's 18 pt serif day number
 becomes a title or stays a local exception with a comment.
 
-We name one z scale, `layers`, low to high: content 0, bottom bar 10,
-drag ghost 20, menu backdrop 30, menu 40, sheet scrim 50, sheet 60,
-toast 70. `OverlayHost` wraps the stack in `src/app/_layout.tsx`. An
+We name one z scale, `layers`, ordered low to high. Content is 0, the
+bottom bar 10, the drag ghost 20 and the menu backdrop 30. The menu is
+40, the sheet scrim 50, the sheet 60 and the toast 70. `OverlayHost` wraps the stack in `src/app/_layout.tsx`. An
 `Overlay` draws its children there, in a layer that fills the window,
 with `zIndex` and `elevation` both set to the layer value. Android
 orders siblings by elevation first, so the two must agree.
@@ -55,8 +55,8 @@ host is about 120 lines and adds no native code.
 
 We also rejected a headless UI kit for the primitives that sit on these
 layers. We checked two on 2026-10-31. `@rn-primitives` 1.5 ports Radix
-to React Native. On the web it renders Radix itself, so the Playwright
-suite would test other code than the phone runs (ADR 0038).
+to React Native. On the web it renders Radix itself. The Playwright
+suite would then test other code than the phone runs (ADR 0038).
 `@gluestack-ui/core` 5.0 builds on react-aria. It adds about 30
 packages and needs `react-native-svg`. Neither kit places a menu clear
 of the bottom bar, and neither docks a sheet on the keyboard. Those are
@@ -68,8 +68,8 @@ can reopen this if focus handling turns out to cost more than a kit.
 
 A new label picks a role, not a size. The screen tickets move their
 literals onto the steps as they adopt the primitives. Some text moves
-by a point when it does: the menu hints and the editor's field hints go
-from 12 to 11, and the empty states go from 15 to 16. Those tickets
+by a point when it does. The menu hints and the editor's field hints go
+from 12 to 11. The empty states go from 15 to 16. Those tickets
 check the change in their screenshots.
 
 The toast floats above an open sheet, and a menu floats above the
@@ -78,7 +78,7 @@ whatever screen opened them.
 
 An overlay renders inside the host, not inside the screen that opened
 it. It sees the app's providers, such as the task store and the safe
-area, but not a provider the screen adds for itself. A screen passes
+area. It does not see a provider the screen adds for itself. A screen passes
 such values as props.
 
 While a modal overlay shows, the host hides the screen from assistive
@@ -95,13 +95,13 @@ on the web.
 
 An overlay belongs to its screen. The capture dock reads
 `useIsFocused`. It closes the sheet when its tab loses focus, and it
-draws the toast only while its tab is focused. Escape now listens in
+draws the toast only while its tab has focus. Escape now listens in
 the capture phase, so it closes the sheet while the text input has
 focus.
 
 A close on focus loss plays no exit. The sheet leaves the tree at once,
 so the clock it shares with the bar has no view to drive. The dock sets
-the sheet's clock to closed and the bar's lift to shown, and the user
+the sheet's clock to closed and the bar's lift to shown. The user then
 finds the bar whole on return. An exit run there would stop when the
 sheet's view went, and it would leave the bar collapsed.
 
@@ -109,7 +109,7 @@ Alternative: mark the hidden screen `inert` on the web while a modal
 overlay shows, so focus cannot leave the sheet. We did not take it
 here. The focus close fixes both reported paths, and the base let the
 same keys through. `inert` changes what the keyboard can reach on every
-modal overlay, so ticket 0063 can weigh it with the rest of the focus
+modal overlay. Ticket 0063 can weigh it with the rest of the focus
 handling.
 
 ## Amendment, 2026-11-10: a modal overlay makes the screen inert
@@ -126,8 +126,8 @@ element that still holds focus.
 
 Android keeps `no-hide-descendants`. iOS keeps the element flag.
 
-The menu and the sheet move focus in when they open, and back to the
-control that opened them when they close. The capture sheet returns
+The menu and the sheet move focus in when they open. They move it back
+to the control that opened them when they close. The capture sheet returns
 focus after its exit, when the overlay leaves the tree.
 
 Alternative: keep `aria-hidden` and add `inert`. The two hide the screen

@@ -6,7 +6,7 @@
 ## Context
 
 The repo had no local checks. CI ran the typecheck, the tests, the
-schemas tests and the bundle, and it ran Vale on the README, the ADRs
+schemas tests and the bundle. It also ran Vale on the README, the ADRs
 and the ticket format. It did not run ESLint, and the prose check never
 failed: Vale exits zero on warnings, so passive voice passed.
 
@@ -25,8 +25,8 @@ exit code ignores them.
 ## Consequences
 
 A broken hook rule or a passive sentence stops at the commit instead of
-in CI. The hook skips work when nothing relevant is staged, so a docs
-commit does not run ESLint.
+in CI. The hook skips work when the staged files hold nothing relevant,
+so a docs commit does not run ESLint.
 
 Hooks are not cloned, so each clone runs `make hooks` once. A commit
 made with `--no-verify` skips the hook; CI still checks it.

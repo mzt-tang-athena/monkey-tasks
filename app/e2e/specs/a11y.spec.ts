@@ -2,7 +2,10 @@ import { AxeBuilder } from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { months, supplements, tabs, tomorrow, undated } from "../data";
-import { press, row } from "../locators";
+import { expectAbove, press, row } from "../locators";
+import { smallTargets } from "../targets";
+import { rgb, setTheme } from "../theme";
+import { THEMES } from "../../src/theme/palettes";
 import {
   failNextCreate,
   failNextWrite,
@@ -15,23 +18,6 @@ import {
  * Ticket 0063: names, states, touch targets, alerts, the non-drag
  * reorder and focus. The axe scan sits at the end.
  */
-
-const minTarget = 44;
-/** Layout boxes land on fractions of a pixel; a hair under is a pass. */
-const slack = 0.5;
-const widgetRoles = [
-  "button",
-  "tab",
-  "checkbox",
-  "radio",
-  "option",
-  "gridcell",
-  "menuitem",
-  "menuitemradio",
-  "link",
-  "switch",
-  "slider",
-];
 
 async function openLists(page: Page) {
   await page.goto("/");
@@ -55,43 +41,39 @@ async function openPlanner(page: Page, mode: "day" | "week" | "month") {
   }
 }
 
-/** Every visible widget smaller than 44 by 44, from its layout box. */
-async function smallTargets(page: Page) {
-  return page.evaluate(
-    ({ roles, min, slack }) => {
-      const small: { role: string; name: string; width: number; height: number }[] = [];
-      for (const role of roles) {
-        for (const element of document.querySelectorAll(`[role="${role}"]`)) {
-          const box = element.getBoundingClientRect();
-          const style = getComputedStyle(element);
-          if (
-            box.width === 0 ||
-            box.height === 0 ||
-            style.visibility === "hidden" ||
-            style.display === "none"
-          ) {
-            continue;
-          }
-          if (box.width < min - slack || box.height < min - slack) {
-            small.push({
-              role,
-              name:
-                element.getAttribute("aria-label") ??
-                (element.textContent ?? "").trim().slice(0, 40),
-              width: Math.round(box.width * 10) / 10,
-              height: Math.round(box.height * 10) / 10,
-            });
-          }
-        }
-      }
-      return small;
-    },
-    { roles: widgetRoles, min: minTarget, slack },
-  );
-}
-
 async function expectTargets(page: Page) {
   expect(await smallTargets(page)).toEqual([]);
+}
+
+/** The Journal tab at 360, on today's note. */
+async function openJournal(page: Page) {
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Journal", exact: true }).click();
+  await expect(page.getByTestId("journal-screen")).toBeVisible();
+  await expect(page.getByText("Woke up early, before the alarm")).toBeVisible();
+}
+
+/** Switch palette and wait for the page to repaint in it. */
+async function usePalette(page: Page, name: "budget" | "midnight") {
+  await setTheme(page, name);
+  await expect
+    .poll(() =>
+      page
+        .getByTestId("journal-screen")
+        .evaluate((element) => getComputedStyle(element).backgroundColor),
+    )
+    .toBe(rgb(THEMES[name].paper));
+}
+
+/** The open entry composer, once its entrance has landed. */
+async function openEntryComposer(page: Page) {
+  await press(page, page.getByRole("button", { name: "add entry" }));
+  await expect(page.getByRole("dialog", { name: "Write an entry" })).toBeVisible();
+  const send = page.getByRole("button", { name: "send entry" });
+  await expect
+    .poll(async () => (await send.boundingBox())?.height ?? 0)
+    .toBeGreaterThanOrEqual(43.9);
 }
 
 test.describe("row names and states", () => {
@@ -171,14 +153,15 @@ test.describe("states", () => {
     await press(page, page.getByRole("button", { name: "sort list" }));
 
     const group = page.getByRole("radiogroup", { name: "Sort list" });
-    await expect(group.getByRole("radio", { name: "Due date" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    await expect(group.getByRole("radio", { name: "My order" })).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
+    await expect(
+      group.getByRole("radio", { name: "Due date Soonest first", exact: true }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(
+      group.getByRole("radio", {
+        name: "My order Drag rows to sort",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-checked", "false");
   });
 
   test("each tab group sits in a tablist", async ({ page }) => {
@@ -198,13 +181,29 @@ test.describe("states", () => {
       page,
       row(page, undated.second).getByRole("button", { name: undated.second }),
     );
+    const editor = page.getByRole("dialog", { name: "Task" });
+    await expect(
+      editor.getByRole("textbox", { name: "Task name", exact: true }),
+    ).toBeVisible();
 
-    const labels = ["Name", "Due", "Recurrence", "Lists", "Reminders", "Body"];
-    for (const label of labels) {
-      await expect(
-        page.getByRole("textbox", { name: label, exact: true }),
-      ).toBeVisible();
-    }
+    // Each picker's one field carries its own name.
+    await press(page, editor.getByRole("button", { name: /^change list/ }));
+    await expect(
+      page.getByRole("textbox", { name: "Find a list", exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await press(page, editor.getByRole("button", { name: "add repeat" }));
+    await press(page, page.getByRole("button", { name: /^Advanced/ }));
+    await expect(
+      page.getByRole("textbox", { name: "Repeat rule", exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await press(page, editor.getByRole("button", { name: /note$/ }));
+    await expect(
+      page.getByRole("textbox", { name: "Note", exact: true }),
+    ).toBeVisible();
   });
 });
 
@@ -235,7 +234,11 @@ test.describe("touch targets", () => {
       page,
       row(page, undated.second).getByRole("button", { name: undated.second }),
     );
-    await expect(page.getByRole("textbox", { name: "Name", exact: true })).toBeVisible();
+    const editor = page.getByRole("dialog", { name: "Task" });
+    await expect(
+      editor.getByRole("textbox", { name: "Task name", exact: true }),
+    ).toBeVisible();
+    await expect(editor).toHaveCSS("opacity", "1");
     await expectTargets(page);
   });
 
@@ -249,6 +252,29 @@ test.describe("touch targets", () => {
     await expect
       .poll(async () => (await send.boundingBox())?.height ?? 0)
       .toBeGreaterThanOrEqual(43.9);
+    await expectTargets(page);
+  });
+
+  for (const palette of ["budget", "midnight"] as const) {
+    test(`Journal in ${palette}`, async ({ page }) => {
+      await openJournal(page);
+      await usePalette(page, palette);
+      await expectTargets(page);
+    });
+
+    test(`the open entry composer in ${palette}`, async ({ page }) => {
+      await openJournal(page);
+      await usePalette(page, palette);
+      await openEntryComposer(page);
+      await expectTargets(page);
+    });
+  }
+
+  test("Settings", async ({ page }) => {
+    await openLists(page);
+    await press(page, page.getByRole("button", { name: "list menu" }));
+    await press(page, page.getByRole("menuitem", { name: "Settings" }));
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
     await expectTargets(page);
   });
 
@@ -297,10 +323,13 @@ test.describe("errors announce", () => {
     );
     await failNextWrite(page, `${undated.second}.md`);
 
-    await page.getByRole("textbox", { name: "Name", exact: true }).fill("Call Mum back");
-    await press(page, page.getByRole("button", { name: "save task" }));
+    // The sheet writes each change, so a picked day is the save.
+    await press(page, page.getByRole("button", { name: "add due date" }));
+    await press(page, page.getByRole("button", { name: "Tomorrow" }));
 
-    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Not saved" }),
+    ).toBeVisible();
   });
 
   test("the capture failure toast is an alert", async ({ page }) => {
@@ -317,36 +346,44 @@ test.describe("errors announce", () => {
 });
 
 test.describe("non-drag paths", () => {
-  test("Move down on the first row in My order moves it second and writes the order", async ({
+  test("the grip is a slider whose steps move the row one place and write the order", async ({
     page,
   }) => {
     await openLists(page);
     await press(page, page.getByRole("button", { name: "sort list" }));
-    await press(page, page.getByRole("radio", { name: "My order" }));
-    await expect.poll(async () => {
-      const first = await row(page, undated.first).boundingBox();
-      const second = await row(page, undated.second).boundingBox();
-      return first != null && second != null && first.y < second.y;
-    }).toBe(true);
-
     await press(
       page,
-      page.getByRole("button", { name: `actions for ${undated.first}` }),
+      page.getByRole("radio", { name: "My order Drag rows to sort" }),
     );
-    await press(page, page.getByRole("menuitem", { name: "Move down" }));
+    await expectAbove(row(page, undated.first), row(page, undated.second));
 
-    await expect.poll(async () => {
-      const first = await row(page, undated.first).boundingBox();
-      const second = await row(page, undated.second).boundingBox();
-      return first != null && second != null && second.y < first.y;
-    }).toBe(true);
+    const grip = page.getByRole("slider", {
+      name: `reorder ${undated.first}`,
+    });
+    await expect(grip).toHaveAttribute("aria-valuenow", "1");
 
+    // Arrow down is the increment action: one place down the list.
+    await grip.focus();
+    await expect(grip).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expectAbove(row(page, undated.second), row(page, undated.first));
     await expect
       .poll(() => noteText(page, `Tasks/${undated.first}.md`))
       .toContain("order: 2");
     await expect
       .poll(() => noteText(page, `Tasks/${undated.second}.md`))
       .toContain("order: 1");
+    await expect(grip).toHaveAttribute("aria-valuenow", "2");
+
+    // Arrow up is the decrement action, and it lands the row back.
+    await page.keyboard.press("ArrowUp");
+    await expectAbove(row(page, undated.first), row(page, undated.second));
+    await expect
+      .poll(() => noteText(page, `Tasks/${undated.first}.md`))
+      .toContain("order: 1");
+    await expect
+      .poll(() => noteText(page, `Tasks/${undated.second}.md`))
+      .toContain("order: 2");
   });
 
   test("the split grabber is adjustable and its actions move it one hour row", async ({
@@ -360,6 +397,7 @@ test.describe("non-drag paths", () => {
     const top = page.getByTestId("day-split:top");
     const before = (await top.boundingBox())?.height ?? 0;
     await slider.focus();
+    await expect(slider).toBeFocused();
     await page.keyboard.press("ArrowDown");
 
     await expect.poll(async () => (await top.boundingBox())?.height ?? 0).toBeLessThan(
@@ -434,8 +472,12 @@ test.describe("overlays", () => {
 });
 
 test.describe("axe", () => {
-  async function scan(page: Page, where: string) {
-    const result = await new AxeBuilder({ page }).analyze();
+  async function scan(page: Page, where: string, include?: string) {
+    const builder = new AxeBuilder({ page });
+    if (include != null) {
+      builder.include(include);
+    }
+    const result = await builder.analyze();
     const bad = result.violations.filter(
       (finding) => finding.impact === "serious" || finding.impact === "critical",
     );
@@ -474,8 +516,10 @@ test.describe("axe", () => {
       page,
       row(page, undated.second).getByRole("button", { name: undated.second }),
     );
-    await expect(page.getByRole("textbox", { name: "Name", exact: true })).toBeVisible();
-    await scan(page, "editor");
+    const editor = page.getByRole("dialog", { name: "Task" });
+    await expect(editor.getByRole("textbox", { name: "Task name" })).toBeVisible();
+    await expect(editor).toHaveCSS("opacity", "1");
+    await scan(page, "editor", '[role="dialog"]');
   });
 
   test("the open capture sheet", async ({ page }) => {
@@ -484,6 +528,25 @@ test.describe("axe", () => {
     await expect(page.getByRole("dialog", { name: "Add a task" })).toBeVisible();
     await scan(page, "capture sheet");
   });
+
+  for (const palette of ["budget", "midnight"] as const) {
+    test(`the Journal page in ${palette} at 360`, async ({ page }) => {
+      await openJournal(page);
+      await usePalette(page, palette);
+      await scan(page, `journal ${palette}`);
+    });
+
+    test(`the open entry composer in ${palette} at 360`, async ({ page }) => {
+      await openJournal(page);
+      await usePalette(page, palette);
+      await openEntryComposer(page);
+      await expect(page.getByRole("dialog", { name: "Write an entry" })).toHaveCSS(
+        "opacity",
+        "1",
+      );
+      await scan(page, `journal composer ${palette}`);
+    });
+  }
 });
 
 test("list tabs still read as tabs", async ({ page }) => {

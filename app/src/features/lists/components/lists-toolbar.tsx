@@ -1,11 +1,16 @@
 import * as React from "react";
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { Icon } from "@/components/ui/icon";
 import { IconButton } from "@/components/ui/icon-button";
 import { Menu, type MenuItem } from "@/components/ui/menu";
 import { TabStrip } from "@/components/ui/tab-strip";
+import { useCommandPane } from "@/hooks/use-command-pane";
 import type { SortMode } from "@/lib/settings";
-import { colors, measure, pageGutter, spacing } from "@/theme/tokens";
+import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
+import type { TaskItem } from "@/types/task";
+import { ClearCompletedSheet } from "./clear-completed-sheet";
 
 const sortOptions: { key: SortMode; label: string; hint: string }[] = [
   { key: "due", label: "Due date", hint: "Soonest first" },
@@ -25,18 +30,34 @@ export function ListsToolbar({
   onSelectTab,
   sortMode,
   onSortMode,
+  completed,
+  onClearCompleted,
 }: {
   tabs: string[];
   tab: string;
   onSelectTab: (tab: string) => void;
   sortMode: SortMode;
   onSortMode: (mode: SortMode) => void;
+  /** The current tab's completed rows: what a clear deletes. */
+  completed: readonly TaskItem[];
+  onClearCompleted: (tasks: readonly TaskItem[]) => void;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
+  const { show } = useCommandPane();
   // One menu at a time: opening one closes the other.
   const [open, setOpen] = React.useState<"sort" | "more" | null>(null);
+  // The clear's confirmation. It keeps the snapshot and the sheet's
+  // lifetime apart, so the count holds while the sheet leaves.
+  const [clear, setClear] = React.useState<{
+    tasks: readonly TaskItem[];
+    open: boolean;
+  } | null>(null);
   const sortAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
   const moreAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
   const close = React.useCallback(() => setOpen(null), []);
+  // One filled mark covers both an open menu and a sort other than due.
+  const sortSelected = open === "sort" || sortMode !== "due";
+  const moreSelected = open === "more";
 
   const sortItems: MenuItem[] = sortOptions.map((option) => ({
     key: option.key,
@@ -48,9 +69,18 @@ export function ListsToolbar({
       close();
     },
   }));
-  // Rename list, Delete list and Delete all completed tasks come with
-  // ticket 0065. Until then the menu holds only what works.
+  // Rename list and Delete list come with ticket 0065. Until then the
+  // menu holds only what works. A tab with no completed task gets no
+  // clear item, so a danger action never reads as available.
   const moreItems: MenuItem[] = [
+    {
+      key: "settings",
+      label: "Settings",
+      onPress: () => {
+        close();
+        router.push("/settings");
+      },
+    },
     {
       key: "diagnostics",
       label: "Diagnostics",
@@ -60,9 +90,23 @@ export function ListsToolbar({
       },
     },
   ];
+  if (completed.length > 0) {
+    moreItems.push({
+      key: "clear-completed",
+      label: "Delete all completed tasks",
+      tone: "danger",
+      onPress: () => {
+        close();
+        setClear({ tasks: [...completed], open: true });
+      },
+    });
+  }
+
+  const shut = () =>
+    setClear((current) => (current == null ? current : { ...current, open: false }));
 
   return (
-    <View style={styles.band}>
+    <View testID="lists-toolbar" style={styles.band}>
       <View style={styles.content}>
         <TabStrip
           tabs={tabs}
@@ -71,24 +115,33 @@ export function ListsToolbar({
           label="Lists"
         />
         <View style={styles.spacer} />
-        <View ref={sortAnchor}>
+        <IconButton label="open commands" onPress={show}>
+          <Icon name="chevron-down" />
+        </IconButton>
+        <View ref={sortAnchor} testID="sort-menu-anchor">
           <IconButton
             label="sort list"
-            active={open === "sort" || sortMode !== "due"}
             expanded={open === "sort"}
             onPress={() => setOpen(open === "sort" ? null : "sort")}
           >
-            <SortGlyph />
+            <Icon
+              name="sort"
+              weight={sortSelected ? "fill" : "outline"}
+              color={sortSelected ? "ink" : "inkMuted"}
+            />
           </IconButton>
         </View>
-        <View ref={moreAnchor}>
+        <View ref={moreAnchor} testID="list-menu-anchor">
           <IconButton
             label="list menu"
-            active={open === "more"}
             expanded={open === "more"}
             onPress={() => setOpen(open === "more" ? null : "more")}
           >
-            <DotsGlyph />
+            <Icon
+              name="more"
+              weight={moreSelected ? "fill" : "outline"}
+              color={moreSelected ? "ink" : "inkMuted"}
+            />
           </IconButton>
         </View>
       </View>
@@ -107,70 +160,43 @@ export function ListsToolbar({
         label="List menu"
         items={moreItems}
       />
+      {clear != null ? (
+        <ClearCompletedSheet
+          open={clear.open}
+          tasks={clear.tasks}
+          onCancel={shut}
+          onConfirm={(tasks) => {
+            shut();
+            onClearCompleted(tasks);
+          }}
+          onExited={() => setClear(null)}
+        />
+      ) : null}
     </View>
   );
 }
 
-/** Three bars that shorten: the sort glyph. */
-function SortGlyph() {
-  return (
-    <View style={styles.sort}>
-      {[16, 11, 6].map((width) => (
-        <View key={width} style={[styles.sortBar, { width }]} />
-      ))}
-    </View>
-  );
-}
-
-/** Three dots: the overflow glyph. */
-function DotsGlyph() {
-  return (
-    <View style={styles.dots}>
-      {[0, 1, 2].map((index) => (
-        <View key={index} style={styles.dot} />
-      ))}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  // Fixed chrome above the scroller: a surface step above the paper,
-  // closed by a hairline that runs edge to edge.
-  band: {
-    backgroundColor: colors.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.hairline,
-  },
-  content: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    maxWidth: measure,
-    alignSelf: "center",
-    width: "100%",
-    paddingHorizontal: pageGutter,
-    paddingTop: spacing.s,
-  },
-  spacer: {
-    flex: 1,
-  },
-  sort: {
-    alignItems: "flex-end",
-    gap: 3,
-  },
-  sortBar: {
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.inkMuted,
-  },
-  dots: {
-    alignItems: "center",
-    gap: 2.5,
-  },
-  dot: {
-    width: 3.5,
-    height: 3.5,
-    borderRadius: 1.75,
-    backgroundColor: colors.inkMuted,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // Fixed chrome above the scroller: a surface step above the paper,
+    // closed by a hairline that runs edge to edge.
+    band: {
+      backgroundColor: colors.surface,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.hairline,
+    },
+    content: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+      maxWidth: measure,
+      alignSelf: "center",
+      width: "100%",
+      paddingHorizontal: pageGutter,
+      paddingTop: spacing.s,
+    },
+    spacer: {
+      flex: 1,
+    },
+  }),
 });

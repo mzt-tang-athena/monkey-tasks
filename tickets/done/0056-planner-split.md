@@ -110,19 +110,19 @@ the day body on every render (`DaySpread.tsx:46-48`,
    places the menu below the toggle and clamps the left side only. To
    reproduce at 360 by 640, open month mode and hold the source toggle.
    The last items fall under the bottom bar. `Menu` flips and clamps it.
-6. **Day lists sort a recurring task by the day it is stored on.**
+6. **Day lists sort a recurring task by its stored day.**
    `sortOpenFirst` (`model.ts:108-124`) sorts by the full stored
    timestamp. On a day other than today, the day list holds each
    recurrence that falls on it (`DaySpread.tsx:364-370`). A daily task
-   stored yesterday at 7:00 PM therefore sorts above a task due that
-   day at 2:30 PM. `DayPreview.tsx:48-62` sorts the same way. The month
+   stored yesterday at 7:00 PM thus sorts above a 2:30 PM task
+   due that day. `DayPreview.tsx:48-62` sorts the same way. The month
    view's picked-day list (`usePlannerMonth.ts:60`) does not sort at
    all. The week column already sorts with `sortByTimeOfDay`
    (`WeekView.tsx:63`). To reproduce in the web preview, keep the e2e
-   clock (Monday 26 October 2026), open day view and step to Tuesday
-   27: Supplements (7:00 PM) shows above Dentist (2:30 PM). Give
-   `lib/day-rows.ts` one sort for a day: open first, then all-day
-   tasks, then by time of day.
+   clock (Monday 26 October 2026). Then open day view and step to
+   Tuesday 27. Supplements (7:00 PM) shows above Dentist (2:30 PM). Give
+   `lib/day-rows.ts` one sort for a day. It sorts open tasks first, then
+   all-day tasks, then by time of day.
 7. **Overdue rows have no separators.** The overdue block maps its rows
    with no hairline between them (`DaySpread.tsx:720-743`). The list
    below draws one through `RowSeparator`
@@ -134,7 +134,7 @@ the day body on every render (`DaySpread.tsx:46-48`,
    month" for the mode, whatever period is on screen. To reproduce,
    open day view and step to tomorrow: the source toggle still reads
    "Due today". Week and month mode do the same for another week or
-   month. Name the period on screen instead, for example "Due
+   month. Name the period on screen instead. For example: "Due
    tomorrow", "Due Wed, 28 Oct", "Due 8 to 14 Nov" or "Due November".
 
 ## Acceptance
@@ -153,26 +153,26 @@ the day body on every render (`DaySpread.tsx:46-48`,
 - [x] A Playwright test reproduces the stacking bug first. Afterwards the ghost draws above the bottom bar in day, week and month mode.
 - [x] With the source menu open, a tap on the bottom bar closes the menu and does not navigate.
 - [x] A Playwright test at 360 by 640 reproduces the menu bug first. Afterwards the open source menu sits fully above the bottom bar.
-- [x] A Playwright test reproduces the sort bug first. Afterwards the day list, the swipe preview and the month picked-day list each show a day's tasks by time of day.
+- [x] A Playwright test reproduces the sort bug first. Afterwards the day list, swipe preview and month picked-day list each show a day's tasks by time of day.
 - [x] A Playwright test reproduces the separator bug first. Afterwards overdue rows and list rows show the same hairline. (The test counts the shared `row-separator` in the overdue group, and a screenshot check backed it.)
 - [x] A Playwright test reproduces the source toggle bug first. Afterwards, in day, week and month mode, the source toggle names the period on screen.
-- [x] A render-count test shows that a hover change during a day drag re-renders the timeline and not the list pane.
-- [x] A drag from the list to the ruler still writes the hour, and a drag to a week column or month cell still writes the day.
+- [x] A render-count test covers a hover change during a day drag. It shows that the change re-renders the timeline and not the list pane.
+- [x] A drag from the list to the ruler still writes the hour. A drag to a week column or month cell still writes the day.
 - [x] `npx eslint src`, `npx tsc --noEmit`, the test suite and the Playwright suite pass.
 
 ## Outcome
 
 ### What landed
 
-- The planner split as the Spec table asks. `planner-screen.tsx` is a composition root. `PlannerListContext` replaces the nine props. `plannerStyles.ts` and `PlannerStates.tsx` are gone.
+- The planner split as the Spec table asks. `planner-screen.tsx` is a composition root. `PlannerListContext` replaces the nine props. `plannerStyles.ts` and `PlannerStates.tsx` no longer exist.
 - `use-drag-session` is the one home for drag in all three modes. ADR 0025 has the dated amendment. The ghost has no origin option, because it now rides the window through `OverlayHost`.
-- The hover lives in a small store, so a drag over the ruler renders the timeline and not the list pane. A test counts the renders.
+- The hover lives in a small store. A drag over the ruler thus renders the timeline and not the list pane. A test counts the renders.
 - The eight bugs each have a test written first. ADR 0041 records the week column choice.
-- Review findings: the date strip keeps a step clear of the top edge, `TaskListSection` uses constant slot styles, and the bug 8 example reads "Due 8 to 14 Nov".
-- Review fixes: the day's wrapped drag API keeps one identity through hold, arm and pickup (`useClaimedList`), so the native pan is not rebuilt mid-drag. The screen holds the month's picked day, so it survives a visit to Day. The pills form lists a day's rows in time order after the overdue group.
+- Review findings: the date strip keeps a step clear of the top edge, and `TaskListSection` uses constant slot styles. The bug 8 example reads "Due 8 to 14 Nov".
+- Review fixes: the day's wrapped drag API keeps one identity through hold, arm and pickup (`useClaimedList`). As a result, nothing rebuilds the native pan mid-drag. The screen holds the month's picked day, so it survives a visit to Day. The pills form lists a day's rows in time order after the overdue group.
 - Also fixed: on a 360 by 640 screen the day's list pane sat under the bottom bar. The split now leaves the list pane in reach until the grabber moves. An empty day other than today no longer says "Nothing scheduled today."
 
-### What is left
+### What remains
 
 - The click guard is local to the session. Ticket 0055 plans `use-press-guard`, and owns the swap when it lands.
 - Week chips are two lines tall at most. A later ticket can measure them if the fixed height proves too coarse (ADR 0041).

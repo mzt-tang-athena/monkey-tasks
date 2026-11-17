@@ -8,7 +8,7 @@ import { loadTasks } from "./task-notes";
 const dir = `${MEMORY_ROOT}/Tasks`;
 
 const valid =
-  '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n  - "[[Focus]]"\n---\n\nBody.\n';
+  '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlist: "[[Focus]]"\n---\n\nBody.\n';
 const broken = '---\nkind: "[[tasks]]"\n---\n\nNo created date.\n';
 
 describe("loadTasks", () => {
@@ -29,8 +29,35 @@ describe("loadTasks", () => {
     expect(brokenRow?.body).toBe("\nNo created date.\n");
 
     const validRow = tasks.find((task) => task.name === "Valid");
-    expect(validRow?.data?.lists).toEqual(["[[Focus]]"]);
+    expect(validRow?.data?.list).toBe("[[Focus]]");
     expect(validRow?.errors).toBeUndefined();
+  });
+
+  it("keeps a note whose alert weight is a typo, with a warning", async () => {
+    const vault = createMemoryVault({
+      "Tasks/Loud.md":
+        '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nalert weight: loud\n---\n',
+    });
+
+    const [row] = await loadTasks(vault, dir);
+
+    expect(row.data?.["alert weight"]).toBe("harsh");
+    expect(row.errors).toBeUndefined();
+    expect(row.warnings).toEqual([
+      'alert weight "loud" is not harsh or quiet, so it rings harsh',
+    ]);
+  });
+
+  it("reads a quiet note with no warning", async () => {
+    const vault = createMemoryVault({
+      "Tasks/Quiet.md":
+        '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nalert weight: quiet\n---\n',
+    });
+
+    const [row] = await loadTasks(vault, dir);
+
+    expect(row.data?.["alert weight"]).toBe("quiet");
+    expect(row.warnings).toBeUndefined();
   });
 
   it("shows a spawned occurrence by its title, not its file name", async () => {

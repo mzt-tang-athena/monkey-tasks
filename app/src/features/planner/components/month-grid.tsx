@@ -7,7 +7,8 @@ import { occurrencesBetween } from "@/lib/recurrence";
 import { isDone, startOfMonth } from "@/features/planner/model";
 import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
-import { colors, fonts, radius, spacing } from "@/theme/tokens";
+import { fonts, radius, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /** The tapped day, tagged with the month it belongs to. The
     container holds it, so a new month from the strip invalidates the
@@ -36,6 +37,7 @@ export function MonthGrid({
   interactive: boolean;
   onPick?: (day: Date) => void;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const year = viewMonth.getFullYear();
   const monthIdx = viewMonth.getMonth();
   const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
@@ -129,6 +131,7 @@ function GridBody({
   onPick?: (day: Date) => void;
   label: string;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const rows: React.ReactNode[] = [];
   for (let start = 0; start < cells.length; start += 7) {
     const week = cells.slice(start, start + 7).map((day, offset) => {
@@ -210,83 +213,85 @@ function GridBody({
   );
 }
 
-const styles = StyleSheet.create({
-  // The page keeps its content height inside the pager's stretch.
-  // The title sits one step over the card.
-  root: {
-    flexShrink: 0,
-    gap: spacing.s,
-  },
-  pressed: {
-    backgroundColor: colors.pressed,
-  },
-  title: {
-    fontSize: 13,
-    lineHeight: 16,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    textTransform: "uppercase",
-    letterSpacing: 1.5,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.m,
-  },
-  head: {
-    flexDirection: "row",
-  },
-  headCell: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 11,
-    lineHeight: 14,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    fontWeight: "600",
-  },
-  grid: {
-    flexDirection: "column",
-  },
-  row: {
-    flexDirection: "row",
-  },
-  cell: {
-    width: "14.28%",
-    aspectRatio: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 3,
-    borderRadius: radius,
-  },
-  cellPicked: {
-    backgroundColor: colors.accentSoft,
-  },
-  cellToday: {
-    backgroundColor: colors.accentSoft,
-  },
-  num: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-  },
-  numToday: {
-    color: colors.accent,
-    fontWeight: "700",
-  },
-  dotSlot: {
-    height: 4,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.accent,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    // The page keeps its content height inside the pager's stretch.
+    // The title sits one step over the card.
+    root: {
+      flexShrink: 0,
+      gap: spacing.s,
+    },
+    pressed: {
+      backgroundColor: colors.pressed,
+    },
+    title: {
+      fontSize: 13,
+      lineHeight: 16,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: radius,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      paddingHorizontal: spacing.xs,
+      paddingVertical: spacing.m,
+    },
+    head: {
+      flexDirection: "row",
+    },
+    headCell: {
+      flex: 1,
+      textAlign: "center",
+      fontSize: 11,
+      lineHeight: 14,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+      fontWeight: "600",
+    },
+    grid: {
+      flexDirection: "column",
+    },
+    row: {
+      flexDirection: "row",
+    },
+    cell: {
+      width: "14.28%",
+      aspectRatio: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 3,
+      borderRadius: radius,
+    },
+    cellPicked: {
+      backgroundColor: colors.accentSoft,
+    },
+    cellToday: {
+      backgroundColor: colors.accentSoft,
+    },
+    num: {
+      fontSize: 14,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+    },
+    numToday: {
+      color: colors.accent,
+      fontWeight: "700",
+    },
+    dotSlot: {
+      height: 4,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    dot: {
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.accent,
+    },
+  }),
 });

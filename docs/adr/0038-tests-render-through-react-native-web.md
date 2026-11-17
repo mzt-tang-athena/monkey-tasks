@@ -28,9 +28,9 @@ A probe on 2026-10-26 tried both layers:
 - `TaskRow.tsx` rendered through React Native Web 0.21 in jsdom with
   React 19.3, in 173 ms. Role and label queries found its buttons, and a
   click reached `onToggle` and `onOpen`.
-- Playwright drove the web preview through ten user flows: tick,
-  capture, list swipe, reorder, day swipe, month swipe, drag to
-  schedule, editor save and reduced motion.
+- Playwright drove the web preview through ten user flows. They
+  covered tick, capture, list swipe, reorder, day swipe, month swipe,
+  drag to schedule, editor save and reduced motion.
 
 ## Decision
 
@@ -87,12 +87,13 @@ change in React Native or in our own handlers passes them unseen.
 ## Amendment, 2026-10-28: a test id marks the live copy only
 
 Ticket 0049 added the Playwright suite. A pager draws a still copy of
-the next page while a swipe travels, and keeps it for 250 ms after the
-page lands. The list drag draws a ghost of the lifted row. Each copy
+the next page while a swipe travels. It keeps the copy for 250 ms after
+the page lands. The list drag draws a ghost of the lifted row. Each copy
 holds the same rows as the live page. Playwright fails at once when a
 locator matches two elements. It does not wait for the copy to go.
 
-So a `testID` marks the live element only, and a copy carries none.
+For that reason a `testID` marks the live element only, and a copy
+carries none.
 `TaskRow` and `TaskListSection` take a `copy` prop for this. The day
 preview and the drag ghost set it. `Timeline` takes its id prefix as a
 prop, and only the live day passes one. `MonthGrid` sets `month-title`
@@ -101,8 +102,8 @@ moment of a gesture.
 
 We rejected two other ways. `aria-hidden` on the copies hides them from
 role queries but not from `getByTestId`. A spec that scopes each query
-to the live page would have to know how each pager is built, and
-ticket 0059 rebuilds every pager.
+to the live page would have to know each pager's structure. Ticket
+0059 rebuilds every pager.
 
 ## Amendment, 2026-11-04: no test uses react-test-renderer
 

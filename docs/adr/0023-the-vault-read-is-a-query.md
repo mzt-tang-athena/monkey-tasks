@@ -5,10 +5,10 @@
 
 ## Context
 
-The store kept the vault list in its own state: a `tasks` array, a
+The store kept the vault list in its own state. It held a `tasks` array, a
 `load` callback, a status flag and an AppState listener that reloaded on
 return. That is the same job a data-fetching library does, written by
-hand, and it grew a queue and a rollback on top.
+hand. It grew a queue and a rollback on top.
 
 ## Decision
 
@@ -23,14 +23,14 @@ a device.
 
 Writes stay local first. A mutation writes through `setQueryData`, keeps
 the per-note queue, and rolls back on failure. A read waits for in-flight
-writes before it scans, so a reload cannot read old text back over a row
+writes before it scans. A reload then cannot read old text back over a row
 the user just changed.
 
 ## Consequences
 
 The store no longer owns a cache, a status flag or a focus listener. A
-screen gets pending and error states from the query. The mutation path is
-unchanged, which matters because it carries the behaviour pinned by
+screen gets pending and error states from the query. The mutation path stays
+the same. That matters because it carries the behaviour pinned by
 ADR 0017 and the store tests.
 
 The app now depends on `@tanstack/react-query`. The library's defaults
@@ -49,7 +49,7 @@ layer without removing work.
 ## Amendment, 2026-10-26
 
 ADR 0037 supersedes the write path of this decision. The read part
-stands: TanStack Query owns the read, nothing goes stale on a timer,
+stands. TanStack Query owns the read, nothing goes stale on a timer,
 and AppState drives the focus refetch.
 
 These parts no longer hold. A mutation does not keep a queue per note.

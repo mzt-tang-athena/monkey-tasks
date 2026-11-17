@@ -1,8 +1,15 @@
 import { expect, test } from "../fixtures";
-import { sections, supplements, tabs, undated } from "../data";
+import { sections, supplements, tabs, undated, warnedWeight } from "../data";
 import { holdDrag, swipe, touchSwipe } from "../gestures";
-import { expectAbove, listTab, press, row, sectionHeader } from "../locators";
-import { putNote, returnToTab } from "../vault";
+import {
+  expectAbove,
+  listTab,
+  openCompleted,
+  press,
+  row,
+  sectionHeader,
+} from "../locators";
+import { noteText, putNote, returnToTab } from "../vault";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -47,7 +54,9 @@ test.describe("tab swipe", () => {
   test("a plain tap on a row still opens the editor", async ({ page }) => {
     await press(page, row(page, undated.second).getByRole("button", { name: undated.second }));
 
-    await expect(page).toHaveURL(/\/task\//);
+    // The editor is a sheet over the list, so the page stays put.
+    await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
+    await expect(page).toHaveURL("/");
   });
 });
 
@@ -72,6 +81,8 @@ test.describe("row names and states", () => {
     });
     await expect(tick).toHaveAttribute("aria-checked", "false");
 
+    // Keep the group open, so the ticked row stays on the page.
+    await openCompleted(page);
     await press(page, tick);
 
     await expect(
@@ -91,38 +102,46 @@ test.describe("row names and states", () => {
 test.describe("My order", () => {
   test.beforeEach(async ({ page }) => {
     await page.getByRole("button", { name: "sort list" }).click();
-    await page.getByRole("radio", { name: "My order" }).click();
+    await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
     await expectAbove(row(page, undated.first), row(page, undated.second));
   });
 
   test("the sort sheet marks the order in use", async ({ page }) => {
     await page.getByRole("button", { name: "sort list" }).click();
 
-    await expect(page.getByRole("radio", { name: "My order" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    await expect(page.getByRole("radio", { name: "Due date" })).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
+    await expect(
+      page.getByRole("radio", { name: "My order Drag rows to sort" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(
+      page.getByRole("radio", { name: "Due date Soonest first" }),
+    ).toHaveAttribute("aria-checked", "false");
   });
 
-  test("each row has a named reorder handle", async ({ page }) => {
+  test("each grip is a slider named by its task at its place", async ({ page }) => {
     // B4: the grip rendered six dots with no name.
     const grip = page.getByTestId(`reorder-grip:${undated.second}`);
 
-    await expect(grip).toHaveRole("button");
-    await expect(grip).toHaveAccessibleName("reorder handle");
-    await expect(page.getByRole("button", { name: "reorder handle" }).first()).toBeVisible();
-    // It has no keyboard action yet (0063), so it is no tab stop.
-    await expect(grip).toHaveAttribute("tabindex", "-1");
+    await expect(grip).toHaveRole("slider");
+    await expect(grip).toHaveAccessibleName(`reorder ${undated.second}`);
+    await expect(
+      page.getByRole("slider", { name: `reorder ${undated.second}` }),
+    ).toBeVisible();
+    await expect(grip).toHaveAttribute("aria-valuenow", "2");
+    // The arrows step it, so it is a tab stop on the web.
+    await expect(grip).toHaveAttribute("tabindex", "0");
+    // The grip is the only non-drag path; the row's actions menu is gone.
+    await expect(
+      page.getByRole("button", { name: `actions for ${undated.second}` }),
+    ).toHaveCount(0);
   });
 
-  test("a held row moves and keeps its place", async ({ page }) => {
-    await holdDrag(page, row(page, undated.second), row(page, undated.first), {
-      at: "upper",
-    });
+  test("a grip drag moves the row and keeps its place", async ({ page }) => {
+    await holdDrag(
+      page,
+      page.getByTestId(`reorder-grip:${undated.second}`),
+      row(page, undated.first),
+      { at: "upper", holdMs: 0 },
+    );
 
     await expectAbove(row(page, undated.second), row(page, undated.first));
 
@@ -146,6 +165,43 @@ test.describe("My order", () => {
   });
 });
 
+test.describe("the sort control", () => {
+  test("the glyph clears the band and fills without moving it", async ({
+    page,
+  }) => {
+    const band = page.getByTestId("lists-toolbar");
+    const sort = page.getByRole("button", { name: "sort list" });
+
+    const bandAtRest = await band.boundingBox();
+    const glyphAtRest = await page.getByTestId("icon:sort").boundingBox();
+    const sortAtRest = await sort.boundingBox();
+    if (bandAtRest == null || glyphAtRest == null || sortAtRest == null) {
+      throw new Error("the band, the glyph or the sort button has no box");
+    }
+    // Bug 1: the selected ground ran to the band's bottom edge.
+    expect(
+      glyphAtRest.y + glyphAtRest.height,
+      "the glyph clears the band's edge",
+    ).toBeLessThanOrEqual(bandAtRest.y + bandAtRest.height - 4);
+
+    await press(page, sort);
+
+    await expect(page.getByTestId("icon:sort:fill")).toBeVisible();
+    await expect(sort).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("menu")).toHaveCount(0);
+    await expect(page.getByTestId("icon:sort")).toBeVisible();
+
+    const bandAfter = await band.boundingBox();
+    const sortAfter = await sort.boundingBox();
+    expect(bandAfter?.height).toBe(bandAtRest.height);
+    expect(sortAtRest.width).toBe(44);
+    expect(sortAtRest.height).toBe(44);
+    expect(sortAfter?.width).toBe(sortAtRest.width);
+    expect(sortAfter?.height).toBe(sortAtRest.height);
+  });
+});
+
 test.describe("the tab strip", () => {
   test("a clipped tab name has a fade over its edge", async ({ page }) => {
     // At 412 wide the strip holds more tabs than fit, so the last one
@@ -158,7 +214,7 @@ test.describe("the tab strip", () => {
       throw new Error("the tab strip has no box");
     }
     await page.mouse.move(strip.x + strip.width / 2, strip.y + strip.height / 2);
-    await page.mouse.wheel(600, 0);
+    await page.mouse.wheel(1200, 0);
 
     await expect(page.getByTestId("tab-fade-end")).toHaveCount(0);
     await expect(page.getByTestId("tab-fade-start")).toBeVisible();
@@ -211,16 +267,21 @@ test.describe("list menu", () => {
     await expect(page).toHaveURL("/");
   });
 
-  test("the overflow menu shows only what works", async ({ page }) => {
-    // Bug 2: three items closed the menu and did nothing. Two used the
-    // danger color, so a user could think a delete ran. Ticket 0065
-    // builds them.
+  test("the overflow menu holds what works and leaves out what does not", async ({
+    page,
+  }) => {
+    // Bug 2: three items closed the menu and did nothing. Rename list
+    // and Delete list still wait on ticket 0065. The clear is built.
     await page.getByRole("button", { name: "list menu" }).click();
 
-    await expect(page.getByText("Diagnostics")).toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "Diagnostics" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "Delete all completed tasks" }),
+    ).toBeVisible();
     await expect(page.getByText("Rename list")).toHaveCount(0);
     await expect(page.getByText("Delete list")).toHaveCount(0);
-    await expect(page.getByText("Delete all completed tasks")).toHaveCount(0);
   });
 });
 
@@ -287,5 +348,21 @@ test.describe("a note that needs repair", () => {
 
   test("the notice names the file and its error", async ({ page }) => {
     await expect(page.getByText("Broken note.md")).toBeVisible();
+  });
+});
+
+test.describe("a note whose alert weight is a typo", () => {
+  test("keeps its row and names the warning", async ({ page }) => {
+    await expect(page.getByText(warnedWeight.warning)).toBeVisible();
+
+    await press(page, listTab(page, tabs.focus));
+    await expect(listTab(page, tabs.focus)).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(row(page, warnedWeight.name)).toBeVisible();
+    expect(await noteText(page, warnedWeight.path)).toContain(
+      "alert weight: loud",
+    );
   });
 });

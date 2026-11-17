@@ -2,7 +2,8 @@ import * as React from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { taskRowFace } from "@/components/task-row-face";
 import type { CardPosition } from "@/lib/motion/drag-math";
-import { colors, radius } from "@/theme/tokens";
+import { radius, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 export { cardPosition, type CardPosition } from "@/lib/motion/drag-math";
 
@@ -23,6 +24,7 @@ export function CardGroupRow({
   style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const top = position === "first" || position === "only";
   const bottom = position === "last" || position === "only";
   return (
@@ -33,31 +35,33 @@ export function CardGroupRow({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-  },
-  top: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: radius,
-    borderTopRightRadius: radius,
-  },
-  bottom: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomLeftRadius: radius,
-    borderBottomRightRadius: radius,
-  },
-  divider: {
-    position: "absolute",
-    left: taskRowFace.textInset,
-    right: 0,
-    top: 0,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.hairline,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderLeftWidth: StyleSheet.hairlineWidth,
+      borderRightWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+    },
+    top: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopLeftRadius: radius,
+      borderTopRightRadius: radius,
+    },
+    bottom: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomLeftRadius: radius,
+      borderBottomRightRadius: radius,
+    },
+    divider: {
+      position: "absolute",
+      left: taskRowFace.textInset,
+      right: 0,
+      top: 0,
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.hairline,
+    },
+  }),
 });

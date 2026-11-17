@@ -6,7 +6,7 @@
  * a spread inside a gesture config.
  */
 export function withTouchAction<C extends object>(
-  touchAction: "pan-y" | "none",
+  touchAction: "pan-x" | "pan-y" | "none",
   config: C,
 ): C {
   return Object.assign(config, { touchAction });

@@ -6,23 +6,16 @@ import { useDismiss } from "@/hooks/use-dismiss";
 import { menuEntering, type MenuCorner } from "@/lib/motion/entrances";
 import { useProgress } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
-import {
-  bottomBar,
-  colors,
-  menuWidth,
-  pageGutter,
-  radiusFloating,
-  shadows,
-  spacing,
-  type,
-} from "@/theme/tokens";
+import { bottomBar, menuWidth, pageGutter, radiusFloating, shadows, spacing, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { Overlay } from "./overlay-host";
 import { Pressable } from "./pressable";
 
 export type MenuItem = {
   key: string;
   label: string;
-  /** A second, quieter line under the label. */
+  /** A second, quieter line under the label. It joins the item's
+      accessible name, so the name holds every word the row shows. */
   hint?: string;
   /** Draws a check: the item is the current choice. Leave it out for
       an action, which has no checked state. */
@@ -89,6 +82,7 @@ export function Menu({
   items,
   align = "end",
   kind = "menu",
+  inSheet = false,
 }: {
   open: boolean;
   /** The view the menu opens from. */
@@ -100,7 +94,13 @@ export function Menu({
   align?: "start" | "end";
   /** A choice of one item is a radio group; actions are a menu. */
   kind?: "menu" | "radiogroup";
+  /**
+   * The anchor sits in a sheet. The menu then draws in the sheet layer,
+   * above the sheet that opened it, rather than under it.
+   */
+  inSheet?: boolean;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [box, setBox] = React.useState<Box | null>(null);
@@ -166,7 +166,7 @@ export function Menu({
 
   return (
     <>
-      <Overlay layer="menuBackdrop" modal>
+      <Overlay layer={inSheet ? "sheet" : "menuBackdrop"} modal>
         <Animated.View style={[StyleSheet.absoluteFill, fade]}>
           <Pressable
             style={StyleSheet.absoluteFill}
@@ -176,7 +176,7 @@ export function Menu({
           />
         </Animated.View>
       </Overlay>
-      <Overlay layer="menu">
+      <Overlay layer={inSheet ? "sheet" : "menu"}>
         <Animated.View
           entering={menuEntering(corner)}
           role={kind}
@@ -233,6 +233,7 @@ function MenuFocus() {
 }
 
 function MenuRow({ item, radio }: { item: MenuItem; radio: boolean }) {
+  const { styles } = useThemedStyles(makeStyles);
   // ARIA allows a checked state only on a radio or a menuitemradio. An
   // action item carries none.
   const check = (
@@ -247,7 +248,9 @@ function MenuRow({ item, radio }: { item: MenuItem; radio: boolean }) {
       onPress={item.onPress}
       disabled={item.disabled}
       role={check}
-      accessibilityLabel={item.label}
+      accessibilityLabel={
+        item.hint == null ? item.label : `${item.label} ${item.hint}`
+      }
       aria-disabled={item.disabled ?? false}
       aria-checked={item.selected === undefined ? undefined : item.selected ?? false}
       tabIndex={0}
@@ -262,6 +265,11 @@ function MenuRow({ item, radio }: { item: MenuItem; radio: boolean }) {
           ]}
         >
           {item.label}
+          {/* The two lines are separate blocks, and the DOM joins their
+              text with nothing between them. The name above has a space,
+              and axe compares the two, so the label carries it too. It
+              hangs at the line end and moves nothing. */}
+          {item.hint == null ? null : " "}
         </Text>
         {item.hint != null ? <Text style={styles.hint}>{item.hint}</Text> : null}
       </View>
@@ -270,51 +278,53 @@ function MenuRow({ item, radio }: { item: MenuItem; radio: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
-  menu: {
-    position: "absolute",
-    width: menuWidth,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    borderRadius: radiusFloating,
-    paddingVertical: spacing.xs,
-    ...shadows.floating,
-  },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    minHeight: itemHeight,
-    paddingHorizontal: spacing.m,
-  },
-  itemPressed: {
-    backgroundColor: colors.pressed,
-  },
-  itemText: {
-    flex: 1,
-    gap: 1,
-  },
-  label: {
-    ...type.control,
-    color: colors.ink,
-  },
-  danger: {
-    color: colors.danger,
-  },
-  selected: {
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  disabled: {
-    color: colors.inkFaint,
-  },
-  hint: {
-    ...type.caption,
-    color: colors.inkMuted,
-  },
-  check: {
-    ...type.meta,
-    color: colors.accent,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    menu: {
+      position: "absolute",
+      width: menuWidth,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      borderRadius: radiusFloating,
+      paddingVertical: spacing.xs,
+      ...shadows.floating,
+    },
+    item: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+      minHeight: itemHeight,
+      paddingHorizontal: spacing.m,
+    },
+    itemPressed: {
+      backgroundColor: colors.pressed,
+    },
+    itemText: {
+      flex: 1,
+      gap: 1,
+    },
+    label: {
+      ...type.control,
+      color: colors.ink,
+    },
+    danger: {
+      color: colors.danger,
+    },
+    selected: {
+      color: colors.accent,
+      fontWeight: "600",
+    },
+    disabled: {
+      color: colors.inkFaint,
+    },
+    hint: {
+      ...type.caption,
+      color: colors.inkMuted,
+    },
+    check: {
+      ...type.meta,
+      color: colors.accent,
+    },
+  }),
 });

@@ -1,23 +1,42 @@
 import * as React from "react";
-import type { BrokenList, TaskItem } from "@/types/task";
+import type { TaskItem } from "@/types/task";
 import type { SortMode } from "@/lib/settings";
 import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
 import { useTabTasks, useTaskSections } from "@/stores/tasks/selectors";
 import { buildSections, type ListsSection } from "../lib/list-sections";
 
-/** A note that failed validation, with the reasons. */
-export type Repair = Pick<BrokenList, "name" | "uri" | "errors">;
+/**
+ * A note to fix: one that fails validation, or a row whose value the
+ * schema read through a fallback. `messages` holds the errors in the
+ * first case and the warnings in the second.
+ */
+export type Repair = {
+  name: string;
+  uri: string;
+  messages: string[];
+};
 
 /**
  * What a tab shows: its rows as keyed groups, and the notes that need
  * repair. A note that fails validation never renders as a task row. It
- * shows, with its errors, in the repair notice.
+ * shows, with its errors, in the repair notice. A note with a warning
+ * keeps its row and also shows in the notice, because its alert still
+ * rings.
  */
 export function useListSections(tab: string, sortMode: SortMode) {
   const { status, brokenLists } = useStoreMeta();
   const allTasks = useTaskList();
   const shown = useTabTasks(tab);
 
+  const brokenListRepairs = React.useMemo<Repair[]>(
+    () =>
+      brokenLists.map((list) => ({
+        name: list.name,
+        uri: list.uri,
+        messages: list.errors,
+      })),
+    [brokenLists],
+  );
   const brokenTasks = React.useMemo<Repair[]>(
     () =>
       allTasks
@@ -25,13 +44,26 @@ export function useListSections(tab: string, sortMode: SortMode) {
         .map((task) => ({
           name: task.name,
           uri: task.uri,
-          errors: task.errors ?? [],
+          messages: task.errors ?? [],
+        })),
+    [allTasks],
+  );
+  const warnedTasks = React.useMemo<Repair[]>(
+    () =>
+      allTasks
+        .filter(
+          (task) => task.errors == null && (task.warnings?.length ?? 0) > 0,
+        )
+        .map((task) => ({
+          name: task.name,
+          uri: task.uri,
+          messages: task.warnings ?? [],
         })),
     [allTasks],
   );
   const repairs = React.useMemo<Repair[]>(
-    () => [...brokenLists, ...brokenTasks],
-    [brokenLists, brokenTasks],
+    () => [...brokenListRepairs, ...brokenTasks, ...warnedTasks],
+    [brokenListRepairs, brokenTasks, warnedTasks],
   );
 
   const visible = React.useMemo<TaskItem[]>(
@@ -56,6 +88,8 @@ export function useListSections(tab: string, sortMode: SortMode) {
     shown,
     repairs,
     sections,
+    /** The tab's completed rows, sorted by name: what a clear deletes. */
+    completed,
     /** The tab has done tasks and no open ones. */
     onlyCompleted: open.length === 0 && completed.length > 0,
   };

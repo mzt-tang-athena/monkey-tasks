@@ -11,9 +11,9 @@ depends: []
 ## Spec
 
 Ticket 0048 steps 8 and 10 change the two workflow files, and ticket
-0049 adds the Playwright job. An agent cannot push them: GitHub
-refuses a workflow change from a token without the `workflow` scope,
-and the agent tokens have `repo` only. The owner pushes this change
+0049 adds the Playwright job. An agent cannot push them, because GitHub
+refuses a workflow change from a token without the `workflow` scope.
+The agent tokens have `repo` only. The owner pushes this change
 over SSH, or with a token that has the `workflow` scope. Push it to a
 branch and open a PR into `epic/0047-rebuild`.
 
@@ -151,8 +151,8 @@ index 342e5bf..2548091 100644
 +          retention-days: 7
 ```
 
-Then add one sentence to the README section "Install it on a phone",
-after "the runner already has the Android SDK.": "It runs only when you
+Then add one sentence to the README section "Install it on a phone".
+It goes after "the runner already has the Android SDK.": "It runs only when you
 start it."
 
 ## Acceptance
@@ -177,7 +177,7 @@ Evidence, all on GitHub Actions:
 | Runs per PR commit | One `ci` run per push to the PR branch, event `pull_request` (run 40604627940). |
 | `e2e-web` | 36 passed. The job took 2 minutes 5 seconds on a cold cache. |
 | Browser cache | A rerun of `e2e-web` logged a cache hit for the `playwright-Linux-...` key and took 2 minutes 21 seconds. |
-| Lint limit and e2e failure | A scratch push to `epic/scratch-0068` held one unused variable and one failing test. `Lint app` failed, `Run Playwright` failed with 2 failed and 36 passed, and the job uploaded `playwright-report` (692 KB). The scratch branch is deleted. |
+| Lint limit and e2e failure | A scratch push to `epic/scratch-0068` held one unused variable and one failing test. `Lint app` failed, `Run Playwright` failed with 2 failed and 36 passed, and the job uploaded `playwright-report` (692 KB). The scratch branch no longer exists. |
 | Manual APK build | `gh workflow run android --ref feat/0068-workflow-triggers` built `monkey-tasks-apk` (36.7 MB) in 24 minutes (run 40605203057). |
 
 A push to main no longer matches any trigger in `android.yml`, because
@@ -192,5 +192,5 @@ The `code`, `e2e-web` and `android` jobs still need the
 2026-10-27. `.gitmodules` uses the SSH URL, the runner has no SSH key,
 and only the secret's `insteadOf` line turns the URL into HTTPS. A
 switch of `.gitmodules` to the HTTPS URL would let a later change drop
-the secret, and the "or make that repository public" error text with
-it.
+the secret. It would also drop the "or make that repository public"
+error text.

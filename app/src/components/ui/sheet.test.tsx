@@ -2,6 +2,7 @@ import * as React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BackHandler, Platform, Text, TextInput } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useProgress } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
 import { OverlayHost } from "./overlay-host";
@@ -33,25 +34,29 @@ function Harness({ initial = true }: { initial?: boolean }) {
     setMounted(true);
     setOpen(true);
   };
+  // The app's root wraps every screen in the gesture root, and the
+  // sheet's handle needs it on a phone.
   return (
-    <OverlayHost>
-      <Text>screen content</Text>
-      <Text onPress={openSheet} accessibilityRole="button">
-        open
-      </Text>
-      {mounted ? (
-        <Sheet
-          open={open}
-          progress={progress}
-          onDismiss={() => setOpen(false)}
-          label="Add a task"
-          closeLabel="close capture"
-          scrim
-        >
-          <TextInput placeholder="Add a task" />
-        </Sheet>
-      ) : null}
-    </OverlayHost>
+    <GestureHandlerRootView>
+      <OverlayHost>
+        <Text>screen content</Text>
+        <Text onPress={openSheet} accessibilityRole="button">
+          open
+        </Text>
+        {mounted ? (
+          <Sheet
+            open={open}
+            progress={progress}
+            onDismiss={() => setOpen(false)}
+            label="Add a task"
+            closeLabel="close capture"
+            scrim
+          >
+            <TextInput placeholder="Add a task" />
+          </Sheet>
+        ) : null}
+      </OverlayHost>
+    </GestureHandlerRootView>
   );
 }
 
@@ -79,6 +84,14 @@ describe("Sheet", () => {
     const dialog = screen.getByRole("dialog", { name: "Add a task" });
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(screen.getByPlaceholderText("Add a task")).toBeTruthy();
+  });
+
+  it("keeps the drag handle out of the accessibility tree", () => {
+    render(<Harness />);
+
+    const handle = screen.getByTestId("sheet-handle");
+    expect(handle.closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(screen.getByRole("button", { name: "close capture" })).toBeTruthy();
   });
 
   it("makes the screen inert while it shows", () => {

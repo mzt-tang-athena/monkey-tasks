@@ -4,7 +4,8 @@ import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import type { Progress } from "@/lib/motion/progress";
-import { bottomBar, colors, measure, spacing } from "@/theme/tokens";
+import { bottomBar, measure, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { NavTab } from "./nav-tab";
 
 /** What the `action` slot reads from the bar. */
@@ -31,16 +32,17 @@ export function useBar(): BarState {
 }
 
 /**
- * The bottom bar both tabs share. Left: the Lists and Planner nav
- * items. Right: the `action` slot, which the screen's route fills
- * (the capture dock). The bar knows no feature. The slot reads the
- * bar's height and hands it the sheet's clock, and the bar slides away
- * on that clock with a transform.
+ * The bottom bar every tab shares. Left: the Lists, Planner and Journal
+ * nav items. Right: the `action` slot, which the screen's route fills
+ * (the capture dock or the journal's Add button). The bar knows no
+ * feature. The slot reads the bar's height and hands it the sheet's
+ * clock, and the bar slides away on that clock with a transform.
  *
  * The bar's surface spans the window. Its row holds to the reading
  * measure, so the nav and the action sit in the content column.
  */
 export function BottomBar({ action }: { action: React.ReactNode }) {
+  const { styles } = useThemedStyles(makeStyles);
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   // The sheet's clock, or null while no slot drives the bar.
@@ -93,6 +95,12 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
               active={pathname === "/planner"}
               onPress={() => router.navigate("/planner")}
             />
+            <NavTab
+              label="Journal"
+              icon="journal"
+              active={pathname === "/journal"}
+              onPress={() => router.navigate("/journal")}
+            />
           </View>
           {/* The air between the nav and the action. */}
           <View style={styles.spacer} />
@@ -103,36 +111,38 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
-  navBand: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.accentDeep,
-  },
-  bar: {
-    backgroundColor: colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.hairline,
-    paddingHorizontal: spacing.m,
-    paddingTop: spacing.s,
-  },
-  row: {
-    maxWidth: measure,
-    width: "100%",
-    alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-    minHeight: bottomBar.row,
-  },
-  nav: {
-    flexDirection: "row",
-    gap: spacing.s,
-  },
-  spacer: {
-    flex: 1,
-    minWidth: spacing.xl,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    navBand: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.accentDeep,
+    },
+    bar: {
+      backgroundColor: colors.surface,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.hairline,
+      paddingHorizontal: spacing.m,
+      paddingTop: spacing.s,
+    },
+    row: {
+      maxWidth: measure,
+      width: "100%",
+      alignSelf: "center",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+      minHeight: bottomBar.row,
+    },
+    nav: {
+      flexDirection: "row",
+      gap: spacing.s,
+    },
+    spacer: {
+      flex: 1,
+      minWidth: spacing.xl,
+    },
+  }),
 });

@@ -4,10 +4,12 @@ import { Landing } from "@/components/motion/landing";
 import type { TaskItem } from "@/types/task";
 import { pillDateLabel } from "@/features/planner/lib/labels";
 import { PlanDrag } from "@/features/planner/lib/plan-drag";
-import { colors, fonts, radii, spacing } from "@/theme/tokens";
+import { fonts, radii, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 /** Round-1 tray pills, back as draggable chips: drag-first, no tick. */
 export function TaskPills({ tasks, copy = false }: { tasks: TaskItem[]; copy?: boolean }) {
+  const { styles } = useThemedStyles(makeStyles);
   if (tasks.length === 0) {
     return null;
   }
@@ -42,47 +44,49 @@ export function TaskPills({ tasks, copy = false }: { tasks: TaskItem[]; copy?: b
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.s,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    borderRadius: radii.pill,
-    paddingLeft: spacing.m,
-    paddingRight: spacing.m,
-    paddingVertical: spacing.s,
-    maxWidth: "100%",
-  },
-  grip: {
-    alignItems: "center",
-    gap: 2,
-  },
-  gripDot: {
-    width: 10,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.inkFaint,
-  },
-  text: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.body,
-    color: colors.ink,
-  },
-  date: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    fontWeight: "600",
-    fontVariant: ["tabular-nums"],
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    wrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.s,
+    },
+    chip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      borderRadius: radii.pill,
+      paddingLeft: spacing.m,
+      paddingRight: spacing.m,
+      paddingVertical: spacing.s,
+      maxWidth: "100%",
+    },
+    grip: {
+      alignItems: "center",
+      gap: 2,
+    },
+    gripDot: {
+      width: 10,
+      height: 2,
+      borderRadius: 1,
+      backgroundColor: colors.inkFaint,
+    },
+    text: {
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.ink,
+    },
+    date: {
+      fontSize: 11,
+      lineHeight: 15,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+      fontWeight: "600",
+      fontVariant: ["tabular-nums"],
+    },
+  }),
 });

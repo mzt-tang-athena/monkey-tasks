@@ -116,6 +116,219 @@ function buildRule(recurrence: string, start: Date): RRule | null {
   }
 }
 
+/** A rule the app can expand: it names a frequency and rrule takes it. */
+function readable(recurrence: string, start: Date): RRule | null {
+  if (!/(^|;)FREQ=/.test(recurrence.trim())) {
+    return null;
+  }
+  return buildRule(recurrence.trim(), start);
+}
+
+/**
+ * The first `count` dates of a rule from `start` on, in the stored
+ * form: with a time when `start` has one. Null when the rule is not
+ * one the app can expand, so the editor can say so.
+ */
+export function upcoming(
+  recurrence: string,
+  start: string,
+  count: number,
+): string[] | null {
+  const stored = parseStoredDate(start);
+  if (stored == null) {
+    return null;
+  }
+  const rule = readable(monthEndRule(recurrence, start), stored.date);
+  if (rule == null) {
+    return null;
+  }
+  try {
+    return rule
+      .all((_, at) => at < count)
+      .map((date) => formatLocal(fromFloating(date), stored.hasTime));
+  } catch {
+    return null;
+  }
+}
+
+/** By `Date.getDay()`, Sunday first. */
+const WEEKDAY_CODES = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+/** The order the words list days in, Monday first. */
+const WEEK_ORDER = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+const DAY_NAMES: Record<string, string> = {
+  MO: "Monday",
+  TU: "Tuesday",
+  WE: "Wednesday",
+  TH: "Thursday",
+  FR: "Friday",
+  SA: "Saturday",
+  SU: "Sunday",
+};
+const DAY_SHORT: Record<string, string> = {
+  MO: "Mon",
+  TU: "Tue",
+  WE: "Wed",
+  TH: "Thu",
+  FR: "Fri",
+  SA: "Sat",
+  SU: "Sun",
+};
+/** The keys the plain forms read. Any other key reads through rrule. */
+const PLAIN_KEYS = new Set(["FREQ", "INTERVAL", "BYDAY", "BYMONTHDAY", "BYSETPOS", "BYMONTH", "WKST"]);
+
+function ordinal(n: number): string {
+  const tens = n % 100;
+  const suffix =
+    tens >= 11 && tens <= 13
+      ? "th"
+      : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
+  return `${n}${suffix}`;
+}
+
+function every(interval: number, one: string, many: string): string {
+  return interval === 1 ? `Every ${one}` : `Every ${interval} ${many}`;
+}
+
+function listWords(words: string[]): string {
+  return words.length === 1
+    ? words[0]
+    : `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+}
+
+/** The plain forms: the presets, the month-end rules and a few more. */
+function plainWords(
+  parts: Map<string, string>,
+  due: string | null | undefined,
+): string | null {
+  const interval = Number(parts.get("INTERVAL") ?? "1");
+  if (!Number.isInteger(interval) || interval < 1) {
+    return null;
+  }
+  const days = parts.get("BYDAY")?.split(",") ?? [];
+  const monthDay = parts.get("BYMONTHDAY");
+  const others = [...parts.keys()].filter(
+    (key) => !["FREQ", "INTERVAL", "WKST"].includes(key),
+  );
+  switch (parts.get("FREQ")) {
+    case "DAILY":
+      return others.length === 0 ? every(interval, "day", "days") : null;
+    case "WEEKLY": {
+      if (others.some((key) => key !== "BYDAY")) {
+        return null;
+      }
+      if (days.some((day) => DAY_NAMES[day] == null)) {
+        return null;
+      }
+      const set = [...new Set(days)].sort(
+        (a, b) => WEEK_ORDER.indexOf(a) - WEEK_ORDER.indexOf(b),
+      );
+      const key = set.join(",");
+      if (interval === 1 && key === "MO,TU,WE,TH,FR") {
+        return "Weekdays";
+      }
+      if (interval === 1 && key === "SA,SU") {
+        return "Weekends";
+      }
+      const anchor = parseStoredDate(due ?? "");
+      const named =
+        set.length > 0
+          ? set
+          : anchor == null
+            ? []
+            : [WEEKDAY_CODES[anchor.date.getDay()]];
+      if (named.length === 0) {
+        return every(interval, "week", "weeks");
+      }
+      if (interval === 1) {
+        return named.length === 1
+          ? `Every ${DAY_NAMES[named[0]]}`
+          : `Every ${listWords(named.map((day) => DAY_SHORT[day]))}`;
+      }
+      const on =
+        named.length === 1
+          ? DAY_NAMES[named[0]]
+          : listWords(named.map((day) => DAY_SHORT[day]));
+      return `Every ${interval} weeks on ${on}`;
+    }
+    case "MONTHLY": {
+      const base = every(interval, "month", "months");
+      if (others.length === 0) {
+        return base;
+      }
+      if (others.length === 1 && monthDay === "-1") {
+        return `${base} on the last day`;
+      }
+      // The month-end forms of ADR 0042: the due day carries the day.
+      if (
+        parts.get("BYSETPOS") === "-1" &&
+        (monthDay === "28,29,30" || monthDay === "28,29") &&
+        others.length === 2
+      ) {
+        return base;
+      }
+      if (others.length === 1 && monthDay != null && /^\d+$/.test(monthDay)) {
+        const day = Number(monthDay);
+        return day >= 1 && day <= 31 ? `${base} on the ${ordinal(day)}` : null;
+      }
+      return null;
+    }
+    case "YEARLY": {
+      const base = every(interval, "year", "years");
+      if (others.length === 0) {
+        return base;
+      }
+      const leap =
+        parts.get("BYMONTH") === "2" &&
+        monthDay === "28,29" &&
+        parts.get("BYSETPOS") === "-1" &&
+        others.length === 3;
+      return leap ? base : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * A rule in plain words, for a tile or a picker: "Every day",
+ * "Weekdays", "Every Monday", "Every 2 weeks". A bare weekly rule
+ * falls on the due's weekday, so `due` names that day. A rule outside
+ * the plain forms reads through rrule's own words. Null when the app
+ * cannot expand the rule at all.
+ */
+export function ruleWords(
+  recurrence: string,
+  due?: string | null,
+): string | null {
+  const text = recurrence.trim().replace(/^RRULE:/, "");
+  const start = parseStoredDate(due ?? "")?.date ?? new Date(2026, 0, 1);
+  const rule = readable(text, start);
+  if (rule == null) {
+    return null;
+  }
+  const parts = new Map(
+    text
+      .split(";")
+      .filter((part) => part !== "")
+      .map((part): [string, string] => {
+        const at = part.indexOf("=");
+        return [part.slice(0, at).toUpperCase(), part.slice(at + 1).toUpperCase()];
+      }),
+  );
+  if ([...parts.keys()].every((key) => PLAIN_KEYS.has(key))) {
+    const plain = plainWords(parts, due);
+    if (plain != null) {
+      return plain;
+    }
+  }
+  try {
+    const words = rule.toText();
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Parsed rules by recurrence plus stored due. The due date is the
  * rule's DTSTART, so both belong in the key. A month render asks about

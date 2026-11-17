@@ -24,7 +24,7 @@ to `@mzt-tang-athena/vale-rules` from the same registry. The repo has
 `.npmrc` with the `@mzt-tang-athena` scope, and both CI jobs
 authenticate with `NODE_AUTH_TOKEN`.
 
-The schemas package is published as
+The published schemas package is
 `@mzt-tang-athena/schemas@0.2.1`. It builds to `dist` and declares an
 `exports` map. Metro 0.87 reads `exports`.
 
@@ -60,7 +60,7 @@ GitHub Packages requires it.
 - [ ] `npx vitest run` passes in `app`
 - [ ] `npx expo export --platform android` completes
 - [ ] `ci.yml` has no `CONTRACTS_TOKEN` and no submodule step
-- [ ] `contracts/` and `.gitmodules` are gone
+- [ ] `contracts/` and `.gitmodules` no longer exist
 
 ## Outcome
 

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { placeBox } from "@/testing/layout";
+import { motion } from "@/lib/motion/tokens";
 import { Split, SplitStill } from "./split";
 
 const box = { x: 0, y: 0, width: 400, height: 628 };
@@ -148,6 +149,47 @@ describe("Split", () => {
 
     expect(onResize).toHaveBeenCalledTimes(1);
     expect(onResize.mock.calls[0][0]).toBeCloseTo(0.4, 3);
+  });
+
+  it("reaches the pane floor at both edges", async () => {
+    const onResize = vi.fn();
+    const floor = motion.split.minPane;
+    const usable = box.height - 28;
+    render(
+      <GestureHandlerRootView>
+        <Split
+          testID="split"
+          fraction={0.5}
+          onResize={onResize}
+          minTop={floor}
+          minBottom={floor}
+          top={<Text>timeline</Text>}
+          bottom={<Text>one row</Text>}
+        />
+      </GestureHandlerRootView>,
+    );
+    layOut();
+    await wait(50);
+
+    await dragGrip([
+      [200, 350],
+      [200, 0],
+    ]);
+    expect(onResize.mock.calls[0][0]).toBeCloseTo(floor / usable, 3);
+    expect(Number(screen.getByTestId("split:top").style.flexGrow)).toBeCloseTo(
+      floor / usable,
+      3,
+    );
+
+    await dragGrip([
+      [200, 350],
+      [200, 900],
+    ]);
+    expect(onResize.mock.calls[1][0]).toBeCloseTo((usable - floor) / usable, 3);
+    expect(Number(screen.getByTestId("split:bottom").style.flexGrow)).toBeCloseTo(
+      floor / usable,
+      3,
+    );
   });
 });
 

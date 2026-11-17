@@ -13,14 +13,15 @@ depends: []
 Agents and reviewers on epic 0047 prove each change by hand. Each run
 writes its own Playwright scripts, picks a port, and saves screenshots
 in its own place. The phase 3 reviews found real visible regressions
-this way (PRs #80 and #81), but the method lives only in each run's
+this way (PRs #80 and #81). Still, the method lives only in each run's
 prompt.
 
 Add a project skill, `.claude/skills/verify-monkey-tasks/`, made with
 the pstack `create-verification-skill` flow. It launches the web
-preview on its own port, checks the instance is ours and current, runs
-journey files on the suite's helpers, keeps screenshots, traces and
-note text as evidence, and stops only the server it started. A feature
+preview on its own port and checks the instance is ours and current.
+It runs journey files on the suite's helpers and keeps screenshots,
+traces and note text as evidence. It stops only the server it started.
+A feature
 map lists how to drive each user feature, and what the web preview
 cannot prove.
 
@@ -45,15 +46,15 @@ closed port as it should, and the screenshots were still in
 `app/build/verify/evidence/`.
 
 The first run found three bugs in the helpers, all fixed before the
-commit: a wrong path to Doctor after `cd`, a Doctor line that printed
-both `ok` and `FAIL`, and an HTML report folder that would wipe the
-evidence. The landed-row screenshot first showed the top of the list,
+commit. The path to Doctor was wrong after `cd`. One Doctor line printed
+both `ok` and `FAIL`. An HTML report folder would wipe the evidence.
+The landed-row screenshot first showed the top of the list,
 so the journey now scrolls the row into view.
 
 Left: the web preview cannot prove UI-thread motion, native gestures,
 keyboard insets, SAF or notifications. The skill says so. An Android
-emulator would close that gap, but this machine has no SDK and the
-user is not in the `kvm` group.
+emulator would close that gap, but this machine has no SDK. The user
+is also not in the `kvm` group.
 
 PR #86 ignores `.claude/` except `.claude/workflows/`. When it merges,
 add `!.claude/skills/` beside that line, or new skill files stay

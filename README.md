@@ -13,7 +13,8 @@ Install the root dependencies from the repo root:
 npm ci
 ```
 
-Android needs the `contracts` submodule checked out. If the folder is
+Every install needs the `contracts` submodule checked out, because the
+app builds the pinned schemas package during `npm ci`. If the folder is
 empty, run `git submodule update --init` at the repo root first.
 
 Install the app dependencies from `app`:
@@ -111,6 +112,24 @@ Android asks once for permission to install from the browser or file
 manager. The build is a release: JavaScript rides inside the APK, so
 the app runs without Metro.
 
+`CHANGELOG.md` lists what each release adds or changes, in plain words.
+Each GitHub release repeats its section.
+
+### Build the release APK on this machine
+
+When Actions has no minutes, or when a build should not leave the
+machine, build the same APK here. This machine holds the Android SDK,
+JDK 17 and an emulator under `~/Android`.
+
+```bash
+export JAVA_HOME=~/Android/jdk ANDROID_HOME=~/Android/Sdk
+cd app
+npx expo prebuild --platform android --no-install
+cd android && ./gradlew assembleRelease
+```
+
+The APK lands at `app/android/app/build/outputs/apk/release/app-release.apk`.
+
 ### Develop against a phone without rebuilding
 
 The release APK takes about 45 minutes and cannot load code from Metro.
@@ -170,7 +189,7 @@ then. That keeps every group on the list full.
 
 | Seed | Holds |
 |---|---|
-| `default` | 16 tasks and 9 list notes. `vault:check` finds nothing. |
+| `default` | 16 tasks, 9 list notes, one journal day and one reference. `vault:check` finds nothing. |
 | `repair` | `Broken note.md` and `Lists/Garden.md`, for the repair block. |
 
 With no `?vault=` in the page address, the preview loads `default`,
@@ -218,12 +237,13 @@ The app code in `app/src` follows the Bulletproof React layout
 | Folder | Holds |
 |---|---|
 | `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
-| `features/<name>` | The UI of one feature: `capture`, `diagnostics`, `lists`, `planner`, `task-editor`. |
+| `features/<name>` | The UI of one feature: `capture`, `command`, `diagnostics`, `journal`, `lists`, `planner`, `task-editor`. |
 | `components` | Shared UI. `components/ui` holds the primitives. |
-| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing` and `MotionScrollView`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
+| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing`, `MotionScrollView` and the tick's `Celebration`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
-| `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
+| `stores/journal` | The daily note query, the reference read and the append mutation. It shares the vault scope and reads no task state. |
+| `lib` | App libraries: `vault` (the adapter port, its SAF and memory adapters, sample notes), `journal` (the note grammar and file I/O), `react-query`, `recurrence`, `notifications`. `lib/alerts` holds the ring shape and the acknowledged groups. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
 | `types` | Shared types, such as `TaskItem`. |
 | `utils` | Pure helpers: dates, YAML, schema errors. |
 | `theme` | Design tokens. |
@@ -241,24 +261,85 @@ documents its props, and each primitive has a component test.
 |---|---|
 | `Button` | A solid or quiet pill, a round send control, or a `text` label at least 44 pt high. |
 | `IconButton`, `Pill` | An icon in a 44 pt target. A control pill, or a `chip` that reads a parsed field. |
-| `Icon` | Every glyph the app draws, by `name` and color token. The app has no icon font. |
+| `Icon` | Every glyph the app draws, from Phosphor's path data (ADR 20261117-phosphor-glyphs). `name`, a palette color and an optional `size` that centers it in a square box beside text. Every name has an outline and a fill drawing, so a selected control can switch weight. |
 | `OverlayHost`, `Overlay` | The root portal in `app/_layout.tsx`. An overlay draws above every screen at its layer. A `modal` overlay hides the screen from assistive tech. |
 | `Menu`, `placeMenu` | A menu that opens from an anchor. It flips above near the bottom bar and stays inside the page gutter. |
-| `Sheet` | A scrim, a dock that rides the keyboard, and a panel. The scrim and Android back close it. |
+| `Sheet` | A scrim, a dock that rides the keyboard, and a panel. The scrim and Android back close it. A `stacked` sheet draws over another sheet, and a `covered` one waits under it. |
+| `CommandPane` | A searchable command list that slides down from the top edge. The screen behind is inert. |
 | `Banner`, `Toast` | A danger or info message with role `alert`. A toast floats above every other layer. |
 | `LoadingState`, `EmptyState`, `ErrorState` | One look for a list that loads, holds nothing or fails. |
-| `SectionHeader` | An eyebrow label over a group, with a count and a tone. |
+| `SectionHeader` | An eyebrow label over a group, with a count and a tone. With `expanded` and `onPress`, the row is a 44pt disclosure that opens the group. |
 | `CardGroupRow` | One row of a group card, with its edges and an inset divider. |
 | `TabStrip`, `SegmentedControl` | Tabs that scroll, with a fade over an edge that hides more tabs, and segments. Every target is at least 44 by 44. |
-| `Pressable` | Every press target. React Native's press on the web, because it takes the browser click. A row that mounts or re-renders under the finger still presses. It needs no layout report. Gesture handler's on native, where a pan cancels it. A surface swallows the one click a pan activation leaves behind. |
+| `EdgeFade` | The stepped fade over the edge of a sideways strip that hides more items. The tab strip and the editor's add strip share it. |
+| `Pressable` | Every press target. React Native's press on the web, because it takes the browser click. A row that mounts or re-renders under the finger still presses. It needs no layout report. Gesture handler's on native, where a pan cancels it. A surface swallows the one click a pan activation leaves behind. A web keyboard focus draws the shared focus mark, in the active palette. |
 | `TextField` | A labelled input, with a hint or an error. |
 
 `components/task-row-face` draws the still task row that `TaskRow` and
-`PreviewRow` share. `hooks/use-dismiss` closes a surface on Android
-back and on Escape in the browser. `hooks/use-press-guard` blocks the
+`PreviewRow` share. `hooks/use-dismiss` closes a surface on Android back
+and on Escape in the browser. `hooks/use-press-guard` blocks the
 click that ends a swipe or a drop. `hooks/use-stable-callback` gives a
-handler one identity for a memoized row (ADR 0043). `theme/tokens.ts`
-holds the type scale, the layer order and the shadows (ADR 0040).
+handler one identity for a memoized row (ADR 0043). `theme/palettes.ts`
+holds the named palettes. `theme/tokens.ts` holds the type scale, the
+layer order and the shadows (ADR 0040). `theme/theme-provider.tsx` owns
+the active palette (ADR 20261111-runtime-theme-provider). A component
+keeps its styles in a `makeStyles(palette)` factory. It reads them
+through `useThemedStyles`. A theme switch then repaints it in place.
+`lib/settings-store.ts` holds the live sort order, task form and week
+view for the mounted Lists and Planner screens. `features/settings` is
+the one screen that writes the palette and those settings (ADR
+20261111-settings-screen). Lists opens it from the list menu and Planner
+opens it from the gear beside the mode switch. Its Diagnostics section
+reads the crash log from app storage and offers Copy and Share (ticket
+0081). It opens the diagnostics screen, which holds the one link to the
+gallery.
+
+`features/gallery` draws every primitive in every state, in the active
+palette (ADR 20261112-component-gallery). Its route is `/gallery`. A
+reviewer reaches it from Diagnostics only. `model.ts` holds the state
+matrix, and the Playwright spec walks the same list. Its Icons section
+draws every glyph in both weights at its real size.
+
+### Icons
+
+`components/ui/icon.tsx` draws Phosphor's path data through
+`react-native-svg`. The generator writes the table in
+`components/ui/glyphs.ts`.
+Add a glyph to the map in `scripts/icons/build.ts`, then run this from
+`app`:
+
+```bash
+npm run icons:build
+```
+
+A test fails when the table is out of date with `@phosphor-icons/react`.
+
+`features/task-editor` is the task editor (ADR
+20261116-task-editor-sheet). A row press on Lists or Planner opens it,
+through `hooks/use-task-editor.tsx` and the provider in
+`app/_layout.tsx`. It draws as a bottom sheet over the screen. It shows
+the list, the title, and one control per property. A property with a
+value is a tile. One without is a chip in the add strip. `model.ts` is
+the property registry: Due, Repeat, Alerts and Note. Reference (ticket
+0091) joins it as one more entry. The Alerts picker also holds the
+task's alert weight, Harsh or Quiet.
+
+Each committed change writes at once. `lib/session.ts` is the session
+reducer and its queue: one write per task, last draft wins, and a
+failure keeps the draft. `lib/when.ts` and `lib/recurrence.ts` turn
+dates and rules into plain words. A picker is a second sheet stacked
+over the editor. Delete sits in the sheet's menu and shows a toast
+with Undo. An alert tap pushes the `/task/[id]` route. For a task, the
+route opens the editor sheet and steps back. For any other note, it
+shows the read-only viewer.
+
+`features/command` holds the command pane that ticket 0085 adds
+(ADR 20261111-command-pane). A downward pull on a header band, or the
+"open commands" button, drops it from the top edge. The search takes
+focus, and a row runs one action and closes the pane. The screen
+behind is inert. The list body, the pager and a row drag never start
+the gesture. Theme and Sort mode open Settings rather than repeat its
+pickers.
 
 ### Planner
 
@@ -270,7 +351,9 @@ holds the type scale, the layer order and the shadows (ADR 0040).
 | `planner-layout.ts` | The shared frame and pane styles. Every other style sits next to its component. |
 | `components/planner-list-context.tsx` | What every task list shares: the source, the form and the row actions. |
 | `components/day/` | The day. It holds the spread, the page, the timeline and list panes, and the day split. It also holds the overdue group and the swipe preview. |
-| `components/week-pane.tsx`, `month-pane.tsx` | The week and month bodies. |
+| `components/week-pane.tsx`, `month-pane.tsx` | The week and month bodies. Week puts its day boxes in the shared pager. |
+| `components/week-view.tsx` | The week body in both layouts, Spread and Rows. A static twin draws the pager's neighbour page. |
+| `lib/week-body.ts` | The seven days, the chip count, and the table of each layout's grid cells. |
 | `lib/plan-drag.ts` | The planner's one drag surface: the targets, the ghost payload and the pure drop patch. |
 | `hooks/use-planner-gestures.ts` | The day and month shifts, until 0059 moves the pagers. |
 | `hooks/use-planner-source.ts` | The source and its chooser. |
@@ -278,8 +361,43 @@ holds the type scale, the layer order and the shadows (ADR 0040).
 
 `hooks/use-today` gives one start-of-day date that moves on at midnight
 and when the app returns to the foreground. The planner route and every
-period label read it. A week column shows the chips that fit and a
-"+N more" line (ADR 0041).
+period label read it. A week day box shows two chips and a "+N" count
+(ADR 0041, ADR 20261114-week-planner-fits-one-screen).
+
+### Journal
+
+`features/journal` shows today's daily note as a ruled page. It reads
+`Journal/Daily/YYYY-MM-DD.md` and appends to it. It never rewrites a line.
+
+| Piece | Holds |
+|---|---|
+| `journal-screen.tsx` | The day's query, the page, the header and the bottom bar's action slot. |
+| `components/journal-dock.tsx` | The Add button, the entry sheet and the failure toast. |
+| `components/entry-form.tsx` | The multiline field, the Food chip and the send control. |
+| `components/journal-header.tsx` | The date and today's food count. The seat for later stats. |
+| `components/journal-paper.tsx` | The ruled page, the blocks and the landing mark. |
+| `components/reference-sheet.tsx` | A read-only look at `References/<name>.md`. |
+| `hooks/use-entry-draft.ts` | The draft, the send and the retry. |
+| `hooks/use-journal-sheet.ts` | The sheet's clock, the Food chip and the failure toast. |
+| `lib/labels.ts` | The date, the food stat name and the failure words. |
+
+`lib/journal/format.ts` holds the note grammar as pure functions. A block
+is a line that is only `HH:MM` and the `- ` bullets under it.
+`planAppend` builds the next text and keeps every existing byte.
+`lib/journal/daily-note.ts` is the only file that reads and writes the
+note. A read never creates. The first send makes the folders and the
+note, with no frontmatter and no embed. A retry re-reads, so an edit from
+Obsidian is never clobbered.
+
+A food entry is `- Ate: ... #food` inside a block. The `#food` tag is the
+machine marker, and the `Ate:` prefix is for the eye. A fixed header
+shows the date and today's food count. The labels stay on the page, and
+the header is the seat for calories and other numbers later. The marker
+is provisional (ADR 20261112-journal-format).
+
+The journal does not use the task store. Its append shares `VAULT_SCOPE`
+with the task writes, so the vault takes one write at a time. The append
+stays out of the Lists failure banner.
 
 Imports follow four zones:
 
@@ -311,31 +429,88 @@ month (ADR 0042).
 
 ## Next
 
-The phase 4 rebuild merged in `b3acdb1`. The current round is tickets
-0080 to 0087. It covers the crash after a tick, the pager remount and
-the selected state recipe. It adds runtime themes, a settings screen,
-a command pane and a crash log. It also moves reorder to the grip.
+Version 1.0 ships the week of 2026-11-16. A tick now draws a short
+burst from the checkbox, in the active palette (ADR
+20261116-completion-celebration). Every tick control plays it, the
+editor sheet's included, and only when the press marks the task done.
 
-After that:
+The design direction round started. `20261112-design-scale-guard`
+merged in `d26fcae`. It names the spacing and radius scale, moves
+fifteen stray values onto it, and adds a vitest guard. The guard fails a
+raw padding, margin, gap or radius of 4 or more in features, components
+and app routes. The component gallery merged in `68fb1a4`, ticket
+`20261112-component-gallery`. It draws every primitive in every state,
+in all four palettes, at 360 and 412 wide. A Playwright spec checks
+names, the 44pt floor and axe in each palette. It keeps one review
+screenshot per palette and width. The gallery found two defects.
+`20261112-menu-hint-name` fixes the first: a hinted menu item now reads
+as one name, and the gallery draws a hint again. `20261112-control-focus-ring`
+fixes the second. The shared press draws one focus mark for a keyboard
+focus, in every palette. The gallery's focus cells follow the keyboard
+(ADR 20261112-control-focus-ring). Ticket 0082 settled the selected
+state recipe. Icon buttons carry their state in the glyph. They draw
+outline at rest and filled when selected, with no box behind the
+button (PR 148). The week drop target draws a 2pt ink ring inside the
+day box. The gap between boxes stays paper (ADR 20261114).
 
-- 0088 the journal tab, with 0089 and 0090
+The phase 4 rebuild merged in `b3acdb1`. The round of tickets 0080 to
+0087 finished. It fixed the crash after a tick and the pager remount.
+It added runtime themes, a settings screen, a crash log and a command
+pane. It also moved reorder to the grip only. Ticket 0082 shipped both
+halves of its pick, the icon glyphs and the week drop ring.
+
+The operator decided the schema review, 0094. Its remaining work is
+three child tickets:
+
+- `20261111-a-timed-due-rings`, in review
+- `20261111-completed-takes-a-time`
+- `20261111-kind-accepts-both-shapes`
+
+The feature queue:
+
+- 0088 the journal tab, built with 0089 and 0090 in PR #143
 - 0091 reference notes on a task
 - 0092 optional quests and evergreen tasks, a discovery
-- 0093 the task editor rebuild, starting with a design
-- 0094 review the task note schema
+- 0093 the task editor rebuild, shipped in #155. The phone pass for
+  keyboard insets and Android back remains
 - 0095 a Notes tab from Inbox, starting with a design
+- 20261111 reminder weight shipped in #150, #152 and #153. The phone check
+  remains (20261111-alert-weight-device-check)
+- 20261111 one list and a whole-tab order, decided. The children:
+  - one list field on the task note
+  - Main holds the unfiled tasks
+  - order the whole tab
+  - pick one list in the editor, shipped in #155
+- 20261111 fold deeds into tasks, a spike
+- 20261117 Phosphor glyphs and an icon-only nav, in review
 
 Open feature tickets:
 
-- 0018 a keep-style notes board
 - 0039 home screen widgets
 - 0065 the list menu actions
 - 0003, 0005 and 0008 carry the larger ideas.
 
-The app has two tabs today, Lists and Planner, and the journal joins
-them in 0088. The Lists tab shows Focus and Main. Main is the
-catch-all. It holds every task not on Focus, including tasks tagged
-with a list that has no tab (ADR 0015).
+The app has three tabs today, Lists, Planner and Journal. The bar
+carries no labels; each tab's name lives in its accessibility label
+(ADR 20261117-phosphor-glyphs). The Lists tab
+shows Main and the list notes. Main holds the tasks with no list. Any
+other tab shows the tasks whose `list` carries that name. My order makes
+each tab one flat list (ADR 0015 and its 2026-11-11 amendment,
+`20261111-one-list-and-tab-order`). The Journal tab shows today's note
+and appends to it.
+
+Each list tab folds its Completed group by default. The header keeps
+the count and opens or closes on a tap. It turns on the app's shared
+clock. The fold is session state per tab, so a restart folds every tab
+again (ADR `20261116-fold-and-clear-completed`).
+
+The list menu's Delete all completed tasks asks first and names the
+count. It removes the done notes of the tab it opened from, one note at
+a time. It reads each note again before the delete, so a note another
+app reopened while the sheet was up stays. A note the app cannot delete
+comes back too, and the banner says how many stayed. The app keeps no
+trash and no undo, so the delete is final. Obsidian sync sees the
+removed files and syncs the deletion.
 
 The vault now serves more than `Tasks/`. The journal appends to
 `Journal/Daily/YYYY-MM-DD.md`, and the reference picker reads
@@ -353,8 +528,9 @@ Phases:
    the vocabulary (0002, ADR 0005). Done. The package lives in the
    central contracts repo (0007, ADR 0007).
 4. MVP screens: focus list, upcoming reminders, calendar, task editor,
-   note viewer (0003, children 0009 to 0013). In progress. Lists and
-   Planner exist. The task editor and note viewer do not.
+   note viewer (0003, children 0009 to 0013). In progress. Lists,
+   Planner and Journal exist, and the task editor sheet shipped in
+   #155. The note viewer shows a note without edits.
 5. Capture: quick capture with offline natural language dates. It uses
    chrono-node and rrule.js. Unparsed lines go to athena agents later
    (0006). Done.
@@ -362,7 +538,10 @@ Phases:
    rebuilds the alarm list after every successful vault read. A capture,
    a tick, or a drag leaves the schedule matching the vault. Ticking a
    recurring task completes the occurrence. It creates the next one as
-   its own note (ADR 0027).
+   its own note (ADR 0027). An alert uses its task's `alert weight`. A
+   harsh alert rings on the alarm stream and escalates at 1, 5 and 15
+   minutes. A quiet one rings once in silence. A tap or a tick clears
+   the group (ADR 20261111-reminder-weight).
 7. Later: deed vocabulary cleanup (0005), the quick-task and deed merge
    decision, and capture text highlighting (0008). Location triggers,
    MCP capture on athena, ntfy fallback, and the athena operational

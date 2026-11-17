@@ -7,6 +7,8 @@ import {
   nextAfter,
   occurrencesBetween,
   occursOn,
+  ruleWords,
+  upcoming,
 } from "./recurrence";
 
 function task(data: TaskFrontmatter): TaskItem {
@@ -30,6 +32,7 @@ function recurring(
   return task({
     kind: "[[tasks]]",
     created: "2026-10-01",
+    "alert weight": "harsh",
     due,
     recurrence,
     ...(completed == null ? {} : { completed }),
@@ -99,6 +102,7 @@ describe("occursOn", () => {
     const once = task({
       kind: "[[tasks]]",
       created: "2026-10-01",
+      "alert weight": "harsh",
       due: "2026-10-22",
     });
     expect(occursOn(once, new Date(2026, 9, 22))).toBe(true);
@@ -107,7 +111,11 @@ describe("occursOn", () => {
   });
 
   it("never touches a day without a due date", () => {
-    const undated = task({ kind: "[[tasks]]", created: "2026-10-01" });
+    const undated = task({
+      kind: "[[tasks]]",
+      created: "2026-10-01",
+      "alert weight": "harsh",
+    });
     expect(occursOn(undated, new Date(2026, 9, 22))).toBe(false);
     expect(
       occurrencesBetween(
@@ -356,5 +364,76 @@ describe("month-end ticks (ticket 0066)", () => {
         occurrencesBetween(bare, new Date(2027, 1, 1), new Date(2027, 3, 30)),
       ),
     ).toEqual(["2027-02-28", "2027-03-31", "2027-04-30"]);
+  });
+});
+
+describe("ruleWords", () => {
+  // 2026-10-26 is a Monday.
+  it.each([
+    ["FREQ=DAILY", "Every day"],
+    ["FREQ=DAILY;INTERVAL=3", "Every 3 days"],
+    ["FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", "Weekdays"],
+    ["FREQ=WEEKLY;BYDAY=FR,MO,WE,TH,TU", "Weekdays"],
+    ["FREQ=WEEKLY;BYDAY=SA,SU", "Weekends"],
+    ["FREQ=WEEKLY", "Every Monday"],
+    ["FREQ=WEEKLY;INTERVAL=2", "Every 2 weeks on Monday"],
+    ["FREQ=WEEKLY;BYDAY=TH", "Every Thursday"],
+    ["FREQ=WEEKLY;BYDAY=FR,MO,WE", "Every Mon, Wed and Fri"],
+    ["FREQ=MONTHLY", "Every month"],
+    ["FREQ=MONTHLY;INTERVAL=3", "Every 3 months"],
+    ["FREQ=MONTHLY;BYMONTHDAY=-1", "Every month on the last day"],
+    ["FREQ=MONTHLY;BYMONTHDAY=28,29,30;BYSETPOS=-1", "Every month"],
+    ["FREQ=MONTHLY;BYMONTHDAY=22", "Every month on the 22nd"],
+    ["FREQ=YEARLY", "Every year"],
+    ["FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1", "Every year"],
+  ])("says %s as %s", (rule, words) => {
+    expect(ruleWords(rule, "2026-10-26")).toBe(words);
+  });
+
+  it("says a bare weekly rule with no due as every week", () => {
+    expect(ruleWords("FREQ=WEEKLY", null)).toBe("Every week");
+  });
+
+  it("reads any other rule through rrule, in words", () => {
+    expect(ruleWords("FREQ=DAILY;COUNT=3", "2026-10-26")).toBe(
+      "Every day for 3 times",
+    );
+  });
+
+  it.each(["", "FOO", "FREQ=SOMETIMES", "FREQ=WEEKLY;BYDAY=XX"])(
+    "gives null for %j, a rule the app cannot expand",
+    (rule) => {
+      expect(ruleWords(rule, "2026-10-26")).toBeNull();
+    },
+  );
+});
+
+describe("upcoming", () => {
+  it("lists the first dates of a rule from its start", () => {
+    expect(upcoming("FREQ=WEEKLY", "2026-10-26", 3)).toEqual([
+      "2026-10-26",
+      "2026-11-02",
+      "2026-11-09",
+    ]);
+  });
+
+  it("keeps the time of a timed start", () => {
+    expect(upcoming("FREQ=DAILY", "2026-10-26T09:30", 2)).toEqual([
+      "2026-10-26T09:30",
+      "2026-10-27T09:30",
+    ]);
+  });
+
+  it("follows the month end for a late monthly start (ADR 0042)", () => {
+    expect(upcoming("FREQ=MONTHLY", "2027-01-31", 3)).toEqual([
+      "2027-01-31",
+      "2027-02-28",
+      "2027-03-31",
+    ]);
+  });
+
+  it("gives null for a rule it cannot expand", () => {
+    expect(upcoming("FREQ=WEEKLY;BYDAY=XX", "2026-10-26", 3)).toBeNull();
+    expect(upcoming("", "2026-10-26", 3)).toBeNull();
   });
 });

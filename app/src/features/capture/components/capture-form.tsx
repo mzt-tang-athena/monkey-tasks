@@ -12,14 +12,8 @@ import { targetLabel } from "@/features/capture/lib/chip-labels";
 import { CaptureChips } from "./capture-chips";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
-import {
-  captureText,
-  colors,
-  fonts,
-  sheetMaxShare,
-  sheetReserve,
-  spacing,
-} from "@/theme/tokens";
+import { captureText, fonts, sheetMaxShare, sheetReserve, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 
 // The sheet input carries focus by caret and placeholder alone: no
 // app ring, and the browser's own focus outline is suppressed on
@@ -49,6 +43,7 @@ export function CaptureForm({
   draft: CaptureDraft;
   onClose: () => void;
 }) {
+  const { styles, colors } = useThemedStyles(makeStyles);
   const window = useWindowDimensions();
   // The input's cap: sheetMaxShare of the window, less the room the
   // keyboard and the panel's fixed chrome need. The input follows its
@@ -118,23 +113,25 @@ export function CaptureForm({
   );
 }
 
-const styles = StyleSheet.create({
-  input: {
-    fontSize: captureText.size,
-    lineHeight: captureText.line,
-    fontFamily: fonts.body,
-    color: colors.ink,
-    minHeight: captureText.minHeight,
-    paddingHorizontal: spacing.s,
-    paddingVertical: spacing.m,
-    ...noFocusOutline,
-  },
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.s,
-  },
-  spacer: {
-    flex: 1,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    input: {
+      fontSize: captureText.size,
+      lineHeight: captureText.line,
+      fontFamily: fonts.body,
+      color: colors.ink,
+      minHeight: captureText.minHeight,
+      paddingHorizontal: spacing.s,
+      paddingVertical: spacing.m,
+      ...noFocusOutline,
+    },
+    actions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
+    },
+    spacer: {
+      flex: 1,
+    },
+  }),
 });

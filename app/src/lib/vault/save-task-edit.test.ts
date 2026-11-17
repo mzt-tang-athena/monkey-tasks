@@ -72,13 +72,14 @@ function task(): TaskItem {
     uri: OLD_URI,
     fileName: "Call.md",
     name: "Call",
-    text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21\nreminders:\n  - 2026-10-21T09:00\nlists:\n  - [[Focus]]\n---\n\nOld body.\n',
+    text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21\nreminders:\n  - 2026-10-21T09:00\nlist: "[[Focus]]"\n---\n\nOld body.\n',
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
+      "alert weight": "harsh",
       due: "2026-10-21",
       reminders: ["2026-10-21T09:00"],
-      lists: ["[[Focus]]"],
+      list: "[[Focus]]",
     },
     body: "\nOld body.\n",
   };
@@ -89,8 +90,9 @@ function edit(overrides: Partial<TaskEdit> = {}): TaskEdit {
     name: "Call",
     due: "2026-10-21",
     recurrence: null,
-    lists: ["Focus"],
+    list: "Focus",
     reminders: ["2026-10-21T09:00"],
+    alertWeight: "harsh",
     body: "\nOld body.\n",
     ...overrides,
   };
@@ -141,6 +143,7 @@ describe("saveTaskEdit", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
+        "alert weight": "harsh",
         due: "2027-01-31",
         recurrence: "FREQ=MONTHLY;BYMONTHDAY=-1",
       },
@@ -163,26 +166,85 @@ describe("saveTaskEdit", () => {
     expect(retimed.data?.recurrence).toBe("FREQ=MONTHLY;BYMONTHDAY=-1");
   });
 
+  it("writes the weight quiet once, in place", async () => {
+    const weighted =
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21\nalert weight: harsh\nreminders:\n  - 2026-10-21T09:00\nlist: "[[Focus]]"\n---\n\nOld body.\n';
+    const item: TaskItem = { ...task(), text: weighted };
+    state.fileText = weighted;
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ alertWeight: "quiet" }),
+    );
+
+    expect(state.writes).toHaveLength(1);
+    expect(result.text).toBe(weighted.replace("alert weight: harsh", "alert weight: quiet"));
+    expect(result.text.match(/alert weight/g)).toHaveLength(1);
+    expect(result.data?.["alert weight"]).toBe("quiet");
+  });
+
+  it("removes the weight for a need and leaves no blank line", async () => {
+    const quiet =
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21\nalert weight: quiet\nreminders:\n  - 2026-10-21T09:00\nlist: "[[Focus]]"\n---\n\nOld body.\n';
+    const base = task();
+    const item: TaskItem = {
+      ...base,
+      text: quiet,
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "quiet",
+      },
+    };
+    state.fileText = quiet;
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ alertWeight: "harsh" }),
+    );
+
+    expect(result.text).toBe(quiet.replace("alert weight: quiet\n", ""));
+    expect(result.text).not.toContain("alert weight");
+    expect(result.data?.["alert weight"]).toBe("harsh");
+  });
+
+  it("leaves the note untouched when the weight does not change", async () => {
+    const item = task();
+    state.fileText = item.text;
+
+    const result = await saveTaskEdit(safAdapter, item, edit());
+
+    expect(state.writes).toHaveLength(1);
+    expect(state.writes[0].text).toBe(item.text);
+    expect(result.text).toBe(item.text);
+  });
+
   it("clears a property when the edit has no value for it", async () => {
     const result = await saveTaskEdit(
       safAdapter,
       task(),
-      edit({ due: null, reminders: [], lists: [] }),
+      edit({ due: null, reminders: [], list: null }),
     );
 
     expect(result.text).not.toContain("due:");
     expect(result.text).not.toContain("reminders");
-    expect(result.text).not.toContain("lists");
+    expect(result.text).not.toMatch(/^lists?:/m);
     expect(result.data?.due).toBeUndefined();
     expect(result.data?.reminders).toBeUndefined();
-    expect(result.data?.lists).toBeUndefined();
+    expect(result.data?.list).toBeUndefined();
   });
 
-  it("writes a one-item list as a block list", async () => {
+  it("writes the list as one scalar", async () => {
     const minimal: TaskItem = {
       ...task(),
       text: '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nOld body.\n',
-      data: { kind: "[[tasks]]", created: "2026-10-20" },
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "harsh",
+      },
     };
     state.fileText = minimal.text;
 
@@ -190,15 +252,96 @@ describe("saveTaskEdit", () => {
       safAdapter,
       minimal,
       edit({
-        lists: ["Errands"],
+        list: "Errands",
         reminders: ["2026-10-25T08:00"],
       }),
     );
 
-    expect(result.text).toContain('lists:\n  - "[[Errands]]"');
+    expect(result.text).toContain('list: "[[Errands]]"');
+    expect(result.text).not.toContain("lists");
     expect(result.text).toContain("reminders:\n  - 2026-10-25T08:00");
-    expect(result.data?.lists).toEqual(["[[Errands]]"]);
+    expect(result.data?.list).toBe("[[Errands]]");
     expect(result.data?.reminders).toEqual(["2026-10-25T08:00"]);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("keeps the warning after a save that leaves the bad value", async () => {
+    const loud =
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nalert weight: loud\n---\n\nOld body.\n';
+    const item: TaskItem = {
+      ...task(),
+      text: loud,
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "harsh",
+      },
+    };
+    state.fileText = loud;
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ reminders: [] }),
+    );
+
+    expect(result.text).toContain("alert weight: loud");
+    expect(result.warnings).toEqual([
+      'alert weight "loud" is not harsh or quiet, so it rings harsh',
+    ]);
+  });
+
+  it("drops a legacy two-link lists field on a save", async () => {
+    const legacy =
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n  - "[[Focus]]"\n  - "[[Home]]"\n---\n\nOld body.\n';
+    const item: TaskItem = {
+      ...task(),
+      text: legacy,
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "harsh",
+        list: "[[Focus]]",
+      },
+    };
+    state.fileText = legacy;
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ list: "Home", reminders: [] }),
+    );
+
+    expect(result.text).toContain('list: "[[Home]]"');
+    expect(result.text).not.toContain("lists:");
+    expect(result.text.match(/\[\[(Focus|Home)\]\]/g)).toHaveLength(1);
+    expect(result.data?.list).toBe("[[Home]]");
+    expect(result.data).not.toHaveProperty("lists");
+  });
+
+  it("clears both list keys when a legacy note's list is cleared", async () => {
+    const legacy =
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nlists:\n  - "[[Focus]]"\n  - "[[Home]]"\n---\n\nOld body.\n';
+    const item: TaskItem = {
+      ...task(),
+      text: legacy,
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "harsh",
+        list: "[[Focus]]",
+      },
+    };
+    state.fileText = legacy;
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ list: null, reminders: [] }),
+    );
+
+    expect(result.text).not.toMatch(/^lists?:/m);
+    expect(result.data?.list).toBeUndefined();
   });
 
   it("replaces the body below the frontmatter", async () => {
@@ -320,6 +463,7 @@ describe("saveTaskEdit", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
+        "alert weight": "harsh",
         title: "Water plants",
         due: "2026-10-27",
       },

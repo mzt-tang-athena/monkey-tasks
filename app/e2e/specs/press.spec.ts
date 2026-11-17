@@ -77,7 +77,7 @@ test("a tap in the first layout frame of a row ticks it", async ({
   expect(seen, "the tap ran in the mount's task").not.toBe("waiting");
   await expect
     .poll(() => noteText(page, `Tasks/${capture.name}.md`))
-    .toContain("completed: 2026-10-26");
+    .toContain("completed: 2026-10-26T");
 });
 
 const inputs: Input[] = ["mouse", "touch"];

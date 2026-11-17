@@ -398,10 +398,14 @@ for (const input of inputs) {
       await page.goto("/");
       await expect(row(page, undated.second)).toBeVisible();
 
+      // Step the 220 ms entrance on the page clock. A loaded runner
+      // can otherwise sample past every fade frame.
+      await pauseClock(page);
       await startSampling(page, "not-a-row");
       await tap(page, input, page.getByRole("button", { name: "add task" }));
+      await page.clock.runFor(300);
+      await page.clock.resume();
       await expect(page.getByRole("dialog")).toBeVisible();
-      await page.waitForTimeout(200);
       const opening = await stopSampling(page);
 
       const shown = opening.filter((frame) => frame.dialog);
@@ -438,14 +442,16 @@ for (const input of inputs) {
         ).toBe(true);
       }
 
+      await pauseClock(page);
       await startSampling(page, "not-a-row");
       await tap(
         page,
         input,
         page.getByRole("button", { name: "close capture" }),
       );
+      await page.clock.runFor(300);
+      await page.clock.resume();
       await expect(page.getByRole("dialog")).toHaveCount(0);
-      await page.waitForTimeout(200);
       const closing = await stopSampling(page);
 
       if (reducedMotion === "reduce") {

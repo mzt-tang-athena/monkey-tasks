@@ -26,10 +26,11 @@ function over(ms: number) {
 /**
  * A horizontal pager. The page under the finger follows it, and a
  * release past the threshold or a flick lands on the next page. The
- * live page renders `children` and keys on `index`. A neighbour on
- * screen renders `renderPreview(page)`. The screen only sets `index`:
- * one page away slides, and a longer jump cuts. A landing calls
- * `onPage(next)` once (ADR 0033, ADR 0046).
+ * live page renders `children` in one element for the pager's life, so
+ * a page keeps its state across a swipe. A neighbour on screen renders
+ * `renderPreview(page)`. The screen only sets `index`: one page away
+ * slides, and a longer jump cuts. A landing calls `onPage(next)` once
+ * (ADR 0033, ADR 0046).
  */
 export function Pager({
   index,
@@ -57,16 +58,25 @@ export function Pager({
   const pressCancel = usePressCancel();
   const reduced = useReducedMotion();
   const width = useSharedValue(0);
+  // The same width as React state, so the live page's own offset
+  // applies in the same render as its content. A shared value alone
+  // updates the track one frame later and shows a blank strip.
+  const [hostWidth, setHostWidth] = React.useState(0);
   const pos = useSharedValue(0);
   const landed = useSharedValue(0);
   // The page a settle is heading to, until it lands or a touch takes it.
   const pending = useSharedValue(none);
   const anchor = useSharedValue(0);
   const page = useSharedValue(index - origin);
+  // The live page's offset from the origin, as a shared value so the
+  // track's animated style reads only shared values. A plain variable
+  // would be captured once and never follow a tab change.
+  const liveAt = useSharedValue(index - origin);
   const edges = useSharedValue<PageBounds>({});
 
   React.useLayoutEffect(() => {
     page.set(index - origin);
+    liveAt.set(index - origin);
     edges.set({
       first: bounds.first === undefined ? undefined : bounds.first - origin,
       last: bounds.last === undefined ? undefined : bounds.last - origin,
@@ -175,17 +185,23 @@ export function Pager({
     .map(Number)
     .filter((rel) => rel !== live);
 
-  // The live page lays out at the track's origin. Only the track's
-  // transform carries the page position, so a page that is not the
-  // first one still lays out inside the host. Android's virtualized
-  // list clips a page's rows against its layout box, so an offscreen
-  // box would hide the rows from TalkBack (ticket 0079).
+  // The previews ride in a track that carries the whole page position,
+  // so the track rests one page over and Android skips it as offscreen.
+  // The live page is its sibling, directly in the host, and carries only
+  // the distance from the track's resting place. Its layout box stays at
+  // the host's origin, so Android's virtualized list keeps its rows and
+  // TalkBack reads the tab (ticket 0079, again in ticket 20261117).
   const track = useAnimatedStyle(() => ({
-    transform: [{ translateX: -(pos.value - live) * width.value }],
+    transform: [{ translateX: -pos.value * width.value }],
+  }));
+  const livePage = useAnimatedStyle(() => ({
+    transform: [{ translateX: (liveAt.value - pos.value) * width.value }],
   }));
 
   const onLayout = (event: LayoutChangeEvent) => {
-    width.set(event.nativeEvent.layout.width);
+    const next = event.nativeEvent.layout.width;
+    width.set(next);
+    setHostWidth(next);
   };
 
   return (
@@ -196,14 +212,20 @@ export function Pager({
             <View
               key={`preview:${rel}`}
               testID={`preview:${origin + rel}`}
-              style={[styles.preview, { left: `${(rel - live) * 100}%` }]}
+              style={[styles.preview, { left: rel * hostWidth }]}
             >
               {renderPreview(origin + rel)}
             </View>
           ))}
-          <View key={`live:${index}`} testID="pager-live" style={fill && styles.fill}>
-            {children}
-          </View>
+        </Animated.View>
+        {/* One element for the pager's life, outside the moving track.
+            Keeping it mounted keeps the page's scroll and rows across a
+            swipe, and its parent stays put for Android's tree. */}
+        <Animated.View
+          testID="pager-live"
+          style={[fill && styles.live, livePage]}
+        >
+          {children}
         </Animated.View>
       </View>
     </GestureDetector>
@@ -215,6 +237,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   fill: {
+    flex: 1,
+  },
+  // A filling pager takes its size from the host, so the live page is
+  // absolute and fills it. A pager that sizes to its page keeps the live
+  // page in flow, where it gives the host its height.
+  live: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     flex: 1,
   },
   preview: {

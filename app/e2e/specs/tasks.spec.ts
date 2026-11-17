@@ -1,25 +1,89 @@
 import { expect, test } from "../fixtures";
-import { rename, sections, undated } from "../data";
-import { expectInSection, press, row, sectionHeader } from "../locators";
+import {
+  bareKindNote,
+  completedNotes,
+  rename,
+  sections,
+  undated,
+} from "../data";
+import {
+  completedToggle,
+  expectInSection,
+  openCompleted,
+  press,
+  row,
+  sectionHeader,
+} from "../locators";
+import { noteText } from "../vault";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(row(page, undated.second)).toBeVisible();
 });
 
-test("a tick marks the task done and moves it to Completed", async ({ page }) => {
+test("a note with a bare kind reads as a task and keeps that kind", async ({ page }) => {
+  const target = row(page, bareKindNote.name);
+  await expect(target).toBeVisible();
+
+  await press(page, target.getByRole("checkbox"));
+
+  await expect
+    .poll(() => noteText(page, bareKindNote.path))
+    .toContain("completed: 2026-10-26T");
+  expect(await noteText(page, bareKindNote.path)).toContain("kind: tasks");
+
+  // The ticked row joins the folded group, and still reads as done.
+  await expect(row(page, bareKindNote.name)).toHaveCount(0);
+  await openCompleted(page);
+  await expect(
+    row(page, bareKindNote.name).getByRole("checkbox"),
+  ).toHaveAttribute("aria-checked", "true");
+});
+
+test("a tick writes the minute it landed", async ({ page }) => {
   const target = row(page, undated.second);
 
   await press(page, target.getByRole("checkbox"));
 
-  await expect(target.getByRole("checkbox")).toHaveAttribute(
-    "aria-checked",
-    "true",
+  await expect
+    .poll(() => noteText(page, `Tasks/${undated.second}.md`))
+    .toMatch(/^completed: 2026-10-26T\d{2}:\d{2}/m);
+});
+
+test("a completion with a time and one with a date alone both read as done", async ({
+  page,
+}) => {
+  await openCompleted(page);
+  for (const name of [completedNotes.timed, completedNotes.dated]) {
+    await expectInSection(
+      row(page, name),
+      sectionHeader(page, sections.completed),
+    );
+  }
+});
+
+test("a tick folds the task away into Completed", async ({ page }) => {
+  const target = row(page, undated.second);
+
+  await press(page, target.getByRole("checkbox"));
+
+  // The row holds for the wash, then joins the folded group. The
+  // header counts it, so the done task leaves the page but not the tab.
+  await expect(target).toHaveCount(0);
+  await expect(completedToggle(page)).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    page.getByRole("button", { name: /^Completed \d+ tasks?$/ }),
+  ).toBeVisible();
+
+  await openCompleted(page);
+  await expectInSection(
+    row(page, undated.second),
+    sectionHeader(page, sections.completed),
   );
-  await expectInSection(target, sectionHeader(page, sections.completed));
 });
 
 test("an untick puts the task back under No date", async ({ page }) => {
+  await openCompleted(page);
   const target = row(page, undated.second);
   await press(page, target.getByRole("checkbox"));
   await expectInSection(target, sectionHeader(page, sections.completed));
@@ -61,15 +125,22 @@ test("a single-line row has equal space above and below its name", async ({ page
   expect(below).toBeCloseTo(above, 0);
 });
 
-test("the editor saves a new name", async ({ page }) => {
+test("the editor writes a new name when the sheet closes", async ({ page }) => {
   await press(page, row(page, rename.from).getByRole("button", { name: rename.from }));
-  const name = page.getByRole("textbox", { name: "Name", exact: true });
+  const name = page.getByRole("textbox", { name: "Task name" });
   await expect(name).toHaveValue(rename.from);
 
   await name.fill(rename.to);
-  await page.getByRole("button", { name: "save task" }).click();
+  // The title writes on blur and on close, never per keystroke.
+  await page.getByRole("button", { name: "close the task" }).click();
 
   await expect(page).toHaveURL("/");
   await expect(row(page, rename.to)).toBeVisible();
   await expect(row(page, rename.from)).toHaveCount(0);
+  // The rename writes a new file named for the title, so the note
+  // carries no separate title key.
+  await expect
+    .poll(() => noteText(page, `Tasks/${rename.to}.md`))
+    .toContain('kind: "[[tasks]]"');
+  expect(await noteText(page, `Tasks/${rename.from}.md`)).toBeNull();
 });

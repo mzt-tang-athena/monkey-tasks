@@ -32,13 +32,14 @@ Spike succeeded on device (Xiaomi-family ROM) on 2026-10-19, PR 1.
   writing the file back all work. The edit reached the desktop vault
   after phone Obsidian ran LiveSync.
 - Exact-alarm local notifications fire with the app closed.
-- Reboot survival holds when the app is backgrounded. When the app is
-  swiped away, the ROM treats it as force-stop, `BOOT_COMPLETED` is
-  never delivered, and stored alarms are lost until the app opens
+- Reboot survival holds when the app runs in the background. After a
+  swipe-away, the ROM treats the app as force-stopped. `BOOT_COMPLETED`
+  never arrives, and stored alarms disappear until the app opens
   again. Mitigation for the real app: rescan and re-schedule on every
-  open; a setup screen should guide users to Autostart and no battery
+  open. A setup screen should guide users to Autostart and no battery
   restrictions.
-- The APK manifest was verified to contain the boot receiver and
-  permissions, so the failure is ROM-level, not a build defect.
+- A check confirmed that the APK manifest contains the boot receiver
+  and permissions. It follows that the failure is ROM-level rather
+  than a build defect.
 - A diagnostics screen (scheduled list + exact-alarm state) stays in
   the spike code and informs the real app's reminders feature.

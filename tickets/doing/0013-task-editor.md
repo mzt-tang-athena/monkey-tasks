@@ -18,9 +18,8 @@ display deed notes it encounters.
 Constraint found on 2026-10-23: Android SAF has no rename call.
 `expo-file-system` cannot move a `content://` document, so a rename
 creates the new file, writes the text, and deletes the old one.
-Obsidian sees a delete and a create, not a rename, so links that point
-at the old name do not follow. The editor warns once on the first
-rename.
+Obsidian sees a delete and a create, not a rename, so links to the old
+name do not follow. The editor warns once on the first rename.
 
 ## Acceptance
 

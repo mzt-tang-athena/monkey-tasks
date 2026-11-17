@@ -34,14 +34,14 @@ Out of scope: repair actions in the app. You fix the note in Obsidian.
 
 ## Outcome
 
-The task loader carries the zod issues on the row, and the Lists
-screen puts a note that fails validation in the existing `Needs
-repair` block with its file name and each error. No task row renders
-it, so it cannot open, tick, drag or swipe, and the valid rows are
-untouched.
+The task loader carries the zod issues on the row. The Lists screen
+puts a note that fails validation in the existing `Needs repair`
+block. The block shows the note's file name and each error. No task
+row renders it, so it cannot open, tick, drag or swipe. The valid rows
+stay untouched.
 
-Verified in the browser at 390px with a broken task note: it appears
-in the repair block and is absent from the sections. The loader test
+Verified in the browser at 390px with a broken task note. The note
+appears in the repair block and is absent from the sections. The loader test
 covers one broken and one valid note.
 
-The work merged as part of #54, whose branch was based on this one.
+The work merged as part of #54, whose branch had this one as its base.

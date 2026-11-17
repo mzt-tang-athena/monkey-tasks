@@ -1,17 +1,19 @@
 import * as React from "react";
 import { View } from "react-native";
-import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CaptureTarget, TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { ErrorState, LoadingState } from "@/components/ui/list-states";
 import { isoOf } from "@/utils/dates";
-import { loadSettings, saveSetting, type TaskForm } from "@/lib/settings";
+import { useSetting } from "@/lib/settings-store";
 import { spacing } from "@/theme/tokens";
+import { useTheme } from "@/theme/theme-provider";
 import { useTaskList, useStoreMeta } from "@/stores/tasks/task-state";
 import { usePatchTask } from "@/stores/tasks/mutations/use-patch-task";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
+import { useTaskEditor } from "@/hooks/use-task-editor";
+import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { useRefreshTasks } from "@/stores/tasks/use-vault-read";
 import { useOpenTasks } from "@/stores/tasks/selectors";
 import { layout } from "./planner-layout";
@@ -74,20 +76,29 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   const patchTask = usePatchTask();
   const refresh = useRefreshTasks();
   const insets = useSafeAreaInsets();
+  const editor = useTaskEditor();
+  const { colors } = useTheme();
 
   // One global task form (rows or pills) for every planner mode,
-  // persisted in app-internal settings; default rows.
-  const [taskForm, setTaskForm] = React.useState<TaskForm>(
-    () => loadSettings().taskForm,
-  );
-  const changeForm = React.useCallback((form: TaskForm) => {
-    setTaskForm(form);
-    saveSetting("taskForm", form);
-  }, []);
+  // live across the planner and the settings screen; default rows.
+  const [taskForm, changeForm] = useSetting("taskForm");
+  const [weekView] = useSetting("weekView");
 
-  const openTask = React.useCallback((task: TaskItem) => {
-    router.push(`/task/${encodeURIComponent(task.id)}`);
-  }, []);
+  const openTask = React.useCallback(
+    (task: TaskItem) => {
+      recordBreadcrumb("open", task.data?.title ?? task.name);
+      editor.open(task.id);
+    },
+    [editor],
+  );
+
+  const toggle = React.useCallback(
+    (task: TaskItem) => {
+      recordBreadcrumb("tick", task.data?.title ?? task.name);
+      void toggleTask(task);
+    },
+    [toggleTask],
+  );
 
   const { source, cycle, choose, anchor, openMenu, closeMenu } =
     usePlannerSource();
@@ -118,18 +129,25 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
       openSourceMenu: openMenu,
       taskForm,
       changeForm,
-      toggle: toggleTask,
+      toggle,
       open: openTask,
     }),
-    [today, source, cycle, anchor, openMenu, taskForm, changeForm, toggleTask, openTask],
+    [today, source, cycle, anchor, openMenu, taskForm, changeForm, toggle, openTask],
   );
 
   return (
     <View
+      testID="planner-screen"
       // The strip hangs from the top edge of the safe area. Where the
       // device has no inset, as in the web preview, it keeps a step
       // clear of the screen's edge.
-      style={[layout.screen, { paddingTop: Math.max(insets.top, spacing.s) }]}
+      style={[
+        layout.screen,
+        {
+          backgroundColor: colors.paper,
+          paddingTop: Math.max(insets.top, spacing.s),
+        },
+      ]}
     >
       <PlanDrag.Root onDrop={drop} renderGhost={(task) => <GhostPill task={task} />}>
         <PlannerListProvider value={list}>
@@ -173,6 +191,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
               ) : null}
               {status === "ready" && mode === "week" ? (
                 <WeekPane
+                  layout={weekView}
                   tasks={tasks}
                   openTasks={openTasks}
                   day={day}

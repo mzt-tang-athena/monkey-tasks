@@ -111,17 +111,27 @@ vi.mock("@/stores/tasks/load-vault", async (importOriginal) => {
 });
 
 // The alarm code runs for real on a fake OS. A full rebuild always
-// starts by cancelling every alarm, so that call counts the rebuilds.
+// reads the OS schedule first, so that call counts the rebuilds.
 vi.mock("@/lib/notifications", () => ({
   ensureNotificationPermission: async () => true,
-  scheduleAt: async (when: Date) => {
-    scheduledAt.push(when.getTime());
+  ensureChannels: async () => undefined,
+  scheduleRing: async (ring: { when: number }) => {
+    scheduledAt.push(ring.when);
     return "alarm";
   },
-  cancelAllScheduled: async () => {
-    fullSyncs += 1;
-  },
   cancelScheduled: async () => undefined,
+  listScheduledDetailed: async () => {
+    fullSyncs += 1;
+    return [];
+  },
+  listDeliveredDetailed: async () => [],
+  dismissDelivered: async () => undefined,
+}));
+
+vi.mock("@/lib/alerts/acked", () => ({
+  loadAcked: () => ({}),
+  isAcked: () => false,
+  recordAcks: () => undefined,
 }));
 
 async function hold(): Promise<void> {
@@ -548,7 +558,13 @@ describe("store races (ticket 0052)", () => {
     await flush();
     const successor = [...disk.keys()].find((uri) => uri.includes("2099-01-02"));
     expect(successor).toBeDefined();
-    expect(scheduledAt).toEqual([new Date(2099, 0, 2, 9, 0).getTime()]);
+    // The rollback leaves the parent open at its own timed due, which
+    // rings too; the kept successor is the second alarm minute.
+    const parentMinute = new Date(2099, 0, 1, 9, 0).getTime();
+    const successorMinute = new Date(2099, 0, 2, 9, 0).getTime();
+    expect(scheduledAt).toHaveLength(8);
+    expect(scheduledAt).toContain(parentMinute);
+    expect(scheduledAt).toContain(successorMinute);
   });
 
   // A Retry runs while another tap on the same row is still pending.
@@ -645,8 +661,9 @@ describe("preview and empty folder (ticket 0051)", () => {
         name: "Supplements",
         due: sample.data?.due ?? null,
         recurrence: sample.data?.recurrence ?? null,
-        lists: [],
+        list: null,
         reminders: [],
+        alertWeight: sample.data?.["alert weight"] ?? "harsh",
         body: "",
       });
     });

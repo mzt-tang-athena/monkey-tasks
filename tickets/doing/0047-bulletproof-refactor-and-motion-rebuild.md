@@ -13,7 +13,7 @@ depends: []
 A full audit on 2026-10-26 found four problems. The app does not follow
 Bulletproof React, which ADR 0001 chose. The data layer loses rows and
 rings alarms twice in normal use. The motion code runs on the JS thread
-and sequences itself with timers, which causes most of the glitches seen
+and sequences itself with timers. That causes most of the glitches seen
 on the phone. And there is no end-to-end test, so none of this shows up
 before a phone pass.
 

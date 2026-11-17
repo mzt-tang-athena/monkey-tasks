@@ -5,8 +5,8 @@
 
 ## Context
 
-The planner route had grown to 3,376 lines: a screen, eleven components,
-a stylesheet and domain helpers in one file. The capture sheet lived
+The planner route had grown to 3,376 lines. One file held a screen, eleven
+components, a stylesheet and domain helpers. The capture sheet lived
 inside an 807-line bottom bar. The task store exposed one context value,
 so every consumer re-rendered on every tick. A review against the
 Bulletproof React practices scored the project at PASS 3, PARTIAL 11,
@@ -16,8 +16,8 @@ FAIL 5.
 
 Routes stay thin. A route file re-exports its screen.
 
-- `app/src/features/<name>/` owns a feature: `model.ts` for pure rules,
-  `components/` for its UI, `hooks/` for its stateful glue, `lib/` for
+- `app/src/features/<name>/` owns a feature. `model.ts` holds pure rules,
+  `components/` its UI, and `hooks/` its stateful glue. `lib/` holds
   pure helpers that are not the model.
 - `app/src/components/` holds cross-feature UI. `components/ui/` holds
   primitives with no feature knowledge.
@@ -36,8 +36,8 @@ The planner container is 639 lines and holds only state and composition.
 The capture sheet is its own component with a `useCaptureDraft` hook.
 Lists and the planner render through virtualized lists.
 
-Presentational components are copied with their styles and verified by
-type check, tests and a manual parity pass. There is no render test for
+We copy presentational components with their styles and verify them by
+type check, tests and a manual parity pass. No render test covers
 each one, and the manual pass is the only check that they look the same.
 
 ## Alternatives

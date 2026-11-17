@@ -1,11 +1,11 @@
 import * as React from "react";
 import { SectionList, StyleSheet, View, useWindowDimensions } from "react-native";
-import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { Pager } from "@/components/motion/pager";
+import { PullSurface } from "@/components/motion/pull";
 import { PreviewRow } from "@/components/preview-row";
 import { renderMotionScroll } from "@/components/motion/scroll-view";
 import {
@@ -13,26 +13,29 @@ import {
   ErrorState,
   LoadingState,
 } from "@/components/ui/list-states";
+import { VaultPrompt } from "@/components/ui/vault-prompt";
 import { useStableCallback } from "@/hooks/use-stable-callback";
+import { useCommandPane } from "@/hooks/use-command-pane";
+import { useTaskEditor } from "@/hooks/use-task-editor";
+import { recordBreadcrumb } from "@/lib/breadcrumbs";
+import { toggleCompleted, useCompletedOpen } from "@/lib/folded-completed";
 import { useStoreMeta } from "@/stores/tasks/task-state";
+import { useClearCompleted } from "@/stores/tasks/mutations/use-clear-completed";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useGrantFolder, useRefreshTasks } from "@/stores/tasks/use-vault-read";
-import { colors, measure, pageGutter, spacing } from "@/theme/tokens";
+import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { ListPagePreview } from "./components/list-page-preview";
 import { ListSectionHeader } from "./components/list-section-header";
-import {
-  FailureBanner,
-  RepairNotice,
-  VaultPrompt,
-} from "./components/list-notices";
+import { FailureBanner, RepairNotice } from "./components/list-notices";
 import { ListsToolbar } from "./components/lists-toolbar";
 import { TaskCardRow } from "./components/task-card-row";
 import { useListSections } from "./hooks/use-list-sections";
 import { useListTabState } from "./hooks/use-list-tabs";
 import { useSortMode } from "./hooks/use-sort-mode";
 import { useTickHold } from "./hooks/use-tick-hold";
-import type { ListsSection } from "./lib/list-sections";
+import { emptyListLabel, foldCompleted, type ListsSection } from "./lib/list-sections";
 import { applyTickHold } from "./lib/tick-hold";
 import { ListReorder } from "./lib/list-reorder";
 import { reorderItems } from "./lib/reorder";
@@ -40,14 +43,18 @@ import type { ReorderEvent } from "@/components/motion/reorder";
 
 /**
  * Lists tab: Main first, then one tab per list note, with capture
- * docked above the bottom bar. Main shows every task. The screen
+ * docked above the bottom bar. Main holds the unfiled tasks. The screen
  * composes the hooks and the components. Its rows reorder only
  * through `ListReorder`, and the tick holds come from each row's own
  * animation (ADR 0034, ADR 0046).
  */
 export default function ListsScreen({ dock }: { dock: DockSlot }) {
+  const { styles } = useThemedStyles(makeStyles);
+  const { show: showCommands } = useCommandPane();
+  const editor = useTaskEditor();
   const { rootUri, status, readError } = useStoreMeta();
   const toggleTask = useToggleTask();
+  const clearCompleted = useClearCompleted();
   const reorderSection = useReorderSection();
   const refresh = useRefreshTasks();
   const grant = useGrantFolder();
@@ -58,7 +65,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const tabState = useListTabState();
   const { tab, setTab, index, bounds, onPage } = tabState;
   const { sortMode, setSortMode } = useSortMode();
-  const { shown, repairs, sections, onlyCompleted } = useListSections(
+  const { shown, repairs, sections, onlyCompleted, completed } = useListSections(
     tab,
     sortMode,
   );
@@ -67,6 +74,19 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const held = React.useMemo(
     () => applyTickHold(sections, tickHold.holds, shown),
     [sections, tickHold.holds, shown],
+  );
+  // The fold is a view step: the groups above keep every row, so a
+  // reorder and a tick hold read the whole group.
+  const completedOpen = useCompletedOpen(tab);
+  const folded = React.useMemo(
+    () => foldCompleted(held, completedOpen),
+    [held, completedOpen],
+  );
+  // A folded group still shows its count, so the header reads the
+  // group before the fold.
+  const counts = React.useMemo(
+    () => new Map(held.map((section) => [section.key, section.data.length])),
+    [held],
   );
 
   const moveTask = React.useCallback(
@@ -78,15 +98,6 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
       void reorderSection(reorderItems(source.data, from, to));
     },
     [held, reorderSection],
-  );
-
-  // A row's Move action takes the same road as its drop: one
-  // ReorderEvent into `moveTask`.
-  const moveRow = React.useCallback(
-    (task: TaskItem, group: string, from: number, to: number) => {
-      moveTask({ payload: task, group, from, to });
-    },
-    [moveTask],
   );
 
   // A real reload: the loader can fail when it talks to the vault, so
@@ -105,23 +116,33 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   // The row callbacks have one identity for the screen's life, so a
   // tick re-renders the ticked row and no other.
   const onToggle = useStableCallback((task: TaskItem) => {
+    recordBreadcrumb("tick", task.data?.title ?? task.name);
     tickHold.toggle(task, held);
   });
-  // A row body press opens the task editor. The id is a SAF uri, so
-  // it rides one encoded path segment.
+  // A row body press opens the task editor sheet over this list.
   const onOpen = useStableCallback((task: TaskItem) => {
-    router.push(`/task/${encodeURIComponent(task.id)}`);
+    recordBreadcrumb("open", task.data?.title ?? task.name);
+    editor.open(task.id);
   });
 
   const renderSectionHeader = React.useCallback(
-    ({ section }: { section: ListsSection }) => (
-      <ListSectionHeader
-        title={section.title}
-        count={section.data.length}
-        tone={section.tone}
-      />
-    ),
-    [],
+    ({ section }: { section: ListsSection }) => {
+      // My order's single group has no title, so it draws no header.
+      if (section.title == null) {
+        return null;
+      }
+      const disclosure = section.tone === "faint";
+      return (
+        <ListSectionHeader
+          title={section.title}
+          count={counts.get(section.key) ?? section.data.length}
+          tone={section.tone}
+          expanded={disclosure ? completedOpen : undefined}
+          onToggle={disclosure ? () => toggleCompleted(tab) : undefined}
+        />
+      );
+    },
+    [completedOpen, counts, tab],
   );
 
   const renderItem = React.useCallback(
@@ -141,22 +162,20 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           section={section.key}
           index={at}
           count={section.data.length}
-          completed={faint}
           canDrag={sortMode === "manual" && !faint}
-          onMove={moveRow}
           onToggle={onToggle}
           onOpen={onOpen}
           onTickSettled={tickHold.settle}
         />
       );
     },
-    [sortMode, moveRow, onToggle, onOpen, tickHold.settle],
+    [sortMode, onToggle, onOpen, tickHold.settle],
   );
 
   const previewHeight = pagerHeight > 0 ? pagerHeight : window.height;
 
   return (
-    <View style={styles.screen}>
+    <View testID="lists-screen" style={styles.screen}>
       {/* The status bar strip takes the header's surface, so the top
           chrome reads as one band instead of a paper gap. */}
       <View style={[styles.statusStrip, { height: insets.top }]} />
@@ -165,14 +184,24 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           <VaultPrompt onGrant={() => void grant()} />
         ) : null}
         {/* The tab bar sits above the scroller: the page's fixed
-            chrome. Sections scroll beneath it, the bar never moves. */}
-        <ListsToolbar
-          tabs={tabState.tabs}
-          tab={tab}
-          onSelectTab={setTab}
-          sortMode={sortMode}
-          onSortMode={setSortMode}
-        />
+            chrome. Sections scroll beneath it, the bar never moves.
+            A downward pull on this band opens the command pane; the
+            list below never starts it (ticket 0085). */}
+        <PullSurface
+          direction="down"
+          onPull={showCommands}
+          testID="header-band-lists"
+        >
+          <ListsToolbar
+            tabs={tabState.tabs}
+            tab={tab}
+            onSelectTab={setTab}
+            sortMode={sortMode}
+            onSortMode={setSortMode}
+            completed={completed}
+            onClearCompleted={clearCompleted}
+          />
+        </PullSurface>
         {/* A failed tick or field write leaves the list usable, so each
             one is a quiet banner over it, not the error state. */}
         {status !== "error" ? <FailureBanner /> : null}
@@ -204,11 +233,15 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
               fill
             >
               <View style={styles.page}>
+                {/* A tab is a different list, so its page starts at the
+                    top, as its preview draws it. The pager's page
+                    itself stays mounted (ticket 0087). */}
                 <SectionList<TaskItem, ListsSection>
+                  key={tab}
                   contentContainerStyle={styles.content}
                   onRefresh={reload}
                   refreshing={refreshing}
-                  sections={held}
+                  sections={folded}
                   keyExtractor={keyExtractor}
                   renderItem={renderItem}
                   renderSectionHeader={renderSectionHeader}
@@ -217,7 +250,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                     <>
                       <RepairNotice repairs={repairs} />
                       {status === "ready" && onlyCompleted ? (
-                        <EmptyState label="Nothing on this list yet." />
+                        <EmptyState label={emptyListLabel(tab)} />
                       ) : null}
                     </>
                   }
@@ -230,7 +263,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                         onRetry={() => void reload()}
                       />
                     ) : (
-                      <EmptyState label="Nothing on this list yet." />
+                      <EmptyState label={emptyListLabel(tab)} />
                     )
                   }
                   stickySectionHeadersEnabled={false}
@@ -245,7 +278,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
       {/* One bottom bar: nav left, capture button right. The target
           pill follows the active list tab: the bar re-reads the
           default target when the tab changes, so the bar itself never
-          remounts and never jumps. Main captures write no lists
+          remounts and never jumps. Main captures write no list
           property; every other tab preselects its own list. */}
       <BottomBar
         action={dock({
@@ -270,34 +303,36 @@ function ListPager(props: React.ComponentProps<typeof Pager>) {
 
 const keyExtractor = (item: TaskItem) => item.id;
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.paper,
-    // The lists screen shares the planner's no-selection rule: a
-    // row drag or tab swipe must not start text selection.
-    userSelect: "none",
-  },
-  statusStrip: {
-    backgroundColor: colors.surface,
-  },
-  // The body holds the pager under the fixed chrome.
-  body: {
-    flex: 1,
-  },
-  // The pager's slot: the page below the toolbar and the banners.
-  pageHost: {
-    flex: 1,
-  },
-  page: {
-    flex: 1,
-  },
-  content: {
-    maxWidth: measure,
-    alignSelf: "center",
-    width: "100%",
-    paddingHorizontal: pageGutter,
-    paddingTop: spacing.m,
-    paddingBottom: spacing.xl,
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.paper,
+      // The lists screen shares the planner's no-selection rule: a
+      // row drag or tab swipe must not start text selection.
+      userSelect: "none",
+    },
+    statusStrip: {
+      backgroundColor: colors.surface,
+    },
+    // The body holds the pager under the fixed chrome.
+    body: {
+      flex: 1,
+    },
+    // The pager's slot: the page below the toolbar and the banners.
+    pageHost: {
+      flex: 1,
+    },
+    page: {
+      flex: 1,
+    },
+    content: {
+      maxWidth: measure,
+      alignSelf: "center",
+      width: "100%",
+      paddingHorizontal: pageGutter,
+      paddingTop: spacing.m,
+      paddingBottom: spacing.xl,
+    },
+  }),
 });

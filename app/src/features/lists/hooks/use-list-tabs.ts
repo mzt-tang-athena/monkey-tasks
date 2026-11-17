@@ -1,5 +1,7 @@
 import * as React from "react";
 import type { CaptureTarget } from "@/types/task";
+import { recordBreadcrumb } from "@/lib/breadcrumbs";
+import { selectList, useSelectedList } from "@/lib/selected-list";
 import { useListTabs, type ListTab } from "@/stores/tasks/selectors";
 
 /**
@@ -9,7 +11,7 @@ import { useListTabs, type ListTab } from "@/stores/tasks/selectors";
  */
 export function useListTabState() {
   const tabs = useListTabs();
-  const [selected, setSelected] = React.useState<ListTab>("Main");
+  const selected = useSelectedList();
   // A list note can vanish while its tab is open. Main takes over.
   const tab = tabs.includes(selected) ? selected : "Main";
   const index = Math.max(0, tabs.indexOf(tab));
@@ -20,7 +22,7 @@ export function useListTabState() {
 
   // The capture targets follow the tab order: Main, then one list
   // target per list note. Main stores nothing; a list target writes
-  // its name into the captured task's lists property.
+  // its name into the captured task's list property.
   const targets = React.useMemo<CaptureTarget[]>(
     () =>
       tabs.map((name) =>
@@ -42,11 +44,17 @@ export function useListTabState() {
     return found === -1 ? 1 : found;
   }, [targets, tab]);
 
+  const setTab = React.useCallback((next: ListTab) => {
+    recordBreadcrumb("tab", next);
+    selectList(next);
+  }, []);
+
   const onPage = React.useCallback(
     (next: number) => {
       const name = tabs[next];
       if (name != null) {
-        setSelected(name);
+        recordBreadcrumb("tab", name);
+        selectList(name);
       }
     },
     [tabs],
@@ -55,7 +63,7 @@ export function useListTabState() {
   return {
     tabs,
     tab,
-    setTab: setSelected,
+    setTab,
     targets,
     defaultTargetIndex,
     index,

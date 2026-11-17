@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "@/types/task";
 import {
+  groupByDue,
   isHiddenOccurrence,
   selectOpenTasks,
   selectSections,
@@ -16,7 +17,7 @@ type TaskFields = {
   due?: string;
   order?: number;
   created?: string;
-  lists?: string[];
+  list?: string;
   completed?: string;
   recurrence?: string;
   "recurrence previous"?: string;
@@ -27,6 +28,7 @@ function task(name: string, fields: TaskFields = {}): TaskItem {
   const data: TaskFrontmatter = {
     kind: "[[tasks]]",
     created: "2026-10-20",
+    "alert weight": "harsh",
     ...fields,
   };
   return {
@@ -72,10 +74,30 @@ describe("selectOpenTasks", () => {
   it("drops completed tasks from the open pool", () => {
     const tasks = [
       task("Done", { due: "2026-10-20", completed: "2026-10-21" }),
+      task("Done late", {
+        due: "2026-10-20",
+        completed: "2026-10-21T18:08",
+      }),
       task("Open", { due: "2026-10-20" }),
     ];
 
     expect(names(selectOpenTasks(tasks, NOW))).toEqual(["Open"]);
+  });
+
+  it("files both completion shapes under completed", () => {
+    const tasks = [
+      task("Done", { due: "2026-10-20", completed: "2026-10-21" }),
+      task("Done late", {
+        due: "2026-10-20",
+        completed: "2026-10-21T18:08",
+      }),
+      task("Open", { due: "2026-10-20" }),
+    ];
+
+    const groups = groupByDue(tasks, NOW);
+
+    expect(names(groups.completed).sort()).toEqual(["Done", "Done late"]);
+    expect(names(groups.overdue)).toEqual(["Open"]);
   });
 
   it("returns an empty pool for no tasks", () => {
@@ -85,32 +107,38 @@ describe("selectOpenTasks", () => {
 
 describe("selectTabTasks", () => {
   const tasks = [
-    task("Plan week", { lists: ["[[Focus]]"] }),
-    task("Buy milk", { lists: ["[[Work]]"] }),
+    task("Plan week", { list: "[[Focus]]" }),
+    task("Buy milk", { list: "[[Work]]" }),
     task("Call bank", {}),
-    task("Errand", { lists: ["[[Errands]]"] }),
-    task("Deep work", { lists: ["[[Work]]", "[[Focus]]"] }),
-    task("Second focus", { lists: ["[[Focus]]"] }),
+    task("Errand", { list: "[[Errands]]" }),
+    task("Deep work", { list: "[[Work]]" }),
+    task("Second focus", { list: "[[Focus]]" }),
   ];
 
-  it("shows only Focus list tasks on the Focus tab", () => {
-    expect(names(selectTabTasks(tasks, "Focus", NOW))).toEqual([
-      "Plan week",
-      "Deep work",
-      "Second focus",
-    ]);
+  it("shows an unfiled task on Main only", () => {
+    expect(names(selectTabTasks(tasks, "Main", NOW))).toEqual(["Call bank"]);
   });
 
-  it("shows every task on Main, ADR 0015", () => {
-    // Main is the catch-all, so Focus and Work tasks show here too. A
-    // task on both lists appears once.
-    expect(names(selectTabTasks(tasks, "Main", NOW))).toEqual([
+  it("shows a listed task on its tab and not on Main", () => {
+    expect(names(selectTabTasks(tasks, "Focus", NOW))).toEqual([
       "Plan week",
-      "Buy milk",
-      "Call bank",
-      "Errand",
-      "Deep work",
       "Second focus",
+    ]);
+    expect(names(selectTabTasks(tasks, "Main", NOW))).not.toContain("Plan week");
+  });
+
+  it("returns a task to Main when its list is cleared", () => {
+    const listed = task("Water plants", { list: "[[Home]]" });
+
+    expect(names(selectTabTasks([listed], "Home", NOW))).toEqual([
+      "Water plants",
+    ]);
+    expect(names(selectTabTasks([listed], "Main", NOW))).toEqual([]);
+
+    listed.data!.list = null;
+
+    expect(names(selectTabTasks([listed], "Main", NOW))).toEqual([
+      "Water plants",
     ]);
   });
 
@@ -145,15 +173,6 @@ describe("selectTabTasks", () => {
     ]);
     expect(isHiddenOccurrence(spawn, NOW)).toBe(true);
     expect(isHiddenOccurrence(overdue, NOW)).toBe(false);
-  });
-
-  it("does not drop a list tab's tasks from Main", () => {
-    const focus = selectTabTasks(tasks, "Focus", NOW);
-    const mainUris = new Set(
-      selectTabTasks(tasks, "Main", NOW).map((item) => item.uri),
-    );
-
-    expect(focus.every((item) => mainUris.has(item.uri))).toBe(true);
   });
 });
 
@@ -197,23 +216,62 @@ describe("selectSections", () => {
     ]);
   });
 
-  it("orders each section by the manual order, unordered last", () => {
+  it("puts every open row in one headerless group in My order", () => {
     const visible = [
-      task("Third", { due: "2026-10-22", order: 3 }),
-      task("First", { due: "2026-10-22", order: 1 }),
-      task("No order B", { due: "2026-10-22" }),
-      task("Second", { due: "2026-10-22", order: 2 }),
-      task("No order A", { due: "2026-10-22" }),
+      task("Tomorrow", { due: "2026-10-23" }),
+      task("No date", {}),
+      task("Past", { due: "2026-10-21" }),
+      task("Today", { due: "2026-10-22" }),
     ];
 
-    const [today] = selectSections(visible, NOW, "manual");
+    const sections = selectSections(visible, NOW, "manual");
 
-    expect(names(today.items)).toEqual([
+    expect(sections).toHaveLength(1);
+    expect(sections[0].title).toBeNull();
+    expect(sections[0].tone).toBe("ink");
+    expect(names(sections[0].items)).toEqual([
+      "No date",
+      "Past",
+      "Today",
+      "Tomorrow",
+    ]);
+  });
+
+  it("orders the whole tab by the manual order, unordered last", () => {
+    const visible = [
+      task("Third", { due: "2026-10-22", order: 3 }),
+      task("First", { due: "2026-10-21", order: 1 }),
+      task("No order B", { due: "2026-10-23" }),
+      task("Second", { created: "2026-10-19", order: 2 }),
+      task("No order A", {}),
+    ];
+
+    const [open] = selectSections(visible, NOW, "manual");
+
+    expect(names(open.items)).toEqual([
       "First",
       "Second",
       "Third",
       "No order A",
       "No order B",
+    ]);
+  });
+
+  it("breaks equal orders by the creation date, then the name", () => {
+    const visible = [
+      task("Later", { created: "2026-10-21", order: 1 }),
+      task("Same day, B", { created: "2026-10-20", order: 1 }),
+      task("Same day, A", { created: "2026-10-20", order: 1 }),
+      task("Earlier", { created: "2026-10-19", order: 1 }),
+    ];
+
+    const [open] = selectSections(visible, NOW, "manual");
+
+    expect(names(open.items)).toEqual([
+      "Earlier",
+      "Same day, A",
+      "Same day, B",
+      "Later",
     ]);
   });
 
@@ -225,14 +283,29 @@ describe("selectSections", () => {
       task("Same day, B", { due: "2026-10-22", created: "2026-10-20" }),
     ];
 
-    const [today] = selectSections(visible, NOW, "manual");
+    const [open] = selectSections(visible, NOW, "manual");
 
-    expect(names(today.items)).toEqual([
+    expect(names(open.items)).toEqual([
       "Bought first",
       "Same day, A",
       "Same day, B",
       "Bought later",
     ]);
+  });
+
+  it("keeps completed rows out of the My order group", () => {
+    const visible = [
+      task("Done", { due: "2026-10-22", completed: "2026-10-22" }),
+      task("Open", { due: "2026-10-22" }),
+    ];
+
+    const sections = selectSections(visible, NOW, "manual");
+
+    expect(sections.map((section) => names(section.items))).toEqual([["Open"]]);
+    expect(
+      selectSections([visible[0]], NOW, "manual"),
+      "a tab with only completed rows has no open group",
+    ).toEqual([]);
   });
 
   it("omits sections with no items", () => {

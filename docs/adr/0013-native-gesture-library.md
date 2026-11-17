@@ -24,8 +24,8 @@ interaction set through it. On web, the pointer path keeps running as is.
 
 ## Consequences
 
-One new dependency. It is the same library most Expo apps use for gestures.
-The preview and the APK must feel the same; the port at APK time moves the
+One new dependency. Most Expo apps use this same library for gestures.
+The preview and the APK must feel the same. The port at APK time moves the
 same gesture rules to the library's API. Nothing in the locked design
 changes.
 

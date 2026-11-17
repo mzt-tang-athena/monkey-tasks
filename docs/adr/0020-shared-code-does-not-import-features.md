@@ -6,8 +6,8 @@
 ## Context
 
 `lib/mock.ts` imported a type from `features/tasks/query`. One import is
-harmless on its own, but the direction is wrong: shared code that leans
-on a feature cannot be reused by another feature, and the cycle becomes
+harmless on its own, but the direction is wrong. Another feature cannot
+reuse shared code that leans on a feature. The cycle also becomes
 likely as the app grows.
 
 ## Decision
@@ -16,13 +16,13 @@ likely as the app grows.
 feature may import from `lib`. `lib` may not import from `features` or
 `app`, except for types, which the compiler erases.
 
-The rule is enforced in `app/eslint.config.js` with
-`@typescript-eslint/no-restricted-imports` and `allowTypeImports`. A
-type-only import is allowed because it leaves no runtime edge.
+`app/eslint.config.js` enforces the rule with
+`@typescript-eslint/no-restricted-imports` and `allowTypeImports`. The
+rule allows a type-only import because it leaves no runtime edge.
 
 ## Consequences
 
-Shared helpers have to be extracted rather than reached for across
+We have to extract shared helpers rather than reach for them across
 folders. The check fails a build, so the rule does not depend on review
 attention.
 
@@ -37,9 +37,9 @@ that the schema package already owns.
 ## Amendment: 2026-10-26
 
 ADR 0039 replaces the rule in this ADR. The check now covers every
-layer, not only `lib`. Type-only imports no longer pass. In the audit
-on 2026-10-26, 35 of the 66 imports that broke the layering carried
-types only, so the exemption hid half the problem.
+layer, not only `lib`. Type-only imports no longer pass. The audit on
+2026-10-26 found 66 imports that broke the layering. Of those, 35
+carried types only, so the exemption hid half the problem.
 
 The shared row types move to `src/types`. They import the frontmatter
 types from `@monkey-tasks/schemas` and copy nothing from them, so the

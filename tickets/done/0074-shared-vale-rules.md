@@ -10,8 +10,8 @@ depends: []
 
 ## Spec
 
-The prose rules live in two places: this repo keeps a copy under
-`.vale/styles/MyRules/` and the shared package
+The prose rules live in two places. This repo keeps a copy under
+`.vale/styles/MyRules/`, and the shared package
 `@mzt-tang-athena/vale-rules` holds the same rules. The copy drifts.
 Swap it for the package so one source feeds every repo.
 
@@ -28,7 +28,7 @@ overrides: the pack owns the rule files, not the config.
 
 - [x] `@mzt-tang-athena/vale-rules@0.1.0` is a dev dependency.
 - [x] `.npmrc` names the GitHub Packages registry and reads `NODE_AUTH_TOKEN`.
-- [x] The local `MyRules` copy and `Readability/LIX.yml` are gone.
+- [x] The local `MyRules` copy and `Readability/LIX.yml` no longer exist.
 - [x] `make lint` and the CI docs job run `npx vale-rules sync` before Vale.
 - [x] The docs prose check reports 0 errors, before and after.
 - [x] Repo checks pass.
@@ -37,13 +37,14 @@ overrides: the pack owns the rule files, not the config.
 
 Done. The repo uses `@mzt-tang-athena/vale-rules@0.1.0`.
 
-The first CI run could not read the package: `GITHUB_TOKEN` belongs to
-`monkey-tasks`, and the package is linked to `mzt-tang-athena/contracts`.
+The first CI run could not read the package. `GITHUB_TOKEN` belongs to
+`monkey-tasks`, and the package belongs to `mzt-tang-athena/contracts`.
 The docs job got 403 `read_package` and the code job got 401.
 
 Both jobs now pass `secrets.VALE_RULES_TOKEN` as `NODE_AUTH_TOKEN`. That
-is an organization secret with visibility all, which carries a personal
-access token with `read:packages`. No per-repo package grant is needed.
+is an organization secret with visibility all. It carries a personal
+access token with `read:packages`, so every repo can read the package
+without its own grant.
 
 The repo now installs `@mzt-tang-athena/vale-rules@0.1.0` from GitHub
 Packages. The local `MyRules` files and `Readability/LIX.yml` are no

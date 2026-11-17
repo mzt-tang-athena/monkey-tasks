@@ -1,0 +1,67 @@
+---
+title: The pager hides list rows from TalkBack again
+created: 2026-11-17
+priority: high
+assignee: opencode
+pr: 157
+depends: []
+---
+
+## Spec
+
+Ticket 0079 fixed a bug where a list tab other than Main lost its rows
+from the Android accessibility tree. TalkBack and `uiautomator` saw an
+empty list, while the screen drew every row.
+
+The bug is back on main at `1f5cd75`. The 0093 emulator pass found it
+on 2026-11-17, with the release APK. After a tab switch, the dumper
+logs `Skipping invisible child ... pager-track ... Rect(0, 274 - -1080,
+2157) ... visible: false`. The dump then holds no `task-row` nodes.
+Main still shows its rows. Finance and Focus show none, even after an
+app restart.
+
+Ticket 0087 (PR 110) brought it back. It moved the page position into
+the track's transform, `-pos * width`, and shifted the live page back
+by `live * width`. The live page paints at x = 0, but the track itself
+now sits off screen. Android skips the whole track as invisible.
+
+Evidence sits in
+`app/build/verify/evidence/android-20261117-024249/` of the
+`lane-editor` checkout: `finance-tab-now.txt`, `focus-tab.txt` and
+`finance-after-restart.txt` hold 0 rows, and `main-restart.txt` holds
+5.
+
+## What to do
+
+Keep both rules at once:
+
+- From 0079, the live page and the track it sits in stay inside the
+  host at rest.
+- From 0087, a commit swaps the live page's content and its place in
+  the same frame, with no blank strip.
+
+Add a test that fails on main today. Read the track's layout and
+transform at rest on a non-first tab, not only the live page's painted
+box.
+
+## Acceptance
+
+- [x] The 0087 frame check still passes, with no blank strip on a
+      swipe.
+- [x] An e2e test fails on the old pager and passes with the fix. It
+      reads the track's resting translate, which must be 0.
+- [x] On the emulator, every list tab's rows show in the
+      `uiautomator` dump after a tab tap. Finance shows its row and
+      Focus shows four.
+
+## Outcome
+
+The live page moved out of the moving track and into the host. Its
+layout box stays at the host's origin. The previews keep the whole page
+position in the track. The live page carries only the distance from it.
+A shared value holds the live page's index, because a plain variable
+captured by the animated style went stale.
+
+Proof: the full Playwright suite passes. A new assertion reads that the
+live page does not sit inside the track. On the emulator, Finance
+and Focus both show their rows in the `uiautomator` dump. PR 157.

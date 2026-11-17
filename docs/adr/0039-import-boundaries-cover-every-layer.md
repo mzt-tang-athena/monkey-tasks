@@ -162,14 +162,14 @@ Ticket 0050 turns the rule on at error. CI runs ESLint with
 `--max-warnings 0` (ticket 0048), so a warn level would fail every run.
 Four imports still break the rule when 0050 lands. Each one carries an
 `eslint-disable-next-line` comment that names the ticket that removes
-it: 0052 for the two in the store, 0057 for the two in `BottomBar`.
+it. That is 0052 for the two in the store, 0057 for the two in `BottomBar`.
 
 ## Amendment, 2026-11-03: sample notes keep vault names
 
 The sample notes under `src/lib/vault/sample/<seed>/Tasks/` break the
 kebab-case rule. Their names hold spaces and capitals, for example
 `Call Mum.md` and `Lists/Errands.md`. They mirror a real Obsidian
-vault, where a note's file name is its title and a list's file name is
+vault. There a note's file name is its title, and a list's file name is
 its tab label. The browser preview shows these names as they are, and
 the e2e suite finds rows by them. The rule covers code, not notes.
 `eslint-plugin-check-file` checks only the files ESLint lints, so it
@@ -189,13 +189,13 @@ height and its lift through `useBar`.
 
 The route composes the dock. Each tab route passes a `dock` function
 into its screen. The screen calls it with its targets, its default
-target and its default due day, and puts the result in the bar. The
+target and its default due day. It puts the result in the bar. The
 dock is `CaptureDock` in `features/capture`. A route may import a
 feature, so no screen imports one.
 
 Alternative: the screen registers its capture targets in a context,
 and a layout above both tabs renders one dock. That layout would hold
 one dock for both tabs, and it removes the prop. We rejected it. The
-registration runs in an effect, so the dock would show a wrong default
+registration runs in an effect. The dock would then show a wrong default
 target for one frame after a tab change. The prop passes the values in
 the same render.

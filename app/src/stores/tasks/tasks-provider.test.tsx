@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { act, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AlertRing } from "@/lib/alerts/rings";
 
 // The store's contract after ADR 0017 and ADR 0037: a tap changes the
 // row before any file I/O, every write is a mutation in one scope, and
@@ -30,6 +31,8 @@ let loadGate: Promise<void> | null = null;
 let createGate: Promise<void> | null = null;
 let createFails = false;
 let deleteFails = false;
+/** Fail the remove of this file name alone. */
+let deleteFailsOn: string | null = null;
 let renameOnCreate = false;
 const creates: { fileName: string; content: string }[] = [];
 const deletes: string[] = [];
@@ -56,12 +59,26 @@ vi.mock("./load-vault", async (importOriginal) => {
   };
 });
 
-// The alarm code runs for real on a fake OS that schedules nothing.
+// The alarm code runs for real on a fake OS that keeps a list of the
+// alarms it holds.
+const os = vi.hoisted(() => ({ alarms: new Map<string, AlertRing>() }));
 vi.mock("@/lib/notifications", () => ({
   ensureNotificationPermission: async () => true,
-  scheduleAt: async () => "alarm",
-  cancelAllScheduled: async () => undefined,
-  cancelScheduled: async () => undefined,
+  ensureChannels: async () => undefined,
+  scheduleRing: async (ring: AlertRing) => {
+    os.alarms.set(ring.id, ring);
+    return ring.id;
+  },
+  cancelScheduled: async (id: string) => {
+    os.alarms.delete(id);
+  },
+  listScheduledDetailed: async () =>
+    [...os.alarms.values()].map((ring) => ({
+      id: ring.id,
+      data: { uri: ring.uri, base: ring.base, step: ring.step, weight: ring.weight },
+    })),
+  listDeliveredDetailed: async () => [],
+  dismissDelivered: async () => undefined,
 }));
 
 import { makeQueryClient } from "@/lib/react-query";
@@ -85,6 +102,23 @@ import type { VaultFailure } from "./use-vault-failures";
 const TASKS = `${MEMORY_ROOT}/Tasks`;
 const CALL_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nBody.\n';
 const FOCUS_TEXT = '---\nkind: "[[lists]]"\ncreated: 2026-10-20\n---\n';
+
+/** A done task note, for the clear tests. */
+const DONE_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ncompleted: 2026-10-25\n---\n\nBody.\n';
+
+/** The same note after another app removed its completion line. */
+const REOPENED_TEXT = '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\n---\n\nBody.\n';
+
+/** Three done notes beside the open Call note. */
+function doneVault(): VaultSeed {
+  return {
+    "Tasks/Call.md": CALL_TEXT,
+    "Tasks/Buy stamps.md": DONE_TEXT,
+    "Tasks/Fix bike light.md": DONE_TEXT,
+    "Tasks/Water the fern.md": DONE_TEXT,
+    "Tasks/Lists/Focus.md": FOCUS_TEXT,
+  };
+}
 
 /** The vault the store runs on: Call, and the Focus list. */
 let vault: MemoryVault;
@@ -126,7 +160,7 @@ function instrumented(inner: MemoryVault): VaultAdapter {
       return made;
     },
     async remove(uri) {
-      if (deleteFails) {
+      if (deleteFails || (deleteFailsOn != null && uri.endsWith(deleteFailsOn))) {
         throw new Error("locked");
       }
       deletes.push(uri);
@@ -288,8 +322,9 @@ function spawnOf(body = "\nWater.\n"): string {
       previous: "Water plants",
       due: "2026-10-27",
       recurrence: "FREQ=WEEKLY",
-      lists: [],
+      list: null,
       reminders: [],
+      alertWeight: "harsh",
       body,
     },
     "2026-10-24",
@@ -312,9 +347,11 @@ beforeEach(() => {
   createGate = null;
   createFails = false;
   deleteFails = false;
+  deleteFailsOn = null;
   renameOnCreate = false;
   creates.length = 0;
   deletes.length = 0;
+  os.alarms.clear();
   latest = null;
   queryClient = null;
 });
@@ -339,6 +376,23 @@ describe("TasksProvider", () => {
     const last = writes[writes.length - 1];
     expect(last.text).toContain("edited: yes");
     expect(last.text).toContain("completed:");
+  });
+
+  it("writes the local day and minute a task was ticked", async () => {
+    await mount();
+    const before = todayIso();
+
+    await act(async () => {
+      await store().toggle(row());
+    });
+    await flush();
+
+    // A tick that crosses midnight in this process may land either day.
+    const after = todayIso();
+    const stamped = row().data?.completed;
+    expect(stamped).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
+    expect([before, after]).toContain(stamped?.slice(0, 10));
+    expect(writes.at(-1)?.text).toContain(`completed: ${stamped}`);
   });
 
   it("ticks the row before the write lands, and does not read the vault", async () => {
@@ -475,8 +529,9 @@ describe("TasksProvider", () => {
         name: "Call",
         due: "2026-10-25",
         recurrence: null,
-        lists: ["Focus"],
+        list: "Focus",
         reminders: [],
+        alertWeight: "harsh",
         body: "\nNew body.\n",
       });
     });
@@ -508,8 +563,9 @@ describe("TasksProvider", () => {
           name: "Call",
           due: "2026-10-25",
           recurrence: null,
-          lists: [],
+          list: null,
           reminders: [],
+          alertWeight: "harsh",
           body: before.body,
         }),
       ).rejects.toThrow("disk full");
@@ -536,8 +592,9 @@ describe("TasksProvider", () => {
         name: "Water the ferns",
         due: "2026-10-30",
         recurrence: null,
-        lists: ["Focus"],
+        list: "Focus",
         reminders: ["2026-10-30T09:00"],
+        alertWeight: before.data?.["alert weight"] ?? "harsh",
         body: "\nNew body.\n",
       });
     });
@@ -551,7 +608,7 @@ describe("TasksProvider", () => {
     expect(edited?.data?.kind).toBe("[[tasks]]");
     expect(edited?.data?.created).toBeDefined();
     expect(edited?.data?.due).toBe("2026-10-30");
-    expect(edited?.data?.lists).toEqual(["[[Focus]]"]);
+    expect(edited?.data?.list).toBe("[[Focus]]");
     expect(edited?.data?.reminders).toEqual(["2026-10-30T09:00"]);
     expect(failures()).toEqual([]);
     // The rename is a new note in the vault, and the old one is gone.
@@ -559,6 +616,110 @@ describe("TasksProvider", () => {
     expect(vault.hooks.read("Tasks/Water the plants.md")).toBeNull();
     // A write never reads the vault again.
     expect(loadCalls).toBe(1);
+  });
+});
+
+describe("delete and Undo", () => {
+  const REMINDED_TEXT =
+    '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nreminders:\n  - 2099-01-01T09:00\n---\n\nBody.\n';
+
+  it("removes the note and its row, and gives the exact text for Undo", async () => {
+    await mount();
+    const before = row();
+    let deleted: Awaited<ReturnType<StoreSnapshot["remove"]>> | undefined;
+
+    await act(async () => {
+      deleted = await store().remove(before);
+    });
+    await flush();
+
+    expect(vault.hooks.read("Tasks/Call.md")).toBeNull();
+    expect(store().tasks.map((item) => item.fileName)).toEqual([]);
+    expect(deleted?.text).toBe(CALL_TEXT);
+    expect(failures()).toEqual([]);
+  });
+
+  it("puts the row back when the remove fails", async () => {
+    await mount();
+    const before = row();
+    deleteFails = true;
+
+    await act(async () => {
+      await expect(store().remove(before)).rejects.toThrow("locked");
+    });
+    await flush();
+
+    expect(row().text).toBe(CALL_TEXT);
+    expect(vault.hooks.read("Tasks/Call.md")).toBe(CALL_TEXT);
+  });
+
+  it("writes the exact text back to the same path on Undo", async () => {
+    await mount();
+    const before = row();
+
+    await act(async () => {
+      const deleted = await store().remove(before);
+      await store().restore(deleted);
+    });
+    await flush();
+
+    expect(vault.hooks.read("Tasks/Call.md")).toBe(CALL_TEXT);
+    expect(row().id).toBe(before.id);
+    expect(row().uri).toBe(before.uri);
+    expect(row().text).toBe(CALL_TEXT);
+  });
+
+  it("takes the row away again when the restore fails", async () => {
+    await mount();
+    const before = row();
+    let deleted: Awaited<ReturnType<StoreSnapshot["remove"]>> | undefined;
+    await act(async () => {
+      deleted = await store().remove(before);
+    });
+    createFails = true;
+
+    await act(async () => {
+      await expect(store().restore(deleted!)).rejects.toThrow("no space");
+    });
+    await flush();
+
+    expect(store().tasks).toEqual([]);
+    expect(vault.hooks.read("Tasks/Call.md")).toBeNull();
+  });
+
+  it("cancels a deleted task's alarm and rings it again after Undo", async () => {
+    await mount({ "Tasks/Call.md": REMINDED_TEXT });
+    // The first read schedules the reminder.
+    await act(async () => {
+      await store().edit(row(), {
+        name: "Call",
+        due: null,
+        recurrence: null,
+        list: null,
+        reminders: ["2099-01-02T09:00"],
+        alertWeight: "harsh",
+        body: "\nBody.\n",
+      });
+    });
+    await flush();
+    const ringing = () =>
+      [...os.alarms.values()]
+        .filter((ring) => ring.step === 0)
+        .map((ring) => ring.base);
+    expect(ringing()).toEqual([new Date(2099, 0, 2, 9, 0).getTime()]);
+
+    let deleted: Awaited<ReturnType<StoreSnapshot["remove"]>> | undefined;
+    await act(async () => {
+      deleted = await store().remove(row());
+    });
+    await flush();
+    expect(ringing()).toEqual([]);
+
+    await act(async () => {
+      await store().restore(deleted!);
+    });
+    await flush();
+    expect(ringing()).toEqual([new Date(2099, 0, 2, 9, 0).getTime()]);
   });
 });
 
@@ -951,5 +1112,148 @@ describe("recurring completion", () => {
     const [notice] = store().failures;
     expect(notice.kind).toBe("notice");
     expect(notice.message).toContain("edited");
+  });
+
+  it("deletes exactly the done notes it was handed, then reads the vault", async () => {
+    await mount(doneVault());
+    const before = loadCalls;
+
+    await act(async () => {
+      await store().clear([byFile("Buy stamps.md"), byFile("Water the fern.md")]);
+    });
+    await flush();
+
+    expect(deletes.sort()).toEqual([
+      `${TASKS}/Buy stamps.md`,
+      `${TASKS}/Water the fern.md`,
+    ]);
+    expect(vault.hooks.read("Tasks/Buy stamps.md")).toBeNull();
+    expect(vault.hooks.read("Tasks/Water the fern.md")).toBeNull();
+    expect(vault.hooks.read("Tasks/Fix bike light.md")).not.toBeNull();
+    expect(store().tasks.map((item) => item.fileName).sort()).toEqual([
+      "Call.md",
+      "Fix bike light.md",
+    ]);
+    expect(loadCalls).toBe(before + 1);
+    expect(failures()).toEqual([]);
+  });
+
+  it("puts back the notes that stayed and names how many", async () => {
+    await mount(doneVault());
+    deleteFailsOn = "Fix bike light.md";
+
+    await act(async () => {
+      await store().clear([
+        byFile("Buy stamps.md"),
+        byFile("Fix bike light.md"),
+        byFile("Water the fern.md"),
+      ]);
+    });
+    await flush();
+
+    expect(deletes.sort()).toEqual([
+      `${TASKS}/Buy stamps.md`,
+      `${TASKS}/Water the fern.md`,
+    ]);
+    expect(byFile("Fix bike light.md")).toBeDefined();
+    expect(store().tasks.map((item) => item.fileName).sort()).toEqual([
+      "Call.md",
+      "Fix bike light.md",
+    ]);
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toContain("1 of 3 completed tasks stayed");
+  });
+
+  it("rolls back a clear that deleted nothing and lists a retry", async () => {
+    await mount(doneVault());
+    deleteFails = true;
+
+    await act(async () => {
+      await store().clear([byFile("Buy stamps.md"), byFile("Fix bike light.md")]);
+    });
+    await flush();
+
+    expect(deletes).toEqual([]);
+    expect(store().tasks.map((item) => item.fileName).sort()).toEqual([
+      "Buy stamps.md",
+      "Call.md",
+      "Fix bike light.md",
+      "Water the fern.md",
+    ]);
+    expect(failures()).toEqual([
+      "clear completed: 2 of 2 completed tasks stayed: locked",
+    ]);
+  });
+
+  it("keeps a note another app reopened while the confirmation was up", async () => {
+    await mount(doneVault());
+    // The sheet froze three done rows. Another app reopens one of them.
+    vault.hooks.write("Tasks/Fix bike light.md", REOPENED_TEXT);
+
+    await act(async () => {
+      await store().clear([
+        byFile("Buy stamps.md"),
+        byFile("Fix bike light.md"),
+        byFile("Water the fern.md"),
+      ]);
+    });
+    await flush();
+
+    expect(deletes.sort()).toEqual([
+      `${TASKS}/Buy stamps.md`,
+      `${TASKS}/Water the fern.md`,
+    ]);
+    expect(vault.hooks.read("Tasks/Buy stamps.md")).toBeNull();
+    expect(vault.hooks.read("Tasks/Water the fern.md")).toBeNull();
+    expect(vault.hooks.read("Tasks/Fix bike light.md")).toBe(REOPENED_TEXT);
+    expect(byFile("Fix bike light.md").data?.completed).toBeUndefined();
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toBe("1 of 3 completed tasks stayed: it was reopened");
+  });
+
+  it("reports a clear whose notes were all reopened as a notice, not a retry", async () => {
+    await mount(doneVault());
+    vault.hooks.write("Tasks/Buy stamps.md", REOPENED_TEXT);
+
+    await act(async () => {
+      await store().clear([byFile("Buy stamps.md")]);
+    });
+    await flush();
+
+    expect(deletes).toEqual([]);
+    expect(vault.hooks.read("Tasks/Buy stamps.md")).toBe(REOPENED_TEXT);
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toBe("1 of 1 completed tasks stayed: it was reopened");
+  });
+
+  it("keeps a note that left the vault while the confirmation was up", async () => {
+    await mount(doneVault());
+    // Obsidian deletes or moves the note, so its read now fails.
+    const seed = doneVault();
+    delete seed["Tasks/Fix bike light.md"];
+    vault.hooks.reset(seed);
+
+    await act(async () => {
+      await store().clear([
+        byFile("Buy stamps.md"),
+        byFile("Fix bike light.md"),
+        byFile("Water the fern.md"),
+      ]);
+    });
+    await flush();
+
+    expect(deletes.sort()).toEqual([
+      `${TASKS}/Buy stamps.md`,
+      `${TASKS}/Water the fern.md`,
+    ]);
+    expect(vault.hooks.read("Tasks/Fix bike light.md")).toBeNull();
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toBe(
+      "1 of 3 completed tasks stayed: its note is missing or unreadable",
+    );
   });
 });

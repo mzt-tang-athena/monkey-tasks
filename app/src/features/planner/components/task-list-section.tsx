@@ -13,7 +13,8 @@ import { renderMotionScroll } from "@/components/motion/scroll-view";
 import { TaskRow } from "@/components/task-row";
 import type { Mode } from "@/features/planner/model";
 import { PlanDrag } from "@/features/planner/lib/plan-drag";
-import { colors, fonts, spacing } from "@/theme/tokens";
+import { fonts, spacing, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { FormToggle } from "./form-toggle";
 import { usePlannerList } from "./planner-list-context";
 import { RowSeparator } from "./row-separator";
@@ -46,6 +47,9 @@ export const TaskListSection = React.memo(function TaskListSection({
   header,
   footer,
   style,
+  onScrollTop,
+  restorePage,
+  restoreTop,
 }: {
   /** The mode and the day the source toggle names its period from. */
   mode: Mode;
@@ -55,9 +59,26 @@ export const TaskListSection = React.memo(function TaskListSection({
   header?: React.ReactNode;
   footer?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  /** The scroller's offset, so a preview can draw where it lands. */
+  onScrollTop?: (y: number) => void;
+  /** The page whose saved offset the list restores. */
+  restorePage?: number;
+  restoreTop?: number;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const { taskForm, toggle, open } = usePlannerList();
   const pills = taskForm === "pills" && tasks.length > 0;
+  const list = React.useRef<FlatList<TaskItem>>(null);
+
+  // A page change swaps the rows and restores that page's offset
+  // before paint, so the landing matches the preview.
+  React.useLayoutEffect(() => {
+    if (restoreTop === undefined) {
+      return;
+    }
+    list.current?.scrollToOffset({ offset: restoreTop, animated: false });
+    onScrollTop?.(restoreTop);
+  }, [restorePage, restoreTop, onScrollTop]);
 
   const renderItem = React.useCallback<ListRenderItem<TaskItem>>(
     ({ item }) => (
@@ -77,11 +98,18 @@ export const TaskListSection = React.memo(function TaskListSection({
 
   return (
     <FlatList
+      ref={list}
       style={style}
       data={taskForm === "rows" ? tasks : noTasks}
       keyExtractor={taskKey}
       renderItem={renderItem}
       renderScrollComponent={renderMotionScroll}
+      scrollEventThrottle={16}
+      onScroll={
+        onScrollTop == null
+          ? undefined
+          : (event) => onScrollTop(event.nativeEvent.contentOffset.y)
+      }
       ItemSeparatorComponent={RowSeparator}
       ListHeaderComponentStyle={headStyle}
       ListHeaderComponent={
@@ -122,38 +150,40 @@ function taskKey(task: TaskItem): string {
   return task.id;
 }
 
-const styles = StyleSheet.create({
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  spacer: {
-    flex: 1,
-  },
-  // The list's header slot: the section head, then a group header and
-  // the pills one step further apart.
-  listHead: {
-    gap: spacing.s,
-  },
-  listHeadBody: {
-    gap: spacing.l,
-  },
-  headRows: {
-    paddingBottom: spacing.s,
-  },
-  headGrouped: {
-    paddingBottom: spacing.l,
-  },
-  headFlush: {
-    paddingBottom: 0,
-  },
-  footer: {
-    paddingTop: spacing.s,
-  },
-  empty: {
-    fontSize: 15,
-    fontFamily: fonts.body,
-    color: colors.inkMuted,
-    textAlign: "center",
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    sectionHead: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    spacer: {
+      flex: 1,
+    },
+    // The list's header slot: the section head, then a group header and
+    // the pills one step further apart.
+    listHead: {
+      gap: spacing.s,
+    },
+    listHeadBody: {
+      gap: spacing.l,
+    },
+    headRows: {
+      paddingBottom: spacing.s,
+    },
+    headGrouped: {
+      paddingBottom: spacing.l,
+    },
+    headFlush: {
+      paddingBottom: 0,
+    },
+    footer: {
+      paddingTop: spacing.s,
+    },
+    empty: {
+      fontSize: 15,
+      fontFamily: fonts.body,
+      color: colors.inkMuted,
+      textAlign: "center",
+    },
+  }),
 });

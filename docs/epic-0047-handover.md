@@ -33,9 +33,9 @@ This guide and the phase scripts are on the branch
 steps first, from that branch:
 
 1. Verify the last commit on the branch. Nobody ran it.
-   - It changes the e2e test "the day list keeps its source toggle above
-     the bottom bar" (`app/e2e/specs/planner-split.spec.ts:56`) to wait
-     for the settled layout. The old test failed PR #86's e2e-web check
+   - It changes one e2e test to wait for the settled layout. The test is
+     "the day list keeps its source toggle above the bottom bar"
+     (`app/e2e/specs/planner-split.spec.ts:56`). The old test failed PR #86's e2e-web check
      about once in 20 runs, under load.
    - The cause is a real one-frame jump, filed in ticket 0061 under "The
      first frame of the split". Until the layout reports, the split
@@ -160,7 +160,7 @@ the Workflow args: `{"ghUser": "<account>"}`.
 ## Stop a run and start it again
 
 1. Stop the run from `/workflows`.
-2. In each worktree under `.claude/worktrees/`, commit what is left as a
+2. In each worktree under `.claude/worktrees/`, commit what remains as a
    "WIP" commit and push it to the ticket's branch.
 3. Remove the worktrees and their local branches.
 4. Launch the same script again. A run started in a different session

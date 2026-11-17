@@ -1,7 +1,8 @@
 import * as React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, type ViewStyle } from "react-native";
 import { Pressable } from "./pressable";
-import { colors, radius, touchTarget, type } from "@/theme/tokens";
+import { radius, touchTarget, type, type Palette } from "@/theme/tokens";
+import { useThemedStyles } from "@/theme/theme-provider";
 import { Icon, type IconName } from "./icon";
 
 export type Segment<Key extends string> = {
@@ -34,6 +35,7 @@ export function SegmentedControl<Key extends string>({
   /** The segments share the full width, as the planner's modes do. */
   stretch?: boolean;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const last = segments.length - 1;
   return (
     <View style={styles.control} role="tablist" aria-label={label}>
@@ -47,7 +49,7 @@ export function SegmentedControl<Key extends string>({
               stretch && styles.stretch,
               active && styles.active,
               pressed && !active && styles.pressed,
-              active && corners(index, last),
+              active && corners(index, last, styles),
             ]}
             onPress={() => onSelect(segment.key)}
             role="tab"
@@ -70,7 +72,11 @@ export function SegmentedControl<Key extends string>({
 
 /** The one place the inner corners square off: a selected segment
     keeps its radius only on the control's outer edge. */
-function corners(index: number, last: number) {
+function corners(
+  index: number,
+  last: number,
+  styles: { first: ViewStyle; middle: ViewStyle; last: ViewStyle },
+) {
   if (last === 0) {
     return null;
   }
@@ -80,49 +86,51 @@ function corners(index: number, last: number) {
   return index === last ? styles.last : styles.middle;
 }
 
-const styles = StyleSheet.create({
-  control: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
-    borderRadius: radius,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    padding: 2,
-  },
-  segment: {
-    minHeight: touchTarget,
-    minWidth: touchTarget,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius,
-  },
-  stretch: {
-    flex: 1,
-  },
-  active: {
-    backgroundColor: colors.accent,
-  },
-  pressed: {
-    backgroundColor: colors.pressed,
-  },
-  first: {
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  middle: {
-    borderRadius: 0,
-  },
-  last: {
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-  },
-  text: {
-    ...type.eyebrow,
-    fontWeight: "500",
-    color: colors.inkMuted,
-  },
-  textActive: {
-    color: colors.onAccent,
-    fontWeight: "600",
-  },
+const makeStyles = (colors: Palette) => ({
+  styles: StyleSheet.create({
+    control: {
+      flexDirection: "row",
+      backgroundColor: colors.surface,
+      borderRadius: radius,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      padding: 2,
+    },
+    segment: {
+      minHeight: touchTarget,
+      minWidth: touchTarget,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: radius,
+    },
+    stretch: {
+      flex: 1,
+    },
+    active: {
+      backgroundColor: colors.accent,
+    },
+    pressed: {
+      backgroundColor: colors.pressed,
+    },
+    first: {
+      borderTopRightRadius: 0,
+      borderBottomRightRadius: 0,
+    },
+    middle: {
+      borderRadius: 0,
+    },
+    last: {
+      borderTopLeftRadius: 0,
+      borderBottomLeftRadius: 0,
+    },
+    text: {
+      ...type.eyebrow,
+      fontWeight: "500",
+      color: colors.inkMuted,
+    },
+    textActive: {
+      color: colors.onAccent,
+      fontWeight: "600",
+    },
+  }),
 });

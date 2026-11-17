@@ -30,9 +30,9 @@ lint warnings, and CI that runs. ADR 0038 records the test decision.
   - `src/features/task-editor/TaskEditorScreen.test.tsx`
   - `src/store/tasks.test.tsx`
 - The first, second and fourth import the stand-ins in
-  `src/test/rn-standin.ts`. A stand-in keeps the props and nothing else,
-  so a test "taps" by calling `props.onPress()` and finds nodes by type
-  name.
+  `src/test/rn-standin.ts`. A stand-in keeps the props and nothing else.
+  As a result, a test "taps" by calling `props.onPress()` and finds nodes
+  by type name.
 - `src/store/tasks.test.tsx` switches `Platform.OS` between `android`
   and `web` (line 286). It tests the provider, not a screen.
 - `src/lib/swipe.test.ts` and `src/features/reminders/sync.test.ts` mock
@@ -54,9 +54,9 @@ lint warnings, and CI that runs. ADR 0038 records the test decision.
   on a PR branch runs CI twice.
 - `.github/workflows/android.yml:14-18` builds a release APK on every
   push to main that touches `app/`. The last eight builds took 19 to 45
-  minutes each. Since 2026-10-24 every job fails in 2 s with "recent
-  account payments have failed or your spending limit needs to be
-  increased". The owner fixes billing. This ticket cuts the spend.
+  minutes each. Since 2026-10-24 every job fails in 2 s. The error is
+  `recent account payments have failed or your spending limit needs to
+  be increased`. The owner fixes billing. This ticket cuts the spend.
 
 ### Work
 
@@ -162,8 +162,8 @@ lint warnings, and CI that runs. ADR 0038 records the test decision.
    `checked` or `selected` from it. Assert the label or the text
    instead. 0049 swaps the prop for `aria-*` props. Delete
    `src/test/rn-standin.ts` once no test imports it. If one file cannot
-   move in this ticket, keep its stand-ins working, name it in Outcome,
-   and open a ticket for it.
+   move in this ticket, keep its stand-ins working. For such a file, also
+   name it in Outcome and open a ticket for it.
 
 5. Add the `@/` alias for `src/`:
    - `app/tsconfig.json`: `"compilerOptions": { "paths": { "@/*": ["./src/*"] } }`.
@@ -198,9 +198,9 @@ lint warnings, and CI that runs. ADR 0038 records the test decision.
    `TaskEditorScreen.tsx` (6), `src/app/(tabs)/index.tsx` (5),
    `src/app/dev.tsx` (4), `BottomBar.tsx` (3), `CaptureChips.tsx` (2),
    `TaskRow.tsx` (2), `PreviewRow.tsx` (2), `PeriodStrip.tsx` (1),
-   `ListPagePreview.tsx` (1). Phase 3 rebuilds most of these files, so
-   the wider selector lands as an error in 0054, which clears the 33
-   sites. We add no warn level in between, for the reason in step 8.
+   `ListPagePreview.tsx` (1). Phase 3 rebuilds most of these files. For
+   that reason, the wider selector lands as an error in 0054, which clears
+   the 33 sites. We add no interim warn level, for the reason in step 8.
 
 10. CI triggers:
     - `ci.yml`: `on: { push: { branches: [main, "epic/**"] }, pull_request: {} }`.
@@ -219,7 +219,7 @@ lint warnings, and CI that runs. ADR 0038 records the test decision.
 - [x] `npm test` runs both projects and reports at least 261 passing tests.
 - [x] No component test calls `vi.mock("react-native")`, or Outcome names each exception and its follow-up ticket.
 - [x] No component test calls `props.onPress()` or finds a node by type name.
-- [x] `src/test/rn-standin.ts` is gone, or Outcome names the test that still imports it.
+- [x] `src/test/rn-standin.ts` no longer exists, or Outcome names the test that still imports it.
 - [x] A test imports through `@/`, and `tsc --noEmit` passes.
 - [x] An app module imports through `@/`, and `expo export --platform web` and `--platform android` both bundle it.
 - [x] `npx eslint src scripts --max-warnings 0` exits zero.
@@ -241,7 +241,7 @@ Landed in PR 71:
 - `src/testing/dom-setup.ts`. It also defines `__DEV__`, which the
   gesture handler's web build reads.
 - The five screen tests render through Testing Library. None mocks
-  `react-native`. `rn-standin.ts` is deleted. The month dot carries
+  `react-native`. `rn-standin.ts` no longer exists. The month dot carries
   `testID="month-dot"` for the grid test.
 - `@/` in tsconfig and Vitest. Two routes import through it, and both
   exports bundle it with no Metro change. ESLint resolves it.
@@ -250,7 +250,7 @@ Landed in PR 71:
   and wide states every text, role and label box sits where it did.
   Screenshots of 30 of 40 states match pixel for pixel. The 10 month
   states differ by at most 2 colour levels on a few anti-aliased edge
-  pixels, because the month page layer now ends at the card.
+  pixels. The cause is that the month page layer now ends at the card.
 - Two small behaviour changes from the spacing pass. A week column with
   more tasks than fit now grows to hold them, and the scroller clips
   it. The 12 px band under the month card left the month swipe zone.

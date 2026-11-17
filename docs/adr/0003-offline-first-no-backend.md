@@ -14,12 +14,12 @@ controller and API layer would buy nothing today.
 
 The app is offline first and has no dedicated backend. The vault folder on
 the device is the working truth. athena stays an integration layer that
-writes results into the vault as notes; agents reach the data through a
+writes results into the vault as notes. Agents reach the data through a
 future MCP server there.
 
 ## Consequences
 
 Tasks, alarms, and triggers work with athena down. Integrations pause when
-athena is down and catch up later. The rule of thumb: a feature that must
-run at 3 am lives on athena; a feature that must work when athena is dead
+athena is down and catch up later. As a rule of thumb, a feature that must
+run at 3 am lives on athena. A feature that must work when athena is dead
 lives in the app.
