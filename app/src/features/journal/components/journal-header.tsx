@@ -4,9 +4,9 @@ import { useThemedStyles } from "@/theme/theme-provider";
 import { dayParts, foodName } from "../lib/labels";
 
 /**
- * The tab's fixed header: the day on the left, today's food count on the
- * right. The page scrolls under it, so the date stays in view while the
- * writing moves past.
+ * The tab's fixed header: the month on the left, today's food count on
+ * the right. The day itself is the page's title, below the header, so
+ * the serif date keeps its size.
  *
  * The count is the first of the numbers this band will hold. Calories
  * from the reference notes join it later. The food labels stay on the
@@ -22,32 +22,21 @@ export function JournalHeader({
   foodCount: number;
 }) {
   const { styles } = useThemedStyles(makeStyles);
-  const parts = dayParts(day);
   return (
     <View style={styles.header}>
       <View style={styles.inner}>
-        <View style={styles.row}>
-          <View style={styles.dateBlock}>
-            <Text style={styles.month}>{parts.month}</Text>
-            <Text style={styles.date} accessibilityRole="header">
-              {parts.date}
-            </Text>
-          </View>
-          <View
-            style={styles.stats}
-            testID="food-stat"
-            role="group"
-            aria-label={foodName(foodCount)}
-          >
-            <Text style={styles.statLabel}>Food</Text>
-            <Text
-              style={[styles.statValue, foodCount === 0 && styles.statZero]}
-            >
-              {foodCount}
-            </Text>
-          </View>
+        <Text style={styles.month}>{dayParts(day).month}</Text>
+        <View
+          style={styles.stats}
+          testID="food-stat"
+          role="group"
+          aria-label={foodName(foodCount)}
+        >
+          <Text style={styles.statLabel}>Food</Text>
+          <Text style={[styles.statValue, foodCount === 0 && styles.statZero]}>
+            {foodCount}
+          </Text>
         </View>
-        <View style={styles.rule} />
       </View>
     </View>
   );
@@ -66,19 +55,12 @@ const makeStyles = (colors: Palette) => ({
       maxWidth: measure,
       width: "100%",
       alignSelf: "center",
-      paddingHorizontal: pageGutter,
-      paddingTop: spacing.s,
-      paddingBottom: spacing.m,
-      gap: spacing.s,
-    },
-    row: {
       flexDirection: "row",
-      alignItems: "flex-end",
+      alignItems: "center",
       justifyContent: "space-between",
       gap: spacing.m,
-    },
-    dateBlock: {
-      gap: spacing.xs,
+      paddingHorizontal: pageGutter,
+      paddingVertical: spacing.m,
     },
     month: {
       ...type.caption,
@@ -86,15 +68,10 @@ const makeStyles = (colors: Palette) => ({
       textTransform: "uppercase",
       letterSpacing: 1.5,
     },
-    date: {
-      ...type.display,
-      color: colors.ink,
-    },
     stats: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.s,
-      paddingBottom: 2,
     },
     statLabel: {
       ...type.eyebrow,
@@ -107,12 +84,6 @@ const makeStyles = (colors: Palette) => ({
     },
     statZero: {
       color: colors.inkMuted,
-    },
-    rule: {
-      height: 2,
-      width: 40,
-      borderRadius: 1,
-      backgroundColor: colors.accent,
     },
   }),
 });
