@@ -11,6 +11,7 @@ import Animated, {
   useAnimatedStyle,
   useDerivedValue,
 } from "react-native-reanimated";
+import { SheetDrag, SheetGrab } from "@/components/motion/sheet-drag";
 import { useDismiss } from "@/hooks/use-dismiss";
 import type { Progress } from "@/lib/motion/progress";
 import { measure, radiusFloating, shadows, sheetGap, spacing, type Palette } from "@/theme/tokens";
@@ -22,8 +23,10 @@ import { useOpenerFocus } from "./use-opener-focus";
 /**
  * A floating sheet: a scrim over the page, a dock that rides the
  * keyboard, and the panel with the caller's content. A press on the
- * scrim and Android back close it. While it shows, the screen under it
- * is hidden from assistive tech.
+ * scrim, Android back and a downward drag on the handle close it. A
+ * caller wraps its header row in `SheetGrab` to make it a handle too.
+ * While the sheet shows, the screen under it is hidden from assistive
+ * tech.
  *
  * The caller owns the clock. It passes a `Progress`, which drives the
  * scrim, the panel and the bar. With `rideKeyboard`, the dock follows
@@ -135,19 +138,30 @@ export function Sheet({
           style={[styles.lift, { height: window.height }, lift]}
         >
           <Animated.View pointerEvents="box-none" style={styles.dock}>
-            <Animated.View
-              ref={panelRef}
-              role="dialog"
-              aria-modal
-              aria-label={label}
-              tabIndex={-1}
-              pointerEvents={open && !covered ? "auto" : "none"}
-              style={[styles.panel, panel]}
-              {...(covered ? coveredProps : null)}
-            >
-              <PanelFocus open={open} />
-              {children}
-            </Animated.View>
+            <SheetDrag open={open} onDismiss={onDismiss}>
+              <Animated.View
+                ref={panelRef}
+                role="dialog"
+                aria-modal
+                aria-label={label}
+                tabIndex={-1}
+                pointerEvents={open && !covered ? "auto" : "none"}
+                style={[styles.panel, panel]}
+                {...(covered ? coveredProps : null)}
+              >
+                <PanelFocus open={open} />
+                {children}
+                {/* The handle sits in the panel's top padding, so it
+                    adds no height. It is a cue for the drag, which the
+                    scrim and back already offer, so assistive tech
+                    skips it. */}
+                <SheetGrab>
+                  <View testID="sheet-handle" style={styles.handle} {...hiddenProps}>
+                    <View style={styles.handleBar} />
+                  </View>
+                </SheetGrab>
+              </Animated.View>
+            </SheetDrag>
           </Animated.View>
         </Animated.View>
       </Overlay>
@@ -162,6 +176,13 @@ const coveredProps: ViewProps = Platform.select<ViewProps>({
   android: { importantForAccessibility: "no-hide-descendants" },
   default: { accessibilityElementsHidden: true },
 });
+
+/** Hides a decoration from assistive tech on every platform. */
+const hiddenProps: ViewProps = {
+  accessibilityElementsHidden: true,
+  importantForAccessibility: "no-hide-descendants",
+  "aria-hidden": true,
+};
 
 /** Moves focus to the first control in the panel, or the panel itself.
     It lives inside the panel, so it mounts with the overlay's portal.
@@ -227,6 +248,21 @@ const makeStyles = (colors: Palette) => ({
       padding: spacing.m,
       gap: sheetGap,
       ...shadows.floating,
+    },
+    handle: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: spacing.m,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    handleBar: {
+      width: 32,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.inkFaint,
     },
   }),
 });

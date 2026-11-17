@@ -8,6 +8,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useKeyboardState } from "react-native-keyboard-controller";
 import { MotionScrollView } from "@/components/motion/scroll-view";
+import { SheetGrab } from "@/components/motion/sheet-drag";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { spacing, type, type Palette } from "@/theme/tokens";
@@ -61,18 +62,20 @@ export function PickerSheet({
       label={title}
       closeLabel={`close ${title.toLowerCase()}`}
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
-        {onDone == null ? null : (
-          <Button
-            variant="text"
-            label={doneLabel ?? "Done"}
-            accessibilityLabel={doneLabel ?? "done"}
-            onPress={onDone}
-            disabled={doneDisabled}
-          />
-        )}
-      </View>
+      <SheetGrab>
+        <View style={styles.header}>
+          <Text style={styles.title}>{title}</Text>
+          {onDone == null ? null : (
+            <Button
+              variant="text"
+              label={doneLabel ?? "Done"}
+              accessibilityLabel={doneLabel ?? "done"}
+              onPress={onDone}
+              disabled={doneDisabled}
+            />
+          )}
+        </View>
+      </SheetGrab>
       {/* The body scrolls inside a cap, so a tall month grid and the
           keyboard never push the header off the top of the sheet. */}
       <MotionScrollView

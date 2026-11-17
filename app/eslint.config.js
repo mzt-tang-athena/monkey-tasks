@@ -265,7 +265,9 @@ module.exports = defineConfig([
     },
   },
   {
-    files: ['src/app/_layout.tsx'],
+    // The root layout wraps the app in the gesture root, and a feature
+    // test that renders a sheet on Android wraps its screen the same way.
+    files: ['src/app/_layout.tsx', 'src/features/**/*.test.tsx'],
     rules: {
       'no-restricted-imports': importBans({
         feature: { allowGestures: ['GestureHandlerRootView'] },
