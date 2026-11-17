@@ -25,3 +25,8 @@ comes first. The same text goes into the GitHub release notes.
   puts back the task, byte for byte.
 - The circle next to the title marks the task done.
 - Tapping a reminder notification opens its task in the sheet.
+
+### Fixes
+
+- Every list tab now shows its tasks to TalkBack and other screen
+  readers. Before, only Main did.

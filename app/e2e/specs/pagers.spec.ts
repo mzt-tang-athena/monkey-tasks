@@ -1042,4 +1042,12 @@ test("a page lays out at the pager's origin, so Android can read it", async ({ p
   await press(page, listTab(page, focus));
   await expect(listTab(page, focus)).toHaveAttribute("aria-selected", "true");
   expect(await layoutX()).toBe(0);
+  // The live page must not ride in the moving track. A transformed
+  // ancestor puts its layout box off screen, and Android then skips
+  // every child, so the rows go missing again (ticket 20261117).
+  expect(
+    await page
+      .getByTestId("pager-live")
+      .evaluate((element) => element.parentElement?.getAttribute("data-testid")),
+  ).not.toBe("pager-track");
 });

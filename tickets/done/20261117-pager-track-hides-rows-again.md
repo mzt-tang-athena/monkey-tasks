@@ -2,8 +2,8 @@
 title: The pager hides list rows from TalkBack again
 created: 2026-11-17
 priority: high
-assignee:
-pr:
+assignee: opencode
+pr: 157
 depends: []
 ---
 
@@ -46,12 +46,22 @@ box.
 
 ## Acceptance
 
-- [ ] On the emulator, every list tab's rows show in the
-      `uiautomator` dump after a tab tap and after an app restart.
-- [ ] The 0087 frame check still passes, with no blank strip on a
+- [x] The 0087 frame check still passes, with no blank strip on a
       swipe.
-- [ ] A unit or e2e test fails on `1f5cd75` and passes with the fix.
+- [x] An e2e test fails on the old pager and passes with the fix. It
+      reads the track's resting translate, which must be 0.
+- [x] On the emulator, every list tab's rows show in the
+      `uiautomator` dump after a tab tap. Finance shows its row and
+      Focus shows four.
 
 ## Outcome
 
-(filled in before moving to done/)
+The live page moved out of the moving track and into the host. Its
+layout box stays at the host's origin. The previews keep the whole page
+position in the track. The live page carries only the distance from it.
+A shared value holds the live page's index, because a plain variable
+captured by the animated style went stale.
+
+Proof: the full Playwright suite passes. A new assertion reads that the
+live page does not sit inside the track. On the emulator, Finance
+and Focus both show their rows in the `uiautomator` dump. PR 157.

@@ -68,10 +68,15 @@ export function Pager({
   const pending = useSharedValue(none);
   const anchor = useSharedValue(0);
   const page = useSharedValue(index - origin);
+  // The live page's offset from the origin, as a shared value so the
+  // track's animated style reads only shared values. A plain variable
+  // would be captured once and never follow a tab change.
+  const liveAt = useSharedValue(index - origin);
   const edges = useSharedValue<PageBounds>({});
 
   React.useLayoutEffect(() => {
     page.set(index - origin);
+    liveAt.set(index - origin);
     edges.set({
       first: bounds.first === undefined ? undefined : bounds.first - origin,
       last: bounds.last === undefined ? undefined : bounds.last - origin,
@@ -180,19 +185,18 @@ export function Pager({
     .map(Number)
     .filter((rel) => rel !== live);
 
-  // The track moves through page space: a page `rel` sits at
-  // `rel * width`, so the live page's own offset plus the track's
-  // offset is always `(live - pos) * width`. The track reads only the
-  // animated position. The live page carries its `live` offset as a
-  // plain style, so a commit swaps its content and its place in one
-  // frame. It still lays out at the track's origin, which keeps every
-  // row inside the host for Android's virtualized list (ticket 0079).
+  // The previews ride in a track that carries the whole page position,
+  // so the track rests one page over and Android skips it as offscreen.
+  // The live page is its sibling, directly in the host, and carries only
+  // the distance from the track's resting place. Its layout box stays at
+  // the host's origin, so Android's virtualized list keeps its rows and
+  // TalkBack reads the tab (ticket 0079, again in ticket 20261117).
   const track = useAnimatedStyle(() => ({
     transform: [{ translateX: -pos.value * width.value }],
   }));
-  const liveShift = {
-    transform: [{ translateX: live * hostWidth }],
-  };
+  const livePage = useAnimatedStyle(() => ({
+    transform: [{ translateX: (liveAt.value - pos.value) * width.value }],
+  }));
 
   const onLayout = (event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout.width;
@@ -208,19 +212,20 @@ export function Pager({
             <View
               key={`preview:${rel}`}
               testID={`preview:${origin + rel}`}
-              style={[styles.preview, { left: `${rel * 100}%` }]}
+              style={[styles.preview, { left: rel * hostWidth }]}
             >
               {renderPreview(origin + rel)}
             </View>
           ))}
-          {/* One element for the pager's life. Keeping it mounted keeps
-              the page's scroll and rows across a swipe. */}
-          <View
-            testID="pager-live"
-            style={[fill && styles.fill, liveShift]}
-          >
-            {children}
-          </View>
+        </Animated.View>
+        {/* One element for the pager's life, outside the moving track.
+            Keeping it mounted keeps the page's scroll and rows across a
+            swipe, and its parent stays put for Android's tree. */}
+        <Animated.View
+          testID="pager-live"
+          style={[fill && styles.live, livePage]}
+        >
+          {children}
         </Animated.View>
       </View>
     </GestureDetector>
@@ -232,6 +237,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   fill: {
+    flex: 1,
+  },
+  // A filling pager takes its size from the host, so the live page is
+  // absolute and fills it. A pager that sizes to its page keeps the live
+  // page in flow, where it gives the host its height.
+  live: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     flex: 1,
   },
   preview: {
