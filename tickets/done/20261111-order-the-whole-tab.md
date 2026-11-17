@@ -47,7 +47,7 @@ reorder commit, the grip's step actions, and the reorder e2e specs.
 
 ## Outcome
 
-Built on 2026-11-16, to merge after the 1.0 tag.
+Built on 2026-11-16.
 
 - My order returns one headerless group of every open row. A null
   title marks it, so no empty string can pass for a header. Completed
