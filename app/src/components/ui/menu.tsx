@@ -82,6 +82,7 @@ export function Menu({
   items,
   align = "end",
   kind = "menu",
+  inSheet = false,
 }: {
   open: boolean;
   /** The view the menu opens from. */
@@ -93,6 +94,11 @@ export function Menu({
   align?: "start" | "end";
   /** A choice of one item is a radio group; actions are a menu. */
   kind?: "menu" | "radiogroup";
+  /**
+   * The anchor sits in a sheet. The menu then draws in the sheet layer,
+   * above the sheet that opened it, rather than under it.
+   */
+  inSheet?: boolean;
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const window = useWindowDimensions();
@@ -160,7 +166,7 @@ export function Menu({
 
   return (
     <>
-      <Overlay layer="menuBackdrop" modal>
+      <Overlay layer={inSheet ? "sheet" : "menuBackdrop"} modal>
         <Animated.View style={[StyleSheet.absoluteFill, fade]}>
           <Pressable
             style={StyleSheet.absoluteFill}
@@ -170,7 +176,7 @@ export function Menu({
           />
         </Animated.View>
       </Overlay>
-      <Overlay layer="menu">
+      <Overlay layer={inSheet ? "sheet" : "menu"}>
         <Animated.View
           entering={menuEntering(corner)}
           role={kind}

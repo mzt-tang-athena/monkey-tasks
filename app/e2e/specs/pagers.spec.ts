@@ -301,7 +301,7 @@ function commonScenarios(input: "mouse" | "touch") {
       listTab(page, tabs.next),
       "the swipe turns the page, and the row's editor stays closed",
     ).toHaveAttribute("aria-selected", "true");
-    await expect(page).toHaveURL("/");
+    await expect(page.getByRole("dialog", { name: "Task" })).toHaveCount(0);
   });
 
   test("a short drag keeps its preview until the track rests", async ({ page }, testInfo) => {
@@ -595,7 +595,7 @@ test.describe("with the mouse", () => {
     await expect.poll(() => trackX(page)).toBe(0);
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
     await press(page, row(page, undated.second).getByRole("button", { name: undated.second }));
-    await expect(page).toHaveURL(/\/task\//);
+    await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
   });
 
   test("the list preview matches the landed page", async ({ page }, testInfo) => {

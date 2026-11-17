@@ -54,7 +54,9 @@ test.describe("tab swipe", () => {
   test("a plain tap on a row still opens the editor", async ({ page }) => {
     await press(page, row(page, undated.second).getByRole("button", { name: undated.second }));
 
-    await expect(page).toHaveURL(/\/task\//);
+    // The editor is a sheet over the list, so the page stays put.
+    await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
+    await expect(page).toHaveURL("/");
   });
 });
 
