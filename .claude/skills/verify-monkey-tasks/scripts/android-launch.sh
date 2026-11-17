@@ -14,6 +14,17 @@
 # (monkey-tasks-verify), ANDROID_VERIFY_MEMORY (2048 MB), MOTION (on),
 # FRESH=1 to clear the app data and grant the folder again.
 set -euo pipefail
+# A wrapper such as `flock` hands its lock to this script as an open
+# fd, on no fixed number. The emulator and the adb server outlive this
+# script, so a copy they inherit would hold the lock for their whole
+# life. Close every inherited fd above 2 before anything starts. Bash
+# reads this script through fd 255, so that one stays.
+for fd in "/proc/$$/fd/"*; do
+  fd=${fd##*/}
+  if ((fd > 2 && fd != 255)); then
+    eval "exec $fd>&-"
+  fi
+done
 source "$(dirname "$0")/android-env.sh"
 trap 'echo "android-launch: stopped at line $LINENO. See $UIXML for the last screen." >&2' ERR
 drive="$SKILL_DIR/scripts/android-drive.sh"
