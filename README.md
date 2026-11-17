@@ -115,6 +115,21 @@ the app runs without Metro.
 `CHANGELOG.md` lists what each release adds or changes, in plain words.
 Each GitHub release repeats its section.
 
+### Build the release APK on this machine
+
+When Actions has no minutes, or when a build should not leave the
+machine, build the same APK here. This machine holds the Android SDK,
+JDK 17 and an emulator under `~/Android`.
+
+```bash
+export JAVA_HOME=~/Android/jdk ANDROID_HOME=~/Android/Sdk
+cd app
+npx expo prebuild --platform android --no-install
+cd android && ./gradlew assembleRelease
+```
+
+The APK lands at `app/android/app/build/outputs/apk/release/app-release.apk`.
+
 ### Develop against a phone without rebuilding
 
 The release APK takes about 45 minutes and cannot load code from Metro.
