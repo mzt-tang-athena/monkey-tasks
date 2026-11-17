@@ -216,23 +216,62 @@ describe("selectSections", () => {
     ]);
   });
 
-  it("orders each section by the manual order, unordered last", () => {
+  it("puts every open row in one headerless group in My order", () => {
     const visible = [
-      task("Third", { due: "2026-10-22", order: 3 }),
-      task("First", { due: "2026-10-22", order: 1 }),
-      task("No order B", { due: "2026-10-22" }),
-      task("Second", { due: "2026-10-22", order: 2 }),
-      task("No order A", { due: "2026-10-22" }),
+      task("Tomorrow", { due: "2026-10-23" }),
+      task("No date", {}),
+      task("Past", { due: "2026-10-21" }),
+      task("Today", { due: "2026-10-22" }),
     ];
 
-    const [today] = selectSections(visible, NOW, "manual");
+    const sections = selectSections(visible, NOW, "manual");
 
-    expect(names(today.items)).toEqual([
+    expect(sections).toHaveLength(1);
+    expect(sections[0].title).toBeNull();
+    expect(sections[0].tone).toBe("ink");
+    expect(names(sections[0].items)).toEqual([
+      "No date",
+      "Past",
+      "Today",
+      "Tomorrow",
+    ]);
+  });
+
+  it("orders the whole tab by the manual order, unordered last", () => {
+    const visible = [
+      task("Third", { due: "2026-10-22", order: 3 }),
+      task("First", { due: "2026-10-21", order: 1 }),
+      task("No order B", { due: "2026-10-23" }),
+      task("Second", { created: "2026-10-19", order: 2 }),
+      task("No order A", {}),
+    ];
+
+    const [open] = selectSections(visible, NOW, "manual");
+
+    expect(names(open.items)).toEqual([
       "First",
       "Second",
       "Third",
       "No order A",
       "No order B",
+    ]);
+  });
+
+  it("breaks equal orders by the creation date, then the name", () => {
+    const visible = [
+      task("Later", { created: "2026-10-21", order: 1 }),
+      task("Same day, B", { created: "2026-10-20", order: 1 }),
+      task("Same day, A", { created: "2026-10-20", order: 1 }),
+      task("Earlier", { created: "2026-10-19", order: 1 }),
+    ];
+
+    const [open] = selectSections(visible, NOW, "manual");
+
+    expect(names(open.items)).toEqual([
+      "Earlier",
+      "Same day, A",
+      "Same day, B",
+      "Later",
     ]);
   });
 
@@ -244,14 +283,29 @@ describe("selectSections", () => {
       task("Same day, B", { due: "2026-10-22", created: "2026-10-20" }),
     ];
 
-    const [today] = selectSections(visible, NOW, "manual");
+    const [open] = selectSections(visible, NOW, "manual");
 
-    expect(names(today.items)).toEqual([
+    expect(names(open.items)).toEqual([
       "Bought first",
       "Same day, A",
       "Same day, B",
       "Bought later",
     ]);
+  });
+
+  it("keeps completed rows out of the My order group", () => {
+    const visible = [
+      task("Done", { due: "2026-10-22", completed: "2026-10-22" }),
+      task("Open", { due: "2026-10-22" }),
+    ];
+
+    const sections = selectSections(visible, NOW, "manual");
+
+    expect(sections.map((section) => names(section.items))).toEqual([["Open"]]);
+    expect(
+      selectSections([visible[0]], NOW, "manual"),
+      "a tab with only completed rows has no open group",
+    ).toEqual([]);
   });
 
   it("omits sections with no items", () => {

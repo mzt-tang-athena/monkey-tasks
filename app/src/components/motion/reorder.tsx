@@ -53,6 +53,8 @@ type ItemEntry = {
   ref: AnimatedRef<View>;
   group: string;
   index: number;
+  /** The Item mount that owns this entry. A remount gets a new one. */
+  source: number;
 };
 
 type ReorderState = {
@@ -339,19 +341,25 @@ export function createReorderSurface<P>() {
     React.useLayoutEffect(() => {
       state.items.modify((all) => {
         "worklet";
-        all[id] = { ref, group, index };
+        all[id] = { ref, group, index, source };
         return all;
       });
-    }, [state, id, ref, group, index]);
+    }, [state, id, ref, group, index, source]);
     React.useEffect(
       () => () => {
+        // A section change remounts a row under a new cell key while the
+        // old copy is still unmounting. The old cleanup runs after the
+        // new copy has registered, so it must not delete the new entry.
         state.items.modify((all) => {
           "worklet";
-          delete all[id];
+          const entry = all[id];
+          if (entry !== undefined && entry.source === source) {
+            delete all[id];
+          }
           return all;
         });
       },
-      [state, id],
+      [state, id, source],
     );
 
     const look = useAnimatedStyle(() => {

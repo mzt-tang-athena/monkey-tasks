@@ -13,6 +13,7 @@ import {
   ErrorState,
   LoadingState,
 } from "@/components/ui/list-states";
+import { VaultPrompt } from "@/components/ui/vault-prompt";
 import { useStableCallback } from "@/hooks/use-stable-callback";
 import { useCommandPane } from "@/hooks/use-command-pane";
 import { useTaskEditor } from "@/hooks/use-task-editor";
@@ -27,11 +28,7 @@ import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { ListPagePreview } from "./components/list-page-preview";
 import { ListSectionHeader } from "./components/list-section-header";
-import {
-  FailureBanner,
-  RepairNotice,
-  VaultPrompt,
-} from "./components/list-notices";
+import { FailureBanner, RepairNotice } from "./components/list-notices";
 import { ListsToolbar } from "./components/lists-toolbar";
 import { TaskCardRow } from "./components/task-card-row";
 import { useListSections } from "./hooks/use-list-sections";
@@ -130,6 +127,10 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
 
   const renderSectionHeader = React.useCallback(
     ({ section }: { section: ListsSection }) => {
+      // My order's single group has no title, so it draws no header.
+      if (section.title == null) {
+        return null;
+      }
       const disclosure = section.tone === "faint";
       return (
         <ListSectionHeader

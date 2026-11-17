@@ -34,11 +34,15 @@ export function previewSections(
   for (const section of sections) {
     const faint = section.tone === "faint";
     const folded = faint && !completedOpen;
-    // A disclosure header is the 44pt row; a plain one is its label.
+    // A disclosure header is the 44pt row; a plain one is its label. A
+    // headerless group owes no header space, so its rows start at the
+    // page's own top padding.
     const header =
-      spacing.xl +
-      (faint ? touchTarget : 16) +
-      (faint ? spacing.xs : spacing.s);
+      section.title == null
+        ? 0
+        : spacing.xl +
+          (faint ? touchTarget : 16) +
+          (faint ? spacing.xs : spacing.s);
     if (left < header) {
       break;
     }
@@ -69,7 +73,8 @@ export function previewSections(
  * still. It is a picture of the page's first screenful, so nothing
  * here takes input and nothing scrolls. It draws the same
  * `SectionHeader`, `CardGroupRow` and `TaskRowFace` as the live list,
- * through the shared group header and the still row.
+ * through the shared group header and the still row. A headerless
+ * group, as My order draws, gets no header here either.
  */
 export function ListPagePreview({
   tab,
@@ -100,12 +105,14 @@ export function ListPagePreview({
         ) : null}
         {visible.map(({ section, data }) => (
           <View key={section.key}>
-            <ListSectionHeader
-              title={section.title}
-              count={section.data.length}
-              tone={section.tone}
-              expanded={section.tone === "faint" ? completedOpen : undefined}
-            />
+            {section.title == null ? null : (
+              <ListSectionHeader
+                title={section.title}
+                count={section.data.length}
+                tone={section.tone}
+                expanded={section.tone === "faint" ? completedOpen : undefined}
+              />
+            )}
             {data.map((task, index) => (
               <CardGroupRow
                 key={task.uri}

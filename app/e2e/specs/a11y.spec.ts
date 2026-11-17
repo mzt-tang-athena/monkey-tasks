@@ -4,6 +4,8 @@ import { expect, test } from "../fixtures";
 import { months, supplements, tabs, tomorrow, undated } from "../data";
 import { expectAbove, press, row } from "../locators";
 import { smallTargets } from "../targets";
+import { rgb, setTheme } from "../theme";
+import { THEMES } from "../../src/theme/palettes";
 import {
   failNextCreate,
   failNextWrite,
@@ -41,6 +43,37 @@ async function openPlanner(page: Page, mode: "day" | "week" | "month") {
 
 async function expectTargets(page: Page) {
   expect(await smallTargets(page)).toEqual([]);
+}
+
+/** The Journal tab at 360, on today's note. */
+async function openJournal(page: Page) {
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Journal", exact: true }).click();
+  await expect(page.getByTestId("journal-screen")).toBeVisible();
+  await expect(page.getByText("Woke up early, before the alarm")).toBeVisible();
+}
+
+/** Switch palette and wait for the page to repaint in it. */
+async function usePalette(page: Page, name: "budget" | "midnight") {
+  await setTheme(page, name);
+  await expect
+    .poll(() =>
+      page
+        .getByTestId("journal-screen")
+        .evaluate((element) => getComputedStyle(element).backgroundColor),
+    )
+    .toBe(rgb(THEMES[name].paper));
+}
+
+/** The open entry composer, once its entrance has landed. */
+async function openEntryComposer(page: Page) {
+  await press(page, page.getByRole("button", { name: "add entry" }));
+  await expect(page.getByRole("dialog", { name: "Write an entry" })).toBeVisible();
+  const send = page.getByRole("button", { name: "send entry" });
+  await expect
+    .poll(async () => (await send.boundingBox())?.height ?? 0)
+    .toBeGreaterThanOrEqual(43.9);
 }
 
 test.describe("row names and states", () => {
@@ -221,6 +254,21 @@ test.describe("touch targets", () => {
       .toBeGreaterThanOrEqual(43.9);
     await expectTargets(page);
   });
+
+  for (const palette of ["budget", "midnight"] as const) {
+    test(`Journal in ${palette}`, async ({ page }) => {
+      await openJournal(page);
+      await usePalette(page, palette);
+      await expectTargets(page);
+    });
+
+    test(`the open entry composer in ${palette}`, async ({ page }) => {
+      await openJournal(page);
+      await usePalette(page, palette);
+      await openEntryComposer(page);
+      await expectTargets(page);
+    });
+  }
 
   test("Settings", async ({ page }) => {
     await openLists(page);
@@ -480,6 +528,25 @@ test.describe("axe", () => {
     await expect(page.getByRole("dialog", { name: "Add a task" })).toBeVisible();
     await scan(page, "capture sheet");
   });
+
+  for (const palette of ["budget", "midnight"] as const) {
+    test(`the Journal page in ${palette} at 360`, async ({ page }) => {
+      await openJournal(page);
+      await usePalette(page, palette);
+      await scan(page, `journal ${palette}`);
+    });
+
+    test(`the open entry composer in ${palette} at 360`, async ({ page }) => {
+      await openJournal(page);
+      await usePalette(page, palette);
+      await openEntryComposer(page);
+      await expect(page.getByRole("dialog", { name: "Write an entry" })).toHaveCSS(
+        "opacity",
+        "1",
+      );
+      await scan(page, `journal composer ${palette}`);
+    });
+  }
 });
 
 test("list tabs still read as tabs", async ({ page }) => {

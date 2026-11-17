@@ -9,13 +9,18 @@ import type { SectionTone, TaskSection } from "@/stores/tasks/selectors";
  */
 export type ListsSection = {
   key: string;
-  title: string;
+  /** The header's label, or null for the headerless My order group. */
+  title: string | null;
   tone: SectionTone | "faint";
   data: TaskItem[];
 };
 
 /** The title of the quiet group at the end. */
 export const completedTitle = "Completed";
+
+/** The key of My order's single open group. A date label and the
+    Completed title never equal it. */
+export const myOrderKey = "my-order";
 
 /**
  * The line an empty page shows. Main is the unfiled bucket, so its
@@ -51,17 +56,18 @@ export function foldCompleted(
 }
 
 /**
- * The screen's groups: the open ones in due order, then one quiet
- * Completed group when it has rows. Each open group's title names it
- * for the whole session ("Today", "Fri, 30 Oct"), so the title is
- * its key.
+ * The screen's groups: the open ones in their sort order, then one
+ * quiet Completed group when it has rows. A titled group's title names
+ * it for the whole session ("Today", "Fri, 30 Oct"), so the title is
+ * its key. My order's single group has no title, so it takes the
+ * constant key.
  */
 export function buildSections(
   open: TaskSection[],
   completed: TaskItem[],
 ): ListsSection[] {
   const sections: ListsSection[] = open.map((section) => ({
-    key: section.title,
+    key: section.title ?? myOrderKey,
     title: section.title,
     tone: section.tone,
     data: section.items,

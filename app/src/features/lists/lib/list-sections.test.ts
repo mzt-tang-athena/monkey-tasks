@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { TaskItem } from "@/types/task";
 import type { TaskSection } from "@/stores/tasks/selectors";
-import { buildSections, foldCompleted } from "./list-sections";
+import {
+  buildSections,
+  completedTitle,
+  foldCompleted,
+  myOrderKey,
+} from "./list-sections";
 
-function task(name: string): TaskItem {
+function task(name: string, completed?: string): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;
   return {
     id: uri,
@@ -11,10 +16,42 @@ function task(name: string): TaskItem {
     fileName: `${name}.md`,
     name,
     text: "",
-    data: { kind: "[[tasks]]", created: "2026-10-20", "alert weight": "harsh" },
     body: "",
+    data: {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+      ...(completed ? { completed } : {}),
+    },
   };
 }
+
+describe("buildSections", () => {
+  it("keys My order's headerless group apart from Completed", () => {
+    const sections = buildSections(
+      [{ title: null, items: [task("A"), task("B")], tone: "ink" }],
+      [task("Done", "2026-10-26")],
+    );
+
+    expect(sections.map((section) => section.key)).toEqual([
+      myOrderKey,
+      completedTitle,
+    ]);
+    expect(sections[0].title).toBeNull();
+    expect(sections[1].title).toBe(completedTitle);
+  });
+
+  it("keeps a date title as the key", () => {
+    const sections = buildSections(
+      [{ title: "Today", items: [task("A")], tone: "ink" }],
+      [],
+    );
+
+    expect(sections).toEqual([
+      { key: "Today", title: "Today", tone: "ink", data: [task("A")] },
+    ]);
+  });
+});
 
 const open: TaskSection[] = [
   { title: "Today", items: [task("Pay rent")], tone: "ink" },

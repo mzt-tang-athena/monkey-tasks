@@ -178,6 +178,14 @@ function completed(name: string, list?: string): TaskItem {
 const tick = (name: string) => fireEvent.click(screen.getByLabelText(`tick ${name}`));
 const holdBeat = () => act(() => void vi.advanceTimersByTime(400));
 
+function doneTask(name: string): TaskItem {
+  const item = task(name);
+  return {
+    ...item,
+    data: { ...item.data!, completed: "2026-10-26T10:00:00" },
+  };
+}
+
 /** A task on the Errands tab, so a preview of it has rows. */
 function listedTask(name: string): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;
@@ -299,6 +307,31 @@ describe("ListsScreen", () => {
     fireEvent.click(screen.getByLabelText("open Apple"));
 
     expect(spy.open).toHaveBeenCalledWith("content://vault/Tasks/Apple.md");
+  });
+
+  it("draws My order as one headerless group above Completed", () => {
+    spy.sortMode = "manual";
+    spy.tasks = [
+      task("Banana", todayIso()),
+      task("Apple"),
+      doneTask("Cherry"),
+    ];
+    render(<ListsScreen dock={dock} />);
+
+    // Completed starts folded, so its one row stays out of the page and
+    // the header carries the count.
+    expect(
+      screen.getAllByTestId(/^row:/).map((node) => node.dataset.testid),
+    ).toEqual(["row:Apple", "row:Banana"]);
+    expect(screen.queryByText(/^Today\s+\d+$/)).toBeNull();
+    expect(screen.queryByText(/^No date\s+\d+$/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Completed 1 task" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Completed 1 task" }));
+
+    expect(
+      screen.getAllByTestId(/^row:/).map((node) => node.dataset.testid),
+    ).toEqual(["row:Apple", "row:Banana", "row:Cherry"]);
   });
 
   it("holds a ticked row in its place for one beat", () => {
