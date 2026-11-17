@@ -95,6 +95,8 @@ export const GALLERY_SECTIONS = [
       { id: "section-header:danger", label: "danger" },
       { id: "section-header:muted", label: "muted" },
       { id: "section-header:faint", label: "faint" },
+      { id: "section-header:expanded", label: "expanded" },
+      { id: "section-header:collapsed", label: "collapsed" },
     ],
   },
   {

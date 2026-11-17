@@ -39,7 +39,6 @@ const props: TaskCardRowProps = {
   section: "No date",
   index: 1,
   count: 3,
-  completed: false,
   canDrag: true,
   onToggle: none,
   onOpen: none,

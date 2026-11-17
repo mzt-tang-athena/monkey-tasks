@@ -1,6 +1,6 @@
 import * as React from "react";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { THEMES } from "@/theme/tokens";
 import { SectionHeader } from "./section-header";
 
@@ -31,12 +31,63 @@ describe("SectionHeader", () => {
       ["accent", palette.accent],
       ["danger", palette.danger],
       ["muted", palette.inkMuted],
-      ["faint", palette.inkFaint],
+      // Done work reads the muted step, not a dimmed faint one.
+      ["faint", palette.inkMuted],
     ] as const;
     for (const [tone, color] of cases) {
       const { unmount } = render(<SectionHeader label="Past" tone={tone} />);
-      expect(getComputedStyle(screen.getByRole("heading")).color).toBe(rgb(color));
+      const style = getComputedStyle(screen.getByRole("heading"));
+      expect(style.color).toBe(rgb(color));
+      // A second dimming would drop the pair under 4.5 to 1.
+      expect(style.opacity).toBe("1");
       unmount();
     }
+  });
+
+  it("reports an open or folded group, and presses", () => {
+    const onPress = vi.fn();
+    const { rerender } = render(
+      <SectionHeader
+        label="Completed"
+        count={7}
+        tone="faint"
+        expanded={false}
+        onPress={onPress}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "Completed 7 tasks" });
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(button);
+    expect(onPress).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <SectionHeader
+        label="Completed"
+        count={7}
+        tone="faint"
+        expanded
+        onPress={onPress}
+      />,
+    );
+    expect(
+      screen
+        .getByRole("button", { name: "Completed 7 tasks" })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+  });
+
+  it("says one task for a count of one", () => {
+    render(
+      <SectionHeader
+        label="Completed"
+        count={1}
+        tone="faint"
+        expanded={false}
+        onPress={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Completed 1 task" })).toBeTruthy();
   });
 });

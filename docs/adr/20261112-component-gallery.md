@@ -115,3 +115,14 @@ shot at rest holds no focus.
 We rejected keeping one cell focused on load. It would show one real
 mark. The other cells would still lack focus under a label that
 says "focused". The page would also take focus from a reviewer.
+
+## Amendment, 2026-11-16: the faint step now carries done work at AA
+
+The Completed group became a place the user opens on purpose. Its rows
+and its header now read `inkMuted`. The faint step sat under 4.5 to 1,
+so it could not carry that group. The change holds 4.5 to 1 in every
+palette (ADR 20261116-fold-and-clear-completed).
+
+The faint section-header cells are no longer exempt from the contrast
+rule. The spec scans them like every other cell. Only the disabled
+button stays exempt, because WCAG exempts disabled text.

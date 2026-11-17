@@ -6,7 +6,14 @@ import {
   sections,
   undated,
 } from "../data";
-import { expectInSection, press, row, sectionHeader } from "../locators";
+import {
+  completedToggle,
+  expectInSection,
+  openCompleted,
+  press,
+  row,
+  sectionHeader,
+} from "../locators";
 import { noteText } from "../vault";
 
 test.beforeEach(async ({ page }) => {
@@ -20,14 +27,17 @@ test("a note with a bare kind reads as a task and keeps that kind", async ({ pag
 
   await press(page, target.getByRole("checkbox"));
 
-  await expect(target.getByRole("checkbox")).toHaveAttribute(
-    "aria-checked",
-    "true",
-  );
   await expect
     .poll(() => noteText(page, bareKindNote.path))
     .toContain("completed: 2026-10-26T");
   expect(await noteText(page, bareKindNote.path)).toContain("kind: tasks");
+
+  // The ticked row joins the folded group, and still reads as done.
+  await expect(row(page, bareKindNote.name)).toHaveCount(0);
+  await openCompleted(page);
+  await expect(
+    row(page, bareKindNote.name).getByRole("checkbox"),
+  ).toHaveAttribute("aria-checked", "true");
 });
 
 test("a tick writes the minute it landed", async ({ page }) => {
@@ -43,6 +53,7 @@ test("a tick writes the minute it landed", async ({ page }) => {
 test("a completion with a time and one with a date alone both read as done", async ({
   page,
 }) => {
+  await openCompleted(page);
   for (const name of [completedNotes.timed, completedNotes.dated]) {
     await expectInSection(
       row(page, name),
@@ -51,19 +62,28 @@ test("a completion with a time and one with a date alone both read as done", asy
   }
 });
 
-test("a tick marks the task done and moves it to Completed", async ({ page }) => {
+test("a tick folds the task away into Completed", async ({ page }) => {
   const target = row(page, undated.second);
 
   await press(page, target.getByRole("checkbox"));
 
-  await expect(target.getByRole("checkbox")).toHaveAttribute(
-    "aria-checked",
-    "true",
+  // The row holds for the wash, then joins the folded group. The
+  // header counts it, so the done task leaves the page but not the tab.
+  await expect(target).toHaveCount(0);
+  await expect(completedToggle(page)).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    page.getByRole("button", { name: /^Completed \d+ tasks?$/ }),
+  ).toBeVisible();
+
+  await openCompleted(page);
+  await expectInSection(
+    row(page, undated.second),
+    sectionHeader(page, sections.completed),
   );
-  await expectInSection(target, sectionHeader(page, sections.completed));
 });
 
 test("an untick puts the task back under No date", async ({ page }) => {
+  await openCompleted(page);
   const target = row(page, undated.second);
   await press(page, target.getByRole("checkbox"));
   await expectInSection(target, sectionHeader(page, sections.completed));

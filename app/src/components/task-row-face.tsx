@@ -226,7 +226,7 @@ const makeStyles = (colors: Palette) => ({
       color: colors.ink,
     },
     nameDone: {
-      color: colors.inkFaint,
+      color: colors.inkMuted,
       textDecorationLine: "line-through",
     },
     metaRow: {
