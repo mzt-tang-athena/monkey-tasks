@@ -526,8 +526,10 @@ test.describe("leaving a held row", () => {
     // A tap begins with a pointer down. The drag's one-shot click guard
     // disarms on it, as it does for a real second finger.
     const tap = (name: string) => {
+      // The bottom bar draws icons only, so a tab is named by its
+      // accessible label, not by its text.
       const tab = [...document.querySelectorAll('[role="tab"]')].find(
-        (element) => element.textContent?.trim() === name,
+        (element) => element.getAttribute("aria-label") === name,
       ) as HTMLElement | undefined;
       tab?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
       tab?.click();
