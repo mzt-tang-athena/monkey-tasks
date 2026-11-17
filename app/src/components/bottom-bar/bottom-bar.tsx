@@ -32,11 +32,11 @@ export function useBar(): BarState {
 }
 
 /**
- * The bottom bar both tabs share. Left: the Lists and Planner nav
- * items. Right: the `action` slot, which the screen's route fills
- * (the capture dock). The bar knows no feature. The slot reads the
- * bar's height and hands it the sheet's clock, and the bar slides away
- * on that clock with a transform.
+ * The bottom bar every tab shares. Left: the Lists, Planner and Journal
+ * nav items. Right: the `action` slot, which the screen's route fills
+ * (the capture dock or the journal's Add button). The bar knows no
+ * feature. The slot reads the bar's height and hands it the sheet's
+ * clock, and the bar slides away on that clock with a transform.
  *
  * The bar's surface spans the window. Its row holds to the reading
  * measure, so the nav and the action sit in the content column.
@@ -94,6 +94,12 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
               icon="calendar"
               active={pathname === "/planner"}
               onPress={() => router.navigate("/planner")}
+            />
+            <NavTab
+              label="Journal"
+              icon="journal"
+              active={pathname === "/journal"}
+              onPress={() => router.navigate("/journal")}
             />
           </View>
           {/* The air between the nav and the action. */}

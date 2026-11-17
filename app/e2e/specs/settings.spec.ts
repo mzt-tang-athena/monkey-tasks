@@ -4,7 +4,11 @@ import { expect, test } from "../fixtures";
 import { supplements, tabs, tomorrow, undated } from "../data";
 import { listTab, press, row } from "../locators";
 import { rgb } from "../theme";
-import { THEMES, type ThemeName } from "../../src/theme/palettes";
+import {
+  THEMES,
+  THEME_NAMES,
+  type ThemeName,
+} from "../../src/theme/palettes";
 
 /**
  * Ticket 0084: the settings screen owns the theme picker and the two
@@ -195,22 +199,23 @@ test.describe("back", () => {
 });
 
 test.describe("accessibility", () => {
-  test("the theme picker reads as a radio group in every palette", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-    await openFromLists(page);
-    await expect(page.getByRole("radiogroup", { name: "Theme" })).toBeVisible();
-
-    for (const name of palettes) {
-      const label = name.charAt(0).toUpperCase() + name.slice(1);
+  // One scan per palette, so each test spends the default budget on one
+  // scan rather than four.
+  for (const name of palettes) {
+    const label = THEME_NAMES[name];
+    test(`the theme picker reads as a radio group in ${label}`, async ({
+      page,
+    }) => {
+      await page.goto("/");
+      await expect(row(page, undated.second)).toBeVisible();
+      await openFromLists(page);
+      await expect(page.getByRole("radiogroup", { name: "Theme" })).toBeVisible();
       await press(page, page.getByRole("radio", { name: label }));
       await expect(page.getByRole("radio", { name: label })).toHaveAttribute(
         "aria-checked",
         "true",
       );
       await scan(page, `settings in ${name}`);
-    }
-  });
+    });
+  }
 });

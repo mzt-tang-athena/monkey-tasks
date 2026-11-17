@@ -6,7 +6,7 @@ import {
   type Mutation,
   type QueryClient,
 } from "@tanstack/react-query";
-import { VAULT_SCOPE } from "./read-gate";
+import { VAULT_SCOPE } from "@/lib/vault/read-gate";
 import { messageOf, type VaultMeta } from "./mutations/use-vault-mutation";
 
 type Entry = {

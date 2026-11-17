@@ -199,6 +199,20 @@ export const captureText = {
 } as const;
 
 /**
+ * The journal page's rhythm. One ruled line is the unit. Every vertical
+ * space on the page is a multiple of `line`, or the writing and the
+ * rules drift apart.
+ */
+export const journal = {
+  /** One ruled line: entry text and the time both sit on it. */
+  line: 28,
+  /** The time rail, wide enough for "12:40" at the meta size. */
+  rail: 40,
+  /** The most rules one page draws, so a huge note stays cheap. */
+  maxRules: 400,
+} as const;
+
+/**
  * Room the capture panel leaves for the keyboard and its own fixed
  * chrome, so a long capture still fits a 568pt screen. About 260pt of
  * keyboard, 116pt of panel chrome and an 8pt gutter.

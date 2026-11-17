@@ -51,7 +51,7 @@ describe("sampleSeed", () => {
   it("holds the preview's sample with no move on the sample day", () => {
     const seed = sampleSeed(PREVIEW_SEEDS, SAMPLE_DAY);
 
-    expect(Object.keys(seed)).toHaveLength(30);
+    expect(Object.keys(seed)).toHaveLength(33);
     expect(seed["Tasks/Supplements.md"]).toContain("recurrence: FREQ=DAILY");
     expect(seed["Tasks/Supplements.md"]).toContain("due: 2026-10-26T19:00");
     expect(seed["Tasks/Read the meter.md"]).toContain("kind: tasks");
@@ -63,6 +63,8 @@ describe("sampleSeed", () => {
     expect(seed["Tasks/Broken note.md"]).toBeDefined();
     expect(seed["Tasks/Descale the kettle.md"]).toContain("alert weight: loud");
     expect(seed["Tasks/Lists/Garden.md"]).toBeDefined();
+    expect(seed["Journal/Daily/2026-10-26.md"]).toBeDefined();
+    expect(seed["References/oatmeal.md"]).toBeDefined();
   });
 
   it("keeps the typed name of a task whose name a file cannot hold", () => {
@@ -81,6 +83,14 @@ describe("sampleSeed", () => {
       "completed: 2026-12-01T18:08",
     );
     expect(seed["Tasks/Return library books.md"]).toContain("due: 2026-11-30");
+  });
+
+  it("moves a daily note's date in its path with the rest", () => {
+    const seed = sampleSeed(["default"], "2026-12-01");
+
+    expect(seed["Journal/Daily/2026-12-01.md"]).toBeDefined();
+    expect(seed["Journal/Daily/2026-10-26.md"]).toBeUndefined();
+    expect(seed["Journal/Daily/2026-12-01.md"]).toContain("12:40");
   });
 
   it("names the seeds it has when asked for one it does not", () => {

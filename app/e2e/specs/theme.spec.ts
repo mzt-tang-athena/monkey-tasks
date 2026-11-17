@@ -114,6 +114,10 @@ test.describe("runtime theme switch", () => {
 });
 
 test.describe("every palette", () => {
+  // Six screens and six axe scans per palette. The default 30 seconds
+  // was close before the journal joined the loop, so the budget grows
+  // with the list.
+  test.describe.configure({ timeout: 90_000 });
   for (const name of names) {
     test(`axe holds on every screen in ${name}`, async ({ page }) => {
       await page.goto("/");
@@ -134,6 +138,10 @@ test.describe("every palette", () => {
       await page.getByRole("tab", { name: "Month", exact: true }).click();
       await expect(page.getByTestId("month-title")).toBeVisible();
       await scan(page, `${name} planner month`);
+
+      await page.goto("/journal");
+      await expect(page.getByText("Woke up early, before the alarm")).toBeVisible();
+      await scan(page, `${name} journal`);
 
       await page.goto("/");
       await expect(row(page, undated.second)).toBeVisible();
