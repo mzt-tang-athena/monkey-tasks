@@ -12,7 +12,8 @@ const shared = ['components', 'hooks', 'lib', 'stores', 'theme', 'types', 'utils
   (dir) => `./src/${dir}`,
 );
 
-// The ADR 0012 margin rule and the ADR 0037 file system rule. Every
+// The ADR 0012 margin rule, the worklet default rule and the ADR 0037
+// file system rule. Every
 // block below that sets `no-restricted-syntax` or `no-restricted-imports`
 // repeats them, because a later block replaces the options of an
 // earlier one for every file both match.
@@ -21,6 +22,15 @@ const marginRule = {
     'Property[key.name=/^margin(Top|Bottom|Left|Right|Vertical|Horizontal|Start|End)?$/], Property[key.value=/^margin(Top|Bottom|Left|Right|Vertical|Horizontal|Start|End)?$/]',
   message:
     'Spacing ownership: do not set a margin in a style. The container owns the gaps with `gap` or symmetric padding (see docs/adr/0012-spacing-ownership-rule.md).',
+};
+// A worklet unpacks its closure in its body, so on the UI thread a
+// default parameter cannot read a module value. The 1.0 sheet drag
+// crashed on one (ticket 20261118-sheet-drag-crash).
+const workletDefaultRule = {
+  selector:
+    ':function[body.body.0.directive="worklet"] > AssignmentPattern',
+  message:
+    'A worklet takes no default parameter: on the UI thread it runs before the closure exists. Default the value in the body with `??`.',
 };
 const fileSystemPath = {
   name: 'expo-file-system/legacy',
@@ -173,7 +183,7 @@ module.exports = defineConfig([
       // Spacing ownership (docs/adr/0012): a child never declares
       // spacing outside itself, so no style sets a margin on any side.
       // The container owns the gaps: a `gap`, or symmetric padding.
-      'no-restricted-syntax': ['error', marginRule],
+      'no-restricted-syntax': ['error', marginRule, workletDefaultRule],
     },
   },
   {
@@ -229,7 +239,7 @@ module.exports = defineConfig([
     files: ['src/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': importBans({}),
-      'no-restricted-syntax': ['error', marginRule, ...motionSyntaxRules, touchListenerRule],
+      'no-restricted-syntax': ['error', marginRule, workletDefaultRule, ...motionSyntaxRules, touchListenerRule],
     },
   },
   {
@@ -253,7 +263,7 @@ module.exports = defineConfig([
   {
     files: ['src/components/motion/scroll-view.tsx'],
     rules: {
-      'no-restricted-syntax': ['error', marginRule, ...motionSyntaxRules],
+      'no-restricted-syntax': ['error', marginRule, workletDefaultRule, ...motionSyntaxRules],
     },
   },
   {
