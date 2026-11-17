@@ -32,9 +32,9 @@ Add a test that runs the worklet's own code the way the UI runtime does.
 - [x] No worklet in `app/src` reads a module value in a default
       parameter.
 - [x] The local gate passes: tsc, eslint, vitest and the full web suite.
-- [ ] On the emulator, a release APK closes the task sheet with a drag
-      and keeps running. The 1.0 release ticket carries this check, on
-      the APK built after this merge.
+- [x] On the emulator, a release APK closes the task sheet with a drag
+      and keeps running. The 1.0 release smoke proved it on the APK
+      built from `2fdaf34`.
 
 ## Outcome
 
