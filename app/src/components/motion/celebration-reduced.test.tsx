@@ -14,7 +14,7 @@ const item: TaskItem = {
   fileName: "Buy milk.md",
   name: "Buy milk",
   text: "",
-  data: { kind: "[[tasks]]", created: "2026-10-20" },
+  data: { kind: "[[tasks]]", created: "2026-10-20", "alert weight": "harsh" },
   body: "",
 };
 
