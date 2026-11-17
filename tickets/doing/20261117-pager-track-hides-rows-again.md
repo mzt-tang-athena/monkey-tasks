@@ -2,7 +2,7 @@
 title: The pager hides list rows from TalkBack again
 created: 2026-11-17
 priority: high
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
@@ -46,11 +46,15 @@ box.
 
 ## Acceptance
 
+- [x] The 0087 frame check still passes, with no blank strip on a
+      swipe.
+- [x] An e2e test fails on the old pager and passes with the fix. It
+      reads the track's resting translate, which must be 0.
 - [ ] On the emulator, every list tab's rows show in the
       `uiautomator` dump after a tab tap and after an app restart.
-- [ ] The 0087 frame check still passes, with no blank strip on a
-      swipe.
-- [ ] A unit or e2e test fails on `1f5cd75` and passes with the fix.
+      The dump after the fix shows `pager-track` and `pager-live` at
+      the host's origin. The row check still waits on a free
+      emulator.
 
 ## Outcome
 
