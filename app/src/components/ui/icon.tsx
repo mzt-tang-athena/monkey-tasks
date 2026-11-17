@@ -1,5 +1,5 @@
 import * as React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { bottomBar, radii, type Palette } from "@/theme/tokens";
 import { useTheme } from "@/theme/theme-provider";
 
@@ -86,8 +86,7 @@ const extent: Record<IconName, number> = {
   more: bottomBar.glyph,
   rows: 14,
   pill: 16,
-  // The arrow fills about 11 of the 14 point line.
-  repeat: 11,
+  repeat: 12,
   grip: 15,
   "grip-bars": 10,
   settings: 18,
@@ -201,8 +200,16 @@ function glyph(
     // The planner's pill form.
     case "pill":
       return <View style={[styles.pill, edge]} />;
+    // A clockwise arrow: a ring open from twelve to three o'clock, with
+    // its head at twelve. Views, not the ↻ character, whose ink sits by
+    // a fallback font's baseline and reads low on Android.
     case "repeat":
-      return <Text style={[styles.repeat, { color: tint }]}>{"↻"}</Text>;
+      return (
+        <View style={styles.repeat}>
+          <View style={[styles.repeatRing, edge, styles.repeatGap]} />
+          <View style={[styles.repeatHead, { borderLeftColor: tint }]} />
+        </View>
+      );
     // The reorder handle: two columns of three dots.
     case "grip":
       return (
@@ -528,9 +535,33 @@ const styles = StyleSheet.create({
   },
 
   repeat: {
-    fontSize: 12,
-    lineHeight: 14,
-    fontWeight: "700",
+    width: 12,
+    height: 12,
+  },
+  repeatRing: {
+    position: "absolute",
+    left: 1,
+    top: 2,
+    width: 10,
+    height: 10,
+    borderRadius: radii.pill,
+    borderWidth: 1.5,
+    transform: [{ rotate: "45deg" }],
+  },
+  repeatGap: {
+    borderTopColor: "transparent",
+  },
+  repeatHead: {
+    position: "absolute",
+    left: 4.5,
+    top: 0,
+    width: 0,
+    height: 0,
+    borderTopWidth: 3,
+    borderBottomWidth: 3,
+    borderLeftWidth: 4,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
   },
 
   grip: {
