@@ -228,4 +228,28 @@ describe("the one list field", () => {
     });
     expect(findings[0].reason).toContain("list:");
   });
+
+  it("reports an unreadable alert weight as a warning", () => {
+    const dir = vault({ "Tasks/Shop.md": task("alert weight: loud\n") });
+
+    const { findings } = checkVault(dir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      file: "Tasks/Shop.md",
+      line: 4,
+      kind: "warning",
+    });
+    expect(findings[0].reason).toBe(
+      'alert weight "loud" is not harsh or quiet, so it rings harsh',
+    );
+  });
+
+  it("accepts a harsh or quiet alert weight", () => {
+    const dir = vault({
+      "Tasks/Shop.md": task("alert weight: harsh\n"),
+      "Tasks/Call.md": task("alert weight: quiet\n"),
+    });
+
+    expect(checkVault(dir)).toEqual({ notes: 2, findings: [] });
+  });
 });

@@ -19,6 +19,7 @@ function task(name: string, data: TaskFrontmatter): TaskItem {
 const weekly = task("Water the plants", {
   kind: "[[tasks]]",
   created: "2026-10-01",
+  "alert weight": "harsh",
   due: "2026-10-20",
   recurrence: "FREQ=WEEKLY",
 });
@@ -56,12 +57,14 @@ describe("DayPreview", () => {
     const evening = task("Supplements", {
       kind: "[[tasks]]",
       created: "2026-10-01",
+      "alert weight": "harsh",
       due: "2026-10-26T19:00",
       recurrence: "FREQ=DAILY",
     });
     const afternoon = task("Dentist appointment", {
       kind: "[[tasks]]",
       created: "2026-10-01",
+      "alert weight": "harsh",
       due: "2026-10-27T14:30",
     });
     preview([evening, afternoon]);

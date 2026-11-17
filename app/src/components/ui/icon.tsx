@@ -18,7 +18,15 @@ export type IconName =
   | "grip-bars"
   | "settings"
   | "chevron-right"
-  | "chevron-down";
+  | "chevron-down"
+  | "bell"
+  | "note"
+  | "close"
+  | "check";
+
+/** How a glyph draws: a hollow stroke at rest, or a solid mark when the
+    control it sits in is selected. */
+export type GlyphWeight = "outline" | "fill";
 
 /**
  * The app's glyphs, built from views. There is no icon font. Each
@@ -29,28 +37,69 @@ export type IconName =
 export function Icon({
   name,
   color = "inkMuted",
+  weight = "outline",
+  size,
 }: {
   name: IconName;
+  /** Only the sort and overflow glyphs carry a filled form. */
+  weight?: GlyphWeight;
   color?: keyof Palette;
+  /**
+   * A square box the glyph fills, centered, for a glyph that sits
+   * beside a line of text. Without it the glyph keeps its own size.
+   */
+  size?: number;
 }) {
   const { colors } = useTheme();
   const tint = colors[color];
   const fill = { backgroundColor: tint };
   const edge = { borderColor: tint };
+  const solid = weight === "fill" && (name === "sort" || name === "more");
+  const drawn = glyph(name, solid, fill, edge, tint);
   return (
     <View
-      testID={`icon:${name}`}
+      testID={`icon:${name}${solid ? ":fill" : ""}`}
       aria-hidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
+      style={size == null ? undefined : [styles.box, { width: size, height: size }]}
     >
-      {glyph(name, fill, edge, tint)}
+      {size == null ? (
+        drawn
+      ) : (
+        <View style={{ transform: [{ scale: size / extent[name] }] }}>{drawn}</View>
+      )}
     </View>
   );
 }
 
+/** How far each glyph reaches as drawn, so a sized icon can fill its box. */
+const extent: Record<IconName, number> = {
+  list: bottomBar.glyph,
+  calendar: bottomBar.glyph,
+  "calendar-mini": 11,
+  "clock-mini": 11,
+  plus: 18,
+  sort: bottomBar.glyph,
+  more: bottomBar.glyph,
+  rows: 14,
+  pill: 16,
+  // The arrow fills about 11 of the 14 point line.
+  repeat: 11,
+  grip: 15,
+  "grip-bars": 10,
+  settings: 18,
+  "chevron-right": 10,
+  "chevron-down": 10,
+  bell: 14,
+  note: 14,
+  close: 13,
+  check: 10,
+};
+
 function glyph(
   name: IconName,
+  solid: boolean,
   fill: { backgroundColor: string },
   edge: { borderColor: string },
   tint: string,
@@ -101,18 +150,31 @@ function glyph(
     case "sort":
       return (
         <View style={styles.sort}>
-          <View style={[styles.sortBar, fill, { width: 16 }]} />
-          <View style={[styles.sortBar, fill, { width: 11 }]} />
-          <View style={[styles.sortBar, fill, { width: 6 }]} />
+          {[16, 11, 6].map((width) => (
+            <View
+              key={width}
+              style={[
+                styles.sortBar,
+                { width },
+                solid ? fill : [styles.sortOutline, edge],
+              ]}
+            />
+          ))}
         </View>
       );
     // The overflow control: three dots in a column.
     case "more":
       return (
         <View style={styles.more}>
-          <View style={[styles.moreDot, fill]} />
-          <View style={[styles.moreDot, fill]} />
-          <View style={[styles.moreDot, fill]} />
+          {[0, 1, 2].map((index) => (
+            <View
+              key={index}
+              style={[
+                styles.moreDot,
+                solid ? fill : [styles.moreOutline, edge],
+              ]}
+            />
+          ))}
         </View>
       );
     // The planner's list form.
@@ -175,10 +237,116 @@ function glyph(
           <View style={[styles.chevron, edge]} />
         </View>
       );
+    // The editor's alerts: a dome on a rim, with the clapper below.
+    case "bell":
+      return (
+        <View style={styles.bell}>
+          <View style={[styles.bellDome, edge]} />
+          <View style={[styles.bellRim, fill]} />
+          <View style={[styles.bellClapper, fill]} />
+        </View>
+      );
+    // The editor's note: a page with two lines of text.
+    case "note":
+      return (
+        <View style={[styles.note, edge]}>
+          <View style={[styles.noteLine, fill]} />
+          <View style={[styles.noteLine, styles.noteLineShort, fill]} />
+        </View>
+      );
+    // A clear or remove control: two crossed strokes.
+    case "close":
+      return (
+        <View style={styles.close}>
+          <View style={[styles.closeStroke, styles.closeLeft, fill]} />
+          <View style={[styles.closeStroke, styles.closeRight, fill]} />
+        </View>
+      );
+    // A chosen item: the two strokes of a turned corner.
+    case "check":
+      return (
+        <View style={styles.chevronBox}>
+          <View style={[styles.check, edge]} />
+        </View>
+      );
   }
 }
 
 const styles = StyleSheet.create({
+  box: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bell: {
+    width: 14,
+    height: 14,
+    alignItems: "center",
+  },
+  bellDome: {
+    width: 10,
+    height: 9,
+    borderWidth: 1.5,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
+  },
+  bellRim: {
+    width: 13,
+    height: 1.5,
+    borderRadius: 1,
+  },
+  bellClapper: {
+    width: 3,
+    height: 2,
+    borderBottomLeftRadius: 1.5,
+    borderBottomRightRadius: 1.5,
+  },
+
+  note: {
+    width: 12,
+    height: 14,
+    borderWidth: 1.5,
+    borderRadius: 2,
+    paddingHorizontal: 2,
+    paddingTop: 3,
+    gap: 2,
+  },
+  noteLine: {
+    height: 1.5,
+    borderRadius: 1,
+  },
+  noteLineShort: {
+    width: 3,
+  },
+
+  close: {
+    width: 12,
+    height: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeStroke: {
+    position: "absolute",
+    width: 13,
+    height: 1.5,
+    borderRadius: 1,
+  },
+  closeLeft: {
+    transform: [{ rotate: "45deg" }],
+  },
+  closeRight: {
+    transform: [{ rotate: "-45deg" }],
+  },
+
+  // The bottom and right edges of a tall box, turned into a tick.
+  check: {
+    width: 5,
+    height: 9,
+    borderRightWidth: 1.5,
+    borderBottomWidth: 1.5,
+    transform: [{ translateY: -1.5 }, { rotate: "45deg" }],
+  },
+
   list: {
     height: 16,
     alignItems: "flex-start",
@@ -274,22 +442,33 @@ const styles = StyleSheet.create({
   },
 
   sort: {
+    height: bottomBar.glyph,
     alignItems: "flex-end",
-    gap: 3,
+    gap: 2.5,
   },
+  // A 5pt stroke leaves room for the hollow form's 1.5pt border.
   sortBar: {
-    height: 2,
-    borderRadius: 1,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  sortOutline: {
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
   },
 
   more: {
+    height: bottomBar.glyph,
     alignItems: "center",
     gap: 2.5,
   },
   moreDot: {
-    width: 3.5,
-    height: 3.5,
-    borderRadius: 1.75,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  moreOutline: {
+    backgroundColor: "transparent",
+    borderWidth: 1.25,
   },
 
   rows: {

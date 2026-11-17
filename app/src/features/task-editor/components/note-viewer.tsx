@@ -20,7 +20,7 @@ export function NoteViewer({ task }: { task: TaskItem }) {
   );
   return (
     <>
-      <EditorHeader showSave={false} />
+      <EditorHeader />
       <MotionScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

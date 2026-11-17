@@ -33,6 +33,33 @@ describe("loadTasks", () => {
     expect(validRow?.errors).toBeUndefined();
   });
 
+  it("keeps a note whose alert weight is a typo, with a warning", async () => {
+    const vault = createMemoryVault({
+      "Tasks/Loud.md":
+        '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nalert weight: loud\n---\n',
+    });
+
+    const [row] = await loadTasks(vault, dir);
+
+    expect(row.data?.["alert weight"]).toBe("harsh");
+    expect(row.errors).toBeUndefined();
+    expect(row.warnings).toEqual([
+      'alert weight "loud" is not harsh or quiet, so it rings harsh',
+    ]);
+  });
+
+  it("reads a quiet note with no warning", async () => {
+    const vault = createMemoryVault({
+      "Tasks/Quiet.md":
+        '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\nalert weight: quiet\n---\n',
+    });
+
+    const [row] = await loadTasks(vault, dir);
+
+    expect(row.data?.["alert weight"]).toBe("quiet");
+    expect(row.warnings).toBeUndefined();
+  });
+
   it("shows a spawned occurrence by its title, not its file name", async () => {
     const vault = createMemoryVault({
       "Tasks/Water plants 2026-10-27.md":

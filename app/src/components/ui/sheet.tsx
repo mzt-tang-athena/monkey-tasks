@@ -1,5 +1,11 @@
 import * as React from "react";
-import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type ViewProps,
+} from "react-native";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import Animated, {
   useAnimatedStyle,
@@ -32,6 +38,8 @@ export function Sheet({
   progress,
   rideKeyboard = false,
   scrim = false,
+  stacked = false,
+  covered = false,
   children,
 }: {
   open: boolean;
@@ -46,6 +54,16 @@ export function Sheet({
   rideKeyboard?: boolean;
   /** Draws the scrim. The page is hidden from assistive tech either way. */
   scrim?: boolean;
+  /**
+   * The sheet opens over another sheet. Its scrim then draws in the
+   * sheet layer, above the sheet under it, which it dims and blocks.
+   */
+  stacked?: boolean;
+  /**
+   * A stacked sheet covers this one. The panel takes no focus and no
+   * press, and assistive tech skips it, until the cover goes.
+   */
+  covered?: boolean;
   children: React.ReactNode;
 }) {
   const { styles } = useThemedStyles(makeStyles);
@@ -88,13 +106,13 @@ export function Sheet({
     }
     const node = panelRef.current as unknown as HTMLElement | null;
     if (node != null) {
-      node.inert = !open;
+      node.inert = !open || covered;
     }
-  }, [open]);
+  }, [open, covered]);
 
   return (
     <>
-      <Overlay layer="sheetScrim" modal={open}>
+      <Overlay layer={stacked ? "sheet" : "sheetScrim"} modal={open}>
         {scrim ? (
           <Animated.View
             pointerEvents={open ? "auto" : "none"}
@@ -123,8 +141,9 @@ export function Sheet({
               aria-modal
               aria-label={label}
               tabIndex={-1}
-              pointerEvents={open ? "auto" : "none"}
+              pointerEvents={open && !covered ? "auto" : "none"}
               style={[styles.panel, panel]}
+              {...(covered ? coveredProps : null)}
             >
               <PanelFocus open={open} />
               {children}
@@ -136,8 +155,17 @@ export function Sheet({
   );
 }
 
+/** Hides a covered panel from assistive tech on a phone. The web uses
+    `inert`, set in the layout effect. */
+const coveredProps: ViewProps = Platform.select<ViewProps>({
+  web: {},
+  android: { importantForAccessibility: "no-hide-descendants" },
+  default: { accessibilityElementsHidden: true },
+});
+
 /** Moves focus to the first control in the panel, or the panel itself.
-    It lives inside the panel, so it mounts with the overlay's portal. */
+    It lives inside the panel, so it mounts with the overlay's portal.
+    It sits out of the flow, so the panel's gap never counts it. */
 function PanelFocus({ open }: { open: boolean }) {
   const ref = React.useRef<React.ComponentRef<typeof View>>(null);
   React.useEffect(() => {
@@ -154,8 +182,14 @@ function PanelFocus({ open }: { open: boolean }) {
     );
     (first ?? dialog).focus();
   }, [open]);
-  return <View ref={ref} />;
+  return <View ref={ref} style={focusMark.outOfFlow} />;
 }
+
+const focusMark = StyleSheet.create({
+  outOfFlow: {
+    position: "absolute",
+  },
+});
 
 const makeStyles = (colors: Palette) => ({
   styles: StyleSheet.create({
@@ -189,6 +223,7 @@ const makeStyles = (colors: Palette) => ({
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.hairline,
       borderRadius: radiusFloating,
+      overflow: "hidden",
       padding: spacing.m,
       gap: sheetGap,
       ...shadows.floating,

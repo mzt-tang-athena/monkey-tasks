@@ -3,8 +3,8 @@ id: 0082
 title: One recipe for selected and active states
 created: 2026-11-11
 priority: high
-assignee:
-pr:
+assignee: opencode
+pr: 148
 depends: []
 ---
 
@@ -58,3 +58,10 @@ component, and replace the ad hoc states.
 ## Outcome
 
 (filled in before moving to done/)
+
+## Note, 2026-11-16
+
+The operator picked direction C (Ink) for the week drop target only.
+Icon buttons carry their state in the glyph. They draw outline at rest
+and filled when selected, with no box behind the button. Every other
+surface keeps its current state mark.

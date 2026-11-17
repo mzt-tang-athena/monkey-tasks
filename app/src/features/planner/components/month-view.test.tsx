@@ -57,6 +57,7 @@ describe("MonthView grid", () => {
       task("standup", {
         kind: "[[tasks]]",
         created: "2026-10-01",
+        "alert weight": "harsh",
         due: "2026-10-21",
         recurrence: "FREQ=DAILY",
       }),
@@ -82,6 +83,7 @@ describe("MonthView grid", () => {
       task("renew passport", {
         kind: "[[tasks]]",
         created: "2026-10-01",
+        "alert weight": "harsh",
         due: "2026-10-05",
       }),
     ]);
@@ -94,6 +96,7 @@ describe("MonthView grid", () => {
       task("standup", {
         kind: "[[tasks]]",
         created: "2026-10-01",
+        "alert weight": "harsh",
         due: "2026-10-21",
         recurrence: "FREQ=DAILY",
         completed: "2026-10-21",

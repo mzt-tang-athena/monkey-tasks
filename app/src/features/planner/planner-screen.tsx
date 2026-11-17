@@ -1,6 +1,5 @@
 import * as React from "react";
 import { View } from "react-native";
-import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CaptureTarget, TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
@@ -13,6 +12,7 @@ import { useTheme } from "@/theme/theme-provider";
 import { useTaskList, useStoreMeta } from "@/stores/tasks/task-state";
 import { usePatchTask } from "@/stores/tasks/mutations/use-patch-task";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
+import { useTaskEditor } from "@/hooks/use-task-editor";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { useRefreshTasks } from "@/stores/tasks/use-vault-read";
 import { useOpenTasks } from "@/stores/tasks/selectors";
@@ -76,16 +76,20 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   const patchTask = usePatchTask();
   const refresh = useRefreshTasks();
   const insets = useSafeAreaInsets();
+  const editor = useTaskEditor();
   const { colors } = useTheme();
 
   // One global task form (rows or pills) for every planner mode,
   // live across the planner and the settings screen; default rows.
   const [taskForm, changeForm] = useSetting("taskForm");
 
-  const openTask = React.useCallback((task: TaskItem) => {
-    recordBreadcrumb("open", task.data?.title ?? task.name);
-    router.push(`/task/${encodeURIComponent(task.id)}`);
-  }, []);
+  const openTask = React.useCallback(
+    (task: TaskItem) => {
+      recordBreadcrumb("open", task.data?.title ?? task.name);
+      editor.open(task.id);
+    },
+    [editor],
+  );
 
   const toggle = React.useCallback(
     (task: TaskItem) => {

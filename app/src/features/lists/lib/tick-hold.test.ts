@@ -15,6 +15,7 @@ function task(name: string, completed?: string): TaskItem {
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
+      "alert weight": "harsh",
       ...(completed ? { completed } : {}),
     },
   };

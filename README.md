@@ -224,7 +224,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing`, `MotionScrollView` and the tick's `Celebration`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
-| `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
+| `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`. `lib/alerts` holds the ring shape and the acknowledged groups. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
 | `types` | Shared types, such as `TaskItem`. |
 | `utils` | Pure helpers: dates, YAML, schema errors. |
 | `theme` | Design tokens. |
@@ -242,16 +242,17 @@ documents its props, and each primitive has a component test.
 |---|---|
 | `Button` | A solid or quiet pill, a round send control, or a `text` label at least 44 pt high. |
 | `IconButton`, `Pill` | An icon in a 44 pt target. A control pill, or a `chip` that reads a parsed field. |
-| `Icon` | Every glyph the app draws, by `name` and color token. The app has no icon font. |
+| `Icon` | Every glyph the app draws, by `name` and color token. An optional `size` centers it in a square box beside text. The app has no icon font. |
 | `OverlayHost`, `Overlay` | The root portal in `app/_layout.tsx`. An overlay draws above every screen at its layer. A `modal` overlay hides the screen from assistive tech. |
 | `Menu`, `placeMenu` | A menu that opens from an anchor. It flips above near the bottom bar and stays inside the page gutter. |
-| `Sheet` | A scrim, a dock that rides the keyboard, and a panel. The scrim and Android back close it. |
+| `Sheet` | A scrim, a dock that rides the keyboard, and a panel. The scrim and Android back close it. A `stacked` sheet draws over another sheet, and a `covered` one waits under it. |
 | `CommandPane` | A searchable command list that slides down from the top edge. The screen behind is inert. |
 | `Banner`, `Toast` | A danger or info message with role `alert`. A toast floats above every other layer. |
 | `LoadingState`, `EmptyState`, `ErrorState` | One look for a list that loads, holds nothing or fails. |
 | `SectionHeader` | An eyebrow label over a group, with a count and a tone. |
 | `CardGroupRow` | One row of a group card, with its edges and an inset divider. |
 | `TabStrip`, `SegmentedControl` | Tabs that scroll, with a fade over an edge that hides more tabs, and segments. Every target is at least 44 by 44. |
+| `EdgeFade` | The stepped fade over the edge of a sideways strip that hides more items. The tab strip and the editor's add strip share it. |
 | `Pressable` | Every press target. React Native's press on the web, because it takes the browser click. A row that mounts or re-renders under the finger still presses. It needs no layout report. Gesture handler's on native, where a pan cancels it. A surface swallows the one click a pan activation leaves behind. A web keyboard focus draws the shared focus mark, in the active palette. |
 | `TextField` | A labelled input, with a hint or an error. |
 
@@ -278,6 +279,25 @@ gallery.
 palette (ADR 20261112-component-gallery). Its route is `/gallery`. A
 reviewer reaches it from Diagnostics only. `model.ts` holds the state
 matrix, and the Playwright spec walks the same list.
+
+`features/task-editor` is the task editor (ADR
+20261116-task-editor-sheet). A row press on Lists or Planner opens it,
+through `hooks/use-task-editor.tsx` and the provider in
+`app/_layout.tsx`. It draws as a bottom sheet over the screen. It shows
+the list, the title, and one control per property. A property with a
+value is a tile. One without is a chip in the add strip. `model.ts` is
+the property registry: Due, Repeat, Alerts and Note. Reference (ticket
+0091) joins it as one more entry. The Alerts picker also holds the
+task's alert weight, Harsh or Quiet.
+
+Each committed change writes at once. `lib/session.ts` is the session
+reducer and its queue: one write per task, last draft wins, and a
+failure keeps the draft. `lib/when.ts` and `lib/recurrence.ts` turn
+dates and rules into plain words. A picker is a second sheet stacked
+over the editor. Delete sits in the sheet's menu and shows a toast
+with Undo. An alert tap pushes the `/task/[id]` route. For a task, the
+route opens the editor sheet and steps back. For any other note, it
+shows the read-only viewer.
 
 `features/command` holds the command pane that ticket 0085 adds
 (ADR 20261111-command-pane). A downward pull on a header band, or the
@@ -376,15 +396,16 @@ The feature queue:
 - 0088 the journal tab, with 0089 and 0090
 - 0091 reference notes on a task
 - 0092 optional quests and evergreen tasks, a discovery
-- 0093 the task editor rebuild, starting with a design
+- 0093 the task editor rebuild, shipped in #155. The phone pass for
+  keyboard insets and Android back remains
 - 0095 a Notes tab from Inbox, starting with a design
-- 20261111 reminder weight, a discussion. Children: the schema, the alerts,
-  the editor, and the device check (20261111-alert-weight-*)
+- 20261111 reminder weight shipped in #150, #152 and #153. The phone check
+  remains (20261111-alert-weight-device-check)
 - 20261111 one list and a whole-tab order, decided. The children:
   - one list field on the task note
   - Main holds the unfiled tasks
   - order the whole tab
-  - pick one list in the editor
+  - pick one list in the editor, shipped in #155
 - 20261111 fold deeds into tasks, a spike
 
 Open feature tickets:
@@ -416,7 +437,8 @@ Phases:
    central contracts repo (0007, ADR 0007).
 4. MVP screens: focus list, upcoming reminders, calendar, task editor,
    note viewer (0003, children 0009 to 0013). In progress. Lists and
-   Planner exist. The task editor and note viewer do not.
+   Planner exist, and the task editor sheet shipped in #155. The note
+   viewer shows a note without edits.
 5. Capture: quick capture with offline natural language dates. It uses
    chrono-node and rrule.js. Unparsed lines go to athena agents later
    (0006). Done.
@@ -424,7 +446,10 @@ Phases:
    rebuilds the alarm list after every successful vault read. A capture,
    a tick, or a drag leaves the schedule matching the vault. Ticking a
    recurring task completes the occurrence. It creates the next one as
-   its own note (ADR 0027).
+   its own note (ADR 0027). An alert uses its task's `alert weight`. A
+   harsh alert rings on the alarm stream and escalates at 1, 5 and 15
+   minutes. A quiet one rings once in silence. A tap or a tick clears
+   the group (ADR 20261111-reminder-weight).
 7. Later: deed vocabulary cleanup (0005), the quick-task and deed merge
    decision, and capture text highlighting (0008). Location triggers,
    MCP capture on athena, ntfy fallback, and the athena operational

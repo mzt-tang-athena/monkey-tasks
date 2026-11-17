@@ -15,6 +15,7 @@ function task(due?: string): TaskItem {
     data: {
       kind: "[[tasks]]",
       created: "2026-10-01",
+      "alert weight": "harsh",
       ...(due == null ? {} : { due }),
     },
   };

@@ -1,8 +1,8 @@
 /**
  * `npm run vault:check -- <vault-dir>` (ticket 0037).
  *
- * Prints one line per finding and a summary. Exit codes: 0 clean,
- * 1 findings, 2 the path is missing or not a folder.
+ * Prints one line per finding and a summary. Exit codes: 0 clean or
+ * warnings only, 1 a problem, 2 the path is missing or not a folder.
  */
 
 import { statSync } from "node:fs";
@@ -40,4 +40,5 @@ for (const finding of findings) {
   );
 }
 console.log(`${notes} notes, ${findings.length} findings in ${vault}`);
-process.exitCode = findings.length === 0 ? 0 : 1;
+const problems = findings.filter((finding) => finding.kind !== "warning");
+process.exitCode = problems.length === 0 ? 0 : 1;

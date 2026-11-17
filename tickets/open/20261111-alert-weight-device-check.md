@@ -35,7 +35,7 @@ Cases:
    swipes away, and never repeats.
 8. A note with no `alert weight` rings harsh.
 9. A note with `alert weight: quiet`, edited in Obsidian to `loud`, rings
-   harsh and shows the repair error.
+   harsh, keeps its row, and Needs repair shows the warning.
 10. A timed due and a reminder at the same minute ring once.
 11. The phone's notification settings show the two channels and no stale
     `reminders` channel.
@@ -48,10 +48,63 @@ to done.
 
 - [ ] All eleven cases pass on the emulator and on the phone, or Outcome
       records each failure and what happened instead.
-- [ ] Screenshots and notification dumps sit in one evidence folder.
+- [x] Screenshots and notification dumps sit in one evidence folder.
 - [ ] Tick the parent ticket's device check list from this evidence.
-- [ ] The outcome names the APK build and the Android version.
+- [x] The outcome names the APK build and the Android version.
 
 ## Outcome
 
-(filled in before moving to done/)
+Emulator pass done on 2026-11-17. The phone pass is still to run, so this
+ticket stays open.
+
+Build: local release APK from `d238c2a`, installed on the
+`monkey-tasks-verify` AVD (API 35, x86_64, Pixel 7, Android 15). Evidence:
+`app/build/verify/evidence/android-20261116-113135/alerts/`. The notes used
+are in `app/build/device-check/`.
+
+Proven on the emulator:
+
+- Both channels exist as chosen. `reminders-harsh` has importance 5,
+  `USAGE_ALARM`, `bypassDnd=true`, sound on and vibration on.
+  `reminders-quiet` has importance 3, no sound, no vibration and no DND
+  bypass. The app deletes the old `reminders` channel.
+- A harsh ring posts on `reminders-harsh` with `flags=ONGOING_EVENT`, and the
+  status bar shows the alarm icon.
+- The four rings sit at 0, 1, 5 and 15 minutes in `dumpsys alarm`. The +1, +5
+  and +15 all posted. At +20 nothing new posted. That held for the ladder
+  task at 00:56 and the DND task at 01:06.
+- A due and a reminder in one minute made one ring at 00:38. That group then
+  escalated on its own.
+- A note with no `alert weight` rang harsh (three tasks).
+- `alert weight: loud` kept its row, rang harsh, and Needs repair showed
+  `alert weight "loud" is not harsh or quiet, so it rings harsh`.
+- Ticking the task cleared its tray entry, and no later ring for it appeared.
+- A quiet cue posted once on `reminders-quiet`, silent, with no vibration and
+  no follow-up. Ticking its task cleared it.
+- With Do Not Disturb on and policy access granted, the 00:46 harsh ring
+  posted. With access revoked and Do Not Disturb still on, the 00:51 +5 ring
+  posted on the same channel.
+
+Not proven on the emulator:
+
+- Sound. The emulator cannot show that a harsh alert is audible with the
+  ringer on silent. Nor can it show a quiet alert is inaudible at full
+  volume.
+- The swipe feel. One swipe left the `Tick me` ring in place. One ladder
+  entry left the list during the run. Its +5 and +15 still rang, so a
+  dismissed entry did not silence the need. Injected swipes on the shade were
+  not reliable enough to settle the gesture.
+- The audible part of Do Not Disturb. We proved the post and the channel
+  flags. The sound is a phone check.
+
+Phone checklist:
+
+- Harsh with the ringer on silent: it rings, and the alarm icon shows.
+- DND granted: it rings through. DND refused: it rings below DND.
+- Swipe a ringing harsh alert. It should stay. If it leaves, the +5 still
+  rings.
+- Listen for +1, +5 and +15, then silence.
+- Tick the task, or open it from the alert: the repeats stop.
+- Quiet at full volume: no sound, no vibration, one ring, swipes away.
+- A note with no key rings harsh.
+- A due and a reminder in one minute ring once.

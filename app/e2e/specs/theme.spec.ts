@@ -141,10 +141,11 @@ test.describe("every palette", () => {
         page,
         row(page, undated.second).getByRole("button", { name: undated.second }),
       );
-      await expect(
-        page.getByRole("textbox", { name: "Name", exact: true }),
-      ).toBeVisible();
-      await scan(page, `${name} editor`);
+      const editor = page.getByRole("dialog", { name: "Task" });
+      await expect(editor).toBeVisible();
+      // The panel fades in. Scan it once it has landed.
+      await expect(editor).toHaveCSS("opacity", "1");
+      await scan(page, `${name} editor`, '[role="dialog"]');
 
       await page.goto("/");
       await expect(row(page, undated.second)).toBeVisible();

@@ -63,6 +63,7 @@ export function captureDraft(
     data: {
       kind: "[[tasks]]",
       created,
+      "alert weight": "harsh",
       ...(due ? { due } : {}),
       ...(listName ? { list: `[[${listName}]]` } : {}),
       ...(parsed.reminders?.length ? { reminders: parsed.reminders } : {}),

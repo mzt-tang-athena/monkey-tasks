@@ -56,6 +56,7 @@ describe("block list indent (ticket 0053, finding 11)", () => {
       recurrence: null,
       list: item.data?.list?.slice(2, -2) ?? null,
       reminders: [],
+      alertWeight: "harsh",
       body: item.body,
     });
     expect(vault.hooks.read("Tasks/Call.md")).toContain("[[Focus]]");
@@ -78,6 +79,7 @@ describe("block list indent (ticket 0053, finding 11)", () => {
       recurrence: null,
       list: item.data?.list?.slice(2, -2) ?? null,
       reminders: [],
+      alertWeight: "harsh",
       body: item.body,
     });
     const saved = vault.hooks.read("Tasks/Call.md") ?? "";
@@ -108,6 +110,7 @@ describe("one list field (ticket 20261111-one-list-field)", () => {
       recurrence: null,
       list: "Home",
       reminders: [],
+      alertWeight: "harsh",
       body: item.body,
     });
 
