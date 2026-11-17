@@ -111,9 +111,11 @@ The successor keeps its row and its day. The ADR records why the app
 leaves the link text alone.
 
 Proof: component tests cover the fold default and toggle. They also
-cover the clear count, tab scoping, the safe Cancel and a partial
-delete failure. Web e2e covers the fold, the menu, Cancel and the
-confirm. The verify journey keeps screenshots and note lists under
+cover the clear count, tab scoping and the safe Cancel. They cover a
+partial delete failure, and a note reopened, gone or unreadable at
+confirm time. Web e2e covers the fold, the menu, Cancel, the confirm,
+and a note reopened while the sheet is up. The verify journey keeps
+screenshots and note lists under
 `app/build/verify/evidence/fold-completed/`. The merge request has the
 gate counts.
 

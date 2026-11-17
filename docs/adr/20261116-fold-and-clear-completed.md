@@ -103,9 +103,9 @@ then points at a file the vault no longer holds.
 
 We accept the broken link. The app never reads the link target. It only
 checks that the property exists, to hide the next occurrence until its
-due day. The untick path that reads the earlier note leaves with that
-note. Obsidian draws the link as unresolved, and the vault loses no
-data.
+due day. The untick path finds the successor by the link's text, and it
+never opens the file the link names. Obsidian draws the link as
+unresolved, and the vault loses no data.
 
 We do not rewrite the next note. That would be a write the user did not
 ask for, and it can race another app. The next note keeps its row, its

@@ -64,13 +64,23 @@ const spec: VaultMutationSpec<
       // The gap between this read and the remove is the read-then-act
       // window `writeNoteIfUnchanged` documents: the adapter has no
       // conditional delete, so another app can still land in between.
+      let text: string;
       try {
-        const fresh = taskFromText(task, await io.adapter.read(task.uri));
-        if (fresh.data?.completed == null) {
-          kept.push({ task, message: notCompleted(fresh) });
-          continue;
-        }
-        deleteAttempts += 1;
+        text = await io.adapter.read(task.uri);
+      } catch {
+        // The note left the vault, or the provider refused the read.
+        // The provider's own message names an internal uri, so the
+        // notice says what the user can act on instead.
+        kept.push({ task, message: "its note is missing or unreadable" });
+        continue;
+      }
+      const fresh = taskFromText(task, text);
+      if (fresh.data?.completed == null) {
+        kept.push({ task, message: notCompleted(fresh) });
+        continue;
+      }
+      deleteAttempts += 1;
+      try {
         await io.adapter.remove(task.uri);
         removed.push(task);
       } catch (error) {

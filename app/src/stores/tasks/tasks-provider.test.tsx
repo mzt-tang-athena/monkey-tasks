@@ -1228,4 +1228,32 @@ describe("recurring completion", () => {
     expect(notice.kind).toBe("notice");
     expect(notice.message).toBe("1 of 1 completed tasks stayed: it was reopened");
   });
+
+  it("keeps a note that left the vault while the confirmation was up", async () => {
+    await mount(doneVault());
+    // Obsidian deletes or moves the note, so its read now fails.
+    const seed = doneVault();
+    delete seed["Tasks/Fix bike light.md"];
+    vault.hooks.reset(seed);
+
+    await act(async () => {
+      await store().clear([
+        byFile("Buy stamps.md"),
+        byFile("Fix bike light.md"),
+        byFile("Water the fern.md"),
+      ]);
+    });
+    await flush();
+
+    expect(deletes.sort()).toEqual([
+      `${TASKS}/Buy stamps.md`,
+      `${TASKS}/Water the fern.md`,
+    ]);
+    expect(vault.hooks.read("Tasks/Fix bike light.md")).toBeNull();
+    const [notice] = store().failures;
+    expect(notice.kind).toBe("notice");
+    expect(notice.message).toBe(
+      "1 of 3 completed tasks stayed: its note is missing or unreadable",
+    );
+  });
 });
