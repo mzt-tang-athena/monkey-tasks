@@ -15,9 +15,9 @@ look like stray rectangles. The navigation also wastes a line on a label
 under each glyph, and the operator knows what each tab is.
 
 Replace the hand-drawn glyphs with Phosphor's geometry, in both weights.
-Phosphor ships an outline (regular) and a filled drawing for every glyph,
-so the selected state gets a real fill rather than a colour change on a
-hollow shape.
+Phosphor ships an outline (regular) and a filled drawing for every glyph.
+The selected state then gets a real fill, not a colour change on a hollow
+shape.
 
 Vendor the path data. A generator under `app/scripts/icons/` reads
 `@phosphor-icons/react`'s def files and writes a committed table. The
@@ -30,7 +30,7 @@ the fill weight and the accent colour. The bar's row drops from 52 to 48,
 which keeps the Add control's 48 and the 44pt touch target.
 
 Add an Icons section to the gallery so the set is reviewable in the four
-palettes, and extend the gallery spec to walk it.
+palettes. Extend the gallery spec to walk it.
 
 ## Acceptance
 
