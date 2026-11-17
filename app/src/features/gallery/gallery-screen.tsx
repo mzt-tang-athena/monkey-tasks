@@ -12,7 +12,7 @@ import { PreviewRow } from "@/components/preview-row";
 import { Banner } from "@/components/ui/banner";
 import { Button } from "@/components/ui/button";
 import { CardGroupRow } from "@/components/ui/card-group-row";
-import { Icon } from "@/components/ui/icon";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { IconButton } from "@/components/ui/icon-button";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/list-states";
 import { Pill } from "@/components/ui/pill";
@@ -49,6 +49,17 @@ const plannerModes: Segment<"day" | "week" | "month">[] = [
 ];
 
 const listTabs = ["Main", "Errands", "Focus"];
+
+/** One glyph at the size it draws on screen, in both weights. */
+function GlyphPair({ name }: { name: IconName }) {
+  const { styles } = useThemedStyles(makeStyles);
+  return (
+    <View style={styles.glyphPair}>
+      <Icon name={name} color="ink" />
+      <Icon name={name} weight="fill" color="ink" />
+    </View>
+  );
+}
 
 /** A task for the row face. The face reads the name and the done flag. */
 function rowTask(name: string): TaskItem {
@@ -127,6 +138,27 @@ export default function GalleryScreen() {
         <Icon name="sort" />
       </IconButton>
     ),
+
+    "icons:list": <GlyphPair name="list" />,
+    "icons:calendar": <GlyphPair name="calendar" />,
+    "icons:journal": <GlyphPair name="journal" />,
+    "icons:calendar-mini": <GlyphPair name="calendar-mini" />,
+    "icons:clock-mini": <GlyphPair name="clock-mini" />,
+    "icons:plus": <GlyphPair name="plus" />,
+    "icons:sort": <GlyphPair name="sort" />,
+    "icons:more": <GlyphPair name="more" />,
+    "icons:rows": <GlyphPair name="rows" />,
+    "icons:pill": <GlyphPair name="pill" />,
+    "icons:repeat": <GlyphPair name="repeat" />,
+    "icons:grip": <GlyphPair name="grip" />,
+    "icons:grip-bars": <GlyphPair name="grip-bars" />,
+    "icons:settings": <GlyphPair name="settings" />,
+    "icons:chevron-right": <GlyphPair name="chevron-right" />,
+    "icons:chevron-down": <GlyphPair name="chevron-down" />,
+    "icons:bell": <GlyphPair name="bell" />,
+    "icons:note": <GlyphPair name="note" />,
+    "icons:close": <GlyphPair name="close" />,
+    "icons:check": <GlyphPair name="check" />,
 
     "segmented-control:selected": (
       <View style={styles.wide}>
@@ -421,6 +453,11 @@ const makeStyles = (colors: Palette) => ({
     },
     wide: {
       width: "100%",
+    },
+    glyphPair: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
     },
     selected: {
       width: "100%",
