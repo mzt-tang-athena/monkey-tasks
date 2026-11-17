@@ -71,3 +71,49 @@ and the targets move while a drag travels.
 
 **One layout only.** One default, with no choice. It halves the test
 path and drops the setting. The operator asked for both.
+
+## Amendment, 2026-11-16: the shipped geometry
+
+Ticket 20261114 builds the fitted week. The numbers below are what
+shipped.
+
+**Spread.** Four rows of day boxes, two columns each, inside the page
+gutter. The rows sit 8pt apart and the gap stays paper. Sunday pairs
+with Monday, Tuesday with Wednesday, Thursday with Friday. Saturday
+spans both columns of the last row. The eighth box stays out.
+
+Each box is 68pt tall. A 4pt pad, a 14pt header line, and two 18pt
+chips 4pt apart fill it. The header shows the weekday caption and the
+date. When the day holds more than two tasks, the header's right
+corner shows a "+N" count. The body is 296pt tall, 40pt over the old
+canvas.
+
+**Rows.** Seven 44pt lines in one card, split by hairlines. Each line
+holds a 36pt date block, two 24pt chips side by side, and the "+N"
+count. The body is 308pt tall.
+
+**One day list.** `weekDays` builds the seven days once, and both
+layouts draw the same `WeekDay[]`. `weekChipCount` draws two chips at
+most. A table holds each layout's grid shape, its cells and its
+height.
+
+**The drop grid.** The live body is one `PlanDrag.Grid`. Each cell
+holds its day's target object. Saturday's two Spread cells hold the
+same object. The grid's hit test stays uniform.
+
+The ring is a new cell-owned mark. A hover then rings the inside of
+the day's own box instead of filling a cell pitch. The ring is 2pt of
+ink with the box's corner. It fades over `motion.ms.tap` and follows
+reduced motion. The month grid keeps its fill box.
+
+**The count's press.** The "+N" count opens the day and leaves the
+selection alone. It draws a 44pt press beside the day press. A button
+may not sit inside another button.
+
+**The swipe.** The week body is a page in the shared pager. A landing
+selects the same weekday in the new week, so the rail follows. The
+neighbour page is the same body with `interactive={false}`. A chip
+drag never turns the page, and a swipe never lifts a chip.
+
+**The setting.** `weekView` is `spread` or `rows`, and a fresh install
+opens Spread. The browser stores it under `monkey-tasks.week-view`.

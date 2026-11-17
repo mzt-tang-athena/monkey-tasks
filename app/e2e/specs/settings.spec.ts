@@ -166,6 +166,39 @@ test.describe("the settings persist", () => {
   });
 });
 
+test.describe("the week view", () => {
+  test("switches the layout in place and survives a reload", async ({ page }) => {
+    await page.goto("/planner");
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
+    await expect(page.getByTestId("week-view:spread")).toBeVisible();
+
+    await openFromPlanner(page);
+    const field = page.getByRole("tablist", { name: "week view" });
+    await expect(field.getByRole("tab", { name: "Spread" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await press(page, field.getByRole("tab", { name: "Rows" }));
+    await expect(field.getByRole("tab", { name: "Rows" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    // The planner stayed mounted, so the change redraws it.
+    await page.goBack();
+    await expect(page).toHaveURL(/mode=week/);
+    await expect(page.getByTestId("week-view:rows")).toBeVisible();
+    await expect(page.getByTestId("week-view:spread")).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByTestId("week-view:rows")).toBeVisible();
+    await page.goto("/settings");
+    await expect(
+      page.getByRole("tablist", { name: "week view" }).getByRole("tab", { name: "Rows" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+});
+
 test.describe("back", () => {
   test("returns to the same Lists tab and screen", async ({ page }) => {
     await page.goto("/");

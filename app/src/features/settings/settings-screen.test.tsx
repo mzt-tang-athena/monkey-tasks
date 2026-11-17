@@ -1,5 +1,5 @@
 import * as React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { Linking, Text } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadSettings } from "@/lib/settings";
@@ -134,6 +134,28 @@ describe("SettingsScreen", () => {
     expect(
       screen.getByRole("tab", { name: "Chips" }).getAttribute("aria-selected"),
     ).toBe("true");
+  });
+
+  it("saves the week view, and a fresh install opens Spread", () => {
+    const first = mount();
+    const weekView = () => screen.getByRole("tablist", { name: "week view" });
+    expect(
+      within(weekView()).getByRole("tab", { name: "Spread" }).getAttribute("aria-selected"),
+    ).toBe("true");
+
+    fireEvent.click(within(weekView()).getByRole("tab", { name: "Rows" }));
+
+    expect(loadSettings().weekView).toBe("rows");
+    expect(globalThis.localStorage.getItem("monkey-tasks.week-view")).toBe("rows");
+    first.unmount();
+
+    mount();
+    expect(
+      within(weekView()).getByRole("tab", { name: "Rows" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(
+      screen.getByText("Spread pairs two days per row. Rows stack all seven."),
+    ).toBeTruthy();
   });
 
   it("updates another mounted screen when a setting changes", () => {
