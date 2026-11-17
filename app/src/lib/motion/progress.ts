@@ -20,12 +20,19 @@ export function timing(
   to: number,
   ms: number,
   done?: () => void,
-  easing: EasingFunction | EasingFunctionFactory = motion.easeOut,
+  easing?: EasingFunction | EasingFunctionFactory,
 ) {
   "worklet";
+  // The default lives in the body, not the parameter list. A worklet
+  // unpacks its closure in the body, so on the UI thread a default
+  // parameter that reads `motion` runs before `motion` exists.
   return withTiming(
     to,
-    { duration: ms, easing, reduceMotion: ReduceMotion.System },
+    {
+      duration: ms,
+      easing: easing ?? motion.easeOut,
+      reduceMotion: ReduceMotion.System,
+    },
     (finished) => {
       "worklet";
       if (finished === true && done !== undefined) {

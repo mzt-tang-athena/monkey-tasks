@@ -24,6 +24,7 @@ import { journal, measure, pageGutter, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { isoOf } from "@/utils/dates";
 import { JournalHeader } from "./components/journal-header";
+import { JournalHeading } from "./components/journal-heading";
 import { JournalPaper } from "./components/journal-paper";
 import { ReferenceSheet } from "./components/reference-sheet";
 import { STICK_SLOP } from "./lib/page-grid";
@@ -33,9 +34,10 @@ import { STICK_SLOP } from "./lib/page-grid";
  * with the composer in the bottom bar's action slot.
  *
  * The screen is a column: header, the page, the bar. The header holds
- * the date and the day's food count, so both stay in view while the
- * writing scrolls past. The page opens at its newest line and follows a
- * sent entry down, but a reader who scrolled up keeps their place.
+ * the month and the day's food count. The day is the page's serif title,
+ * so it scrolls with the writing. The page opens at its newest line and
+ * follows a sent entry down, but a reader who scrolled up keeps their
+ * place.
  *
  * It reads no task state. The note is its own query.
  */
@@ -146,6 +148,7 @@ export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
             />
           }
         >
+          <JournalHeading day={day} />
           {read.status === "loading" ? (
             <LoadingState label="Reading today's note" />
           ) : read.status === "error" ? (

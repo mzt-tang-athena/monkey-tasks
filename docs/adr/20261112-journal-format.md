@@ -153,4 +153,18 @@ We removed the bottom band. The header always draws, so later stats cause
 no layout jump. This replaces the band in the 2026-11-14 amendment. The
 date now stays in view on a long day.
 
+## Amendment, 2026-11-17: the day stays on the page
+
+The fixed header made the day small. The day is the page's title, so it
+belongs at the top of the page at full size. The header now holds the
+month and the food count. The serif date and its accent rule scroll with
+the writing.
+
+The bottom band stays gone. On a small phone the day can scroll out of
+view, because the page opens at its newest line. That is the cost of
+keeping the title on the page.
+
+This supersedes the header in the amendment above.
+
+
 
