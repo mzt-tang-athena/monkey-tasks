@@ -7,7 +7,13 @@ import {
   supplementsTick,
   undated,
 } from "../data";
-import { expectInSection, press, row, sectionHeader } from "../locators";
+import {
+  expectInSection,
+  openCompleted,
+  press,
+  row,
+  sectionHeader,
+} from "../locators";
 import {
   failNextWrite,
   notePaths,
@@ -61,8 +67,9 @@ test("a tick on a repeating task makes its next occurrence a note", async ({
   expect(await noteText(page, supplementsTick.note)).toContain(
     supplementsTick.completedPrefix,
   );
-  // Today's row moves to Completed. The next one waits for its day, so
-  // the list shows it tomorrow, not now.
+  // Today's row moves to a folded Completed. The next one waits for its
+  // day, so the list shows it tomorrow, not now.
+  await openCompleted(page);
   const done = row(page, supplements);
   await expect(done).toHaveCount(1);
   await expect(done.getByRole("checkbox")).toHaveAttribute(
@@ -115,7 +122,10 @@ test.describe("a slow vault and a failed write", () => {
   const note = `Tasks/${fileName}`;
 
   for (const from of ["the page query", "globalThis.__vault"] as const) {
-    test(`tick at once and roll back, set from ${from}`, async ({ page }) => {
+    test(`tick at once and roll back, set from ${from}`, async ({
+      page,
+      reducedMotion,
+    }) => {
       if (from === "the page query") {
         await page.goto(
           `/?latency=${latencyMs}&fail=${encodeURIComponent(`write:${fileName}`)}`,
@@ -134,10 +144,19 @@ test.describe("a slow vault and a failed write", () => {
       await target.getByRole("checkbox").click();
       await page.clock.runFor(50);
 
-      await expect(
-        target.getByRole("checkbox"),
-        "the row ticks before the slow vault answers",
-      ).toHaveAttribute("aria-checked", "true");
+      if (reducedMotion === "reduce") {
+        // A reduced-motion tick folds the row away at once.
+        await expect(
+          row(page, name),
+          "the row ticks before the slow vault answers",
+        ).toHaveCount(0);
+      } else {
+        // The wash holds the row in place, and it reads as done.
+        await expect(
+          target.getByRole("checkbox"),
+          "the row ticks before the slow vault answers",
+        ).toHaveAttribute("aria-checked", "true");
+      }
       expect(await noteText(page, note)).not.toContain("completed:");
 
       await page.clock.runFor(latencyMs * 4);

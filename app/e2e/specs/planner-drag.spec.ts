@@ -299,15 +299,20 @@ for (const input of inputs) {
       );
     });
 
-    test("the grabber follows the finger and stops at its limit", async ({ page }) => {
+    test("the grabber follows the finger and stops at its floor", async ({ page }) => {
       await openPlanner(page);
       const split = page.getByTestId("day-split");
       const top = page.getByTestId("day-split:top");
+      const bottom = page.getByTestId("day-split:bottom");
       const grip = page.getByTestId("day-split:grip");
       const splitBox = await split.boundingBox();
       if (splitBox == null) {
         throw new Error("the split has no box");
       }
+      // motion.split.minPane. One row, so a pane still reads.
+      const floor = 44;
+      const divider = 28;
+      const usable = splitBox.height - divider;
       const start = (await top.boundingBox())?.height ?? 0;
       const point = await pointOn(page, grip);
 
@@ -316,17 +321,84 @@ for (const input of inputs) {
       await expect.poll(async () => ((await top.boundingBox())?.height ?? 0) - start).toBeGreaterThan(100);
 
       await pointer.moveTo({ x: point.x, y: point.y + 1200 });
-      const limit = splitBox.height - 28 - 150;
+      const bottomLimit = usable - floor;
       await expect
-        .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - limit))
+        .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - bottomLimit))
         .toBeLessThanOrEqual(2);
       await pointer.up();
 
       await page.waitForTimeout(300);
-      expect(Math.abs(((await top.boundingBox())?.height ?? 0) - limit)).toBeLessThanOrEqual(2);
+      expect(Math.abs(((await top.boundingBox())?.height ?? 0) - bottomLimit)).toBeLessThanOrEqual(2);
+      expect(Math.abs(((await bottom.boundingBox())?.height ?? 0) - floor)).toBeLessThanOrEqual(2);
+      const lowGrip = await grip.boundingBox();
+      if (lowGrip == null) {
+        throw new Error("the grip has no box");
+      }
+      expect(lowGrip.height).toBe(44);
+      expect(lowGrip.y + lowGrip.height).toBeLessThanOrEqual(
+        splitBox.y + splitBox.height,
+      );
+
+      const up = await press(page, input, grip, { holdMs: 0 });
+      await up.moveTo({ x: point.x, y: splitBox.y - 200 });
+      await expect
+        .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - floor))
+        .toBeLessThanOrEqual(2);
+      await up.up();
+
+      await page.waitForTimeout(300);
+      expect(Math.abs(((await top.boundingBox())?.height ?? 0) - floor)).toBeLessThanOrEqual(2);
+      const highGrip = await grip.boundingBox();
+      if (highGrip == null) {
+        throw new Error("the grip has no box");
+      }
+      expect(highGrip.height).toBe(44);
+      expect(highGrip.y).toBeGreaterThanOrEqual(splitBox.y);
+
+      // The keyboard takes the same range, one row at a time.
+      await grip.focus();
+      for (let i = 0; i < 40; i++) {
+        await page.keyboard.press("ArrowUp");
+      }
+      await expect
+        .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - bottomLimit))
+        .toBeLessThanOrEqual(2);
+      for (let i = 0; i < 60; i++) {
+        await page.keyboard.press("ArrowDown");
+      }
+      await expect
+        .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - floor))
+        .toBeLessThanOrEqual(2);
     });
   });
 }
+
+test("a shorter screen keeps both panes above their floor", async ({ page }) => {
+  await openPlanner(page);
+  const top = page.getByTestId("day-split:top");
+  const bottom = page.getByTestId("day-split:bottom");
+  const grip = page.getByTestId("day-split:grip");
+  // motion.split.minPane: one row.
+  const floor = 44;
+  const box = (await grip.boundingBox())!;
+
+  const pointer = await press(page, "mouse", grip, { holdMs: 0 });
+  await pointer.moveTo({ x: box.x + box.width / 2, y: 0 });
+  await pointer.up();
+  await expect
+    .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - floor))
+    .toBeLessThanOrEqual(2);
+  expect(Number(await grip.getAttribute("aria-valuenow"))).toBeLessThan(10);
+
+  await page.setViewportSize({ width: 360, height: 640 });
+  await expect
+    .poll(async () => Math.abs(((await top.boundingBox())?.height ?? 0) - floor))
+    .toBeLessThanOrEqual(2);
+  expect(((await bottom.boundingBox())?.height ?? 0)).toBeGreaterThan(floor);
+  await expect
+    .poll(async () => Number(await grip.getAttribute("aria-valuenow")))
+    .toBeGreaterThan(10);
+});
 
 test("a touch that moves before its hold scrolls the pane and lifts nothing", async ({ page }) => {
   await openPlanner(page);

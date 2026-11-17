@@ -358,3 +358,31 @@ Proof: `pagers.spec.ts` reads the live page's layout offset on a
 non-first tab, 1200 px before the fix and 0 after. The emulator, with
 the release APK of `bd15a24`, reads the rows and banners on Errands
 and Focus. The lists swipe journey passes end to end.
+
+## Amendment, 2026-11-16: the split floor is one row
+
+Ticket 0061 gave both day-split panes a 150pt floor. Before it, the hook
+floored only the timeline pane. The list pane could collapse, and the
+handle reached the bottom edge. After 0061 the handle stopped 150pt
+from each edge of the split. It travelled 324pt of a 624pt body on a
+412 by 915 screen. On a 360 by 640 screen it travelled 49pt of 349pt.
+
+Each pane now keeps a 44pt floor: one touch target. That is also the
+height of the list's section head and of the grip's own box. The handle
+travels 536pt of 624pt on the tall screen and 261pt of 349pt on the
+short one.
+
+Alternative: let a pane collapse to nothing, as it did before 0061. The
+grip box is 44pt tall and hangs 8pt past the divider. A pane of zero
+clips 8pt of the grip at that edge, because the split clips its
+overflow. The 44pt floor keeps the whole target reachable.
+
+The clamp is one worklet in `lib/motion/split-math`. The drag, the
+keyboard step and a layout change all read it. A new height re-clamps
+the stored share. A share from a tall screen can put a pane under its
+floor on a short one. The preview draws that same stored share, so the
+two pages stay in step.
+
+Proof: `planner-drag.spec.ts` drags the grip to both edges and reads
+the pane heights. It also shrinks the viewport and reads the re-clamped
+share.

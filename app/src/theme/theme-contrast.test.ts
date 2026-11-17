@@ -48,6 +48,18 @@ const MARK_PAIRS: { foreground: keyof Palette; background: keyof Palette }[] = [
   { foreground: "focusRing", background: "pressed" },
 ];
 
+/**
+ * The two places done work still shows: a done row's name on its card
+ * (`surface`) and the Completed group's header on the page (`paper`).
+ * Both read `inkMuted`, and both must clear AA. Named apart from the
+ * list above so a palette change that dims done work fails a test that
+ * says what broke.
+ */
+const DONE_PAIRS: { foreground: keyof Palette; background: keyof Palette }[] = [
+  { foreground: "inkMuted", background: "surface" },
+  { foreground: "inkMuted", background: "paper" },
+];
+
 function channel(value: number): number {
   const c = value / 255;
   return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
@@ -94,6 +106,17 @@ describe("theme contrast", () => {
       const failures = MARK_PAIRS.flatMap(({ foreground, background }) => {
         const got = ratio(palette[foreground], palette[background]);
         return got < MARK_MIN
+          ? [`${foreground} on ${background}: ${got.toFixed(2)}`]
+          : [];
+      });
+      expect(failures).toEqual([]);
+    });
+
+    it(`${name} keeps done work at ${MIN} to 1`, () => {
+      const palette = THEMES[name];
+      const failures = DONE_PAIRS.flatMap(({ foreground, background }) => {
+        const got = ratio(palette[foreground], palette[background]);
+        return got < MIN
           ? [`${foreground} on ${background}: ${got.toFixed(2)}`]
           : [];
       });
