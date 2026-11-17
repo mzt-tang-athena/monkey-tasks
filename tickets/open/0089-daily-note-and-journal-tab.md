@@ -83,6 +83,17 @@ shows a retry. The screen does not use the task store.
 - [ ] An ADR records the path, the block grammar, append-only and the
       create choice.
 
+## Amendments
+
+### 2026-11-17, the bar is icon-only
+
+Ticket 0095 settles the bar. Every destination shows its symbol only,
+with no visible label, and keeps a 44 point target and an accessible
+name. The destinations are Lists, Planner, Journal and Inbox Notes.
+The Add action keeps its text and sits in the action slot. The tab
+width is 48 points, so four destinations plus Add fit at 360 points.
+See `docs/adr/20261117-icon-only-bottom-bar.md`.
+
 ## Outcome
 
 (filled in before moving to done/)
