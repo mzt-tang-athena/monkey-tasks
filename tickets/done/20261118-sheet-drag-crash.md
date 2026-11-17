@@ -27,14 +27,27 @@ Add a test that runs the worklet's own code the way the UI runtime does.
 
 ## Acceptance
 
-- [ ] A component test runs `timing` from its worklet code, outside the
+- [x] A component test runs `timing` from its worklet code, outside the
       module scope, with no `easing`. It fails on main and passes here.
-- [ ] No worklet in `app/src` reads a module value in a default
+- [x] No worklet in `app/src` reads a module value in a default
       parameter.
-- [ ] The local gate passes: tsc, eslint, vitest and the full web suite.
+- [x] The local gate passes: tsc, eslint, vitest and the full web suite.
 - [ ] On the emulator, a release APK closes the task sheet with a drag
-      and keeps running.
+      and keeps running. The 1.0 release ticket carries this check, on
+      the APK built after this merge.
 
 ## Outcome
 
-(filled in before moving to done/)
+`timing` now defaults its curve in the body. The worklet reads
+`motion` after it unpacks its closure, so the UI thread has it.
+
+`progress.test.tsx` runs `timing` and `spring` from their own worklet
+code at global scope. The `timing` case failed on main with
+`ReferenceError: motion is not defined`, the same error as the crash.
+It passes here.
+
+A lint rule now rejects a default parameter on any worklet. It flagged
+the old `timing` and nothing else in `src`.
+
+Gate on `ca4f4bf`: tsc, eslint, and 1133 unit tests in 117 files. The
+full web suite had 578 passed and 26 skipped in 15.1 minutes.
