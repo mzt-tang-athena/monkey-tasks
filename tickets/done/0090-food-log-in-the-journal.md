@@ -80,4 +80,10 @@ On a release APK through SAF, a food send wrote
 `- Ate: eggs on toast #food` under the current time. The note kept all
 earlier bytes and the trailing embed stayed last.
 
+Revised 2026-11-17. The band above the bottom bar repeated the labels
+that the page already showed, so we removed it. A fixed header now holds
+the date and the count. The labels stay on the page. The header is the
+seat for calories and other numbers later (ADR 20261112-journal-format,
+amendment 2026-11-17).
+
 The marker stays provisional until the operator uses it for a while.

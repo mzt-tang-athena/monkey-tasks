@@ -336,15 +336,15 @@ period label read it. A week column shows the chips that fit and a
 
 | Piece | Holds |
 |---|---|
-| `journal-screen.tsx` | The day's query, the page, the Food band and the bottom bar's action slot. |
+| `journal-screen.tsx` | The day's query, the page, the header and the bottom bar's action slot. |
 | `components/journal-dock.tsx` | The Add button, the entry sheet and the failure toast. |
 | `components/entry-form.tsx` | The multiline field, the Food chip and the send control. |
+| `components/journal-header.tsx` | The date and today's food count. The seat for later stats. |
 | `components/journal-paper.tsx` | The ruled page, the blocks and the landing mark. |
-| `components/food-strip.tsx` | Today's food count and labels, read from the same page. |
 | `components/reference-sheet.tsx` | A read-only look at `References/<name>.md`. |
 | `hooks/use-entry-draft.ts` | The draft, the send and the retry. |
 | `hooks/use-journal-sheet.ts` | The sheet's clock, the Food chip and the failure toast. |
-| `lib/labels.ts` | The date, the food line and the failure words. |
+| `lib/labels.ts` | The date, the food stat name and the failure words. |
 
 `lib/journal/format.ts` holds the note grammar as pure functions. A block
 is a line that is only `HH:MM` and the `- ` bullets under it.
@@ -355,8 +355,9 @@ note, with no frontmatter and no embed. A retry re-reads, so an edit from
 Obsidian is never clobbered.
 
 A food entry is `- Ate: ... #food` inside a block. The `#food` tag is the
-machine marker, and the `Ate:` prefix is for the eye. The Food band above
-the bottom bar counts today's entries and shows their labels. The marker
+machine marker, and the `Ate:` prefix is for the eye. A fixed header
+shows the date and today's food count. The labels stay on the page, and
+the header is the seat for calories and other numbers later. The marker
 is provisional (ADR 20261112-journal-format).
 
 The journal does not use the task store. Its append shares `VAULT_SCOPE`

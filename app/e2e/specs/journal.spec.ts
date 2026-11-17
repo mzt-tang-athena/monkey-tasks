@@ -70,9 +70,9 @@ test("a sent entry lands above the embed and moves no earlier byte", async ({
   await expect(page.getByText("Made soup")).toBeVisible();
 });
 
-test("a food entry reaches the note and the Food strip", async ({ page }) => {
+test("a food entry reaches the note and the header count", async ({ page }) => {
   await openJournal(page);
-  await expect(page.getByTestId("food-strip")).toContainText("2");
+  await expect(page.getByTestId("food-stat")).toContainText("2");
 
   await openComposer(page);
   await page.getByRole("button", { name: "food entry: off" }).click();
@@ -81,12 +81,10 @@ test("a food entry reaches the note and the Food strip", async ({ page }) => {
   await page.getByRole("button", { name: "send entry" }).click();
 
   await expectNote(page, "- Ate: toast with jam #food");
-  const strip = page.getByTestId("food-strip");
-  await expect(strip).toContainText("3");
-  await expect(strip).toContainText("toast with jam");
-  await expect(
-    page.getByLabel(/food today, 3 entries: .*toast with jam/),
-  ).toBeVisible();
+  const stat = page.getByTestId("food-stat");
+  await expect(stat).toContainText("3");
+  await expect(stat).not.toContainText("toast with jam");
+  await expect(page.getByLabel("food today, 3 entries")).toBeVisible();
   await expect(page.getByText("toast with jam", { exact: true })).toBeVisible();
 });
 
@@ -94,7 +92,8 @@ test("the first send creates the note on an empty vault", async ({ page }) => {
   await page.goto("/journal?vault=");
   await expect(page.getByTestId("journal-screen")).toBeVisible();
   await expect(page.getByText("Nothing written yet today.")).toBeVisible();
-  await expect(page.getByTestId("food-strip")).toContainText("No food logged");
+  await expect(page.getByLabel("food today, no entries")).toBeVisible();
+  await expect(page.getByTestId("food-stat")).toContainText("0");
 
   await sendEntry(page, "the first entry");
   await expectNote(page, "the first entry");

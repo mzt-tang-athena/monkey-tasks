@@ -137,3 +137,20 @@ destinations at 360 points; ticket 0095 owns the fourth.
 The Food band shows labels, not portions. A dashboard that reads the tags
 can arrive before the app shows any number from them.
 
+## Amendment, 2026-11-17: a header holds the date and the stats
+
+The tab had no header. The date sat at the top of the page. The food
+count sat in a band above the bottom bar. The band repeated the food
+labels that the page already showed, so it said nothing new.
+
+The date now sits in a fixed header above the page, with today's food
+count on the right. The page scrolls under the header, so the date stays
+in view on a long day. The labels stay on the page. The header is the
+seat for the numbers that come later, such as calories read from the
+reference notes.
+
+We removed the bottom band. The header always draws, so later stats cause
+no layout jump. This replaces the band in the 2026-11-14 amendment. The
+date now stays in view on a long day.
+
+

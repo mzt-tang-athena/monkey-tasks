@@ -43,18 +43,10 @@ export function dayParts(day: string): DayParts {
   };
 }
 
-/** The Food strip's line: the labels newest last, or a quiet nothing. */
-export function foodLine(labels: string[]): string {
-  return labels.length === 0 ? "No food logged" : labels.join(" · ");
-}
-
-/** What a screen reader hears for the Food strip. */
-export function foodName(labels: string[]): string {
-  const count = labels.length;
+/** What a screen reader hears for the Food band. */
+export function foodName(count: number): string {
   const noun = count === 1 ? "entry" : "entries";
-  return count === 0
-    ? "food today, none logged"
-    : `food today, ${count} ${noun}: ${labels.join(", ")}`;
+  return count === 0 ? "food today, no entries" : `food today, ${count} ${noun}`;
 }
 
 /** A failed send, as the toast reads it. */

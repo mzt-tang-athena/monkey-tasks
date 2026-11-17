@@ -23,18 +23,17 @@ import {
 import { journal, measure, pageGutter, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { isoOf } from "@/utils/dates";
-import { FoodStrip } from "./components/food-strip";
-import { JournalHeading } from "./components/journal-heading";
+import { JournalHeader } from "./components/journal-header";
 import { JournalPaper } from "./components/journal-paper";
 import { ReferenceSheet } from "./components/reference-sheet";
 import { STICK_SLOP } from "./lib/page-grid";
 
 /**
- * The Journal tab. Today's note as a ruled page, the Food band under
- * it, and the composer in the bottom bar's action slot.
+ * The Journal tab. Today's note as a ruled page under a fixed header,
+ * with the composer in the bottom bar's action slot.
  *
- * The screen is a column: chrome, the page, the band, the bar. The page
- * scrolls and the band does not, so the count stays in view while the
+ * The screen is a column: header, the page, the bar. The header holds
+ * the date and the day's food count, so both stay in view while the
  * writing scrolls past. The page opens at its newest line and follows a
  * sent entry down, but a reader who scrolled up keeps their place.
  *
@@ -121,6 +120,7 @@ export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
   return (
     <View testID="journal-screen" style={styles.screen}>
       <View style={[styles.statusStrip, { height: insets.top }]} />
+      <JournalHeader day={day} foodCount={page.food.length} />
       <View style={styles.body}>
         {root == null && booted ? (
           <VaultPrompt
@@ -146,7 +146,6 @@ export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
             />
           }
         >
-          <JournalHeading day={day} />
           {read.status === "loading" ? (
             <LoadingState label="Reading today's note" />
           ) : read.status === "error" ? (
@@ -159,7 +158,6 @@ export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
             <JournalPaper page={page} onReference={setReference} />
           )}
         </MotionScrollView>
-        <FoodStrip food={page.food} />
       </View>
       <BottomBar
         action={dock({ day, onSend: () => setSent((count) => count + 1) })}
@@ -176,7 +174,7 @@ const makeStyles = (colors: Palette) => ({
       backgroundColor: colors.paper,
     },
     statusStrip: {
-      backgroundColor: colors.paper,
+      backgroundColor: colors.surface,
     },
     body: {
       flex: 1,
