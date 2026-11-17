@@ -342,7 +342,8 @@ period label read it. A week column shows the chips that fit and a
 | `journal-screen.tsx` | The day's query, the page, the header and the bottom bar's action slot. |
 | `components/journal-dock.tsx` | The Add button, the entry sheet and the failure toast. |
 | `components/entry-form.tsx` | The multiline field, the Food chip and the send control. |
-| `components/journal-header.tsx` | The date and today's food count. The seat for later stats. |
+| `components/journal-header.tsx` | The month and today's food count. The seat for later stats. |
+| `components/journal-heading.tsx` | The day's serif title and its accent rule, at the top of the page. |
 | `components/journal-paper.tsx` | The ruled page, the blocks and the landing mark. |
 | `components/reference-sheet.tsx` | A read-only look at `References/<name>.md`. |
 | `hooks/use-entry-draft.ts` | The draft, the send and the retry. |
@@ -359,9 +360,10 @@ Obsidian is never clobbered.
 
 A food entry is `- Ate: ... #food` inside a block. The `#food` tag is the
 machine marker, and the `Ate:` prefix is for the eye. A fixed header
-shows the date and today's food count. The labels stay on the page, and
-the header is the seat for calories and other numbers later. The marker
-is provisional (ADR 20261112-journal-format).
+shows the month and today's food count. The day is the page's serif
+title. The labels stay on the page, and the header is the seat for
+calories and other numbers later. The marker is provisional (ADR
+20261112-journal-format).
 
 The journal does not use the task store. Its append shares `VAULT_SCOPE`
 with the task writes, so the vault takes one write at a time. The append
