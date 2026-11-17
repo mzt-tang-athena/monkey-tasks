@@ -5,7 +5,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import type { TaskItem } from "@/types/task";
-import { useCelebrate } from "@/components/motion/celebration";
+import { useTickBurst } from "@/components/motion/celebration";
 import { useProgress } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
 import { taskIsDone } from "@monkey-tasks/schemas";
@@ -51,13 +51,12 @@ function TaskRowBase({
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const { faceStyles } = useTaskRowFace();
-  const celebrate = useCelebrate();
-  const tickRef = React.useRef<React.ComponentRef<typeof View>>(null);
   const [hot, setHot] = React.useState(false);
   // The store is optimistic: a tap flips this row's data in the same
   // frame. The row reads that data and nothing else, so a fast tick,
   // untick, tick sequence has one source of truth.
   const done = task.data != null && taskIsDone(task.data);
+  const { ref: tickRef, play: celebrate } = useTickBurst(done);
 
   // `active` marks a tick that started after mount. It keeps an untick
   // from playing the tick backwards, and keeps a row that mounts done
@@ -110,11 +109,7 @@ function TaskRowBase({
   }));
 
   const press = () => {
-    if (!done) {
-      tickRef.current?.measureInWindow((x, y, width, height) => {
-        celebrate({ x: x + width / 2, y: y + height / 2 });
-      });
-    }
+    celebrate();
     onToggle?.(task);
   };
 

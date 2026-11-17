@@ -359,8 +359,9 @@ month (ADR 0042).
 ## Next
 
 Version 1.0 ships the week of 2026-11-16. A tick now draws a short
-burst above the list, in the active palette (ADR
-20261116-completion-celebration). It plays on a user's tick only.
+burst from the checkbox, in the active palette (ADR
+20261116-completion-celebration). Every tick control plays it, the
+editor sheet's included, and only when the press marks the task done.
 
 The design direction round started. `20261112-design-scale-guard`
 merged in `d26fcae`. It names the spacing and radius scale, moves

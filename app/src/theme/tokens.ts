@@ -71,6 +71,9 @@ export const layers = {
   menu: 40,
   sheetScrim: 50,
   sheet: 60,
+  /** A tick's burst from inside the sheet: over that sheet, under the
+      toast. A press in a sheet is the only tick that can ask for it. */
+  celebrateSheet: 65,
   toast: 70,
 } as const;
 

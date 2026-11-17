@@ -1,6 +1,6 @@
-import type { Page } from "@playwright/test";
+import type { Page, TestInfo } from "@playwright/test";
 import { expect, test } from "../fixtures";
-import { undated } from "../data";
+import { completedNotes, undated } from "../data";
 import { press, row } from "../locators";
 
 type Watched = { burstSeen?: boolean };
@@ -33,6 +33,25 @@ async function burstSeen(page: Page) {
   );
 }
 
+/** The run saw one burst and then none, or no burst at all under
+    reduced motion. */
+async function expectBurstRule(page: Page, testInfo: TestInfo) {
+  if (testInfo.project.name === "reduced-motion") {
+    // A burst would still stand at 150 ms. The watch would have seen
+    // one mount at any point before this read.
+    await page.waitForTimeout(150);
+    expect(await burstSeen(page)).toBe(false);
+    await page.waitForTimeout(600);
+    await expect(page.getByTestId("tick-burst")).toHaveCount(0);
+    return;
+  }
+
+  await expect.poll(() => burstSeen(page)).toBe(true);
+  await expect(page.getByTestId("tick-burst")).toHaveCount(0, {
+    timeout: 2500,
+  });
+}
+
 test.describe("completion celebration", () => {
   test("a tick plays one burst, and it clears itself", async ({
     page,
@@ -47,19 +66,51 @@ test.describe("completion celebration", () => {
     await press(page, tick);
     await expect(tick).toHaveAttribute("aria-checked", "true");
 
-    if (testInfo.project.name === "reduced-motion") {
-      // A burst would still stand at 150 ms. The watch would have seen
-      // one mount at any point before this read.
-      await page.waitForTimeout(150);
-      expect(await burstSeen(page)).toBe(false);
-      await page.waitForTimeout(600);
-      await expect(page.getByTestId("tick-burst")).toHaveCount(0);
-      return;
-    }
+    await expectBurstRule(page, testInfo);
+  });
 
-    await expect.poll(() => burstSeen(page)).toBe(true);
-    await expect(page.getByTestId("tick-burst")).toHaveCount(0, {
-      timeout: 2500,
-    });
+  test("a mark done in the editor sheet plays a burst, and it clears", async ({
+    page,
+  }, testInfo) => {
+    await page.goto("/");
+    const target = row(page, undated.first);
+    await press(page, target.getByRole("button", { name: undated.first }));
+    const editor = page.getByRole("dialog", { name: "Task" });
+    const mark = editor.getByRole("button", { name: "mark done" });
+    await expect(mark).toBeVisible();
+    await watchBurst(page);
+
+    await press(page, mark);
+    await expect(target.getByRole("checkbox")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+
+    await expectBurstRule(page, testInfo);
+  });
+
+  test("a sheet that reopens a done task plays no burst", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const target = row(page, completedNotes.timed);
+    await press(page, target.getByRole("button", { name: completedNotes.timed }));
+    const editor = page.getByRole("dialog", { name: "Task" });
+    const reopen = editor.getByRole("button", { name: "mark not done" });
+    await expect(reopen).toBeVisible();
+    await watchBurst(page);
+
+    await press(page, reopen);
+    await expect(target.getByRole("checkbox")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+
+    // No project reduces motion here: the sheet's tick never plays on a
+    // reopen, whatever the motion setting.
+    await page.waitForTimeout(150);
+    expect(await burstSeen(page)).toBe(false);
+    await page.waitForTimeout(600);
+    await expect(page.getByTestId("tick-burst")).toHaveCount(0);
   });
 });

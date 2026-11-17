@@ -47,24 +47,31 @@ per frame. Mount nothing on the row's path unless the user ticks.
 
 ## Outcome
 
-A tick now draws a 520 ms burst above the list, from the checkbox the
-user pressed. The look is a ring plus eight dots in the active
-palette's `accent` and `accentDeep`. The burst stays after the row
-moves to Completed, so the 320 ms regroup does not cut it. It draws at
-`layers.celebrate`, above the list and under the bottom bar, and takes
-no press.
+A tick now draws a 520 ms burst from the checkbox the user pressed. The
+look is a ring plus eight dots in the active palette's `accent` and
+`accentDeep`. The burst stays after the row moves to Completed, so the
+320 ms regroup does not cut it. A page tick draws at
+`layers.celebrate`, above the list and under the bottom bar. A tick
+inside the editor sheet draws at `layers.celebrateSheet`, over the
+sheet. Both take no press.
+
+Every tick control plays it. That is a Lists row, a Planner day or list
+row, a Planner timeline chip, and the editor sheet's tick. One hook,
+`useTickBurst(done)`, holds the rule.
 
 The press triggers the burst. The data alone never does. An undo, a
-sync and a reload play nothing. Reduced motion mounts nothing.
+sync and a reload play nothing. A press that reopens a done task plays
+nothing either. Reduced motion mounts nothing.
 
 Cost per burst: one `measureInWindow` call, two provider renders, nine
 animated views and nine worklets on one shared value. No timer, no JS
 work per frame, no new dependency.
 
-Tests: three component tests for the trigger and one for reduced
+Component tests cover the trigger, the sheet's tick and reduced
 motion. An e2e spec watches the document for the mount in both
-projects. Evidence is in
-`app/build/verify/evidence/completion-celebration/`. The evidence is the web
-preview only. No Android APK ran on a device or emulator.
+projects. It covers a row tick, a sheet tick and a sheet reopen.
+Evidence is in `app/build/verify/evidence/completion-celebration/`:
+the web preview's frame series, and a release APK's frames on the
+emulator.
 
 ADR: `docs/adr/20261116-completion-celebration.md`. PR: #147.

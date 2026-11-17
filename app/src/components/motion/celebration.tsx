@@ -10,11 +10,25 @@ import Animated, {
 import { Overlay } from "@/components/ui/overlay-host";
 import { timing } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
-import { radii } from "@/theme/tokens";
+import { radii, type Layer } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 
 /** A point in window space, the center of the checkbox the user ticked. */
 export type CelebrationAt = { x: number; y: number };
+
+/**
+ * The surface the tick happened on. A burst from the page draws under
+ * every bar and menu. A burst from inside a sheet draws over that
+ * sheet, or the panel would hide it as the sheet closes.
+ */
+export type CelebrationSurface = "page" | "sheet";
+
+const layerOf: Record<CelebrationSurface, Layer> = {
+  page: "celebrate",
+  sheet: "celebrateSheet",
+};
+
+const surfaces = ["page", "sheet"] as const;
 
 /** The most bursts on screen at once, so a fast run of ticks cannot
     pile up nodes. Each one is gone in half a second. */
@@ -49,25 +63,43 @@ const dots = [
   };
 });
 
-type Burst = CelebrationAt & { id: number };
+type Burst = CelebrationAt & { id: number; surface: CelebrationSurface };
 
-const CelebrateContext = React.createContext<(at: CelebrationAt) => void>(
-  () => {},
-);
+type Celebrate = (at: CelebrationAt, surface?: CelebrationSurface) => void;
+
+const CelebrateContext = React.createContext<Celebrate>(() => {});
 
 /**
- * The one way a tick asks for a burst. A component with no provider
- * above it, as a unit test renders it, celebrates nothing.
+ * The burst behind one tick control. `ref` goes on the view that draws
+ * the circle, and `play` runs at the start of the control's press. It
+ * reads the circle's place on screen, and a press that reopens a done
+ * task plays nothing. A component with no provider above it, as a unit
+ * test renders it, celebrates nothing.
  */
-export function useCelebrate(): (at: CelebrationAt) => void {
-  return React.useContext(CelebrateContext);
+export function useTickBurst(
+  done: boolean,
+  surface: CelebrationSurface = "page",
+): { ref: React.RefObject<React.ComponentRef<typeof View> | null>; play: () => void } {
+  const celebrate = React.useContext(CelebrateContext);
+  const ref = React.useRef<React.ComponentRef<typeof View>>(null);
+  const play = React.useCallback(() => {
+    if (done) {
+      return;
+    }
+    ref.current?.measureInWindow((x, y, width, height) => {
+      celebrate({ x: x + width / 2, y: y + height / 2 }, surface);
+    });
+  }, [celebrate, done, surface]);
+  return { ref, play };
 }
 
 /**
  * Draws each tick's burst above the screen for `motion.ms.celebrate`.
- * It sits under the theme and the overlay host in the root layout.
- * A burst draws at `layers.celebrate`, so it never covers the bottom
- * bar, and it takes no press. With reduced motion it never mounts.
+ * It sits under the theme and the overlay host in the root layout, and
+ * above every surface that can tick. A burst draws at its surface's
+ * layer: under the bars and menus for a page tick, over the sheet for
+ * a tick inside one. It takes no press, and with reduced motion it
+ * never mounts.
  *
  * It draws outside the row on purpose: a ticked row moves to
  * Completed after the tick's 320 ms (ADR 0034), and a burst inside it
@@ -78,15 +110,15 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
   const [bursts, setBursts] = React.useState<Burst[]>([]);
   const nextId = React.useRef(1);
 
-  const celebrate = React.useCallback(
-    (at: CelebrationAt) => {
+  const celebrate = React.useCallback<Celebrate>(
+    (at, surface = "page") => {
       if (reduced) {
         return;
       }
       const id = nextId.current++;
       setBursts((current) => [
         ...current.slice(-(maxBursts - 1)),
-        { ...at, id },
+        { ...at, id, surface },
       ]);
     },
     [reduced],
@@ -99,13 +131,19 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
   return (
     <CelebrateContext.Provider value={celebrate}>
       {children}
-      {bursts.length === 0 ? null : (
-        <Overlay layer="celebrate">
-          {bursts.map((burst) => (
-            <TickBurst key={burst.id} at={burst} onDone={done} />
-          ))}
-        </Overlay>
-      )}
+      {surfaces.map((surface) => {
+        const here = bursts.filter((burst) => burst.surface === surface);
+        if (here.length === 0) {
+          return null;
+        }
+        return (
+          <Overlay key={surface} layer={layerOf[surface]}>
+            {here.map((burst) => (
+              <TickBurst key={burst.id} at={burst} onDone={done} />
+            ))}
+          </Overlay>
+        );
+      })}
     </CelebrateContext.Provider>
   );
 }

@@ -99,3 +99,45 @@ data change with no press, and reduced motion play nothing.
 The e2e spec watches the document for the burst. It proves one mount
 on a tick and no standing burst once the run ends. The reduced motion
 project proves no mount.
+
+## Amendment, 2026-11-17: every tick plays, from the surface it ticked
+
+The editor became a sheet (ADR 20261116-task-editor-sheet) while this
+decision was in review. Two things changed.
+
+**The provider sits above the editor.** In the root layout the
+celebration wraps the command pane and the editor provider, all inside
+`OverlayHost`. It has to sit inside the host, because the burst is an
+overlay and takes the host's one z order. It has to sit above the
+editor, because the sheet's tick asks the same provider for a burst.
+
+**The sheet's tick plays too.** A mark done in the sheet was silent, so
+a tick felt different there. Every tick control now plays the burst
+from its own circle. The rule is one hook, `useTickBurst(done)`. A
+press plays when it marks the task done. A press that reopens a done
+task plays nothing. The sheet also shows the done state, so its control
+says what it does. It reads `mark done`, or `mark not done` on a done
+task.
+
+The surfaces with a tick press, and whether each plays:
+
+| Surface | Plays |
+| --- | --- |
+| A Lists row | yes |
+| A Planner day row and its overdue group | yes |
+| A Planner week and month list row | yes |
+| A Planner timeline task chip | yes |
+| The editor sheet's tick | yes, when it marks done |
+
+**The layer follows the surface.** A burst from the page draws at
+`layers.celebrate`, between the content and the bottom bar, as above. A
+burst from inside the sheet draws at `layers.celebrateSheet`, over the
+sheet and under the toast. At the page layer the opaque panel would
+hide it. The sheet also leaves in 220 ms, so the user would see the
+burst appear late and half faded. Only a press inside the sheet can ask
+for that layer. The sheet's scrim takes every other press while it
+shows.
+
+The Android pass now backs the look on the UI thread. The frames are in
+`app/build/verify/evidence/completion-celebration/android/`.
+
