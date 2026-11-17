@@ -4,7 +4,7 @@ import type { VaultAdapter } from "@/lib/vault/adapter";
 import { useVault } from "@/lib/vault/vault-provider";
 import type { TaskItem } from "@/types/task";
 import { cachedRows, tasksKey, type TaskListData } from "../query";
-import { VAULT_SCOPE, deferRead, runDeferredReads } from "../read-gate";
+import { VAULT_SCOPE, deferRead, runDeferredReads } from "@/lib/vault/read-gate";
 import { syncTaskReminders } from "../reminder-sync";
 import { PENDING, rowById } from "../rows";
 import { taskFromText } from "../task-notes";

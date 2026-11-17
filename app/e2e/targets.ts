@@ -36,7 +36,8 @@ export type SmallTarget = {
 /**
  * Every visible widget smaller than 44 by 44, from its layout box.
  * `root` is a CSS selector: the whole page by default, or one surface
- * such as an open dialog.
+ * such as an open dialog. A link inline in running text is exempt, per
+ * WCAG 2.5.8; a standalone link or any button still counts.
  *
  * A surface that plays an entrance grows from a smaller scale, so its
  * rows take less room on screen while it plays. The floor is about the
@@ -64,9 +65,46 @@ export async function smallTargets(
         return scale;
       };
       const scope = document.querySelector(selector) ?? document.body;
+      /**
+       * WCAG 2.5.8 exempts a target inside a sentence: the text around
+       * it bounds its size, so growing it would move the text. A link
+       * qualifies only when it renders inline with other words in its
+       * line. A button, or a link that owns its line, keeps the floor.
+       */
+      const inlineLinkInText = (element: Element) => {
+        if (getComputedStyle(element).display !== "inline") {
+          return false;
+        }
+        if (
+          element.closest(
+            '[role="button"], [role="tab"], [role="menuitem"], [role="checkbox"], [role="radio"], [role="switch"]',
+          ) != null
+        ) {
+          return false;
+        }
+        const parent = element.parentElement;
+        if (parent == null) {
+          return false;
+        }
+        let beside = "";
+        for (const node of parent.childNodes) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            beside += node.textContent ?? "";
+          } else if (
+            node instanceof Element &&
+            node.getAttribute("role") !== "link"
+          ) {
+            beside += node.textContent ?? "";
+          }
+        }
+        return beside.trim() !== "";
+      };
       const small: SmallTarget[] = [];
       for (const role of roles) {
         for (const element of scope.querySelectorAll(`[role="${role}"]`)) {
+          if (role === "link" && inlineLinkInText(element)) {
+            continue;
+          }
           const box = element.getBoundingClientRect();
           const scale = scaleOf(element);
           const width = box.width / scale;

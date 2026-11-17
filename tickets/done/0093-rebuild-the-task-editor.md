@@ -55,8 +55,12 @@ is Todoist's task sheet.
 
 The editor is a bottom sheet that opens over the
 screen that shows the task. `app/src/components/ui/sheet.tsx` already has
-the scrim, Android back, the drag to dismiss and the keyboard ride
-(ADR 0014).
+the scrim, Android back and the keyboard ride (ADR 0014).
+
+Note 2026-11-17: this spec first said the sheet already had drag to
+dismiss. It did not. The drag shipped after PR 155. A drag down on the
+sheet's handle or on a header row now closes it. ADR
+`20261116-task-editor-sheet` records how the drag shares touches.
 
 From top to bottom:
 
@@ -134,8 +138,8 @@ inside the sheet. The editor has no split view and no route of its own.
 ### Keyboard (question 5)
 
 The sheet rides the keyboard. The title stays above it. The tiles
-scroll. A scrim tap, Android back or a drag down dismisses
-the sheet. The note editor has its own Done control in its header.
+scroll. A scrim tap, Android back or a drag down on the handle or the
+header dismisses the sheet. The note editor has its own Done control in its header.
 
 ### Subtasks (question 6)
 

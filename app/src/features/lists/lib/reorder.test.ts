@@ -61,4 +61,33 @@ describe("reorderItems", () => {
       ["C", 3],
     ]);
   });
+
+  it("renumbers the tab from the top to the end and back", () => {
+    const items = [task("A"), task("B"), task("C"), task("D")];
+
+    expect(names(reorderItems(items, 0, items.length))).toEqual([
+      ["B", 1],
+      ["C", 2],
+      ["D", 3],
+      ["A", 4],
+    ]);
+
+    const ordered = [task("B", 1), task("C", 2), task("D", 3), task("A", 4)];
+
+    expect(names(reorderItems(ordered, 3, 0))).toEqual([
+      ["A", 1],
+      ["B", 2],
+      ["C", 3],
+      ["D", 4],
+    ]);
+  });
+
+  it("writes only the rows whose number changed", () => {
+    const ordered = [task("A", 1), task("B", 2), task("C", 3), task("D", 4)];
+
+    expect(names(reorderItems(ordered, 1, 3))).toEqual([
+      ["C", 2],
+      ["B", 3],
+    ]);
+  });
 });

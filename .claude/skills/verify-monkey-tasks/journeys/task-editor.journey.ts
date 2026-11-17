@@ -252,3 +252,34 @@ test("delete shows a toast, and Undo puts the exact text back", async ({ page },
   await expect(row(page, undated.second)).toBeVisible();
   expect(await noteText(page, path)).toBe(before);
 });
+
+test("a drag down on the handle follows the hand and closes the sheet", async ({ page }, info) => {
+  const shot = (name: string) =>
+    page.screenshot({ path: info.outputPath(`${name}.png`) });
+  const editor = await openEditor(page);
+  const rest = (await editor.boundingBox())?.y ?? Number.NaN;
+  await shot("16-drag-rest");
+
+  const handle = await editor.getByTestId("sheet-handle").boundingBox();
+  if (handle == null) {
+    throw new Error("the sheet shows no handle");
+  }
+  const x = handle.x + handle.width / 2;
+  const y = handle.y + handle.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 150, { steps: 15 });
+  // Gesture handler counts the travel from where the pan activated, so
+  // the panel trails the hand by that slop and never jumps.
+  await expect
+    .poll(async () => ((await editor.boundingBox())?.y ?? rest) - rest, {
+      message: "the panel follows the hand",
+    })
+    .toBeGreaterThan(110);
+  await shot("17-drag-mid");
+
+  await page.mouse.up();
+  await expect(editor).toHaveCount(0);
+  await expect(row(page, undated.second)).toBeVisible();
+  await shot("18-drag-closed");
+});

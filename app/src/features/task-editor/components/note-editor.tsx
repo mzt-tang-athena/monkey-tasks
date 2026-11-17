@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useKeyboardState } from "react-native-keyboard-controller";
+import { SheetGrab } from "@/components/motion/sheet-drag";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { radius, spacing, type, type Palette } from "@/theme/tokens";
@@ -17,7 +18,8 @@ import { useSheetClock } from "../hooks/use-sheet-clock";
 /**
  * The note editor: a full height surface over the editor sheet, with a
  * plain markdown field. Done writes the text and returns. The scrim,
- * Escape and Android back write it too, so no keystroke is lost.
+ * Escape, Android back and a drag down on the header write it too, so
+ * no keystroke is lost.
  */
 export function NoteEditor({
   open,
@@ -72,14 +74,16 @@ export function NoteEditor({
           },
         ]}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Note</Text>
-          <Button
-            label="Done"
-            accessibilityLabel="done with the note"
-            onPress={() => onClose(draft === text ? null : draft)}
-          />
-        </View>
+        <SheetGrab>
+          <View style={styles.header}>
+            <Text style={styles.title}>Note</Text>
+            <Button
+              label="Done"
+              accessibilityLabel="done with the note"
+              onPress={() => onClose(draft === text ? null : draft)}
+            />
+          </View>
+        </SheetGrab>
         <TextInput
           value={draft}
           onChangeText={setDraft}

@@ -112,6 +112,9 @@ Android asks once for permission to install from the browser or file
 manager. The build is a release: JavaScript rides inside the APK, so
 the app runs without Metro.
 
+`CHANGELOG.md` lists what each release adds or changes, in plain words.
+Each GitHub release repeats its section.
+
 ### Develop against a phone without rebuilding
 
 The release APK takes about 45 minutes and cannot load code from Metro.
@@ -171,7 +174,7 @@ then. That keeps every group on the list full.
 
 | Seed | Holds |
 |---|---|
-| `default` | 16 tasks and 9 list notes. `vault:check` finds nothing. |
+| `default` | 16 tasks, 9 list notes, one journal day and one reference. `vault:check` finds nothing. |
 | `repair` | `Broken note.md` and `Lists/Garden.md`, for the repair block. |
 
 With no `?vault=` in the page address, the preview loads `default`,
@@ -219,12 +222,13 @@ The app code in `app/src` follows the Bulletproof React layout
 | Folder | Holds |
 |---|---|
 | `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
-| `features/<name>` | The UI of one feature: `capture`, `command`, `diagnostics`, `lists`, `planner`, `task-editor`. |
+| `features/<name>` | The UI of one feature: `capture`, `command`, `diagnostics`, `journal`, `lists`, `planner`, `task-editor`. |
 | `components` | Shared UI. `components/ui` holds the primitives. |
 | `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing`, `MotionScrollView` and the tick's `Celebration`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
-| `lib` | Libraries set up for this app: `vault` (the adapter port, its SAF and memory adapters, and the sample notes), `react-query`, `recurrence`, `notifications`. `lib/alerts` holds the ring shape and the acknowledged groups. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
+| `stores/journal` | The daily note query, the reference read and the append mutation. It shares the vault scope and reads no task state. |
+| `lib` | App libraries: `vault` (the adapter port, its SAF and memory adapters, sample notes), `journal` (the note grammar and file I/O), `react-query`, `recurrence`, `notifications`. `lib/alerts` holds the ring shape and the acknowledged groups. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
 | `types` | Shared types, such as `TaskItem`. |
 | `utils` | Pure helpers: dates, YAML, schema errors. |
 | `theme` | Design tokens. |
@@ -328,6 +332,41 @@ and when the app returns to the foreground. The planner route and every
 period label read it. A week column shows the chips that fit and a
 "+N more" line (ADR 0041).
 
+### Journal
+
+`features/journal` shows today's daily note as a ruled page. It reads
+`Journal/Daily/YYYY-MM-DD.md` and appends to it. It never rewrites a line.
+
+| Piece | Holds |
+|---|---|
+| `journal-screen.tsx` | The day's query, the page, the header and the bottom bar's action slot. |
+| `components/journal-dock.tsx` | The Add button, the entry sheet and the failure toast. |
+| `components/entry-form.tsx` | The multiline field, the Food chip and the send control. |
+| `components/journal-header.tsx` | The date and today's food count. The seat for later stats. |
+| `components/journal-paper.tsx` | The ruled page, the blocks and the landing mark. |
+| `components/reference-sheet.tsx` | A read-only look at `References/<name>.md`. |
+| `hooks/use-entry-draft.ts` | The draft, the send and the retry. |
+| `hooks/use-journal-sheet.ts` | The sheet's clock, the Food chip and the failure toast. |
+| `lib/labels.ts` | The date, the food stat name and the failure words. |
+
+`lib/journal/format.ts` holds the note grammar as pure functions. A block
+is a line that is only `HH:MM` and the `- ` bullets under it.
+`planAppend` builds the next text and keeps every existing byte.
+`lib/journal/daily-note.ts` is the only file that reads and writes the
+note. A read never creates. The first send makes the folders and the
+note, with no frontmatter and no embed. A retry re-reads, so an edit from
+Obsidian is never clobbered.
+
+A food entry is `- Ate: ... #food` inside a block. The `#food` tag is the
+machine marker, and the `Ate:` prefix is for the eye. A fixed header
+shows the date and today's food count. The labels stay on the page, and
+the header is the seat for calories and other numbers later. The marker
+is provisional (ADR 20261112-journal-format).
+
+The journal does not use the task store. Its append shares `VAULT_SCOPE`
+with the task writes, so the vault takes one write at a time. The append
+stays out of the Lists failure banner.
+
 Imports follow four zones:
 
 1. A feature imports no other feature.
@@ -394,7 +433,7 @@ three child tickets:
 
 The feature queue:
 
-- 0088 the journal tab, with 0089 and 0090
+- 0088 the journal tab, built with 0089 and 0090 in PR #143
 - 0091 reference notes on a task
 - 0092 optional quests and evergreen tasks, a discovery
 - 0093 the task editor rebuild, shipped in #155. The phone pass for
@@ -415,11 +454,12 @@ Open feature tickets:
 - 0065 the list menu actions
 - 0003, 0005 and 0008 carry the larger ideas.
 
-The app has two tabs today, Lists and Planner, and the journal joins
-them in 0088. The Lists tab shows Main and the list notes. Main holds
-the tasks with no list. Any other tab shows the tasks whose `list`
-carries that name. My order makes each tab one flat list (ADR 0015 and
-its 2026-11-11 amendment, `20261111-one-list-and-tab-order`).
+The app has three tabs today, Lists, Planner and Journal. The Lists tab
+shows Main and the list notes. Main holds the tasks with no list. Any
+other tab shows the tasks whose `list` carries that name. My order makes
+each tab one flat list (ADR 0015 and its 2026-11-11 amendment,
+`20261111-one-list-and-tab-order`). The Journal tab shows today's note
+and appends to it.
 
 The vault now serves more than `Tasks/`. The journal appends to
 `Journal/Daily/YYYY-MM-DD.md`, and the reference picker reads
@@ -437,9 +477,9 @@ Phases:
    the vocabulary (0002, ADR 0005). Done. The package lives in the
    central contracts repo (0007, ADR 0007).
 4. MVP screens: focus list, upcoming reminders, calendar, task editor,
-   note viewer (0003, children 0009 to 0013). In progress. Lists and
-   Planner exist, and the task editor sheet shipped in #155. The note
-   viewer shows a note without edits.
+   note viewer (0003, children 0009 to 0013). In progress. Lists,
+   Planner and Journal exist, and the task editor sheet shipped in
+   #155. The note viewer shows a note without edits.
 5. Capture: quick capture with offline natural language dates. It uses
    chrono-node and rrule.js. Unparsed lines go to athena agents later
    (0006). Done.

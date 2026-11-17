@@ -6,7 +6,7 @@ import {
 import type { VaultAdapter } from "@/lib/vault/adapter";
 import type { BrokenList, ListItem, TaskItem } from "@/types/task";
 import { loadVault } from "./load-vault";
-import { vaultIdle } from "./read-gate";
+import { vaultIdle } from "@/lib/vault/read-gate";
 import { carryIds } from "./rows";
 
 /** What the list query caches: the folder the rows came from, the rows,

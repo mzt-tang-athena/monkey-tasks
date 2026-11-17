@@ -1,11 +1,12 @@
 import * as React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { bottomBar, radii, type Palette } from "@/theme/tokens";
 import { useTheme } from "@/theme/theme-provider";
 
 export type IconName =
   | "list"
   | "calendar"
+  | "journal"
   | "calendar-mini"
   | "clock-mini"
   | "plus"
@@ -81,11 +82,11 @@ const extent: Record<IconName, number> = {
   "clock-mini": 11,
   plus: 18,
   sort: bottomBar.glyph,
+  journal: bottomBar.glyph,
   more: bottomBar.glyph,
   rows: 14,
   pill: 16,
-  // The arrow fills about 11 of the 14 point line.
-  repeat: 11,
+  repeat: 12,
   grip: 15,
   "grip-bars": 10,
   settings: 18,
@@ -120,6 +121,16 @@ function glyph(
         <View style={[styles.calendar, edge]}>
           <View style={[styles.calendarTop, fill]} />
           <View style={[styles.calendarDot, fill]} />
+        </View>
+      );
+    // The Journal tab: a ruled page with a margin line.
+    case "journal":
+      return (
+        <View style={[styles.journal, edge]}>
+          <View style={[styles.journalMargin, fill]} />
+          <View style={[styles.journalLine, { top: 3.5 }, fill]} />
+          <View style={[styles.journalLine, { top: 7.5 }, fill]} />
+          <View style={[styles.journalLine, styles.journalLineShort, { top: 11.5 }, fill]} />
         </View>
       );
     // The date chip in the capture sheet.
@@ -189,8 +200,16 @@ function glyph(
     // The planner's pill form.
     case "pill":
       return <View style={[styles.pill, edge]} />;
+    // A clockwise arrow: a ring open from twelve to three o'clock, with
+    // its head at twelve. Views, not the ↻ character, whose ink sits by
+    // a fallback font's baseline and reads low on Android.
     case "repeat":
-      return <Text style={[styles.repeat, { color: tint }]}>{"↻"}</Text>;
+      return (
+        <View style={styles.repeat}>
+          <View style={[styles.repeatRing, edge, styles.repeatGap]} />
+          <View style={[styles.repeatHead, { borderLeftColor: tint }]} />
+        </View>
+      );
     // The reorder handle: two columns of three dots.
     case "grip":
       return (
@@ -378,6 +397,30 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
 
+  journal: {
+    width: bottomBar.glyph,
+    height: bottomBar.glyph,
+    borderWidth: 1.5,
+    borderRadius: 3,
+  },
+  journalMargin: {
+    position: "absolute",
+    left: 3.5,
+    top: 0,
+    bottom: 0,
+    width: 1.5,
+  },
+  journalLine: {
+    position: "absolute",
+    left: 7,
+    right: 2.5,
+    height: 1.5,
+    borderRadius: 0.75,
+  },
+  journalLineShort: {
+    right: 6,
+  },
+
   calendarMini: {
     width: 11,
     height: 11,
@@ -492,9 +535,33 @@ const styles = StyleSheet.create({
   },
 
   repeat: {
-    fontSize: 12,
-    lineHeight: 14,
-    fontWeight: "700",
+    width: 12,
+    height: 12,
+  },
+  repeatRing: {
+    position: "absolute",
+    left: 1,
+    top: 2,
+    width: 10,
+    height: 10,
+    borderRadius: radii.pill,
+    borderWidth: 1.5,
+    transform: [{ rotate: "45deg" }],
+  },
+  repeatGap: {
+    borderTopColor: "transparent",
+  },
+  repeatHead: {
+    position: "absolute",
+    left: 4.5,
+    top: 0,
+    width: 0,
+    height: 0,
+    borderTopWidth: 3,
+    borderBottomWidth: 3,
+    borderLeftWidth: 4,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
   },
 
   grip: {

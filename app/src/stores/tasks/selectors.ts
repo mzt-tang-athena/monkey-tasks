@@ -20,7 +20,8 @@ import { useStoreMeta, useTaskList } from "./task-state";
 export type SectionTone = "danger" | "ink" | "muted";
 
 export type TaskSection = {
-  title: string;
+  /** The header's label, or null for a group with no header. */
+  title: string | null;
   items: TaskItem[];
   tone: SectionTone;
 };
@@ -158,47 +159,60 @@ export function isHiddenOccurrence(task: TaskItem, now: Date): boolean {
   return startOfDay(due.date).getTime() > startOfDay(now).getTime();
 }
 
+const created = (task: TaskItem): string =>
+  task.data?.created ?? "9999-99-99";
+
+/** The fallback order: the note's `created`, then its name. */
+const byCreated = (a: TaskItem, b: TaskItem): number =>
+  created(a).localeCompare(created(b)) || a.name.localeCompare(b.name);
+
 /**
- * Manual order: `order` ascending, tasks without one after. The
- * unplaced ones fall back to the order they were created in, then by
- * name, so a fresh list reads oldest first instead of alphabetical.
- * The same rule the sort sheet's My order picks.
+ * Manual order: `order` ascending over the whole tab, tasks without
+ * one after. Equal orders break by `created`, then by name, so the
+ * duplicates old section-level drags left read in a stable order. The
+ * unplaced ones use the same fallback, so a fresh list reads oldest
+ * first instead of alphabetical. See ADR
+ * 20261111-one-list-and-tab-order.
  */
 function byManualOrder(a: TaskItem, b: TaskItem): number {
   const left = a.data?.order;
   const right = b.data?.order;
   if (left != null && right != null) {
-    return left - right || a.name.localeCompare(b.name);
+    return left - right || byCreated(a, b);
   }
   if (left != null) return -1;
   if (right != null) return 1;
-  const created = (task: TaskItem) => task.data?.created ?? "9999-99-99";
-  return (
-    created(a).localeCompare(created(b)) || a.name.localeCompare(b.name)
-  );
+  return byCreated(a, b);
 }
 
 /**
- * The lists tab's dated sections, empty ones dropped: Past, Today, one
- * per upcoming day, then No date. `now` labels the day buckets.
+ * The lists tab's sections. Due order keeps the dated groups, empty
+ * ones dropped: Past, Today, one per upcoming day, then No date. My
+ * order returns one headerless group of every open row, sorted by the
+ * whole-tab `order`; the screen builds Completed separately.
  */
 export function selectSections(
   visible: TaskItem[],
   now: Date,
   sortMode: SortMode = "due",
 ): TaskSection[] {
+  if (sortMode === "manual") {
+    const open = visible.filter((item) => item.data?.completed == null);
+    if (open.length === 0) {
+      return [];
+    }
+    return [{ title: null, items: [...open].sort(byManualOrder), tone: "ink" }];
+  }
   const groups = groupByDue(visible, now);
-  const inOrder = (items: TaskItem[]) =>
-    sortMode === "manual" ? [...items].sort(byManualOrder) : items;
   const sections: TaskSection[] = [
-    { title: "Past", items: inOrder(groups.overdue), tone: "danger" },
-    { title: "Today", items: inOrder(groups.today), tone: "ink" },
+    { title: "Past", items: groups.overdue, tone: "danger" },
+    { title: "Today", items: groups.today, tone: "ink" },
     ...groups.upcoming.map((bucket) => ({
       title: dayLabel(bucket.date, now),
-      items: inOrder(bucket.items),
+      items: bucket.items,
       tone: "muted" as const,
     })),
-    { title: "No date", items: inOrder(groups.undated), tone: "muted" },
+    { title: "No date", items: groups.undated, tone: "muted" },
   ];
   return sections.filter((section) => section.items.length > 0);
 }
