@@ -130,9 +130,22 @@ drag turns no page, and a swipe lifts no chip.
 and stores under `monkey-tasks.week-view`. Settings gains the "Week
 view" field with Spread and Rows.
 
-**Gates.** tsc, lint with zero warnings, and 875 unit and component
-tests. Web export, and the full Playwright suite on that build.
+**Gates, head 75ca646.** tsc is clean and eslint has zero warnings.
+The full unit suite is 883 tests in 99 files. The full Playwright suite on the exported build gave 484 passed. Six
+axe scans hit their 30s test timeout under host load. The same two
+spec files then passed on a rerun under the shared lock, 28 tests in
+2.7 minutes. No budget went up.
 
-**Proved on the web build only.** The "restart" in the setting reads a
-page reload here. A device build was not run. Screenshots at 360x640
-and 412x915, light and dark, are in /tmp/opencode/week-build.
+**Proved on the emulator too.** A release APK on the monkey-tasks-verify
+AVD, Android 35. Spread draws all seven days. A swipe turns the week
+both ways and the rail follows. The landing keeps the picked weekday:
+Tuesday 17 became Tuesday 24. A hold-drag from the pool rings the
+Saturday box and writes `due: 2026-11-21` to the note. Settings shows
+Week view, Rows persists, and the Rows body draws seven lines. A drag
+there rings the Saturday line and writes the same date. The "restart"
+in the setting is a page reload on the web. On the device, a
+fresh app start.
+
+Web screenshots at 360x640 and 412x915, light and dark, are in
+/tmp/opencode/week-build. Emulator evidence is in
+app/build/verify/evidence/android-20261117-052742.

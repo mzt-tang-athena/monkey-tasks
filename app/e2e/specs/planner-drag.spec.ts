@@ -538,35 +538,17 @@ test("a touch drag that ends in touchCancel writes nothing", async ({ page }) =>
   expect(await noteText(page, overdueNote)).toBe(before);
 });
 
-  test.describe("a drop on Saturday", () => {
-    for (const layout of ["spread", "rows"] as const) {
-      test(`a pool row dropped on Saturday in ${layout} takes that day, and the ring sits inside the box`, async ({
-        page,
-      }) => {
-        await openWeek(page, layout);
-        const source = page.getByTestId(`task-source:${undated.second}`);
-        await source.scrollIntoViewIfNeeded();
-        const box = page.getByTestId(`week-day:${saturday}`);
-
-        const pointer = await press(page, "mouse", source, { holdMs: 400 });
-        await pointer.moveTo(await pointOn(page, box));
-        await expectRingInsideDay(page, saturday);
-        await pointer.up();
-
-        await expect
-          .poll(() => noteText(page, "Tasks/Call Mum.md"))
-          .toContain(`due: ${saturday}`);
-        await expect(box.getByText(undated.second)).toBeVisible();
-      });
-    }
-
-    test("a touch drag drops on Saturday too", async ({ page }) => {
-      await openWeek(page, "spread");
+test.describe("a drop on Saturday", () => {
+  for (const layout of ["spread", "rows"] as const) {
+    test(`a pool row dropped on Saturday in ${layout} takes that day, and the ring sits inside the box`, async ({
+      page,
+    }) => {
+      await openWeek(page, layout);
       const source = page.getByTestId(`task-source:${undated.second}`);
       await source.scrollIntoViewIfNeeded();
       const box = page.getByTestId(`week-day:${saturday}`);
 
-      const pointer = await press(page, "touch", source, { holdMs: 400 });
+      const pointer = await press(page, "mouse", source, { holdMs: 400 });
       await pointer.moveTo(await pointOn(page, box));
       await expectRingInsideDay(page, saturday);
       await pointer.up();
@@ -574,21 +556,39 @@ test("a touch drag that ends in touchCancel writes nothing", async ({ page }) =>
       await expect
         .poll(() => noteText(page, "Tasks/Call Mum.md"))
         .toContain(`due: ${saturday}`);
+      await expect(box.getByText(undated.second)).toBeVisible();
     });
-  });
+  }
 
-  test("a chip dragged across the week moves the task and turns no page", async ({ page }) => {
+  test("a touch drag drops on Saturday too", async ({ page }) => {
     await openWeek(page, "spread");
-    const chip = page.getByTestId(`week-task:${dentist.name}`);
+    const source = page.getByTestId(`task-source:${undated.second}`);
+    await source.scrollIntoViewIfNeeded();
+    const box = page.getByTestId(`week-day:${saturday}`);
 
-    await dragWith(page, "mouse", chip, page.getByTestId("week-day:2026-10-29"));
+    const pointer = await press(page, "touch", source, { holdMs: 400 });
+    await pointer.moveTo(await pointOn(page, box));
+    await expectRingInsideDay(page, saturday);
+    await pointer.up();
 
     await expect
-      .poll(() => noteText(page, dentist.path))
-      .toContain("due: 2026-10-29T14:30");
-    await expect(page.getByTestId("week-day:2026-11-02")).toHaveCount(0);
-    await expect(page.getByTestId(`week-task:${dentist.name}`)).toBeVisible();
+      .poll(() => noteText(page, "Tasks/Call Mum.md"))
+      .toContain(`due: ${saturday}`);
   });
+});
+
+test("a chip dragged across the week moves the task and turns no page", async ({ page }) => {
+  await openWeek(page, "spread");
+  const chip = page.getByTestId(`week-task:${dentist.name}`);
+
+  await dragWith(page, "mouse", chip, page.getByTestId("week-day:2026-10-29"));
+
+  await expect
+    .poll(() => noteText(page, dentist.path))
+    .toContain("due: 2026-10-29T14:30");
+  await expect(page.getByTestId("week-day:2026-11-02")).toHaveCount(0);
+  await expect(page.getByTestId(`week-task:${dentist.name}`)).toBeVisible();
+});
 
   test("a swipe on a chip turns the week and writes nothing", async ({ page }) => {
     await openWeek(page, "spread");
