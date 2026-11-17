@@ -19,6 +19,8 @@ ADR `20261116-task-editor-sheet` is the decision. Ticket 0093 built it.
 - `editor-note` edits the note body in a full height field.
 - `editor-failed` keeps the draft and offers Retry.
 - `editor-delete` removes the note, with Undo for five seconds.
+- `editor-drag` closes the sheet on a drag down from the handle or the
+  header row.
 
 ## How to get to it (user POV)
 
@@ -54,6 +56,12 @@ Preconditions: a fresh page on `/`.
   `retry save`. Retry writes the same draft.
 - **Delete.** `task menu`, then the menuitem `Delete`. The alert
   `Task deleted` holds `undo delete`.
+- **Drag to close.** `pullDown(page, input, target, sheetPx.close)` from
+  `gestures.ts`, with `input` `touch` (needs `hasTouch`) or `mouse`. The
+  target is the dialog's `sheet-handle` testID or a control in its
+  header, such as `change list, <name>`. Past 80 px the dialog goes.
+  `sheetPx.short` springs back to the same top. On a stacked picker only the picker goes. The capture sheet has
+  only the handle. `e2e/specs/sheet-drag.spec.ts` covers each case.
 - **Side effect.** `noteText` shows `due`, `recurrence`, `list`,
   `reminders`, `alert weight` and the body. Undo puts the exact text
   back.
@@ -75,5 +83,15 @@ Preconditions: a fresh page on `/`.
   For a note that is not a task, it serves the read-only viewer.
 - A picker body re-measures after its content changes. Wait about
   300 ms before a screenshot, or the shot catches the old height.
+- Only the handle and the header row start a drag. A drag on the body
+  scrolls the body, and a drag on the title selects text. The web
+  cannot prove the native hand-over between the header pan and the
+  body scroller. Nor can it prove the drag on the UI thread. Check
+  both on the emulator.
+- The web cannot prove the flick. Chrome sends one pointer move per
+  frame, 20 to 50 ms apart on a busy runner. Gesture handler's web
+  velocity then lands near the 500 px/s line, so a test flips by load.
+  `app/src/lib/motion/sheet-drag.test.ts` holds the rule. Flick on the
+  emulator.
 - The title writes on close, never per keystroke. A test that types and
   reads the note at once sees the write a moment later. Use `poll`.
