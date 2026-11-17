@@ -432,6 +432,33 @@ function commonScenarios(input: "mouse" | "touch") {
     await page.clock.resume();
   });
 
+  test("a swipe on the week body turns the week and the rail follows", async ({ page }) => {
+    await page.goto("/planner");
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
+    await expect(page.getByTestId("week-view:spread")).toBeVisible();
+    const rail = page.getByRole("tablist", { name: "weeks" });
+    await expect(
+      rail.getByRole("tab", { name: /week of Oct 25-31/ }),
+    ).toHaveAttribute("aria-selected", "true");
+
+    await turn(page, page.getByTestId("week-pager"));
+
+    await expect(
+      rail.getByRole("tab", { name: /week of Nov 1-7/ }),
+      "the rail moves to the landed week",
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      page.getByTestId("week-day:2026-11-02"),
+      "the landed week is the one on screen",
+    ).toBeVisible();
+    // The landing picks the same weekday; it does not open the day.
+    await expect(page, "Monday stays picked in the new week").toHaveURL(
+      /day=2026-11-02/,
+    );
+    await expect(page.getByTestId("day-heading")).toHaveCount(0);
+    await expect(page).toHaveURL(/mode=week/);
+  });
+
   test("a swipe on a month cell opens no day", async ({ page }) => {
     await page.goto("/planner");
     await page.getByRole("tab", { name: "Month", exact: true }).click();
@@ -556,7 +583,7 @@ async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
 }
 
 test.describe("with the mouse", () => {
-  test("the three pager hosts take a vertical pan", async ({ page }) => {
+  test("the four pager hosts take a vertical pan", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await expectTouchAction(page.getByTestId("list-pager"), "pan-y");
@@ -564,6 +591,10 @@ test.describe("with the mouse", () => {
     await page.goto("/planner");
     await expect(page.getByTestId("day-heading")).toBeVisible();
     await expectTouchAction(page.getByTestId("day-pager"), "pan-y");
+
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
+    await expect(page.getByTestId("week-view:spread")).toBeVisible();
+    await expectTouchAction(page.getByTestId("week-pager"), "pan-y");
 
     await page.getByRole("tab", { name: "Month", exact: true }).click();
     await expect(page.getByTestId("month-title")).toHaveText(months.current);
@@ -755,7 +786,7 @@ test.describe("with the mouse", () => {
 test.describe("with a touch screen", () => {
   test.use({ hasTouch: true, isMobile: true });
 
-  test("the three pager hosts take a vertical pan", async ({ page }) => {
+  test("the four pager hosts take a vertical pan", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await expectTouchAction(page.getByTestId("list-pager"), "pan-y");
@@ -763,6 +794,10 @@ test.describe("with a touch screen", () => {
     await page.goto("/planner");
     await expect(page.getByTestId("day-heading")).toBeVisible();
     await expectTouchAction(page.getByTestId("day-pager"), "pan-y");
+
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
+    await expect(page.getByTestId("week-view:spread")).toBeVisible();
+    await expectTouchAction(page.getByTestId("week-pager"), "pan-y");
 
     await page.getByRole("tab", { name: "Month", exact: true }).click();
     await expect(page.getByTestId("month-title")).toHaveText(months.current);
@@ -1007,4 +1042,12 @@ test("a page lays out at the pager's origin, so Android can read it", async ({ p
   await press(page, listTab(page, focus));
   await expect(listTab(page, focus)).toHaveAttribute("aria-selected", "true");
   expect(await layoutX()).toBe(0);
+  // The live page must not ride in the moving track. A transformed
+  // ancestor puts its layout box off screen, and Android then skips
+  // every child, so the rows go missing again (ticket 20261117).
+  expect(
+    await page
+      .getByTestId("pager-live")
+      .evaluate((element) => element.parentElement?.getAttribute("data-testid")),
+  ).not.toBe("pager-track");
 });

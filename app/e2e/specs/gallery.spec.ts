@@ -198,6 +198,18 @@ async function checkPaint(
     cell("icon-button:rest").getByTestId("icon:sort"),
     `${where} rest glyph`,
   ).toBeVisible();
+  const outline = cell("icons:calendar").getByTestId("icon:calendar");
+  const filled = cell("icons:calendar").getByTestId("icon:calendar:fill");
+  await expect(outline, `${where} outline glyph`).toBeVisible();
+  await expect(filled, `${where} filled glyph`).toBeVisible();
+  await expect(outline.locator("path"), `${where} glyph ink`).toHaveAttribute(
+    "fill",
+    p.ink,
+  );
+  const pair = [await outline.boundingBox(), await filled.boundingBox()];
+  expect(pair[1]?.width, `${where} one box for both weights`).toBe(
+    pair[0]?.width,
+  );
 
   const box = await page.getByTestId("gallery-scroll").evaluate((element) => ({
     scroll: element.scrollWidth,

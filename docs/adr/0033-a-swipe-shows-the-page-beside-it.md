@@ -156,3 +156,18 @@ switch, still sits still.
 Earlier text gives the month grid as the page that sets its own
 height. The week body does the same, and the height follows the chosen
 layout. ADR 20261114 decides that layout.
+
+## Amendment, 2026-11-16: the week body joins the pager
+
+Ticket 20261114 puts the week body in the shared pager. Week mode no
+longer scrolls sideways, so the pager owns the horizontal gesture
+there.
+
+A landing selects the same weekday in the new week. The rail then
+follows the selected week. The neighbour page is the same week body
+with `interactive={false}`, the way the month grid draws its twin. It
+registers no drag source and takes no press.
+
+The week body is a `PlanDrag.Grid` with a cell-owned ring. Its cells
+keep their targets across the preview, so a drag reads the same
+geometry on the live page.

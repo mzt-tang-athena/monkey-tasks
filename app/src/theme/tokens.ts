@@ -153,15 +153,6 @@ export const drag = {
 export const measure = 720;
 
 /**
- * Week mode's day-column width and canvas height. Sized so a 390pt
- * phone shows two full columns plus a third peeking after the page
- * gutters; the canvas height caps the columns so tall viewports do
- * not stretch them into the bottom section's space.
- */
-export const weekColWidth = 144;
-export const weekCanvasHeight = 256;
-
-/**
  * The period strip's scroll step: one strip pill plus one gap. Keep
  * in sync with the styles: stripDay is 44 wide and the rail gap is
  * spacing.s. The rail alignment math consumes this.
@@ -178,16 +169,13 @@ export const touchTarget = 44;
 export const menuWidth = 216;
 
 /**
- * The bottom bar's rhythm: a taller row, a 44pt nav target, and a
- * 48pt Add control that reads as the primary action.
+ * The bottom bar's rhythm: a 48pt row, a 44pt nav target, and a 48pt
+ * Add control that reads as the primary action.
  */
 export const bottomBar = {
-  row: 52,
+  row: 48,
   tabWidth: 56,
   add: 48,
-  glyph: 20,
-  labelSize: 12,
-  labelLine: 16,
   addLabelSize: 16,
   addLabelLine: 22,
 } as const;

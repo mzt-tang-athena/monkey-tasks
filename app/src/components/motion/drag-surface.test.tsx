@@ -10,6 +10,11 @@ import { createDragSurface } from "./drag-surface";
 type Task = { name: string };
 const Drag = createDragSurface<Task, string>();
 
+type Day = { iso: string };
+const Days = createDragSurface<Task, Day>();
+const monday: Day = { iso: "mon" };
+const weekend: Day = { iso: "weekend" };
+
 function Watch({ onRender }: { onRender: (dragging: boolean) => void }) {
   onRender(Drag.useDragging());
   return null;
@@ -204,5 +209,47 @@ describe("createDragSurface", () => {
   ] as const)("sets touch-action for a %s source to %s", (hold, value) => {
     render(<Harness task={{ name: "x" }} hold={hold} onDrop={() => {}} renderGhost={() => null} />);
     expect(getComputedStyle(screen.getByTestId("source")).touchAction).toBe(value);
+  });
+
+  it("rings the box that owns a hovered cell, and a drop on either of its cells lands on it", async () => {
+    const onDrop = vi.fn();
+    const task = { name: "x" };
+    render(
+      <GestureHandlerRootView>
+        <Days.Root onDrop={onDrop} renderGhost={() => null}>
+          <Days.Source testID="source" payload={task} hold="grip">
+            <Text>x</Text>
+          </Days.Source>
+          <Days.Grid testID="grid" columns={3} rows={1} cells={[monday, weekend, weekend]} mark="ring">
+            <Days.Ring cell={0} testID="ring:mon" />
+            <Days.Ring cell={1} testID="ring:weekend" />
+          </Days.Grid>
+        </Days.Root>
+      </GestureHandlerRootView>,
+    );
+    placeBox(screen.getByTestId("source"), { x: 0, y: 0, width: 200, height: 40 });
+    placeBox(screen.getByTestId("grid"), { x: 0, y: 100, width: 300, height: 50 });
+    const opacity = (id: string) => Number(getComputedStyle(screen.getByTestId(id)).opacity);
+    const source = screen.getByTestId("source");
+
+    await act(async () => {
+      source.dispatchEvent(pointer("pointerdown", 20, 20));
+    });
+    for (const [x, y] of [[20, 60], [150, 120], [250, 125]]) {
+      await act(async () => {
+        source.dispatchEvent(pointer("pointermove", x, y));
+      });
+      await wait(16);
+    }
+    await wait(300);
+
+    expect(opacity("ring:weekend")).toBe(1);
+    expect(opacity("ring:mon")).toBe(0);
+
+    await act(async () => {
+      source.dispatchEvent(pointer("pointerup", 250, 125));
+    });
+    await wait(50);
+    expect(onDrop).toHaveBeenCalledWith(task, weekend);
   });
 });

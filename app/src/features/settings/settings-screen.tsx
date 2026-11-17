@@ -11,7 +11,7 @@ import { MotionScrollView } from "@/components/motion/scroll-view";
 import { useVault } from "@/lib/vault/vault-provider";
 import { useSetting } from "@/lib/settings-store";
 import { appVersion, buildChannel } from "@/lib/build-info";
-import type { SortMode, TaskForm } from "@/lib/settings";
+import type { SortMode, TaskForm, WeekLayout } from "@/lib/settings";
 import {
   measure,
   pageGutter,
@@ -47,6 +47,11 @@ const formOptions: Segment<TaskForm>[] = [
   { key: "pills", label: "Chips" },
 ];
 
+const weekOptions: Segment<WeekLayout>[] = [
+  { key: "spread", label: "Spread" },
+  { key: "rows", label: "Rows" },
+];
+
 /**
  * The settings screen. It owns the palette picker and the two settings
  * the Lists and Planner screens share. Every value reads and writes
@@ -59,6 +64,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const [sortMode, setSortMode] = useSetting("sortMode");
   const [taskForm, setTaskForm] = useSetting("taskForm");
+  const [weekView, setWeekView] = useSetting("weekView");
   const vault = useVault();
 
   const version = appVersion();
@@ -114,6 +120,20 @@ export default function SettingsScreen() {
             />
             <Text style={styles.fieldHint}>
               Rows tick in place. Chips drag first.
+            </Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Week view</Text>
+            <SegmentedControl
+              segments={weekOptions}
+              selected={weekView}
+              onSelect={setWeekView}
+              label="week view"
+              stretch
+            />
+            <Text style={styles.fieldHint}>
+              Spread pairs two days per row. Rows stack all seven.
             </Text>
           </View>
         </Section>

@@ -2,8 +2,8 @@
 title: The week planner fits one screen and offers two layouts
 created: 2026-11-14
 priority: normal
-assignee:
-pr:
+assignee: opencode
+pr: 151
 depends: [0084]
 ---
 
@@ -83,25 +83,69 @@ Rows stack all seven."
 
 ## Acceptance
 
-- [ ] A 360pt wide screen shows all seven days in week mode, with no
+- [x] A 360pt wide screen shows all seven days in week mode, with no
       horizontal scroll.
-- [ ] A horizontal swipe on the week body turns to the next or the
+- [x] A horizontal swipe on the week body turns to the next or the
       previous week, and the rail follows. The feel matches day and
       month.
-- [ ] Both layouts keep today's mark, the picked day's edge, the day
+- [x] Both layouts keep today's mark, the picked day's edge, the day
       press and the "+N more" press.
-- [ ] A drag from the pool lands on any day, Saturday included,
+- [x] A drag from the pool lands on any day, Saturday included,
       without a scroll.
-- [ ] A drop rings inside its own day box.
-- [ ] Settings offers Week view. The choice survives a restart, and
+- [x] A drop rings inside its own day box.
+- [x] Settings offers Week view. The choice survives a restart, and
       the mounted week redraws on the change.
-- [ ] A fresh install opens Spread.
-- [ ] Unit and component tests cover the chip count and the seven
+- [x] A fresh install opens Spread.
+- [x] Unit and component tests cover the chip count and the seven
       cells in both layouts. e2e covers the swipe, a drop on Saturday
       and the setting.
-- [ ] The ADR records the fitted week, the two layouts and the choice.
+- [x] The ADR records the fitted week, the two layouts and the choice.
       ADR 0041 and ADR 0033 each get a dated amendment.
 
 ## Outcome
 
-(filled in before moving to done/)
+Week mode draws seven day boxes on one screen in two layouts, Spread
+and Rows. It turns by swipe in the shared pager. A pool task drops on
+any day, Saturday included, with no scroll. The drop target rings
+inside the day's own box.
+
+**Shipped geometry.** Spread pairs Sunday with Monday and so on.
+Saturday spans the last row, 320pt wide on a 360pt screen. Each box is
+68pt tall and the body is 296pt. Rows stacks seven 44pt lines in one
+card and the body is 308pt. Both layouts draw two chips at most, then a
+"+N" count.
+
+**The ring.** `PlanDrag.Grid` takes `mark="ring"`. It draws no box and
+gives each cell a `Ring` that fills the box it renders in. The mark is
+2pt of ink. It fades over `motion.ms.tap` and follows reduced motion.
+Saturday's two cells hold one target object. Either cell rings the one
+box. The month grid keeps its fill box.
+
+**The pager.** `WeekPane` puts the body in the `Pager` as `week-pager`.
+A landing selects the same weekday in the new week, so the rail
+follows. The neighbour page is `WeekView interactive={false}`. A chip
+drag turns no page, and a swipe lifts no chip.
+
+**The setting.** `weekView` sits in `Settings`, defaults to `spread`,
+and stores under `monkey-tasks.week-view`. Settings gains the "Week
+view" field with Spread and Rows.
+
+**Gates, head 75ca646.** tsc is clean and eslint has zero warnings.
+The full unit suite is 883 tests in 99 files. The full Playwright suite on the exported build gave 484 passed. Six
+axe scans hit their 30s test timeout under host load. The same two
+spec files then passed on a rerun under the shared lock, 28 tests in
+2.7 minutes. No budget went up.
+
+**Proved on the emulator too.** A release APK on the monkey-tasks-verify
+AVD, Android 35. Spread draws all seven days. A swipe turns the week
+both ways and the rail follows. The landing keeps the picked weekday:
+Tuesday 17 became Tuesday 24. A hold-drag from the pool rings the
+Saturday box and writes `due: 2026-11-21` to the note. Settings shows
+Week view, Rows persists, and the Rows body draws seven lines. A drag
+there rings the Saturday line and writes the same date. The "restart"
+in the setting is a page reload on the web. On the device, a
+fresh app start.
+
+Web screenshots at 360x640 and 412x915, light and dark, are in
+/tmp/opencode/week-build. Emulator evidence is in
+app/build/verify/evidence/android-20261117-052742.

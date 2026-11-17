@@ -57,8 +57,9 @@ with no server.
 
 ### Planner
 
-- Day shows a timeline over the list for the day. Week shows seven days,
-  and Month shows the month. Each page swipes to its neighbours.
+- Day shows a timeline over the list for the day. Week fits all seven
+  days on one screen, as a spread of two days per row or as seven rows.
+  Month shows the month. Each page swipes to its neighbours.
 - The middle handle now travels near the top and the bottom of the
   screen. Either pane can grow to almost the whole page.
 - A timed due rings at its time. The due time and a reminder in the same
@@ -83,3 +84,8 @@ with no server.
 - A hidden gallery draws every component in every state, in all four
   themes, at 360 and 412 wide. Open it at Settings, Diagnostics, Open
   gallery.
+
+### Fixes
+
+- Every list tab now shows its tasks to TalkBack and other screen
+  readers. Before, only Main did.
