@@ -101,6 +101,12 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
               active={pathname === "/journal"}
               onPress={() => router.navigate("/journal")}
             />
+            <NavTab
+              label="Inbox Notes"
+              icon="inbox"
+              active={pathname === "/inbox"}
+              onPress={() => router.navigate("/inbox")}
+            />
           </View>
           {/* The air between the nav and the action. */}
           <View style={styles.spacer} />
@@ -138,7 +144,7 @@ const makeStyles = (colors: Palette) => ({
     },
     nav: {
       flexDirection: "row",
-      gap: spacing.s,
+      gap: spacing.xs,
     },
     spacer: {
       flex: 1,
