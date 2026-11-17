@@ -112,6 +112,9 @@ Android asks once for permission to install from the browser or file
 manager. The build is a release: JavaScript rides inside the APK, so
 the app runs without Metro.
 
+`CHANGELOG.md` lists what each release adds or changes, in plain words.
+Each GitHub release repeats its section.
+
 ### Develop against a phone without rebuilding
 
 The release APK takes about 45 minutes and cannot load code from Metro.
