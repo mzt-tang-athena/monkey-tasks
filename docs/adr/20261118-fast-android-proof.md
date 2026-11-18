@@ -30,14 +30,15 @@ dependencies and the native assets. The asset digest covers an image
 that changed bytes but kept its name, which the fingerprint does not
 see.
 
-The swap runs without the heavy lock. It takes about two minutes on
-one core, and lanes can run it beside a build. Only the JS export
+The swap runs without the heavy lock. It took 46 seconds with a warm
+Metro cache, and 97 seconds beside another lane's build, in two runs.
+The JS export bounds it at 24 to 89 seconds. Only the export
 serializes, on `/tmp/monkey-tasks-js-export.lock`, because Metro binds
 port 8081.
 
 ## Consequences
 
-A lane that matches a base gets an APK in about two minutes instead of
+A lane that matches a base gets an APK in about a minute instead of
 43. The first lane on a new fingerprint still pays the full build and
 seeds the cache for the rest.
 
@@ -65,6 +66,7 @@ report when a lane touches native code.
 
 We keep the emulator running between passes instead of using a
 quick-boot snapshot. A running emulator costs 2 GB and no boot time.
-A snapshot would save about 80 seconds, and only when the emulator must
-stop. It adds a save on every stop. Its restore path is flaky under
-software rendering.
+A cold pass spent 72 seconds before it seeded the vault. A relaunch on
+the running emulator seeded in 10 seconds. A snapshot would save that
+boot only when the emulator must stop. It adds a save on every stop,
+and its restore path is flaky under software rendering.

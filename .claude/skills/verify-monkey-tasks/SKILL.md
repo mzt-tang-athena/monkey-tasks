@@ -326,6 +326,7 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 - A starved emulator stops drawing (screenshots come back black) and drops taps. The picker walk then fails with `picker-stuck.txt`. Wait for the host to calm down, or stop the other load, and launch again. Once the grant exists, launch no longer needs the picker.
 - Heavy screen capture can spoil a gesture. A `screencap` loop during a swipe left the page unturned. `frames` uses `screenrecord`, and the same swipe turned the page.
 - A swipe that ends off screen reads as a system gesture. Drive clamps the end to the screen.
+- `FRESH=1` clears the app data, so the notification prompt comes back. It can cover the app before the first row draws. Answer it, or launch again without `FRESH`.
 - After `force-stop` the old window lingers in the screen tree for a moment. `$D restart` waits for it to go.
 - An APK built before ADR 0045 keeps the old tail of a note after a shorter write (ticket 0076). Compare notes byte for byte after an edit that removes text.
 
