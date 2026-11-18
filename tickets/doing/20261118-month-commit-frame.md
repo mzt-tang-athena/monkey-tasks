@@ -2,7 +2,7 @@
 title: The month card blinks at the landing
 created: 2026-11-18
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
