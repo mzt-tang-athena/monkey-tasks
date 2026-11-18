@@ -3,7 +3,7 @@ title: Fast Android proof by swapping the JS bundle
 created: 2026-11-18
 priority: high
 assignee: omp
-pr:
+pr: 172
 depends: []
 ---
 
