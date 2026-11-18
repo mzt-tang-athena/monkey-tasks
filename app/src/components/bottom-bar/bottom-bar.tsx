@@ -7,6 +7,7 @@ import type { Progress } from "@/lib/motion/progress";
 import { bottomBar, measure, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { NavTab } from "./nav-tab";
+import { useBarSpace } from "./bar-space";
 
 /** What the `action` slot reads from the bar. */
 export type BarState = {
@@ -47,8 +48,12 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   // The sheet's clock, or null while no slot drives the bar.
   const [hide, setHide] = React.useState<Progress | null>(null);
-  // The bar's height, measured with no clip in the way.
-  const [height, setHeight] = React.useState(0);
+  // The bar's height, measured with no clip in the way. The root
+  // provider shares it with the page burst, which sits above the
+  // screen and must stop at the bar's top edge.
+  const space = useBarSpace();
+  const [localHeight, setLocalHeight] = React.useState(0);
+  const height = space?.height ?? localHeight;
   const state = React.useMemo(() => ({ height, setHide }), [height, setHide]);
 
   // The box stays, so no frame runs a layout pass. A full height of
@@ -67,8 +72,13 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
         style={[styles.bar, { paddingBottom: insets.bottom + spacing.s }, slide]}
         onLayout={(event) => {
           const next = event.nativeEvent.layout.height;
-          if (next > 0) {
-            setHeight(next);
+          if (next <= 0) {
+            return;
+          }
+          if (space == null) {
+            setLocalHeight(next);
+          } else {
+            space.report(next);
           }
         }}
       >
