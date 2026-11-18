@@ -505,7 +505,8 @@ The feature queue:
 - 0092 optional quests and evergreen tasks, a discovery
 - 0093 the task editor rebuild, shipped in #155. The phone pass for
   keyboard insets and Android back remains
-- 0095 the Inbox Notes tab, in review
+- 0095 the Inbox Notes tab, shipped in #164. The phone pass for
+  TalkBack on the four tabs and the note composer remains
 - 20261111 reminder weight shipped in #150, #152 and #153. The phone check
   remains (20261111-alert-weight-device-check)
 - 20261111 one list and a whole-tab order, decided. The children:

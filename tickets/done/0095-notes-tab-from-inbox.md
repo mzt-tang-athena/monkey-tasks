@@ -4,7 +4,7 @@ title: Notes tab from Inbox
 created: 2026-11-11
 priority: normal
 assignee: opencode
-pr:
+pr: 164
 depends: [0083]
 ---
 
@@ -52,20 +52,41 @@ adapter already lists and reads any folder under the root.
 
 ## Acceptance
 
-- [ ] The tab lists Inbox notes, newest first, with a card title from
+- [x] The tab lists Inbox notes, newest first, with a card title from
       the note's name and a content preview. A note with no frontmatter
       works.
-- [ ] A new note gets a unique name. Timestamp only by default, a slug
+- [x] A new note gets a unique name. Timestamp only by default, a slug
       when a title is typed, a suffix on a collision.
-- [ ] A new note appears in Obsidian as a normal note in `Inbox/`.
-- [ ] Open, edit and save round trip. A failed write keeps the draft.
-- [ ] The bar layout and the tab label are recorded, and 0089 is
+- [x] A new note appears in Obsidian as a normal note in `Inbox/`.
+- [x] Open, edit and save round trip. A failed write keeps the draft.
+- [x] The bar layout and the tab label are recorded, and 0089 is
       amended.
-- [ ] 44pt targets, named controls, TalkBack, axe clean. e2e covers
+- [x] 44pt targets, named controls, TalkBack, axe clean. e2e covers
       list, create, open, save and the empty state.
-- [ ] The card naming and sort rules are recorded in an ADR.
-- [ ] The operator's design calls are recorded.
+- [x] The card naming and sort rules are recorded in an ADR.
+- [x] The operator's design calls are recorded.
 
 ## Outcome
 
-(filled in before moving to done/)
+Shipped in #164. The Inbox Notes tab lists `Inbox/*.md` as a two-column
+card grid, newest first. A bare stamp name reads as a local date and
+time; every other name shows as the file holds it. A capture is one
+body field with an optional title behind a reveal, and the first one
+makes the folder. The editor edits the body, keeps frontmatter byte for
+byte, and a conflict offers Save a copy. ADRs
+`20261117-inbox-note-model` and `20261117-icon-only-bottom-bar` record
+the card model and the four-destination bar.
+
+Proof: `app/e2e/specs/inbox-notes.spec.ts` covers the grid, capture,
+typed title, two captures in one minute, a failed capture and its
+retry, the empty folder, open and save, a conflict and Save a copy, an
+outside write and a foreground read, and axe on the screen, the
+composer and the editor. The a11y spec adds the tab and the composer to
+the touch-target walk. The verify journey at
+`app/build/verify/evidence/20261118-012953` drives a capture and an
+edit, then reads the vault back. The full web suite had 604 passed and
+26 skipped, and 1166 unit tests passed.
+
+The web cannot prove TalkBack, real SAF writes or keyboard insets.
+TalkBack on the four tabs and the note composer stays with the phone
+pass.
