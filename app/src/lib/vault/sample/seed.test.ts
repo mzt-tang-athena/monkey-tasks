@@ -51,7 +51,7 @@ describe("sampleSeed", () => {
   it("holds the preview's sample with no move on the sample day", () => {
     const seed = sampleSeed(PREVIEW_SEEDS, SAMPLE_DAY);
 
-    expect(Object.keys(seed)).toHaveLength(33);
+    expect(Object.keys(seed)).toHaveLength(40);
     expect(seed["Tasks/Supplements.md"]).toContain("recurrence: FREQ=DAILY");
     expect(seed["Tasks/Supplements.md"]).toContain("due: 2026-10-26T19:00");
     expect(seed["Tasks/Read the meter.md"]).toContain("kind: tasks");
@@ -65,6 +65,7 @@ describe("sampleSeed", () => {
     expect(seed["Tasks/Lists/Garden.md"]).toBeDefined();
     expect(seed["Journal/Daily/2026-10-26.md"]).toBeDefined();
     expect(seed["References/oatmeal.md"]).toBeDefined();
+    expect(seed["Inbox/202610260830.md"]).toContain("Coffee with Sam");
   });
 
   it("keeps the typed name of a task whose name a file cannot hold", () => {
@@ -95,7 +96,7 @@ describe("sampleSeed", () => {
 
   it("names the seeds it has when asked for one it does not", () => {
     expect(() => sampleSeed(["nope"], SAMPLE_DAY)).toThrow(
-      'no sample vault "nope": pick from default, repair',
+      'no sample vault "nope": pick from default, inbox, repair',
     );
   });
 });
