@@ -152,7 +152,8 @@ it runs `build-apk.sh` and keeps the result as the base.
 
 Read the `mode:` line. `swap` means the APK carries the checkout's
 JavaScript over a base APK's native layer. `full` means a real build.
-A swap proves JavaScript, not native code.
+A swap proves JavaScript, not native code. The cache holds one APK per
+fingerprint, so delete folders under it by hand when the disk fills.
 
 Never ship a swapped APK. A release builds with `build-apk.sh` and
 `CLEAN=1`, and a tagged commit forces the full path here. ADR
