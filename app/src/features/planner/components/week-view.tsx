@@ -1,7 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import type { TaskItem } from "@/types/task";
-import type { WeekLayout } from "@/lib/settings";
+import type { WeekLayout, WeekStart } from "@/lib/settings";
 import { Pressable } from "@/components/ui/pressable";
 import { PlanDrag, type PlanTarget } from "@/features/planner/lib/plan-drag";
 import { hasTime, timeOf } from "@/features/planner/model";
@@ -55,6 +55,7 @@ export function WeekView({
   tasks,
   today,
   selected,
+  weekStart,
   interactive,
   onSelect,
   onOpenDay,
@@ -63,6 +64,8 @@ export function WeekView({
   tasks: TaskItem[];
   today: Date;
   selected: Date;
+  /** The day the week starts on: the boxes run in its order. */
+  weekStart: WeekStart;
   interactive: boolean;
   onSelect?: (date: Date) => void;
   /** The "+N" count opens that day in the day view. */
@@ -70,8 +73,8 @@ export function WeekView({
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const days = React.useMemo(
-    () => weekDays({ tasks, selected, today }),
-    [tasks, selected, today],
+    () => weekDays({ tasks, selected, today, weekStart }),
+    [tasks, selected, today, weekStart],
   );
   const geometry = weekLayouts[layout];
   // One target object per day: Saturday's two Spread cells share it.

@@ -288,10 +288,12 @@ the active palette (ADR 20261111-runtime-theme-provider). A component
 keeps its styles in a `makeStyles(palette)` factory. It reads them
 through `useThemedStyles`. A theme switch then repaints it in place.
 The root layout draws the status bar in the palette's icon colour.
-`lib/settings-store.ts` holds the live sort order, task form and week
-view for the mounted Lists and Planner screens. `features/settings` is
-the one screen that writes the palette and those settings (ADR
-20261111-settings-screen). Lists opens it from the list menu and Planner
+`lib/settings-store.ts` holds the live sort order, task form, week
+view and week start for the mounted Lists and Planner screens.
+`features/settings` is the one screen that writes the palette and
+those settings (ADR 20261111-settings-screen). A week runs Monday to
+Sunday by default, and Settings lets you pick Sunday (ADR
+`20261118-week-start-setting`). Lists opens it from the list menu and Planner
 opens it from the gear beside the mode switch. Its Diagnostics section
 reads the crash log from app storage and offers Copy and Share (ticket
 0081). It opens the diagnostics screen, which holds the one link to the
@@ -354,7 +356,7 @@ pickers.
 | `planner-layout.ts` | The shared frame and pane styles. Every other style sits next to its component. |
 | `components/planner-list-context.tsx` | What every task list shares: the source, the form and the row actions. |
 | `components/day/` | The day. It holds the spread, the page, the timeline and list panes, and the day split. It also holds the overdue group and the swipe preview. |
-| `components/week-pane.tsx`, `month-pane.tsx` | The week and month bodies. Week puts its day boxes in the shared pager. |
+| `components/week-pane.tsx`, `month-pane.tsx` | The week and month bodies. Week puts its day boxes in the shared pager. Both put the card over the list with `SplitFit`, the day's divider held still. |
 | `components/week-view.tsx` | The week body in both layouts, Spread and Rows. A static twin draws the pager's neighbour page. |
 | `lib/week-body.ts` | The seven days, the chip count, and the table of each layout's grid cells. |
 | `lib/plan-drag.ts` | The planner's one drag surface: the targets, the ghost payload and the pure drop patch. |
