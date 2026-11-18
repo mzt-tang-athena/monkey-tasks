@@ -96,9 +96,24 @@ export function Sheet({
       { scale: 0.96 + 0.04 * travel.value },
     ],
   }));
-  const lift = useAnimatedStyle(() => ({
-    transform: [{ translateY: rideKeyboard ? keyboard.height.value : 0 }],
-  }));
+  // The keyboard library reports the whole IME inset, the system
+  // navigation included, because the app draws edge to edge. The dock
+  // already holds the panel above that bar, so the lift carries only
+  // the part of the keyboard above it. The two never add, which would
+  // open a band between the panel and the keyboard. The height is
+  // negative, a translate that clears the keyboard.
+  const lift = useAnimatedStyle(
+    () => ({
+      transform: [
+        {
+          translateY: rideKeyboard
+            ? Math.min(keyboard.height.value + insets.bottom, 0)
+            : 0,
+        },
+      ],
+    }),
+    [rideKeyboard, insets.bottom],
+  );
 
   // On the web a parent's `pointer-events: none` does not stop a Text
   // child, which React Native Web gives `pointer-events: auto`. The
@@ -139,8 +154,6 @@ export function Sheet({
           pointerEvents="box-none"
           style={[styles.lift, { height: window.height }, lift]}
         >
-          {/* The inset and the keyboard lift add. The keyboard library
-              reports its height above the system navigation. */}
           <Animated.View
             testID="sheet-dock"
             pointerEvents="box-none"
