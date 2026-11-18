@@ -58,6 +58,6 @@ Merged in #168.
 - The Planner header lost its chevron and gear.
 - The Lists toolbar lost its chevron.
 - ADR 20261111-command-pane has a dated amendment.
-- Web: 624 passed, 26 skipped, 0 failed. The commands spec is 44.
+- Web: 632 passed, 26 skipped, 0 failed. The commands spec is 44.
 - Android: the gap swipe, refresh, drag, swipe and 360dp pass.
-- Evidence: `app/build/verify/evidence` (the last two runs).
+- Evidence: `app/build/verify/evidence`, the last two runs.
