@@ -40,3 +40,40 @@ with a screenshot at 412 wide. Do not fix them here.
 - [ ] `CHANGELOG.md` lists the change under 1.2.0.
 
 ## Outcome
+
+Fixed on 2026-11-18 on `fix/week-month-divider`.
+
+`split.tsx` gains `SplitFit`.
+The top pane keeps the height its card gives it.
+The divider draws the day's dashed rule and grip.
+The list below fills the rest and clips at its top edge. The divider's
+markup moved into one `Divider` in the same file, so `Split`,
+`SplitStill` and `SplitFit` draw the same band.
+
+Week and Month do not resize. Both cards have an intrinsic height, so
+a drag could only clip the card or leave paper under it. The grip is
+the day's mark and carries no slider role. ADR 0046 records the
+choice.
+
+The audit found these other edges, with a shot at 412 wide in each
+palette:
+
+- Lists, list under the tab strip: a scrolled card ends flush
+  under the strip, no rule.
+- Planner day, timeline under the TIMELINE label: hour rows scroll
+  under the label, no rule.
+- Journal, entries under the month band: the band and the page meet
+  with no rule.
+- Inbox, cards under the title: cards would scroll under the title
+  with no rule.
+- Settings, sections under the Back row: no band and no rule.
+- The bottom bar has a shadow, so it reads as an edge.
+- The command pane fits its rows today, so nothing scrolls in it.
+- The editor and capture sheets have their own top edge.
+
+Evidence: `app/build/verify/evidence/20261118-144555/` for the rest,
+`20261118-145035/` for the deeper scrolls, and `20261118-151636/` for
+the fixed week and month.
+
+Gate: tsc, eslint, 1187 vitest tests, the full web suite, record
+names, changelog, and Vale on the ADR.
