@@ -11,7 +11,7 @@ import { MotionScrollView } from "@/components/motion/scroll-view";
 import { useVault } from "@/lib/vault/vault-provider";
 import { useSetting } from "@/lib/settings-store";
 import { appVersion, buildChannel } from "@/lib/build-info";
-import type { SortMode, TaskForm, WeekLayout } from "@/lib/settings";
+import type { SortMode, TaskForm, WeekLayout, WeekStart } from "@/lib/settings";
 import {
   measure,
   pageGutter,
@@ -52,6 +52,11 @@ const weekOptions: Segment<WeekLayout>[] = [
   { key: "rows", label: "Rows" },
 ];
 
+const weekStartOptions: Segment<WeekStart>[] = [
+  { key: "monday", label: "Monday" },
+  { key: "sunday", label: "Sunday" },
+];
+
 /**
  * The settings screen. It owns the palette picker and the two settings
  * the Lists and Planner screens share. Every value reads and writes
@@ -65,6 +70,7 @@ export default function SettingsScreen() {
   const [sortMode, setSortMode] = useSetting("sortMode");
   const [taskForm, setTaskForm] = useSetting("taskForm");
   const [weekView, setWeekView] = useSetting("weekView");
+  const [weekStart, setWeekStart] = useSetting("weekStart");
   const vault = useVault();
 
   const version = appVersion();
@@ -134,6 +140,20 @@ export default function SettingsScreen() {
             />
             <Text style={styles.fieldHint}>
               Spread pairs two days per row. Rows stack all seven.
+            </Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Week starts on</Text>
+            <SegmentedControl
+              segments={weekStartOptions}
+              selected={weekStart}
+              onSelect={setWeekStart}
+              label="week starts on"
+              stretch
+            />
+            <Text style={styles.fieldHint}>
+              The week grid, the month grid and the week strip follow it.
             </Text>
           </View>
         </Section>

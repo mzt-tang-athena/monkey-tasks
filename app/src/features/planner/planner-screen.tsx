@@ -83,6 +83,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   // live across the planner and the settings screen; default rows.
   const [taskForm, changeForm] = useSetting("taskForm");
   const [weekView] = useSetting("weekView");
+  const [weekStart] = useSetting("weekStart");
 
   const openTask = React.useCallback(
     (task: TaskItem) => {
@@ -191,6 +192,9 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
               ) : null}
               {status === "ready" && mode === "week" ? (
                 <WeekPane
+                  // A new week start moves the pager's origin, so the
+                  // pane mounts again rather than reading a stale one.
+                  key={weekStart}
                   layout={weekView}
                   tasks={tasks}
                   openTasks={openTasks}

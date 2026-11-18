@@ -5,6 +5,7 @@ import type { WeekLayout } from "@/lib/settings";
 import { Pager } from "@/components/motion/pager";
 import { SplitFit } from "@/components/motion/split";
 import { addDays } from "@/utils/dates";
+import { useSetting } from "@/lib/settings-store";
 import { dayIndexBetween, pillsForSource, startOfWeek } from "@/features/planner/model";
 import { layout } from "../planner-layout";
 import { usePlannerList } from "./planner-list-context";
@@ -38,16 +39,18 @@ export function WeekPane({
   onOpenDay: (day: Date) => void;
 }) {
   const { source } = usePlannerList();
+  const [weekStart] = useSetting("weekStart");
   const weekPool = React.useMemo(
-    () => pillsForSource(tasks, source, startOfWeek(day)),
-    [tasks, source, day],
+    () => pillsForSource(tasks, source, startOfWeek(day, weekStart)),
+    [tasks, source, day, weekStart],
   );
 
   // The week index counts from the week this pane mounted. The pager
   // reads it, and a landing keeps the picked weekday, so Tuesday stays
   // Tuesday.
-  const [origin] = React.useState(() => startOfWeek(day));
-  const index = dayIndexBetween(origin.getTime(), startOfWeek(day).getTime()) / 7;
+  const [origin] = React.useState(() => startOfWeek(day, weekStart));
+  const index =
+    dayIndexBetween(origin.getTime(), startOfWeek(day, weekStart).getTime()) / 7;
   const onPage = React.useCallback(
     (next: number) => onSelect(addDays(day, 7 * (next - index))),
     [onSelect, day, index],
@@ -68,6 +71,7 @@ export function WeekPane({
                 tasks={openTasks}
                 today={today}
                 selected={addDays(day, 7 * (page - index))}
+                weekStart={weekStart}
                 interactive={false}
               />
             </View>
@@ -79,6 +83,7 @@ export function WeekPane({
               tasks={openTasks}
               today={today}
               selected={day}
+              weekStart={weekStart}
               interactive
               onSelect={onSelect}
               onOpenDay={onOpenDay}

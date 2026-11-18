@@ -1,6 +1,8 @@
+import type { WeekStart } from "@/lib/settings";
 import {
   addDays,
   dayLabel,
+  dayOfWeek,
   formatLocal,
   formatTime,
   parseStoredDate,
@@ -71,10 +73,13 @@ export function quickDays(today: Date): { label: string; day: Date }[] {
  * One month as calendar rows, Sunday first as on the planner. A cell is
  * a day of the month, or null before the first and after the last.
  */
-export function monthRows(month: Date): (Date | null)[][] {
+export function monthRows(month: Date, weekStart: WeekStart): (Date | null)[][] {
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-  const cells: (Date | null)[] = Array.from({ length: first.getDay() }, () => null);
+  const cells: (Date | null)[] = Array.from(
+    { length: dayOfWeek(first, weekStart) },
+    () => null,
+  );
   for (let day = 1; day <= days; day += 1) {
     cells.push(new Date(month.getFullYear(), month.getMonth(), day));
   }

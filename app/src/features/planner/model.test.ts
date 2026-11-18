@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "@/types/task";
+import type { WeekStart } from "@/lib/settings";
+import { isoOf } from "@/utils/dates";
 import {
   hasTime,
   inSourceList,
@@ -10,6 +12,7 @@ import {
   sortByTimeOfDay,
   sortOpenFirst,
   sourceLabel,
+  startOfWeek,
   tasksForDay,
   tasksForDayAll,
   timeOf,
@@ -301,11 +304,33 @@ describe("tasksForDay", () => {
   });
 });
 
+describe("startOfWeek", () => {
+  it("starts the week on Monday, across a month and a year edge", () => {
+    // 1 November 2026 is a Sunday, and 1 January 2027 a Friday.
+    expect(isoOf(startOfWeek(new Date(2026, 10, 1), "monday"))).toBe("2026-10-26");
+    expect(isoOf(startOfWeek(new Date(2027, 0, 1), "monday"))).toBe("2026-12-28");
+  });
+
+  it("starts the week on Sunday, across a month and a year edge", () => {
+    expect(isoOf(startOfWeek(new Date(2026, 10, 1), "sunday"))).toBe("2026-11-01");
+    expect(isoOf(startOfWeek(new Date(2027, 0, 1), "sunday"))).toBe("2026-12-27");
+  });
+
+  it("leaves a day in its own week at either setting", () => {
+    // Thursday 31 December 2026: Monday 28, Sunday 27.
+    expect(isoOf(startOfWeek(new Date(2026, 11, 31), "monday"))).toBe("2026-12-28");
+    expect(isoOf(startOfWeek(new Date(2026, 11, 31), "sunday"))).toBe("2026-12-27");
+  });
+});
+
 describe("sourceLabel", () => {
-  // Monday 26 October 2026. Weeks start on Sunday.
+  // Monday 26 October 2026.
   const today = new Date(2026, 9, 26);
-  const label = (mode: "day" | "week" | "month", day: Date) =>
-    sourceLabel("due-period", mode, day, today);
+  const label = (
+    mode: "day" | "week" | "month",
+    day: Date,
+    weekStart: WeekStart = "monday",
+  ) => sourceLabel("due-period", mode, day, today, weekStart);
 
   it("names a day relative to today", () => {
     expect(label("day", today)).toBe("Due today");
@@ -318,16 +343,32 @@ describe("sourceLabel", () => {
     expect(label("day", new Date(2027, 0, 4))).toBe("Due Mon, 4 Jan 2027");
   });
 
-  it("names a week by the range it runs, Sunday to Saturday", () => {
+  it("names a week by the range it runs, Monday to Sunday", () => {
     expect(label("week", new Date(2026, 9, 28))).toBe("Due this week");
-    // 8 November 2026 is a Sunday: the week runs 8 to 14.
-    expect(label("week", new Date(2026, 10, 8))).toBe("Due 8 to 14 Nov");
-    expect(label("week", new Date(2026, 10, 11))).toBe("Due 8 to 14 Nov");
+    // 8 November 2026 is a Sunday: its Monday week runs 2 to 8 November.
+    expect(label("week", new Date(2026, 10, 8))).toBe("Due 2 to 8 Nov");
+    expect(label("week", new Date(2026, 10, 11))).toBe("Due 9 to 15 Nov");
+  });
+
+  it("runs Sunday to Saturday when the week starts on Sunday", () => {
+    // 9 November 2026 is a Monday, so the two settings put it in
+    // different weeks.
+    expect(label("week", new Date(2026, 10, 9), "sunday")).toBe("Due 8 to 14 Nov");
+    expect(label("week", new Date(2026, 10, 9))).toBe("Due 9 to 15 Nov");
   });
 
   it("names both months when a week crosses a month end", () => {
-    expect(label("week", new Date(2026, 10, 1))).toBe("Due 1 to 7 Nov");
-    expect(label("week", new Date(2026, 10, 29))).toBe("Due 29 Nov to 5 Dec");
+    // 30 November 2026 is a Monday, so its week runs into December.
+    expect(label("week", new Date(2026, 10, 30))).toBe("Due 30 Nov to 6 Dec");
+    // 29 November 2026 is a Sunday, and Sunday starts its own week.
+    expect(label("week", new Date(2026, 10, 29))).toBe("Due 23 to 29 Nov");
+    expect(label("week", new Date(2026, 10, 29), "sunday")).toBe("Due 29 Nov to 5 Dec");
+  });
+
+  it("names both years when a week crosses a year end", () => {
+    // 1 January 2027 is a Friday.
+    expect(label("week", new Date(2027, 0, 1))).toBe("Due 28 Dec to 3 Jan 2027");
+    expect(label("week", new Date(2027, 0, 1), "sunday")).toBe("Due 27 Dec to 2 Jan 2027");
   });
 
   it("names a month, with its year when the year differs", () => {
@@ -337,7 +378,11 @@ describe("sourceLabel", () => {
   });
 
   it("names a list by its own name in every mode", () => {
-    expect(sourceLabel("Focus", "day", new Date(2026, 9, 28), today)).toBe("Focus");
-    expect(sourceLabel("Main", "month", new Date(2026, 10, 1), today)).toBe("Main");
+    expect(sourceLabel("Focus", "day", new Date(2026, 9, 28), today, "monday")).toBe(
+      "Focus",
+    );
+    expect(sourceLabel("Main", "month", new Date(2026, 10, 1), today, "sunday")).toBe(
+      "Main",
+    );
   });
 });

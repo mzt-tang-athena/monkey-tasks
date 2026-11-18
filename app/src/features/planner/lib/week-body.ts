@@ -1,5 +1,5 @@
 import type { TaskItem } from "@/types/task";
-import type { WeekLayout } from "@/lib/settings";
+import type { WeekLayout, WeekStart } from "@/lib/settings";
 import { addDays, isoOf, isSameDay } from "@/utils/dates";
 import { spacing, touchTarget } from "@/theme/tokens";
 import { startOfWeek, tasksForDay } from "@/features/planner/model";
@@ -21,17 +21,19 @@ export type WeekDay = {
   items: TaskItem[];
 };
 
-/** The seven days of the selected day's week, Sunday first. */
+/** The seven days of the selected day's week, in the week's order. */
 export function weekDays({
   tasks,
   selected,
   today,
+  weekStart,
 }: {
   tasks: TaskItem[];
   selected: Date;
   today: Date;
+  weekStart: WeekStart;
 }): WeekDay[] {
-  const start = startOfWeek(selected);
+  const start = startOfWeek(selected, weekStart);
   return Array.from({ length: 7 }, (_, offset) => {
     const date = addDays(start, offset);
     return {
