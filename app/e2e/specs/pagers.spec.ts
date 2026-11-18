@@ -537,7 +537,7 @@ function commonScenarios(input: "mouse" | "touch") {
     await expect(page.getByTestId("week-view:spread")).toBeVisible();
     const rail = page.getByRole("tablist", { name: "weeks" });
     await expect(
-      rail.getByRole("tab", { name: /week of Oct 26-Nov 1/ }),
+      rail.getByRole("tab", { name: /week of Oct 26-1 W44/ }),
     ).toHaveAttribute("aria-selected", "true");
 
     await turn(page, page.getByTestId("week-pager"));

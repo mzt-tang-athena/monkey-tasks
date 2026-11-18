@@ -280,7 +280,7 @@ test.describe("the week start", () => {
       "2026-11-01",
     ]);
     await expect(
-      rail.getByRole("tab", { name: /week of Oct 26-Nov 1/ }),
+      rail.getByRole("tab", { name: /week of Oct 26-1 W44/ }),
     ).toHaveAttribute("aria-selected", "true");
 
     await openFromPlanner(page);
