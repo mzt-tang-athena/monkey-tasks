@@ -13,6 +13,7 @@ import { follow, releaseTarget, visiblePages, type PageBounds } from "@/lib/moti
 import { motion } from "@/lib/motion/tokens";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
+import type { PageFollow } from "./page-follow";
 import { usePressCancel } from "./internal/press-cancel";
 
 const none = Number.NaN;
@@ -30,7 +31,8 @@ function over(ms: number) {
  * a page keeps its state across a swipe. A neighbour on screen renders
  * `renderPreview(page)`. The screen only sets `index`: one page away
  * slides, and a longer jump cuts. A landing calls `onPage(next)` once
- * (ADR 0033, ADR 0046).
+ * (ADR 0033, ADR 0046). A `follow` publishes the live page position,
+ * so chrome can track the swipe on the UI thread.
  */
 export function Pager({
   index,
@@ -39,6 +41,7 @@ export function Pager({
   renderPreview,
   fill = false,
   enabled = true,
+  follow: tracker,
   testID,
   children,
 }: {
@@ -50,6 +53,8 @@ export function Pager({
   /** False while a drag surface under the same root owns the
       gesture, so a row drag never turns a page. */
   enabled?: boolean;
+  /** Chrome that tracks this pager's live position. */
+  follow?: PageFollow;
   testID?: string;
   children: React.ReactNode;
 }) {
@@ -62,7 +67,9 @@ export function Pager({
   // applies in the same render as its content. A shared value alone
   // updates the track one frame later and shows a blank strip.
   const [hostWidth, setHostWidth] = React.useState(0);
-  const pos = useSharedValue(0);
+  // A follow lends its own value, so tracking costs no extra write.
+  const ownPos = useSharedValue(0);
+  const pos = tracker?.progress ?? ownPos;
   const landed = useSharedValue(0);
   // The page a settle is heading to, until it lands or a touch takes it.
   const pending = useSharedValue(none);
@@ -81,6 +88,10 @@ export function Pager({
       first: bounds.first === undefined ? undefined : bounds.first - origin,
       last: bounds.last === undefined ? undefined : bounds.last - origin,
     });
+    // The origin names the page the tracker's progress counts from.
+    if (tracker != null && tracker.origin.value !== origin) {
+      tracker.origin.set(origin);
+    }
   });
 
   const latest = React.useRef(onPage);
@@ -137,6 +148,9 @@ export function Pager({
       onActivate: () => {
         "worklet";
         toJS(pressCancel.arm);
+        if (tracker != null) {
+          tracker.touching.set(1);
+        }
         // Writing the value stops a settle in flight.
         anchor.set(pos.value);
         pos.set(anchor.value);
@@ -175,6 +189,12 @@ export function Pager({
             }
           }),
         );
+      },
+      onFinalize: () => {
+        "worklet";
+        if (tracker != null) {
+          tracker.touching.set(0);
+        }
       },
     }),
   );

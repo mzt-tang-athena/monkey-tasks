@@ -56,6 +56,24 @@ async function trackX(page: Page): Promise<number> {
   });
 }
 
+/** The tab strip's rule, which tracks the list swipe. */
+async function underline(page: Page) {
+  const box = await page.getByTestId("tab-underline").boundingBox();
+  if (box == null) {
+    throw new Error("the tab rule has no box");
+  }
+  return box;
+}
+
+/** The rule's box under a tab at rest: the tab less its 12 px inset. */
+async function tabRule(page: Page, name: string) {
+  const box = await listTab(page, name).boundingBox();
+  if (box == null) {
+    throw new Error(`the ${name} tab has no box`);
+  }
+  return { left: box.x + 12, width: box.width - 24 };
+}
+
 /**
  * The live page's offset from its pager's box, in px. The track moves
  * through page space now, so it stands at `-page * width` at rest. The
@@ -289,6 +307,87 @@ function commonScenarios(input: "mouse" | "touch") {
 
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "false");
+  });
+
+  test("the tab rule follows a half swipe", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+    const width = (await pagerBox(page, "list-pager")).width;
+    const rest = await underline(page);
+    const main = await tabRule(page, tabs.main);
+    const next = await tabRule(page, tabs.next);
+
+    await pauseClock(page);
+    const half = async () => {
+      await frame(page);
+      const during = await underline(page);
+      if (isMotion(testInfo)) {
+        // The rule left its tab and blends toward the next one.
+        expect(during.x, "the rule left its tab").toBeGreaterThan(rest.x + 4);
+        expect(during.x, "the rule stays before the next tab's rule").toBeLessThan(next.left);
+        expect(during.width, "the rule widened toward the next tab").toBeGreaterThan(rest.width);
+        expect(during.width, "the rule has not reached the next tab's width").toBeLessThan(
+          next.width,
+        );
+        // Half a page puts the rule's middle between the two tab middles.
+        const middle = during.x + during.width / 2;
+        const between = (main.left + main.width / 2 + next.left + next.width / 2) / 2;
+        expect(Math.abs(middle - between), "the rule sits halfway").toBeLessThan(20);
+      } else {
+        expect(during.x, "reduce motion keeps the rule at rest").toBeCloseTo(rest.x, 0);
+        expect(during.width).toBeCloseTo(rest.width, 0);
+      }
+    };
+    if (input === "touch") {
+      await touchHold(page, sectionHeader(page, sections.today), -width / 2, half);
+    } else {
+      await mouseHold(page, sectionHeader(page, sections.today), -width / 2, half);
+    }
+    await frame(page, 600);
+    await page.clock.resume();
+
+    await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
+    await expect
+      .poll(async () => {
+        const settled = await underline(page);
+        const target = await tabRule(page, tabs.next);
+        return Math.round(settled.x - target.left);
+      })
+      .toBeLessThanOrEqual(2);
+  });
+
+  test("a tab tap three pages away slides the rule across", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    await pauseClock(page);
+    if (input === "touch") {
+      await listTab(page, focus).tap();
+    } else {
+      await listTab(page, focus).click();
+    }
+    await frame(page, 60);
+    if (isMotion(testInfo)) {
+      const during = await underline(page);
+      // The page cuts; the rule crosses between the tabs on its own
+      // clock. Both boxes read at the same instant, so the strip's
+      // scroll does not matter.
+      const from = await tabRule(page, tabs.main);
+      const to = await tabRule(page, focus);
+      expect(during.x, "the rule left its tab").toBeGreaterThan(from.left + 4);
+      expect(during.x, "the rule is still crossing").toBeLessThan(to.left);
+    }
+    await frame(page, 600);
+    await page.clock.resume();
+
+    await expect(listTab(page, focus)).toHaveAttribute("aria-selected", "true");
+    await expect
+      .poll(async () => {
+        const settled = await underline(page);
+        const target = await tabRule(page, focus);
+        return Math.round(settled.x - target.left);
+      })
+      .toBeLessThanOrEqual(2);
   });
 
   test("a swipe that starts on a row opens no editor", async ({ page }) => {

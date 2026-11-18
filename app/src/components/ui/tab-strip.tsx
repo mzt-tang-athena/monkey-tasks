@@ -12,10 +12,15 @@ import {
   MotionScrollView,
   type MotionScrollRef,
 } from "@/components/motion/scroll-view";
+import type { PageFollow } from "@/components/motion/page-follow";
+import { TabUnderline } from "@/components/motion/tab-underline";
 import { EdgeFade, edgeFadeWidth, fadedEdges } from "./edge-fade";
 import { Pressable } from "./pressable";
 import { radius, spacing, touchTarget, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
+
+/** A tab's place in the strip's content, in px. */
+type Place = { x: number; width: number };
 
 /**
  * A row of tabs that scrolls sideways, with a rule under the selected
@@ -24,41 +29,51 @@ import { useThemedStyles } from "@/theme/theme-provider";
  * user can still scroll it by hand. Each tab is at least 44 by 44.
  * Where more tabs wait past an edge, the edge fades, so a clipped
  * name reads as "more this way" and not as a bug. The fade paints the
- * surface color, so the strip belongs on a surface.
+ * surface color, so the strip belongs on a surface. With a page follow
+ * from a pager, the rule tracks the swipe (ADR 0046).
  */
 export function TabStrip({
   tabs,
   selected,
   onSelect,
   label,
+  follow,
 }: {
   tabs: string[];
   selected: string;
   onSelect: (tab: string) => void;
   /** Names the tab list for assistive tech. */
   label: string;
+  /** The pager whose swipe the rule follows. */
+  follow?: PageFollow;
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const strip = React.useRef<MotionScrollRef | null>(null);
   // Reanimated reads the system switch once, at load.
   const reduced = useReducedMotion();
-  // Where each tab starts, from its layout. A tab keeps its place for
-  // the session, so one measure is enough.
-  const offsets = React.useRef<Record<string, number>>({});
+  // Where each tab sits in the content, from its layout. A tab keeps
+  // its place for the session, so one measure is enough.
+  const [places, setPlaces] = React.useState<Record<string, Place>>({});
   const [frame, setFrame] = React.useState({ view: 0, content: 0, x: 0 });
   const fade = fadedEdges(frame);
 
+  const selectedX = places[selected]?.x;
   React.useEffect(() => {
-    const x = offsets.current[selected];
-    if (x == null) {
+    if (selectedX == null) {
       return;
     }
     // Past the start fade, so the fade never pales the selected name.
     strip.current?.scrollTo({
-      x: Math.max(0, x - edgeFadeWidth),
+      x: Math.max(0, selectedX - edgeFadeWidth),
       animated: !reduced,
     });
-  }, [selected, reduced]);
+  }, [selectedX, reduced]);
+
+  const boxes = React.useMemo(
+    () => tabs.map((name) => places[name] ?? null),
+    [tabs, places],
+  );
+  const index = Math.max(0, tabs.indexOf(selected));
 
   return (
     <View style={styles.strip}>
@@ -90,18 +105,29 @@ export function TabStrip({
               style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
               onPress={() => onSelect(name)}
               onLayout={(event) => {
-                offsets.current[name] = event.nativeEvent.layout.x;
+                const { x, width } = event.nativeEvent.layout;
+                setPlaces((current) => {
+                  const place = current[name];
+                  if (place?.x === x && place.width === width) {
+                    return current;
+                  }
+                  return { ...current, [name]: { x, width } };
+                });
               }}
               role="tab"
               aria-selected={active}
             >
               <Text style={[styles.text, active && styles.textActive]}>{name}</Text>
-              {/* A rule that paints nothing would flatten on Android and
-                  lose its rounded ends when it turns active. */}
-              <View collapsable={false} style={[styles.rule, active && styles.ruleActive]} />
             </Pressable>
           );
         })}
+        <TabUnderline
+          follow={follow}
+          selected={index}
+          boxes={boxes}
+          inset={spacing.m}
+          testID="tab-underline"
+        />
       </MotionScrollView>
       {fade.start ? <EdgeFade side="start" testID="tab-fade-start" /> : null}
       {fade.end ? <EdgeFade side="end" testID="tab-fade-end" /> : null}
@@ -138,17 +164,6 @@ const makeStyles = (colors: Palette) => ({
     textActive: {
       color: colors.accent,
       fontWeight: "700",
-    },
-    rule: {
-      position: "absolute",
-      left: spacing.m,
-      right: spacing.m,
-      bottom: 0,
-      height: 2,
-      borderRadius: 1,
-    },
-    ruleActive: {
-      backgroundColor: colors.accent,
     },
   }),
 });

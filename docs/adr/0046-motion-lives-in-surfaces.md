@@ -386,3 +386,50 @@ two pages stay in step.
 Proof: `planner-drag.spec.ts` drags the grip to both edges and reads
 the pane heights. It also shrinks the viewport and reads the re-clamped
 share.
+
+## Amendment, 2026-11-18: the tab rule tracks the swipe
+
+The Lists tab strip painted one rule inside each tab.
+The rule moved only when the pager committed a new tab.
+A swipe left it under the old tab until release.
+
+A screen now creates one `PageFollow` with `usePageFollow`.
+It hands the link to the `Pager` and to the `TabStrip`.
+The pager lends the link its own page position.
+The link then adds no write per frame.
+The pager also writes the page it mounted on.
+The strip paints one `TabUnderline` inside its content.
+An animated style reads the absolute page.
+It places the bar from the two tab boxes.
+Half a page puts the bar halfway between the tabs.
+Its width blends between the two tab widths.
+
+A tap one page away rides the pager's own settle.
+A longer tap cuts the page, so the bar crosses on its own clock.
+The pager sets a `touching` flag while a finger owns it.
+A drag after a long tap then still tracks the finger.
+
+Reduced motion needs no special path.
+The pager does not follow the finger.
+Every timing lands at once under `ReduceMotion.System`.
+The bar then jumps.
+
+Alternative: drive the bar from React state on a `useProgress` clock.
+That re-renders the screen per frame or lags one frame behind.
+Both lose the tracking the ask is about.
+
+Alternative: scroll the strip on the UI thread during a swipe.
+The incoming tab is the selected tab's neighbour.
+The strip scrolls the selected tab 30 px from its start.
+That neighbour is on screen while the bar reaches it.
+The strip still scrolls on commit.
+
+Cost: tab geometry arrives through layout state.
+The bar paints nothing on the strip's first frame.
+
+Proof: `pagers.spec.ts` holds a drag halfway.
+It runs for the mouse and for CDP touch.
+It reads the bar between the two tabs.
+Its width sits between the two tab widths.
+Reduce motion holds the bar still.
+The Android emulator frames proof lands here.
