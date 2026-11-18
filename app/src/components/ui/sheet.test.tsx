@@ -5,6 +5,7 @@ import { BackHandler, Platform, Text, TextInput } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useProgress } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
+import { spacing } from "@/theme/tokens";
 import { OverlayHost } from "./overlay-host";
 import { Sheet } from "./sheet";
 
@@ -18,6 +19,18 @@ vi.mock("react-native-keyboard-controller", async () => {
     }),
   };
 });
+
+// The device reports its system insets. The test gives them a value a
+// phone with three-button navigation reports.
+const safe = vi.hoisted(() => ({ bottom: 0 }));
+vi.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({
+    top: 0,
+    right: 0,
+    bottom: safe.bottom,
+    left: 0,
+  }),
+}));
 
 function Harness({ initial = true }: { initial?: boolean }) {
   const [open, setOpen] = React.useState(initial);
@@ -78,6 +91,10 @@ function inert(element: HTMLElement): boolean {
 }
 
 describe("Sheet", () => {
+  afterEach(() => {
+    safe.bottom = 0;
+  });
+
   it("reports a named modal dialog", () => {
     render(<Harness />);
 
@@ -132,6 +149,14 @@ describe("Sheet", () => {
     await finishMotion();
 
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("keeps the panel's 8pt gap above the bottom inset", () => {
+    safe.bottom = 48;
+    render(<Harness />);
+
+    const dock = screen.getByTestId("sheet-dock");
+    expect(parseFloat(getComputedStyle(dock).bottom)).toBe(spacing.s + 48);
   });
 
   it("is not drawn while closed", async () => {

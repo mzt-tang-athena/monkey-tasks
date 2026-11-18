@@ -137,7 +137,11 @@ export function Sheet({
           pointerEvents="box-none"
           style={[styles.lift, { height: window.height }, lift]}
         >
-          <Animated.View pointerEvents="box-none" style={styles.dock}>
+          <Animated.View
+            testID="sheet-dock"
+            pointerEvents="box-none"
+            style={styles.dock}
+          >
             <SheetDrag open={open} onDismiss={onDismiss}>
               <Animated.View
                 ref={panelRef}
