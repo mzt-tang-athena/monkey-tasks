@@ -3,7 +3,7 @@ title: Week and month lists take the day's divider
 created: 2026-11-18
 priority: high
 assignee: omp
-pr:
+pr: 174
 depends: []
 ---
 
