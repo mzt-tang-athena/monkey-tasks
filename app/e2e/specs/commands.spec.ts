@@ -364,6 +364,11 @@ test.describe("the bar's split Add pill", () => {
       expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(360.5);
     }
 
+    // The gap is the swipe target, so it keeps a real box too.
+    const gap = await page.getByTestId("bar-gap").boundingBox();
+    expect(gap?.width ?? 0).toBeGreaterThanOrEqual(23.5);
+    expect(gap?.height ?? 0).toBeGreaterThanOrEqual(43.5);
+
     // Nothing spills sideways: the bar fits the phone.
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

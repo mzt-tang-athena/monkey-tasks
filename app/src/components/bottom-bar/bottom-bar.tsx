@@ -170,6 +170,9 @@ const makeStyles = (colors: Palette) => ({
     spacer: {
       flex: 1,
       minWidth: spacing.xl,
+      // The row centers its children, so an empty view would have no
+      // height to swipe. The gap takes the row's full height instead.
+      alignSelf: "stretch",
     },
   }),
 });
