@@ -18,7 +18,7 @@
         "ACCESS_NOTIFICATION_POLICY"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#7A9A3E",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -37,7 +37,12 @@
     "owner": "monkey.tang.systems",
     "plugins": [
       "expo-router",
-      "expo-status-bar"
+      [
+        "expo-status-bar",
+        {
+          "style": "dark"
+        }
+      ]
     ]
   }
 }

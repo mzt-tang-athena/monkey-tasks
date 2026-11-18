@@ -240,7 +240,7 @@ The app code in `app/src` follows the Bulletproof React layout
 | `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
 | `features/<name>` | The UI of one feature: `capture`, `command`, `diagnostics`, `inbox-notes`, `journal`, `lists`, `planner`, `task-editor`. |
 | `components` | Shared UI. `components/ui` holds the primitives. |
-| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing`, `MotionScrollView` and the tick's `Celebration`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
+| `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing`, `MotionScrollView` and the tick's `Celebration`. `TabUnderline` tracks a `Pager` through the `PageFollow` its screen creates. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
 | `stores/journal` | The daily note query, the reference read and the append mutation. It shares the vault scope and reads no task state. |
@@ -272,7 +272,7 @@ documents its props, and each primitive has a component test.
 | `LoadingState`, `EmptyState`, `ErrorState` | One look for a list that loads, holds nothing or fails. |
 | `SectionHeader` | An eyebrow label over a group, with a count and a tone. With `expanded` and `onPress`, the row is a 44pt disclosure that opens the group. |
 | `CardGroupRow` | One row of a group card, with its edges and an inset divider. |
-| `TabStrip`, `SegmentedControl` | Tabs that scroll, with a fade over an edge that hides more tabs, and segments. Every target is at least 44 by 44. |
+| `TabStrip`, `SegmentedControl` | Tabs that scroll, with a fade over an edge that hides more tabs, and segments. Every target is at least 44 by 44. With a `PageFollow`, the selected rule tracks the pager's swipe. |
 | `EdgeFade` | The stepped fade over the edge of a sideways strip that hides more items. The tab strip and the editor's add strip share it. |
 | `Pressable` | Every press target. React Native's press on the web, because it takes the browser click. A row that mounts or re-renders under the finger still presses. It needs no layout report. Gesture handler's on native, where a pan cancels it. A surface swallows the one click a pan activation leaves behind. A web keyboard focus draws the shared focus mark, in the active palette. |
 | `TextField` | A labelled input, with a hint or an error. |
@@ -287,6 +287,7 @@ layer order and the shadows (ADR 0040). `theme/theme-provider.tsx` owns
 the active palette (ADR 20261111-runtime-theme-provider). A component
 keeps its styles in a `makeStyles(palette)` factory. It reads them
 through `useThemedStyles`. A theme switch then repaints it in place.
+The root layout draws the status bar in the palette's icon colour.
 `lib/settings-store.ts` holds the live sort order, task form and week
 view for the mounted Lists and Planner screens. `features/settings` is
 the one screen that writes the palette and those settings (ADR
@@ -422,7 +423,8 @@ store. The tab's action is the note composer.
 functions. A bare `YYYYMMDDHHmm` name shows as a local date and time.
 Every other name shows exactly as written, so a slug or a sentence
 keeps its words. A card shows up to eight lines of the body with the markdown
-marks gone and the indentation flattened. `lib/inbox-notes/read-inbox.ts`
+marks gone and the indentation flattened. A long name wraps after a hyphen,
+never inside a word. `lib/inbox-notes/read-inbox.ts`
 lists, reads, creates and saves the notes. A read never makes the
 folder; the first capture does.
 
@@ -465,6 +467,10 @@ Version 1.0 ships the week of 2026-11-16. A tick now draws a short
 burst from the checkbox, in the active palette (ADR
 20261116-completion-celebration). Every tick control plays it, the
 editor sheet's included, and only when the press marks the task done.
+
+The launcher icon is a flat matcha tile with a white tick (ADR
+`20261118-app-icon`). The sources live in `app/scripts/app-icon/source/`,
+and `npm run app-icon:build` rebuilds every icon asset from them.
 
 The design direction round started. `20261112-design-scale-guard`
 merged in `d26fcae`. It names the spacing and radius scale, moves

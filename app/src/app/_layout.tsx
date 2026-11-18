@@ -13,6 +13,7 @@ import { CelebrationProvider } from "@/components/motion/celebration";
 import { OverlayHost } from "@/components/ui/overlay-host";
 import { CommandPaneProvider } from "@/features/command/command-pane-provider";
 import { TaskEditorProvider } from "@/features/task-editor/task-editor-provider";
+import { ThemedStatusBar } from "@/theme/status-bar";
 import { ThemeProvider } from "@/theme/theme-provider";
 import { installErrorAlert } from "@/lib/errors";
 import { installCrashTestHooks } from "@/lib/crash-test-hooks";
@@ -67,6 +68,9 @@ export default function RootLayout() {
         {/* One palette for every screen, sheet and toast, so a switch
             repaints the whole tree without a remount. */}
         <ThemeProvider>
+          {/* The system bar's icons read the palette, so a switch
+              repaints them without a restart. */}
+          <ThemedStatusBar />
           {/* Render errors inside a screen show the boundary panel
               instead of unmounting to a blank app. It wraps the data
               layer so a provider that throws still renders the panel.

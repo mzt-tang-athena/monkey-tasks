@@ -386,3 +386,99 @@ two pages stay in step.
 Proof: `planner-drag.spec.ts` drags the grip to both edges and reads
 the pane heights. It also shrinks the viewport and reads the re-clamped
 share.
+
+## Amendment, 2026-11-18: the tab rule tracks the swipe
+
+The Lists tab strip painted one rule inside each tab.
+The rule moved only when the pager committed a new tab.
+A swipe left it under the old tab until release.
+
+A screen now creates one `PageFollow` with `usePageFollow`.
+It hands the link to the `Pager` and to the `TabStrip`.
+The pager lends the link its own page position.
+The link then adds no write per frame.
+The pager also writes the page it mounted on.
+The strip paints one `TabUnderline` inside its content.
+An animated style reads the absolute page.
+It places the bar from the two tab boxes.
+Half a page puts the bar halfway between the tabs.
+Its width blends between the two tab widths.
+
+A tap one page away rides the pager's own settle.
+A longer tap cuts the page, so the bar crosses on its own clock.
+The pager sets a `touching` flag while a finger owns it.
+A drag after a long tap then still tracks the finger.
+
+Reduced motion needs no special path.
+The pager does not follow the finger.
+Every timing lands at once under `ReduceMotion.System`.
+The bar then jumps.
+
+Alternative: drive the bar from React state on a `useProgress` clock.
+That re-renders the screen per frame or lags one frame behind.
+Both lose the tracking the ask is about.
+
+Alternative: scroll the strip on the UI thread during a swipe.
+The incoming tab is the selected tab's neighbour.
+The strip scrolls the selected tab 30 px from its start.
+That neighbour is on screen while the bar reaches it.
+The strip still scrolls on commit.
+
+Cost: tab geometry arrives through layout state.
+The bar paints nothing on the strip's first frame.
+
+Proof: `pagers.spec.ts` holds a drag halfway.
+It runs for the mouse and for CDP touch.
+It reads the bar between the two tabs.
+Its width sits between the two tab widths.
+Reduce motion holds the bar still.
+
+Android proof, release APK of `e0cbf5b` on the Pixel 7 emulator.
+The frame grid is 270 px wide, a quarter of the screen.
+- Main's rule spans x 21 to 45.
+- Errands' rule spans x 65 to 103.
+- Frames 1 to 21 walk the bar from 21 to 48.
+- Its width blends from 24 to 32 on the way.
+- The release lands it under Errands.
+- With motion off it jumps in one frame and holds.
+- Evidence: `app/build/verify/evidence/android-20261118-074823/`.
+
+## Amendment, 2026-11-18: a preview takes the host's box
+
+The operator swiped the month planner on the phone.
+The incoming card arrived with every date at the top of the card.
+The landed card was right.
+
+The pager put a preview in a positioned box with `width: "100%"`
+and `top: 0; bottom: 0`.
+The box took its height from the track.
+The track holds only positioned children, so the track has no height.
+A month cell took its height from `aspectRatio: 1` over a
+percentage width.
+In that subtree the width resolved and the height came out 0.
+The landed page sat in flow at the host's width, so it came out right.
+
+A preview now takes the host's measured width and height, in pixels.
+A preview is then the same box as the live page.
+A month cell divides its row with `flex` instead of a percentage.
+No part of the card depends on a percentage chain.
+
+Alternative: leave the surface and give the month grid a row height
+in points.
+That fixes one caller and leaves every preview box zero tall.
+The list preview and the week preview carry their own height, so
+they hid the fault.
+
+Cost: a preview is the host's box. A neighbour taller than the live
+page would clip.
+Every neighbour today has the same shape as its page.
+The day and list previews already filled the host.
+
+Proof: a frame grid of a month swipe on the emulator.
+The 1.1.0 release APK shows the incoming card with its dates at the
+top until it lands.
+This branch lays the same card out on its first frame.
+The week card shows no fault in either run.
+Its grid carries a fixed height.
+Evidence: `app/build/verify/evidence/android-20261118-113528/`,
+`android-20261118-123618/` and `android-20261118-123853/`.

@@ -5,6 +5,7 @@ import type { TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { Pager } from "@/components/motion/pager";
+import { usePageFollow } from "@/components/motion/page-follow";
 import { PullSurface } from "@/components/motion/pull";
 import { PreviewRow } from "@/components/preview-row";
 import { renderMotionScroll } from "@/components/motion/scroll-view";
@@ -64,6 +65,9 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
 
   const tabState = useListTabState();
   const { tab, setTab, index, bounds, onPage } = tabState;
+  // The tab strip's rule and the pager share one live page position,
+  // so the rule tracks a swipe on the UI thread (ADR 0046).
+  const follow = usePageFollow(index);
   const { sortMode, setSortMode } = useSortMode();
   const { shown, repairs, sections, onlyCompleted, completed } = useListSections(
     tab,
@@ -196,6 +200,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
             tabs={tabState.tabs}
             tab={tab}
             onSelectTab={setTab}
+            follow={follow}
             sortMode={sortMode}
             onSortMode={setSortMode}
             completed={completed}
@@ -220,6 +225,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
               index={index}
               bounds={bounds}
               onPage={onPage}
+              follow={follow}
               renderPreview={(page) => {
                 const name = tabState.tabs[page];
                 return name == null ? null : (
