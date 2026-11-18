@@ -8,6 +8,7 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import { Overlay } from "@/components/ui/overlay-host";
+import { useBarSpace } from "@/components/bottom-bar/bar-space";
 import { timing } from "@/lib/motion/progress";
 import { motion } from "@/lib/motion/tokens";
 import { radii, type Layer } from "@/theme/tokens";
@@ -97,9 +98,13 @@ export function useTickBurst(
  * Draws each tick's burst above the screen for `motion.ms.celebrate`.
  * It sits under the theme and the overlay host in the root layout, and
  * above every surface that can tick. A burst draws at its surface's
- * layer: under the bars and menus for a page tick, over the sheet for
- * a tick inside one. It takes no press, and with reduced motion it
- * never mounts.
+ * layer: a page burst stops at the bottom bar's top edge, and a burst
+ * from inside a sheet draws over that sheet. It takes no press, and
+ * with reduced motion it never mounts.
+ *
+ * The bar lives inside a screen, so tree order cannot put the page
+ * burst under it. The bar publishes its height, and the page layer is
+ * clipped there. The sheet layer stays whole.
  *
  * It draws outside the row on purpose: a ticked row moves to
  * Completed after the tick's 320 ms (ADR 0034), and a burst inside it
@@ -107,6 +112,9 @@ export function useTickBurst(
  */
 export function CelebrationProvider({ children }: { children: React.ReactNode }) {
   const reduced = useReducedMotion();
+  const { styles } = useThemedStyles(makeStyles);
+  const space = useBarSpace();
+  const barHeight = space?.height ?? 0;
   const [bursts, setBursts] = React.useState<Burst[]>([]);
   const nextId = React.useRef(1);
 
@@ -136,11 +144,22 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
         if (here.length === 0) {
           return null;
         }
+        const nodes = here.map((burst) => (
+          <TickBurst key={burst.id} at={burst} onDone={done} />
+        ));
         return (
           <Overlay key={surface} layer={layerOf[surface]}>
-            {here.map((burst) => (
-              <TickBurst key={burst.id} at={burst} onDone={done} />
-            ))}
+            {surface === "page" ? (
+              <View
+                testID="tick-burst-clip"
+                pointerEvents="none"
+                style={[styles.clip, { bottom: barHeight }]}
+              >
+                {nodes}
+              </View>
+            ) : (
+              nodes
+            )}
           </Overlay>
         );
       })}
@@ -248,6 +267,15 @@ const makeStyles = () => ({
       position: "absolute",
       width: reach * 2,
       height: reach * 2,
+    },
+    // The page layer ends where the bar starts. A burst whose dots
+    // would fly over the bar is cut at that edge.
+    clip: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      overflow: "hidden",
     },
     ring: {
       position: "absolute",

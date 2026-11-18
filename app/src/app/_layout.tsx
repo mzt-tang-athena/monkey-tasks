@@ -8,6 +8,7 @@ import { makeQueryClient } from "@/lib/react-query";
 import { TasksProvider } from "@/stores/tasks/tasks-provider";
 import { VaultProvider } from "@/lib/vault/vault-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { BarSpaceProvider } from "@/components/bottom-bar/bar-space";
 import { CelebrationProvider } from "@/components/motion/celebration";
 import { OverlayHost } from "@/components/ui/overlay-host";
 import { CommandPaneProvider } from "@/features/command/command-pane-provider";
@@ -80,26 +81,31 @@ export default function RootLayout() {
                   {/* Menus, sheets and toasts draw here, above every
                       screen, in one z order (ADR 0040). */}
                   <OverlayHost>
-                    {/* Every surface that can tick sits inside the
-                        celebration: the screens, the command pane and
-                        the editor sheet. The burst is an overlay, so it
-                        needs the host above it. */}
-                    <CelebrationProvider>
-                      <CommandPaneProvider>
-                        {/* The task editor sheet and its toasts draw over
-                            every screen, so a write outlives the sheet
-                            that started it. */}
-                        <TaskEditorProvider>
-                          <Stack>
-                            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                            <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
-                            {/* The screen draws its own back button, so the
-                                stack's header never covers the page. */}
-                            <Stack.Screen name="settings" options={{ headerShown: false }} />
-                          </Stack>
-                        </TaskEditorProvider>
-                      </CommandPaneProvider>
-                    </CelebrationProvider>
+                    {/* The page burst sits above the screen, and the bar
+                        sits inside one. This provider hands the bar's
+                        height up, so the burst can stop at its top. */}
+                    <BarSpaceProvider>
+                      {/* Every surface that can tick sits inside the
+                          celebration: the screens, the command pane and
+                          the editor sheet. The burst is an overlay, so it
+                          needs the host above it. */}
+                      <CelebrationProvider>
+                        <CommandPaneProvider>
+                          {/* The task editor sheet and its toasts draw over
+                              every screen, so a write outlives the sheet
+                              that started it. */}
+                          <TaskEditorProvider>
+                            <Stack>
+                              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                              <Stack.Screen name="dev" options={{ title: "Diagnostics" }} />
+                              {/* The screen draws its own back button, so the
+                                  stack's header never covers the page. */}
+                              <Stack.Screen name="settings" options={{ headerShown: false }} />
+                            </Stack>
+                          </TaskEditorProvider>
+                        </CommandPaneProvider>
+                      </CelebrationProvider>
+                    </BarSpaceProvider>
                   </OverlayHost>
                 </TasksProvider>
               </VaultProvider>

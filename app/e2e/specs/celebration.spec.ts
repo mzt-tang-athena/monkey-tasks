@@ -1,9 +1,138 @@
-import type { Page, TestInfo } from "@playwright/test";
+import type { Locator, Page, TestInfo } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { completedNotes, undated } from "../data";
 import { openCompleted, press, row } from "../locators";
 
 type Watched = { burstSeen?: boolean };
+
+type Box = { left: number; top: number; right: number; bottom: number };
+
+type BurstWatch = { boxes?: Box[]; bar?: Box | null };
+
+/** Two boxes share area. Touching edges do not count. */
+function overlaps(one: Box, other: Box) {
+  return (
+    Math.min(one.right, other.right) > Math.max(one.left, other.left) &&
+    Math.min(one.bottom, other.bottom) > Math.max(one.top, other.top)
+  );
+}
+
+/**
+ * Records the box every burst paints into, as the page saw it at the
+ * mount, and the bar's box. A box is cut by each ancestor that clips,
+ * so it reads the area that can paint, not the layout the element
+ * would have without the clip.
+ */
+async function watchBurstBoxes(page: Page) {
+  await page.evaluate(() => {
+    const watched = window as unknown as BurstWatch;
+    watched.boxes = [];
+
+    const asBox = (rect: DOMRect): Box => ({
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+    });
+
+    const clipped = (element: Element): Box => {
+      const own = element.getBoundingClientRect();
+      let box: Box = asBox(own);
+      let node = element.parentElement;
+      while (node != null) {
+        const style = getComputedStyle(node);
+        const clips = [style.overflowX, style.overflowY].some(
+          (value) =>
+            value === "hidden" ||
+            value === "clip" ||
+            value === "scroll" ||
+            value === "auto",
+        );
+        if (clips) {
+          const frame = node.getBoundingClientRect();
+          box = {
+            left: Math.max(box.left, frame.left),
+            top: Math.max(box.top, frame.top),
+            right: Math.min(box.right, frame.right),
+            bottom: Math.min(box.bottom, frame.bottom),
+          };
+        }
+        node = node.parentElement;
+      }
+      return box;
+    };
+
+    const bar = document.querySelector('[data-testid="bottom-bar"]');
+    watched.bar = bar == null ? null : asBox(bar.getBoundingClientRect());
+
+    const seen = new WeakSet<Element>();
+    const record = () => {
+      for (const burst of document.querySelectorAll(
+        '[data-testid="tick-burst"]',
+      )) {
+        if (seen.has(burst)) {
+          continue;
+        }
+        seen.add(burst);
+        watched.boxes!.push(clipped(burst));
+      }
+    };
+    record();
+    new MutationObserver(record).observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  });
+}
+
+async function burstBoxes(page: Page) {
+  return page.evaluate(() => {
+    const watched = window as unknown as BurstWatch;
+    return { boxes: watched.boxes ?? [], bar: watched.bar ?? null };
+  });
+}
+
+/**
+ * Scrolls the list so the tick's circle sits just above the bar. A
+ * page tick near the bar is the case the burst must not cross.
+ */
+async function placeTickAboveBar(page: Page, tick: Locator, bar: Locator) {
+  const barBox = await bar.boundingBox();
+  if (barBox == null) {
+    throw new Error("the bottom bar has no box");
+  }
+  const target = barBox.y - 12;
+  for (let pass = 0; pass < 4; pass++) {
+    const box = await tick.boundingBox();
+    if (box == null) {
+      throw new Error("the tick has no box");
+    }
+    const delta = box.y + box.height / 2 - target;
+    if (Math.abs(delta) <= 1) {
+      return;
+    }
+    await tick.evaluate((element, by) => {
+      let node = element.parentElement;
+      while (node != null && node !== document.body) {
+        const style = getComputedStyle(node);
+        const scrolls =
+          (style.overflowY === "auto" || style.overflowY === "scroll") &&
+          node.scrollHeight > node.clientHeight;
+        if (scrolls) {
+          node.scrollTop += by;
+          return;
+        }
+        node = node.parentElement;
+      }
+      throw new Error("the tick has no scrolling ancestor");
+    }, delta);
+    await page.waitForTimeout(50);
+  }
+  const box = await tick.boundingBox();
+  expect(box == null ? Number.NaN : box.y + box.height / 2).toBeLessThan(
+    barBox.y,
+  );
+}
 
 /**
  * The tick's burst draws above the row, because a ticked row moves to
@@ -70,6 +199,45 @@ test.describe("completion celebration", () => {
     await expect(tick).toHaveAttribute("aria-checked", "true");
 
     await expectBurstRule(page, testInfo);
+  });
+
+  test("a page tick's burst never paints over the bottom bar", async ({
+    page,
+  }, testInfo) => {
+    await page.goto("/");
+    const tick = row(page, undated.second).getByRole("checkbox", {
+      name: undated.second,
+    });
+    const bar = page.getByTestId("bottom-bar");
+    await expect(tick).toHaveAttribute("aria-checked", "false");
+    await expect(bar).toBeVisible();
+    // Completed folds by default. Open it so the ticked row stays on the
+    // page and keeps its box after the tick.
+    await openCompleted(page);
+    // A row near the bar is the case in the report: the row sits above
+    // the bar, and the burst reaches past it.
+    await placeTickAboveBar(page, tick, bar);
+    await watchBurstBoxes(page);
+
+    await press(page, tick);
+    await expect(tick).toHaveAttribute("aria-checked", "true");
+
+    if (testInfo.project.name === "reduced-motion") {
+      await page.waitForTimeout(150);
+      const { boxes } = await burstBoxes(page);
+      expect(boxes).toHaveLength(0);
+      await expect(page.getByTestId("tick-burst")).toHaveCount(0);
+      return;
+    }
+
+    await expect
+      .poll(async () => (await burstBoxes(page)).boxes.length)
+      .toBeGreaterThan(0);
+    const { boxes, bar: barBox } = await burstBoxes(page);
+    expect(barBox).not.toBeNull();
+    for (const box of boxes) {
+      expect(overlaps(box, barBox!)).toBe(false);
+    }
   });
 
   test("a mark done in the editor sheet plays a burst, and it clears", async ({

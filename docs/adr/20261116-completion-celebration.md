@@ -141,3 +141,39 @@ shows.
 The Android pass now backs the look on the UI thread. The frames are in
 `app/build/verify/evidence/completion-celebration/android/`.
 
+## Amendment, 2026-11-18: a page burst stops at the bottom bar
+
+The original decision put the page burst at `layers.celebrate`, between
+the content and the bottom bar. That order works only when both sit in
+one stacking context. They do not. The burst is an overlay in the root
+host, above every screen. The bar is inside a screen. The layer number
+never ordered the two. At 412 wide, a row ticked just above the bar
+painted dots over the bar's top edge.
+
+The page layer now ends at the bar's top edge. The bar reports its
+measured height, with the safe-area band included. A small provider
+hands that number to the root. The page burst layer clips at that
+height. The bar itself does not move.
+
+The sheet layer is not clipped. A burst from the editor sheet still
+draws over that sheet and under the toast. Menus, sheets and toasts sit
+at higher layers, so they still draw over a page burst. Reduced motion
+still mounts nothing.
+
+The change has three costs:
+
+- The clip cuts a burst on a low row short of its full reach. We
+  accept that. The bar is opaque chrome, and the burst belongs on the
+  page.
+- The clip uses the bar's layout height. The bar slides away while the
+  capture sheet shows. A page burst cannot start then, because the
+  sheet takes every press. A burst already in flight may show in the
+  strip the bar just left, and the scrim covers it.
+- A screen with no bar keeps the last height. No barless screen has a
+  tick row.
+
+Alternative: draw the page burst inside each screen, under its bar.
+Rejected. The burst is one root provider that serves every screen and
+the sheet. A per-screen copy would add an overlay and a coordinate
+shift for the same pixels.
+
