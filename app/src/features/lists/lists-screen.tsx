@@ -5,7 +5,7 @@ import type { TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { Pager } from "@/components/motion/pager";
-import { PullSurface } from "@/components/motion/pull";
+import { PagePull, PullSurface } from "@/components/motion/pull";
 import { PreviewRow } from "@/components/preview-row";
 import { renderMotionScroll } from "@/components/motion/scroll-view";
 import {
@@ -101,16 +101,9 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   );
 
   // A real reload: the loader can fail when it talks to the vault, so
-  // the error state keeps its retry affordance (also wired to the
-  // list's pull to refresh).
-  const [refreshing, setRefreshing] = React.useState(false);
+  // the error state keeps its retry.
   const reload = React.useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refresh();
-    } finally {
-      setRefreshing(false);
-    }
+    await refresh();
   }, [refresh]);
 
   // The row callbacks have one identity for the screen's life, so a
@@ -236,39 +229,39 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                 {/* A tab is a different list, so its page starts at the
                     top, as its preview draws it. The pager's page
                     itself stays mounted (ticket 0087). */}
-                <SectionList<TaskItem, ListsSection>
-                  key={tab}
-                  contentContainerStyle={styles.content}
-                  onRefresh={reload}
-                  refreshing={refreshing}
-                  sections={folded}
-                  keyExtractor={keyExtractor}
-                  renderItem={renderItem}
-                  renderSectionHeader={renderSectionHeader}
-                  renderScrollComponent={renderMotionScroll}
-                  ListHeaderComponent={
-                    <>
-                      <RepairNotice repairs={repairs} />
-                      {status === "ready" && onlyCompleted ? (
+                <PagePull onPull={showCommands}>
+                  <SectionList<TaskItem, ListsSection>
+                    key={tab}
+                    contentContainerStyle={styles.content}
+                    sections={folded}
+                    keyExtractor={keyExtractor}
+                    renderItem={renderItem}
+                    renderSectionHeader={renderSectionHeader}
+                    renderScrollComponent={renderMotionScroll}
+                    ListHeaderComponent={
+                      <>
+                        <RepairNotice repairs={repairs} />
+                        {status === "ready" && onlyCompleted ? (
+                          <EmptyState label={emptyListLabel(tab)} />
+                        ) : null}
+                      </>
+                    }
+                    ListEmptyComponent={
+                      status === "loading" ? (
+                        <LoadingState />
+                      ) : status === "error" ? (
+                        <ErrorState
+                          message={readError ?? "Something went wrong."}
+                          onRetry={() => void reload()}
+                        />
+                      ) : (
                         <EmptyState label={emptyListLabel(tab)} />
-                      ) : null}
-                    </>
-                  }
-                  ListEmptyComponent={
-                    status === "loading" ? (
-                      <LoadingState />
-                    ) : status === "error" ? (
-                      <ErrorState
-                        message={readError ?? "Something went wrong."}
-                        onRetry={() => void reload()}
-                      />
-                    ) : (
-                      <EmptyState label={emptyListLabel(tab)} />
-                    )
-                  }
-                  stickySectionHeadersEnabled={false}
-                  removeClippedSubviews={false}
-                />
+                      )
+                    }
+                    stickySectionHeadersEnabled={false}
+                    removeClippedSubviews={false}
+                  />
+                </PagePull>
               </View>
             </ListPager>
           </ListReorder.Root>

@@ -12,6 +12,7 @@ function sources(overrides: Partial<CommandSources> = {}): CommandSources {
     switchList: vi.fn(),
     openSettings: vi.fn(),
     openDiagnostics: vi.fn(),
+    reloadVault: vi.fn(),
     ...overrides,
   };
 }
@@ -61,5 +62,13 @@ describe("buildCommands", () => {
     expect(context.goPlanner).toHaveBeenCalledTimes(1);
     expect(context.openDiagnostics).toHaveBeenCalledTimes(1);
     expect(context.addTask).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers a vault reload", () => {
+    const reloadVault = vi.fn();
+    const command = byId("reload", sources({ reloadVault }));
+    expect(command.label).toBe("Reload vault");
+    command.run();
+    expect(reloadVault).toHaveBeenCalledTimes(1);
   });
 });

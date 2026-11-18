@@ -3,7 +3,9 @@ import { StyleSheet, Text } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { Pressable } from "@/components/ui/pressable";
 import { SectionHeader } from "@/components/ui/section-header";
+import { PagePull } from "@/components/motion/pull";
 import { WEEKDAYS_FULL } from "@/features/planner/lib/labels";
+import { useCommandPane } from "@/hooks/use-command-pane";
 import type { PlannerMonth } from "@/features/planner/hooks/use-planner-month";
 import { fonts, radius, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -38,6 +40,7 @@ export function MonthPane({
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const { source } = usePlannerList();
+  const { show: showCommands } = useCommandPane();
   const { picked, setPicked, viewMonth, monthKey, pickedDay, monthRows, pickedTasks } =
     month;
 
@@ -74,32 +77,34 @@ export function MonthPane({
   );
 
   return (
-    <MonthView
-      viewMonth={viewMonth}
-      today={today}
-      tasks={tasks}
-      picked={picked}
-      onPick={pick}
-      onSelectMonth={onSelectMonth}
-    >
-      {/* The pane under the card: the source's month list until a day
-          is picked, then that day's tasks. */}
-      <TaskListSection
-        style={layout.paneScroll}
-        mode="month"
-        day={day}
-        tasks={pickedDay == null ? monthRows : pickedTasks}
-        header={header}
-        footer={footer}
-        emptyLabel={
-          pickedDay == null
-            ? source === "due-period"
-              ? "Nothing scheduled this month."
-              : `Nothing on ${source} yet.`
-            : "Nothing scheduled."
-        }
-      />
-    </MonthView>
+    <PagePull onPull={showCommands}>
+      <MonthView
+        viewMonth={viewMonth}
+        today={today}
+        tasks={tasks}
+        picked={picked}
+        onPick={pick}
+        onSelectMonth={onSelectMonth}
+      >
+        {/* The pane under the card: the source's month list until a day
+            is picked, then that day's tasks. */}
+        <TaskListSection
+          style={layout.paneScroll}
+          mode="month"
+          day={day}
+          tasks={pickedDay == null ? monthRows : pickedTasks}
+          header={header}
+          footer={footer}
+          emptyLabel={
+            pickedDay == null
+              ? source === "due-period"
+                ? "Nothing scheduled this month."
+                : `Nothing on ${source} yet.`
+              : "Nothing scheduled."
+          }
+        />
+      </MonthView>
+    </PagePull>
   );
 }
 

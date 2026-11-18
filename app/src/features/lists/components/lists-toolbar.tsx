@@ -5,7 +5,6 @@ import { Icon } from "@/components/ui/icon";
 import { IconButton } from "@/components/ui/icon-button";
 import { Menu, type MenuItem } from "@/components/ui/menu";
 import { TabStrip } from "@/components/ui/tab-strip";
-import { useCommandPane } from "@/hooks/use-command-pane";
 import type { SortMode } from "@/lib/settings";
 import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -43,7 +42,6 @@ export function ListsToolbar({
   onClearCompleted: (tasks: readonly TaskItem[]) => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
-  const { show } = useCommandPane();
   // One menu at a time: opening one closes the other.
   const [open, setOpen] = React.useState<"sort" | "more" | null>(null);
   // The clear's confirmation. It keeps the snapshot and the sheet's
@@ -115,9 +113,6 @@ export function ListsToolbar({
           label="Lists"
         />
         <View style={styles.spacer} />
-        <IconButton label="open commands" onPress={show}>
-          <Icon name="chevron-down" />
-        </IconButton>
         <View ref={sortAnchor} testID="sort-menu-anchor">
           <IconButton
             label="sort list"

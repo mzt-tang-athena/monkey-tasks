@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { CommandPane } from "@/components/ui/command-pane";
 import {
@@ -24,6 +25,7 @@ import { orderCommands, recordRecent } from "./model";
 export function CommandPaneProvider({ children }: { children: React.ReactNode }) {
   const [shown, setShown] = React.useState(false);
   const [recent, setRecent] = React.useState<string[]>([]);
+  const client = useQueryClient();
   const { lists } = useStoreMeta();
   const currentList = useSelectedList();
   const [sortMode] = useSetting("sortMode");
@@ -55,6 +57,11 @@ export function CommandPaneProvider({ children }: { children: React.ReactNode })
     },
     openSettings: () => router.push("/settings"),
     openDiagnostics: () => router.push("/dev"),
+    // Every vault read is one query cache, so all of them go stale. The
+    // active screen rereads at once.
+    reloadVault: () => {
+      void client.invalidateQueries();
+    },
   });
 
   const rows = orderCommands(commands, recent).map((command) => ({

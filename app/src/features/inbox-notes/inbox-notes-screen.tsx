@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
+import { PagePull } from "@/components/motion/pull";
 import { renderMotionScroll } from "@/components/motion/scroll-view";
 import { Banner } from "@/components/ui/banner";
 import {
@@ -11,6 +12,7 @@ import {
   LoadingState,
 } from "@/components/ui/list-states";
 import { VaultPrompt } from "@/components/ui/vault-prompt";
+import { useCommandPane } from "@/hooks/use-command-pane";
 import { useStableCallback } from "@/hooks/use-stable-callback";
 import type { InboxNote } from "@/lib/inbox-notes/model";
 import { useInboxNotes } from "@/stores/inbox-notes/use-inbox-notes";
@@ -36,15 +38,10 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
     grant,
   } = useInboxNotes();
   const insets = useSafeAreaInsets();
-  const [refreshing, setRefreshing] = React.useState(false);
+  const { show: showCommands } = useCommandPane();
 
   const reload = React.useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refresh();
-    } finally {
-      setRefreshing(false);
-    }
+    await refresh();
   }, [refresh]);
 
   const open = useStableCallback((note: InboxNote) => {
@@ -69,7 +66,7 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
     );
 
   return (
-    <View style={styles.screen}>
+    <View testID="inbox-notes-screen" style={styles.screen}>
       <View style={[styles.statusStrip, { height: insets.top }]} />
       <InboxHeader count={notes.length} />
 
@@ -103,24 +100,24 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
         </View>
       ) : null}
 
-      <FlatList
-        data={cards}
-        keyExtractor={(item, index) => item?.uri ?? `pad-${index}`}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.content}
-        renderScrollComponent={renderMotionScroll}
-        onRefresh={reload}
-        refreshing={refreshing}
-        ListEmptyComponent={empty ?? undefined}
-        renderItem={({ item }) =>
-          item == null ? (
-            <View style={styles.fill} />
-          ) : (
-            <NoteCard note={item} onPress={open} />
-          )
-        }
-      />
+      <PagePull onPull={showCommands}>
+        <FlatList
+          data={cards}
+          keyExtractor={(item, index) => item?.uri ?? `pad-${index}`}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.content}
+          renderScrollComponent={renderMotionScroll}
+          ListEmptyComponent={empty ?? undefined}
+          renderItem={({ item }) =>
+            item == null ? (
+              <View style={styles.fill} />
+            ) : (
+              <NoteCard note={item} onPress={open} />
+            )
+          }
+        />
+      </PagePull>
 
       <BottomBar action={dock} />
     </View>

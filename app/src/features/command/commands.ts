@@ -20,6 +20,8 @@ export type CommandSources = {
   switchList: () => void;
   openSettings: () => void;
   openDiagnostics: () => void;
+  /** Read the vault again, as the app does on return to the front. */
+  reloadVault: () => void;
 };
 
 /**
@@ -83,6 +85,12 @@ export function buildCommands(sources: CommandSources): Command[] {
       label: "Settings",
       keywords: ["preferences"],
       run: sources.openSettings,
+    },
+    {
+      id: "reload",
+      label: "Reload vault",
+      keywords: ["refresh", "sync", "reread", "folder"],
+      run: sources.reloadVault,
     },
     {
       id: "diagnostics",

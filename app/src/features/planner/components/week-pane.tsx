@@ -3,8 +3,10 @@ import { View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import type { WeekLayout } from "@/lib/settings";
 import { Pager } from "@/components/motion/pager";
+import { PagePull } from "@/components/motion/pull";
 import { addDays } from "@/utils/dates";
 import { dayIndexBetween, pillsForSource, startOfWeek } from "@/features/planner/model";
+import { useCommandPane } from "@/hooks/use-command-pane";
 import { layout } from "../planner-layout";
 import { usePlannerList } from "./planner-list-context";
 import { TaskListSection } from "./task-list-section";
@@ -35,6 +37,7 @@ export function WeekPane({
   onOpenDay: (day: Date) => void;
 }) {
   const { source } = usePlannerList();
+  const { show: showCommands } = useCommandPane();
   const weekPool = React.useMemo(
     () => pillsForSource(tasks, source, startOfWeek(day)),
     [tasks, source, day],
@@ -51,50 +54,52 @@ export function WeekPane({
   );
 
   return (
-    <View style={layout.weekBody}>
-      <Pager
-        testID="week-pager"
-        index={index}
-        onPage={onPage}
-        renderPreview={(page) => (
+    <PagePull onPull={showCommands}>
+      <View style={layout.weekBody}>
+        <Pager
+          testID="week-pager"
+          index={index}
+          onPage={onPage}
+          renderPreview={(page) => (
+            <View style={layout.gutter}>
+              <WeekView
+                layout={weekLayout}
+                tasks={openTasks}
+                today={today}
+                selected={addDays(day, 7 * (page - index))}
+                interactive={false}
+              />
+            </View>
+          )}
+        >
           <View style={layout.gutter}>
             <WeekView
               layout={weekLayout}
               tasks={openTasks}
               today={today}
-              selected={addDays(day, 7 * (page - index))}
-              interactive={false}
+              selected={day}
+              interactive
+              onSelect={onSelect}
+              onOpenDay={onOpenDay}
             />
           </View>
-        )}
-      >
-        <View style={layout.gutter}>
-          <WeekView
-            layout={weekLayout}
-            tasks={openTasks}
-            today={today}
-            selected={day}
-            interactive
-            onSelect={onSelect}
-            onOpenDay={onOpenDay}
+        </Pager>
+        {/* Week's foot: the shared section in its own scrolling pane,
+            fed the week's placement pool. */}
+        <View style={[layout.paneList, layout.gutter]}>
+          <TaskListSection
+            style={layout.paneScroll}
+            mode="week"
+            day={day}
+            tasks={weekPool}
+            emptyLabel={
+              source === "due-period"
+                ? "Nothing to place this week."
+                : `Nothing on ${source} yet.`
+            }
           />
         </View>
-      </Pager>
-      {/* Week's foot: the shared section in its own scrolling pane,
-          fed the week's placement pool. */}
-      <View style={[layout.paneList, layout.gutter]}>
-        <TaskListSection
-          style={layout.paneScroll}
-          mode="week"
-          day={day}
-          tasks={weekPool}
-          emptyLabel={
-            source === "due-period"
-              ? "Nothing to place this week."
-              : `Nothing on ${source} yet.`
-          }
-        />
       </View>
-    </View>
+    </PagePull>
   );
 }

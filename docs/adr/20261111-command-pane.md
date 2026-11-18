@@ -73,3 +73,65 @@ that gesture, so a phone check is still open.
 Alternative: open the pane from a per-screen drawer. We rejected it. It
 would duplicate the row list on every screen. It would also put the pane
 below the overlay host, outside the one focus system.
+
+## Amendment, 2026-11-18: the pull spans the page, the bar carries the opener
+
+The operator picked this from a mockup on 2026-11-18. Three parts.
+
+The pull now covers the page body, not only the header band. Each page
+scroller offers it on all four tabs. The scroller reads its own offset,
+and the pull acts only while that offset sits at the top. A pull that
+starts lower down only scrolls. The pan activates on a downward travel
+alone. Upward travel keeps the scroll. Sideways travel fails at the
+same 24pt as before, so the pager keeps its swipe. The row drag, the
+day split and a sheet never start it. A pull over a row arms the press
+guard, so the row does not open too.
+
+On the web, the browser owns a vertical touch drag. A pan that waits
+for its 12pt threshold loses the drag to the browser's scroll. So
+`MotionScrollView` also listens for the web's own touch events. A drag
+that starts at the top and travels down keeps the gesture. It prevents
+the `touchmove` default, so the page holds still. Upward travel stays
+with the browser. Native keeps the pan, where the platform arbitrates
+between the drag, the pager and the split.
+
+Alternative: set `touch-action: none` on a page at its top. We rejected
+it. It also blocks an upward drag, so a reader could not scroll down
+from the top of a page.
+
+Pull-to-refresh leaves Lists, Journal and Inbox Notes. The pull belongs
+to the pane on every page. The vault already rereads when the app
+returns to the foreground. The pane gains "Reload vault". It
+invalidates every vault query, so the shown screen rereads now. Another
+tab rereads when it mounts again.
+
+The opener moves into the bottom bar as a split Add pill. The left half
+draws the plus. The right half draws Phosphor's Command glyph. Each
+half is a 44pt square with its own name. A keyboard and TalkBack reach
+"add task" and "open commands" separately. The pill is about 89pt, so
+four tabs and the pill still fit a 360pt screen. The Add half keeps the
+tab's own action and name.
+
+The Planner header drops its chevron and its gear. The Lists toolbar
+drops its chevron too. The bar carries the opener on every tab, so a
+second one only shortens the row. Settings stays in the pane and in the
+Lists three-dot menu. A header band still pulls open the pane, so the
+always-visible chrome keeps a fast path.
+
+Alternatives we rejected:
+
+- Keep the opener out of the bar: thumbs cannot reach it.
+- Keep the word "Add": it does not fit beside two 44pt targets.
+- Use a magnifying glass: the operator read it as search.
+- Keep refresh on Inbox Notes: the top pull opens the pane.
+- Pull only the header band: the other tabs have no band.
+
+The scroller owns the offset, so the pane needs no screen to open. A
+sheet that draws over a page sits outside the page's provider. Its own
+scroller never opens the pane behind it.
+
+Proof: `e2e/specs/commands.spec.ts` pulls at the top of each tab. It
+pulls on a scrolled page and reads the scroll and the shut pane. It
+drags a row and the split grip, swipes the pager and pulls in a sheet.
+The emulator run reads the Lists and Journal pulls. It also reads a row
+drag, a page swipe and the bar at 360dp.

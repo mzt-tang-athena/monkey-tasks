@@ -290,8 +290,8 @@ through `useThemedStyles`. A theme switch then repaints it in place.
 `lib/settings-store.ts` holds the live sort order, task form and week
 view for the mounted Lists and Planner screens. `features/settings` is
 the one screen that writes the palette and those settings (ADR
-20261111-settings-screen). Lists opens it from the list menu and Planner
-opens it from the gear beside the mode switch. Its Diagnostics section
+20261111-settings-screen). Lists opens it from the list menu, and the
+command pane opens it from every tab. Its Diagnostics section
 reads the crash log from app storage and offers Copy and Share (ticket
 0081). It opens the diagnostics screen, which holds the one link to the
 gallery.
@@ -336,12 +336,13 @@ route opens the editor sheet and steps back. For any other note, it
 shows the read-only viewer.
 
 `features/command` holds the command pane that ticket 0085 adds
-(ADR 20261111-command-pane). A downward pull on a header band, or the
-"open commands" button, drops it from the top edge. The search takes
+(ADR 20261111-command-pane). A downward pull at the top of a page, or
+the bar's Command half, drops it from the top edge. The search takes
 focus, and a row runs one action and closes the pane. The screen
-behind is inert. The list body, the pager and a row drag never start
-the gesture. Theme and Sort mode open Settings rather than repeat its
-pickers.
+behind is inert. A pull on a page scrolled away from its top only
+scrolls. A pager swipe, a row drag, the day split and a sheet never
+start the gesture. "Reload vault" rereads every vault query, and Theme
+and Sort mode open Settings rather than repeat its pickers.
 
 ### Planner
 
@@ -525,7 +526,10 @@ Open feature tickets:
 
 The app has four tabs today, Lists, Planner, Journal and Inbox Notes. The bar
 carries no labels; each tab's name lives in its accessibility label
-(ADR 20261117-phosphor-glyphs). The Lists tab
+(ADR 20261117-phosphor-glyphs). The bar's action is a split Add pill.
+Its plus half runs the tab's Add. Its Command half opens the pane
+(ADR 20261111-command-pane). Both halves are 44pt, so four tabs and the
+pill fit a 360pt screen. The Lists tab
 shows Main and the list notes. Main holds the tasks with no list. Any
 other tab shows the tasks whose `list` carries that name. My order makes
 each tab one flat list (ADR 0015 and its 2026-11-11 amendment,

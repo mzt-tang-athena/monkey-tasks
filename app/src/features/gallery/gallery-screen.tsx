@@ -159,6 +159,7 @@ export default function GalleryScreen() {
     "icons:note": <GlyphPair name="note" />,
     "icons:close": <GlyphPair name="close" />,
     "icons:check": <GlyphPair name="check" />,
+    "icons:command": <GlyphPair name="command" />,
 
     "segmented-control:selected": (
       <View style={styles.wide}>

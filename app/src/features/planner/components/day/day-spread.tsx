@@ -2,7 +2,9 @@ import * as React from "react";
 import { View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { Pager } from "@/components/motion/pager";
+import { PagePull } from "@/components/motion/pull";
 import { addDays, startOfDay } from "@/utils/dates";
+import { useCommandPane } from "@/hooks/use-command-pane";
 import { dayRows } from "@/features/planner/lib/day-rows";
 import { dayIndexBetween, type Mode } from "@/features/planner/model";
 import { PlannerHeader } from "../planner-header";
@@ -45,6 +47,7 @@ export function DaySpread({
 }) {
   const live = usePlannerList();
   const { source, taskForm } = live;
+  const { show: showCommands } = useCommandPane();
 
   // The day index counts from the day this screen mounted. The pager
   // reads it, and a landing writes the day back through the screen.
@@ -113,36 +116,38 @@ export function DaySpread({
       {/* The pager sits under the header: only the day body slides,
           so the date strip and the mode switch never move. */}
       <View style={bodyFrame}>
-        <Pager
-          testID="day-pager"
-          index={index}
-          onPage={onPage}
-          renderPreview={(page) => (
-            <DayPreview
-              date={addDays(origin, page)}
+        <PagePull onPull={showCommands}>
+          <Pager
+            testID="day-pager"
+            index={index}
+            onPage={onPage}
+            renderPreview={(page) => (
+              <DayPreview
+                date={addDays(origin, page)}
+                today={today}
+                tasks={tasks}
+                now={now}
+                fraction={fraction}
+                scroll={saved(page)}
+              />
+            )}
+            fill
+          >
+            <DayPage
+              date={date}
               today={today}
-              tasks={tasks}
+              rows={rows}
               now={now}
               fraction={fraction}
-              scroll={saved(page)}
+              onResize={onResize}
+              onTimelineScroll={onTimelineScroll}
+              onListScroll={onListScroll}
+              restorePage={index}
+              restoreTimeline={restore.timeline}
+              restoreList={restore.list}
             />
-          )}
-          fill
-        >
-          <DayPage
-            date={date}
-            today={today}
-            rows={rows}
-            now={now}
-            fraction={fraction}
-            onResize={onResize}
-            onTimelineScroll={onTimelineScroll}
-            onListScroll={onListScroll}
-            restorePage={index}
-            restoreTimeline={restore.timeline}
-            restoreList={restore.list}
-          />
-        </Pager>
+          </Pager>
+        </PagePull>
       </View>
     </View>
   );
