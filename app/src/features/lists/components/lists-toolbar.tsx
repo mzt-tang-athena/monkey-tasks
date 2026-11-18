@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { IconButton } from "@/components/ui/icon-button";
 import { Menu, type MenuItem } from "@/components/ui/menu";
 import { TabStrip } from "@/components/ui/tab-strip";
+import type { PageFollow } from "@/components/motion/page-follow";
 import type { SortMode } from "@/lib/settings";
 import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -27,6 +28,7 @@ export function ListsToolbar({
   tabs,
   tab,
   onSelectTab,
+  follow,
   sortMode,
   onSortMode,
   completed,
@@ -35,6 +37,8 @@ export function ListsToolbar({
   tabs: string[];
   tab: string;
   onSelectTab: (tab: string) => void;
+  /** The pager whose swipe the tab rule follows. */
+  follow?: PageFollow;
   sortMode: SortMode;
   onSortMode: (mode: SortMode) => void;
   /** The current tab's completed rows: what a clear deletes. */
@@ -111,6 +115,7 @@ export function ListsToolbar({
           selected={tab}
           onSelect={onSelectTab}
           label="Lists"
+          follow={follow}
         />
         <View style={styles.spacer} />
         <View ref={sortAnchor} testID="sort-menu-anchor">

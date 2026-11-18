@@ -1,8 +1,8 @@
 VALE_STYLES = .vale/styles
 
-.PHONY: lint ensure-styles hooks check-records test-check-records
+.PHONY: lint ensure-styles hooks check-records check-changelog test-check-records
 
-lint: check-records ensure-styles
+lint: check-records check-changelog ensure-styles
 	npx vale-rules sync
 	vale README.md docs/adr/*.md tickets/README.md
 
@@ -15,6 +15,9 @@ hooks:
 
 check-records:
 	@scripts/check-records.sh
+
+check-changelog:
+	@scripts/check-changelog.sh
 
 test-check-records:
 	@bash scripts/test-check-records.sh

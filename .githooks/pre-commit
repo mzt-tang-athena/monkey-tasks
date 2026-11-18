@@ -19,6 +19,10 @@ if [ -n "$code" ]; then
   (cd "$root/app" && printf '%s\n' "$code" | sed 's|^app/||' | tr '\n' '\0' | xargs -0 npx --no-install eslint --max-warnings 0)
 fi
 
+if printf '%s\n' "$staged" | grep -qx 'CHANGELOG.md'; then
+  "$root/scripts/check-changelog.sh" "$root/CHANGELOG.md"
+fi
+
 if [ -n "$docs" ]; then
   if command -v vale >/dev/null 2>&1; then
     echo "vale: $(printf '%s\n' "$docs" | wc -l) file(s)"

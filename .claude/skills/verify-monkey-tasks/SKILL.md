@@ -135,8 +135,32 @@ instance runs per console port. The default is 5580. Set
 
 ### Get an APK
 
-The `android` workflow builds a release APK from a branch in 19 to 45
-minutes. Download it into a new, empty folder:
+`scripts/android-apk.sh <checkout>` returns a release APK for a
+checkout. The swap is fast when the native layer stays the same:
+
+```sh
+.claude/skills/verify-monkey-tasks/scripts/android-apk.sh .
+```
+
+It computes the `@expo/fingerprint` project hash and a digest of the
+exported JS assets. Then it looks in `~/code/monkey-tasks/apk-cache`
+for a base APK that matches both. When one exists, it puts the
+checkout's JS bundle and `app.config` into that APK. It then aligns
+and signs the result with the base's key. That takes about two minutes
+and needs no heavy lock, so a lane can run it beside a build. On a miss
+it runs `build-apk.sh` and keeps the result as the base.
+
+Read the `mode:` line. `swap` means the APK carries the checkout's
+JavaScript over a base APK's native layer. `full` means a real build.
+A swap proves JavaScript, not native code. The cache holds one APK per
+fingerprint, so delete folders under it by hand when the disk fills.
+
+Never ship a swapped APK. A release builds with `build-apk.sh` and
+`CLEAN=1`, and a tagged commit forces the full path here. ADR
+`20261118-fast-android-proof` records the limits.
+
+The `android` workflow also builds a release APK from a branch in 19 to
+45 minutes. Download it into a new, empty folder:
 
 ```sh
 gh run list --workflow android --branch epic/0047-rebuild --limit 3
@@ -181,8 +205,9 @@ check needs them at their defaults.
 Timings on this host (4 cores) follow. A cold boot took 99 to 150 s and
 the install 19 to 45 s. They run slower when other work loads the host. The picker
 walk took 37 to 76 s. A rerun on a running emulator skips the boot and
-an unchanged APK. `MOTION=off` starts with the three animation scales
-at 0.
+an unchanged APK. Keep the emulator running between passes in one lane.
+Clean up once at the end, so each extra pass skips the boot.
+`MOTION=off` starts with the three animation scales at 0.
 
 Wrap launch in `flock -o`:
 
@@ -301,12 +326,14 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 - A starved emulator stops drawing (screenshots come back black) and drops taps. The picker walk then fails with `picker-stuck.txt`. Wait for the host to calm down, or stop the other load, and launch again. Once the grant exists, launch no longer needs the picker.
 - Heavy screen capture can spoil a gesture. A `screencap` loop during a swipe left the page unturned. `frames` uses `screenrecord`, and the same swipe turned the page.
 - A swipe that ends off screen reads as a system gesture. Drive clamps the end to the screen.
+- `FRESH=1` clears the app data, so the notification prompt comes back. It can cover the app before the first row draws. Answer it, or launch again without `FRESH`.
 - After `force-stop` the old window lingers in the screen tree for a moment. `$D restart` waits for it to go.
 - An APK built before ADR 0045 keeps the old tail of a note after a shorter write (ticket 0076). Compare notes byte for byte after an edit that removes text.
 
 ### Android helpers
 
 - `android-env.sh` holds the names, paths and state for one port. The other scripts source it.
+- `android-apk.sh <checkout> [--full]` returns an APK, swapping the JS bundle when it can.
 - `android-launch.sh [apk]` boots, installs, seeds, grants and waits.
 - `android-doctor.sh [--host]` is the read-only check.
 - `android-drive.sh <step>` drives and saves evidence.

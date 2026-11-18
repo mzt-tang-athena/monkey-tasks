@@ -67,6 +67,14 @@ function pointer(type: string, x: number, init: PointerEventInit = {}) {
 
 /** A swipe from `from` to `to`, in steps, and a release. */
 async function swipe(host: HTMLElement, from: number, to: number, end = "pointerup") {
+  await hold(host, from, to);
+  await act(async () => {
+    host.dispatchEvent(pointer(end, to));
+  });
+}
+
+/** A drag from `from` to `to` that keeps the finger down. */
+async function hold(host: HTMLElement, from: number, to: number) {
   await act(async () => {
     host.dispatchEvent(pointer("pointerdown", from));
   });
@@ -77,9 +85,6 @@ async function swipe(host: HTMLElement, from: number, to: number, end = "pointer
       await new Promise((resolve) => setTimeout(resolve, 16));
     });
   }
-  await act(async () => {
-    host.dispatchEvent(pointer(end, to));
-  });
 }
 
 async function mountScreen(onPage?: (next: number) => void) {
@@ -98,6 +103,14 @@ describe("Pager", () => {
   it("sets pan-y in the gesture config, so the host computes it", async () => {
     const { host } = await mountScreen();
     expect(getComputedStyle(host).touchAction).toBe("pan-y");
+  });
+
+  it("gives a neighbour page the pager's box before it shows", async () => {
+    const { host } = await mountScreen();
+    await hold(host, 300, 220);
+    const preview = screen.getByTestId("preview:1");
+    expect(getComputedStyle(preview).width).toBe(`${width}px`);
+    expect(getComputedStyle(preview).height).toBe("600px");
   });
 
   it("keeps the live cell mounted when a swipe lands", async () => {
