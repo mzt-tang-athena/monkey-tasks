@@ -133,6 +133,33 @@ instance runs per console port. The default is 5580. Set
 `ANDROID_VERIFY_PORT` to run a second one. Every Android script sources
 `scripts/android-env.sh` for the SDK paths, so each works with no shell setup.
 
+### Heavy jobs take turns
+
+This host has 15 GB. Builds, full web suites and emulator passes share
+one lock, `/tmp/monkey-tasks-heavy.lock`, so only one runs at a time.
+
+- `android-build.sh <checkout>`: the full release build.
+- `web-suite.sh <checkout> <tag> <port>`: the full web suite.
+- `android-release-smoke.sh <apk>`: the release smoke on the emulator.
+
+Each takes the heavy lock itself. Run each in its own systemd unit:
+
+```sh
+systemd-run --user --unit=<name> --collect -p MemoryMax=8G \
+  --setenv=HOME=$HOME --setenv=PATH=$PATH <script> <args>
+```
+
+Wrap your own emulator script as below. Take heavy first, then the
+emulator lock, never the reverse. `MONKEY_HEAVY_LOCK=1` tells the
+scripts above that you hold the lock already.
+
+```sh
+flock -o /tmp/monkey-tasks-heavy.lock env MONKEY_HEAVY_LOCK=1 \
+  flock -o /tmp/monkey-tasks-emulator.lock <script>
+```
+
+Logs land in `$MONKEY_LOG_DIR`, default `/tmp/monkey-tasks`.
+
 ### Get an APK
 
 `scripts/android-apk.sh <checkout>` returns a release APK for a
@@ -148,15 +175,19 @@ for a base APK that matches both. When one exists, it puts the
 checkout's JS bundle and `app.config` into that APK. It then aligns
 and signs the result with the base's key. That takes about two minutes
 and needs no heavy lock, so a lane can run it beside a build. On a miss
-it runs `build-apk.sh` and keeps the result as the base.
+it runs `android-build.sh` and keeps the result as the base.
 
 Read the `mode:` line. `swap` means the APK carries the checkout's
 JavaScript over a base APK's native layer. `full` means a real build.
 A swap proves JavaScript, not native code. The cache holds one APK per
 fingerprint, so delete folders under it by hand when the disk fills.
 
-Never ship a swapped APK. A release builds with `build-apk.sh` and
-`CLEAN=1`, and a tagged commit forces the full path here. ADR
+A proof build targets only the emulator's x86_64, so it does not
+install on the phone. Set `ARCHS` to build more.
+
+Never ship a swapped APK. A release builds with `android-build.sh`
+and `CLEAN=1`, for every CPU type. A tagged commit forces the full
+path here. ADR
 `20261118-fast-android-proof` records the limits.
 
 The `android` workflow also builds a release APK from a branch in 19 to
@@ -334,6 +365,9 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 
 - `android-env.sh` holds the names, paths and state for one port. The other scripts source it.
 - `android-apk.sh <checkout> [--full]` returns an APK, swapping the JS bundle when it can.
+- `android-build.sh <checkout>` runs the full release build under the heavy lock.
+- `android-release-smoke.sh <apk>` runs the release smoke under the heavy lock.
+- `web-suite.sh <checkout> <tag> <port>` runs the full web suite under the heavy lock.
 - `android-launch.sh [apk]` boots, installs, seeds, grants and waits.
 - `android-doctor.sh [--host]` is the read-only check.
 - `android-drive.sh <step>` drives and saves evidence.

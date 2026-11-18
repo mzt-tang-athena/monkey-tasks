@@ -2,8 +2,9 @@ import * as React from "react";
 import { StyleSheet, View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { Pager } from "@/components/motion/pager";
+import { SplitFit } from "@/components/motion/split";
 import { startOfMonth } from "@/features/planner/model";
-import { pageGutter, spacing } from "@/theme/tokens";
+import { pageGutter } from "@/theme/tokens";
 import { MonthGrid, type PickedDay } from "./month-grid";
 
 /** The months between two month starts, as a page index. */
@@ -14,9 +15,10 @@ function monthIndex(from: Date, to: Date): number {
   );
 }
 
-/** The fixed half of the month: the title and the grid card. The
-    container passes the picked-day list pane as children, so both
-    halves share one column. */
+/** The fixed half of the month: the title and the grid card, over the
+    picked-day list pane the container passes as children. The card
+    keeps its height, so the split holds still and the list clips at
+    the divider. */
 export function MonthView({
   viewMonth,
   today,
@@ -52,46 +54,45 @@ export function MonthView({
 
   return (
     <View style={styles.column}>
-      <View style={styles.fixed}>
-        <Pager
-          testID="month-pager"
-          index={index}
-          onPage={onPage}
-          renderPreview={(page) => (
+      <SplitFit
+        testID="month-split"
+        top={
+          <Pager
+            testID="month-pager"
+            index={index}
+            onPage={onPage}
+            renderPreview={(page) => (
+              <MonthGrid
+                viewMonth={monthAt(page)}
+                tasks={tasks}
+                today={today}
+                picked={picked}
+                interactive={false}
+              />
+            )}
+          >
             <MonthGrid
-              viewMonth={monthAt(page)}
+              viewMonth={viewMonth}
               tasks={tasks}
               today={today}
               picked={picked}
-              interactive={false}
+              interactive
+              onPick={onPick}
             />
-          )}
-        >
-          <MonthGrid
-            viewMonth={viewMonth}
-            tasks={tasks}
-            today={today}
-            picked={picked}
-            interactive
-            onPick={onPick}
-          />
-        </Pager>
-      </View>
-      {children}
+          </Pager>
+        }
+        bottom={children}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   // The month sits in the week and month frame, which has no gutter.
+  // The split's divider spaces the card from the list, so the column
+  // carries no gap of its own.
   column: {
     flex: 1,
-    gap: spacing.m,
     paddingHorizontal: pageGutter,
-  },
-  // The fixed half: title and grid card. Its own swipe zone shifts
-  // months without touching the row drags beneath.
-  fixed: {
-    flexShrink: 0,
   },
 });
