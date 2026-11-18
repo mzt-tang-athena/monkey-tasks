@@ -13,7 +13,8 @@ import {
 /**
  * Ticket 0084: the settings screen owns the theme picker and the two
  * settings the Lists and Planner screens already store. It opens from
- * both tabs, returns to the same tab, and touches no vault note.
+ * the Lists menu and the command pane, returns to the same tab, and
+ * touches no vault note.
  */
 
 const palettes = Object.keys(THEMES) as ThemeName[];
@@ -37,7 +38,13 @@ async function openFromLists(page: Page) {
 }
 
 async function openFromPlanner(page: Page) {
-  await press(page, page.getByRole("button", { name: "open settings" }));
+  // The Planner header has no gear now. Settings opens from the pane,
+  // which every tab's bar carries.
+  await press(
+    page,
+    page.getByRole("button", { name: "open commands" }).filter({ visible: true }),
+  );
+  await press(page, page.getByTestId("command:settings"));
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 }
 
@@ -79,7 +86,7 @@ test.describe("entry points", () => {
     );
   });
 
-  test("opens from Planner in one tap", async ({ page }) => {
+  test("opens from Planner in two taps", async ({ page }) => {
     await page.goto("/planner");
     await expect(page.getByTestId("day-heading")).toBeVisible();
 
