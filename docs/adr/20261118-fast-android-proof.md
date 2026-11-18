@@ -70,3 +70,17 @@ A cold pass spent 72 seconds before it seeded the vault. A relaunch on
 the running emulator seeded in 10 seconds. A snapshot would save that
 boot only when the emulator must stop. It adds a save on every stop,
 and its restore path is flaky under software rendering.
+
+## Amendment 2026-11-18: scripts in the skill, one CPU type
+
+The full build, the web suite and the release smoke lived in a
+scratch folder outside the repo. A restart would have wiped them, and
+`android-apk.sh` called the build there. They now live in the skill as
+`android-build.sh`, `web-suite.sh` and `android-release-smoke.sh`.
+
+A proof build now compiles native code for x86_64 only, the
+emulator's CPU type. Before, it compiled four CPU types, and most of
+the 43 minutes went to that. The cost is that a proof APK does not
+install on the phone. A release still builds every CPU type with
+`CLEAN=1`. We rejected arm64 plus x86_64. No lane puts a proof APK
+on the phone, and arm64 doubles the native compile.
