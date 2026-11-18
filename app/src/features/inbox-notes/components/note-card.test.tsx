@@ -53,4 +53,14 @@ describe("NoteCard", () => {
     );
     expect(runs).toEqual([title]);
   });
+
+  it("joins back to the name for every hyphen shape", () => {
+    for (const title of ["a--b", "-lead", "trail-", "-", "two words-here"]) {
+      const { unmount } = render(
+        <NoteCard note={note(title)} onPress={vi.fn()} />,
+      );
+      expect(screen.getByTestId("note-title").textContent).toBe(title);
+      unmount();
+    }
+  });
 });
