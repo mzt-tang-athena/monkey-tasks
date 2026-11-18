@@ -7,6 +7,7 @@ import {
   type ViewProps,
 } from "react-native";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -75,6 +76,7 @@ export function Sheet({
 
   const window = useWindowDimensions();
   const keyboard = useReanimatedKeyboardAnimation();
+  const insets = useSafeAreaInsets();
 
   // The keyboard's own progress leads while it moves. The caller's
   // clock drives the sheet when no keyboard moves, as in the browser.
@@ -137,7 +139,13 @@ export function Sheet({
           pointerEvents="box-none"
           style={[styles.lift, { height: window.height }, lift]}
         >
-          <Animated.View pointerEvents="box-none" style={styles.dock}>
+          {/* The inset and the keyboard lift add. The keyboard library
+              reports its height above the system navigation. */}
+          <Animated.View
+            testID="sheet-dock"
+            pointerEvents="box-none"
+            style={[styles.dock, { bottom: spacing.s + insets.bottom }]}
+          >
             <SheetDrag open={open} onDismiss={onDismiss}>
               <Animated.View
                 ref={panelRef}
@@ -233,7 +241,6 @@ const makeStyles = (colors: Palette) => ({
       position: "absolute",
       left: 0,
       right: 0,
-      bottom: spacing.s,
       paddingHorizontal: spacing.m,
       alignItems: "center",
     },
