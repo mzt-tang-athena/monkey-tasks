@@ -8,9 +8,10 @@ fails a bullet that wraps or runs past 64 characters.
 
 ## 1.2.0 - 2026-11-18
 
-### Fixes
+### Planner
 
 - The month card you swipe to shows its dates at once.
+- Week and month lists sit under the day's divider.
 
 ## 1.1.0 - 2026-11-18
 

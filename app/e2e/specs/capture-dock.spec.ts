@@ -118,13 +118,15 @@ test("a failed capture toast belongs to its tab and shows over no other screen",
   // sits below the fold, and a click that scrolls it in can land before
   // its press target is measured; `press` scrolls and waits a frame.
   await press(page, row(page, undated.second));
-  const editor = page.getByRole("dialog", { name: "Task" });
+  // The capture sheet's name holds "task", and it can still be on its
+  // way out, so the editor's name is read whole.
+  const editor = page.getByRole("dialog", { name: "Task", exact: true });
   await expect(editor).toBeVisible();
   await expect(toast).toHaveCount(0);
 
   // Back on the tab, the toast is still there, with its draft.
   await page.getByRole("button", { name: "close the task" }).click();
-  await expect(page.getByRole("dialog", { name: "Task" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Task", exact: true })).toHaveCount(0);
   await expect(toast).toHaveCount(1);
 
   // The other tab shows no toast of this tab.
