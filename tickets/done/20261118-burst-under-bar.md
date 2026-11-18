@@ -3,7 +3,7 @@ title: A page tick's burst stays under the bottom bar
 created: 2026-11-18
 priority: high
 assignee: omp
-pr:
+pr: 163
 depends: []
 ---
 
@@ -27,12 +27,24 @@ Record the trade-off as a dated amendment to
 
 ## Acceptance
 
-- [ ] A list row whose circle sits just above the bar shows no burst
+- [x] A list row whose circle sits just above the bar shows no burst
       pixel inside the bar's box.
-- [ ] The editor sheet's burst still draws above the sheet.
-- [ ] Menus, sheets and toasts still draw above a page burst.
-- [ ] Reduced motion draws no burst.
-- [ ] A web e2e case in `celebration.spec.ts` fails on the base commit
+- [x] The editor sheet's burst still draws above the sheet.
+- [x] Menus, sheets and toasts still draw above a page burst.
+- [x] Reduced motion draws no burst.
+- [x] A web e2e case in `celebration.spec.ts` fails on the base commit
       and passes after the fix.
 
 ## Outcome
+
+Fixed in #163. The bar reports its measured height, safe-area band
+included, to a root provider. The page burst layer clips at that
+height. No burst paints over the bar now. The sheet burst keeps its
+own layer.
+
+The new e2e case in `celebration.spec.ts` failed on the base source with
+an overlapping burst box and bar box. It passes with the fix in both
+the motion and reduced-motion projects. The full web suite had 580
+passed and 26 skipped. `tsc`, eslint and 1133 unit tests passed. The
+celebration ADR has a dated amendment with the design and its
+trade-offs.
