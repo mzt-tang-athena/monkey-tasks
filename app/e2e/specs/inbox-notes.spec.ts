@@ -1,5 +1,5 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { expect, pauseClock, test } from "../fixtures";
+import { expect, test } from "../fixtures";
 import type { Page } from "@playwright/test";
 import {
   failNextCreate,
@@ -12,26 +12,49 @@ import {
 /**
  * The Inbox Notes tab (ticket 0095): the card grid, the fast capture,
  * the body-only editor, the read-check-write guard and the empty state.
+ *
+ * A test that needs one known capture time stops the page clock. React
+ * Query then needs a hand: it tells its observers from a zero delay
+ * timer, and a stopped clock holds that timer forever. `tick` runs the
+ * page's timers on, so a read or a write reaches the screen.
  */
 
 const today = "Inbox/202610260830.md";
-const plain = "Inbox/declarative-vault-port.md";
 const paste = "Inbox/20261022-indented-paste.md";
+const plain = "Inbox/declarative-vault-port.md";
+const foreign = "Inbox/202610210700.md";
 
 async function openInbox(page: Page) {
   await page.goto("/");
   await page.getByRole("tab", { name: "Inbox Notes", exact: true }).click();
-  await expect(page.getByTestId(`note-card:${today.replace("Inbox/", "")}`)).toBeVisible();
+  await expect(
+    page.getByTestId(`note-card:${today.replace("Inbox/", "")}`),
+  ).toBeVisible();
 }
 
-/** The local stamp at the page clock, after the clock is paused. */
+/**
+ * Stop the clock at the next whole minute after a minute ahead. A
+ * capture then holds still inside one minute, and no runner can pass
+ * the pause before it lands.
+ */
+async function stopClock(page: Page) {
+  const now = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(Math.ceil((now + 60_000) / 60_000) * 60_000);
+}
+
+/** Run the page's timers while the clock stays under the test's hand. */
+async function tick(page: Page) {
+  await page.clock.runFor(500);
+}
+
+/** The local stamp at the stopped page clock. */
 function stampNow(page: Page): Promise<string> {
   return page.evaluate(() => {
     const date = new Date();
     const pad = (value: number) => String(value).padStart(2, "0");
-    return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(
-      date.getHours(),
-    )}${pad(date.getMinutes())}`;
+    return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(
+      date.getDate(),
+    )}${pad(date.getHours())}${pad(date.getMinutes())}`;
   });
 }
 
@@ -56,18 +79,19 @@ test("the cards show the names, the previews and two columns", async ({
   const third = page.getByTestId("note-card:20261024-1830-thought-dump.md");
   await expect(first).toContainText("26 Oct 2026, 08:30");
   await expect(second).toContainText("25 Oct 2026, 19:45");
+  // A name that is not a bare stamp shows exactly as the file holds it.
   await expect(third).toContainText("20261024-1830-thought-dump");
-  await expect(page.getByTestId("note-card:20261023-flight-email-tracker.md")).toContainText(
-    "20261023-flight-email-tracker",
-  );
+  await expect(
+    page.getByTestId("note-card:20261023-flight-email-tracker.md"),
+  ).toContainText("20261023-flight-email-tracker");
 
   // The frontmatter is skipped and the marks are gone.
   await expect(second).toContainText("Two books to find");
   await expect(second).not.toContainText("kind:");
   // The indented paste reads as prose, not as code.
-  await expect(page.getByTestId(`note-card:${paste.replace("Inbox/", "")}`)).toContainText(
-    "Slide 1",
-  );
+  await expect(
+    page.getByTestId(`note-card:${paste.replace("Inbox/", "")}`),
+  ).toContainText("Slide 1");
 
   const [a, b, c] = await Promise.all([
     first.boundingBox(),
@@ -83,40 +107,49 @@ test("the cards show the names, the previews and two columns", async ({
   expect(c!.y).toBeGreaterThan(a!.y);
 });
 
-test("a capture writes a stamped note with no frontmatter", async ({ page }) => {
+test("a capture writes a stamped note with no frontmatter", async ({
+  page,
+}) => {
   await openInbox(page);
-  await pauseClock(page);
+  await stopClock(page);
   const stamp = await stampNow(page);
 
   await sendNote(page, "A quick thought.");
+  await tick(page);
 
-  const card = page.getByTestId(`note-card:${stamp}.md`);
-  await expect(card).toBeVisible();
+  await expect(page.getByTestId(`note-card:${stamp}.md`)).toBeVisible();
   expect(await noteText(page, `Inbox/${stamp}.md`)).toBe("A quick thought.");
 });
 
 test("a typed title adds a kebab slug to the name", async ({ page }) => {
   await openInbox(page);
-  await pauseClock(page);
+  await stopClock(page);
   const stamp = await stampNow(page);
 
   await openComposer(page);
-  await page.getByRole("button", { name: "add a title" }).click();
+  await page.getByRole("button", { name: "add title" }).click();
   await page.getByLabel("Title", { exact: true }).fill("Buy stamps");
   await page.getByLabel("note text").fill("two books");
   await page.getByRole("button", { name: "save note" }).click();
+  await tick(page);
 
-  await expect(page.getByTestId(`note-card:${stamp}-buy-stamps.md`)).toBeVisible();
-  expect(await noteText(page, `Inbox/${stamp}-buy-stamps.md`)).toBe("two books");
+  await expect(
+    page.getByTestId(`note-card:${stamp}-buy-stamps.md`),
+  ).toBeVisible();
+  expect(await noteText(page, `Inbox/${stamp}-buy-stamps.md`)).toBe(
+    "two books",
+  );
 });
 
 test("two captures in one minute keep both notes", async ({ page }) => {
   await openInbox(page);
-  await pauseClock(page);
+  await stopClock(page);
   const stamp = await stampNow(page);
 
   await sendNote(page, "one");
+  await tick(page);
   await sendNote(page, "two");
+  await tick(page);
 
   await expect(page.getByTestId(`note-card:${stamp}.md`)).toBeVisible();
   const second = page.getByTestId(`note-card:${stamp} (1).md`);
@@ -127,16 +160,18 @@ test("two captures in one minute keep both notes", async ({ page }) => {
 
 test("a failed capture keeps the draft and sends again", async ({ page }) => {
   await openInbox(page);
-  await pauseClock(page);
+  await stopClock(page);
   const stamp = await stampNow(page);
   await failNextCreate(page, `${stamp}.md`);
 
   await sendNote(page, "still here");
+  await tick(page);
 
-  await expect(page.getByRole("alert")).toContainText("create");
+  await expect(page.getByRole("alert")).toContainText("create failed");
   await openComposer(page);
   await expect(page.getByLabel("note text")).toHaveValue("still here");
   await page.getByRole("button", { name: "save note" }).click();
+  await tick(page);
 
   await expect(page.getByTestId(`note-card:${stamp}.md`)).toBeVisible();
   expect(await noteText(page, `Inbox/${stamp}.md`)).toBe("still here");
@@ -157,7 +192,9 @@ test("the first capture makes the Inbox folder", async ({ page }) => {
 
 test("open and save keeps the frontmatter byte for byte", async ({ page }) => {
   await openInbox(page);
-  const before = (await noteText(page, plain)) as string;
+  await expect(
+    page.getByTestId("note-card:202610251945.md"),
+  ).toContainText("Two books to find");
 
   await page.getByTestId("note-card:declarative-vault-port.md").click();
   await expect(page.getByLabel("note body")).toHaveValue(
@@ -170,11 +207,11 @@ test("open and save keeps the frontmatter byte for byte", async ({ page }) => {
     page.getByTestId("note-card:declarative-vault-port.md"),
   ).toContainText("Edited in the app.");
   const after = (await noteText(page, plain)) as string;
-  expect(after.startsWith("---\nkind: resource\ncreated: 2026-09-24\n---\n")).toBe(
-    true,
-  );
+  expect(
+    after.startsWith("---\nkind: resource\ncreated: 2026-09-24\n---\n"),
+  ).toBe(true);
   expect(after).toContain("Edited in the app.");
-  expect(after.length).toBeGreaterThan(before.length - 100);
+  expect(after).not.toContain("Declarative vault architecture");
 });
 
 test("a conflict keeps the outside text, and a copy keeps the draft", async ({
@@ -190,21 +227,23 @@ test("a conflict keeps the outside text, and a copy keeps the draft", async ({
 
   await expect(page.getByText("This note changed")).toBeVisible();
   expect(await noteText(page, plain)).toBe("changed by another app\n");
+
+  const before = await notePaths(page, "Inbox/");
   await page.getByRole("button", { name: /save a copy/i }).click();
 
-  const copies = (await notePaths(page, "Inbox/")).filter(
-    (path) => path !== plain && /\/\d{12}\.md$/.test(path),
-  );
+  const after = await notePaths(page, "Inbox/");
+  const copies = after.filter((path) => !before.includes(path));
   expect(copies).toHaveLength(1);
   expect(await noteText(page, copies[0])).toBe("my draft");
 });
 
 test("a foreground read picks up an outside note", async ({ page }) => {
   await openInbox(page);
-  const path = "Inbox/202610210700.md";
-  await putNote(page, path, "from another app");
+  await putNote(page, foreign, "from another app");
   await returnToTab(page);
-  await expect(page.getByTestId("note-card:202610210700.md")).toBeVisible();
+  await expect(
+    page.getByTestId(`note-card:${foreign.replace("Inbox/", "")}`),
+  ).toBeVisible();
 });
 
 test("the screen, the composer and the editor pass axe", async ({ page }) => {

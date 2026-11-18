@@ -70,7 +70,6 @@ export function NoteForm({ sheet }: { sheet: NoteSheetState }) {
             tone="accent"
             label="Add title"
             onPress={sheet.revealTitle}
-            accessibilityLabel="add a title"
           />
         </View>
       )}

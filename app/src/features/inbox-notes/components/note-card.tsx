@@ -9,8 +9,8 @@ import { useThemedStyles } from "@/theme/theme-provider";
 /**
  * One note in the grid: its title and its content preview. The title
  * is the note's name, and the preview is enough to know what the note
- * is without opening it. The card's name for assistive tech carries
- * both, because the preview is the point of the card.
+ * is without opening it. The card takes its accessible name from the
+ * text it shows, so a screen reader and the eye read the same words.
  */
 export const NoteCard = React.memo(function NoteCard({
   note,
@@ -20,14 +20,12 @@ export const NoteCard = React.memo(function NoteCard({
   onPress: (note: InboxNote) => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
-  const name = note.preview === "" ? note.title : `${note.title}. ${note.preview}`;
   return (
     <Pressable
       testID={`note-card:${note.fileName}`}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       onPress={() => onPress(note)}
       accessibilityRole="button"
-      accessibilityLabel={name}
       accessibilityHint="opens the note"
     >
       <Text style={styles.title} numberOfLines={3}>
