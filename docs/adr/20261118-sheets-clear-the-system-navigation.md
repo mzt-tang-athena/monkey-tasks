@@ -30,8 +30,9 @@ stays dimmed down to the system bar, and the system buttons stay
 readable over it.
 
 The keyboard and the inset add up. The keyboard library reports its
-height above the navigation bar. A dock 8pt above the inset sits 8pt above
-the keyboard when it opens, in both navigation modes.
+height above the navigation bar. The panel stays above the keyboard when
+it opens. In gesture navigation the keyboard covers the navigation area.
+The panel then keeps one extra gesture inset of air above it.
 
 We rejected padding each caller's content by the inset. Seven sheets
 would each need the same line, and one missed caller brings the fault

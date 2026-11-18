@@ -3,7 +3,7 @@ title: Sheets sit above the system navigation
 created: 2026-11-18
 priority: high
 assignee: omp
-pr:
+pr: 176
 depends: []
 ---
 
@@ -28,13 +28,22 @@ editor, the delete confirmation, and the three composers.
 
 ## Acceptance
 
-- [ ] The task editor panel ends above the bottom inset, by 8pt.
-- [ ] The pickers, note editor, delete confirmation and composers do the same.
+- [ ] The editor panel ends 8pt above the bottom inset.
+- [ ] Every other sheet ends above it too.
 - [ ] A drag down still closes a sheet.
-- [ ] A component test gives the safe area a bottom inset and fails on main.
-- [ ] An APK shows the editor whole under three-button navigation. Check it with the keyboard open and closed.
-- [ ] The same APK shows it whole under gesture navigation.
+- [ ] A component test fails on main.
+- [ ] The editor is whole in three-button navigation.
+- [ ] The keyboard open keeps it whole.
+- [ ] Gesture navigation keeps it whole.
 
 ## Outcome
 
-(filled in before moving to done/)
+The shared sheet dock reads the bottom safe-area inset. The panel sits
+8pt above it, and the scrim still covers the whole window.
+The component test fails on main with "expected 8 to be 56".
+On the emulator every sheet clears the system buttons. That covers the
+editor, its pickers, both note editors, the delete confirmation, the
+capture sheet and both composers. The same holds on gesture navigation,
+with the keyboard open or closed. A drag down still closes the editor.
+Evidence lives under app/build/verify/evidence.
+ADR 20261118-sheets-clear-the-system-navigation records the decision.
