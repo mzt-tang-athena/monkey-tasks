@@ -2,17 +2,17 @@ import { AxeBuilder } from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { tabs, undated } from "../data";
-import { holdDrag, scrollTopOf, swipe, touchFlick } from "../gestures";
-import { expectBefore, expectAbove, listTab, row } from "../locators";
+import { holdDrag, swipe, touchFlick } from "../gestures";
+import { expectBefore, listTab, row } from "../locators";
+import { putNote } from "../vault";
 
 /**
  * Ticket 0085 and its 2026-11-18 amendment: the command pane slides
- * down over the current screen. A downward pull at the top of a page,
- * a pull on a header band, the bar's Command half, or the pane's own
- * button opens it. The search takes focus, a command runs and closes
- * the pane, and a pull on a page scrolled away from its top only
- * scrolls. A pager swipe, a row drag, the day split and a sheet leave
- * it shut.
+ * down over the current screen. A downward swipe on the bottom bar's
+ * gap opens it, and so does the bar's Command half. The search takes
+ * focus, a command runs and closes the pane, and no tab, pill, list
+ * body or header band starts the gesture. The bar's split Add pill
+ * opens the tab's own sheet from its plus half.
  */
 
 function pane(page: Page): Locator {
@@ -56,64 +56,26 @@ async function expectShut(page: Page): Promise<void> {
   await expect(pane(page)).toHaveCount(0);
 }
 
-/** A two-finger touch drag down over `from`, through CDP. */
-async function twoFingerPull(page: Page, from: Locator, dy: number): Promise<void> {
-  const box = await from.boundingBox();
-  if (box == null) {
-    throw new Error("the pull source has no box");
-  }
-  const cdp = await page.context().newCDPSession(page);
-  const at = [0.4, 0.6].map((share) => ({
-    x: box.x + box.width * share,
-    y: box.y + box.height / 2,
-  }));
-  const send = (type: "touchStart" | "touchMove" | "touchEnd", points = at) =>
-    cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points });
-  await send("touchStart");
-  for (let step = 1; step <= 14; step += 1) {
-    await send(
-      "touchMove",
-      at.map((point) => ({ x: point.x, y: point.y + (dy * step) / 14 })),
-    );
-    await page.waitForTimeout(16);
-  }
-  await send("touchEnd", []);
-  await cdp.detach();
-}
-
 test.describe("opening", () => {
-  test("a pull at the top of the Lists page opens it with the search focused", async ({
+  test("a downward swipe on the bar's gap opens it with the search focused", async ({
     page,
   }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
-    await touchFlick(page, page.getByTestId("lists-screen"), 140);
+    await touchFlick(page, page.getByTestId("bar-gap"), 120);
 
     await expect(pane(page)).toBeVisible();
     await expect(search(page)).toBeFocused();
-    // The row under the pull never opened its editor.
-    await expect(page.getByRole("dialog", { name: "Task" })).toHaveCount(0);
   });
 
-  test("a pull at the top of Planner, Journal and Inbox Notes opens it", async ({
-    page,
-  }) => {
-    const pages = [
-      { path: "/planner", screen: "planner-screen", from: "timeline-scroller" },
-      { path: "/journal", screen: "journal-screen", from: "journal-screen" },
-      { path: "/inbox", screen: "inbox-notes-screen", from: "inbox-notes-screen" },
-    ];
-    for (const each of pages) {
-      await page.goto(each.path);
-      await expect(page.getByTestId(each.screen)).toBeVisible();
+  test("a mouse pull on the bar's gap opens it too", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
 
-      await touchFlick(page, page.getByTestId(each.from), 140);
+    await pull(page, page.getByTestId("bar-gap"), 140);
 
-      await expect(pane(page), each.path).toBeVisible();
-      await page.keyboard.press("Escape");
-      await expectShut(page);
-    }
+    await expect(pane(page)).toBeVisible();
   });
 
   test("the bar's Command half opens it, and Escape puts focus back", async ({
@@ -133,41 +95,6 @@ test.describe("opening", () => {
     await expect(opener).toBeFocused();
   });
 
-  test("a downward pull on the Lists header band opens it", async ({ page }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-
-    await pull(page, page.getByTestId("header-band-lists").filter({ visible: true }), 140);
-
-    await expect(pane(page)).toBeVisible();
-  });
-
-  test("a downward pull on the Planner header band opens it too", async ({ page }) => {
-    await page.goto("/planner");
-    await expect(page.getByTestId("day-heading")).toBeVisible();
-
-    await pull(
-      page,
-      page.getByTestId("header-band-planner").filter({ visible: true }),
-      140,
-    );
-
-    await expect(pane(page)).toBeVisible();
-  });
-
-  test("a two-finger swipe down on the header band opens it", async ({ page }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-
-    await twoFingerPull(
-      page,
-      page.getByTestId("header-band-lists").filter({ visible: true }),
-      140,
-    );
-
-    await expect(pane(page)).toBeVisible();
-  });
-
   test("a pull up on the pane's top edge closes it", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
@@ -180,6 +107,101 @@ test.describe("opening", () => {
     await pull(page, page.getByTestId("command-search"), -70);
 
     await expectShut(page);
+  });
+});
+
+test.describe("the bar's own controls keep their gestures", () => {
+  test("a swipe down on a tab opens nothing and keeps its tab", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    await touchFlick(page, listTab(page, tabs.main), 120);
+
+    await expectShut(page);
+    await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("a swipe down on the Add half opens nothing and no sheet", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    await touchFlick(
+      page,
+      page.getByRole("button", { name: "add task" }).filter({ visible: true }),
+      120,
+    );
+
+    await expectShut(page);
+    await expect(page.getByRole("dialog", { name: "Add a task" })).toHaveCount(0);
+  });
+});
+
+test.describe("no page starts the pane", () => {
+  test("a pull on a list body opens no pane and keeps the row", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    await touchFlick(page, page.getByTestId("lists-screen"), 160);
+
+    await expectShut(page);
+    await expect(row(page, undated.second)).toBeVisible();
+  });
+
+  test("a pull on the Planner body opens no pane", async ({ page }) => {
+    await page.goto("/planner");
+    await expect(page.getByTestId("day-heading")).toBeVisible();
+
+    await touchFlick(page, page.getByTestId("timeline-scroller"), 160);
+
+    await expectShut(page);
+  });
+
+  test("a pager swipe and a row drag leave it shut", async ({ page }) => {
+    await page.goto("/planner");
+    await expect(page.getByTestId("day-heading")).toBeVisible();
+    await swipe(page, page.getByTestId("day-pager"), "left");
+    await expectShut(page);
+
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+    await page.getByRole("button", { name: "sort list" }).click();
+    await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
+    await holdDrag(
+      page,
+      page.getByTestId(`reorder-grip:${undated.second}`),
+      row(page, undated.first),
+      { at: "upper", holdMs: 0 },
+    );
+    await expectShut(page);
+  });
+});
+
+test.describe("the headers", () => {
+  test("the Planner header drops its chevron and its gear", async ({ page }) => {
+    await page.goto("/planner");
+    await expect(page.getByTestId("day-heading")).toBeVisible();
+    const header = page.getByTestId("planner-header");
+
+    await expect(header.getByRole("button", { name: "open commands" })).toHaveCount(0);
+    await expect(header.getByRole("button", { name: "open settings" })).toHaveCount(0);
+
+    // The mode switch takes the row.
+    const mode = header.getByRole("tab", { name: "Month" });
+    const width = page.viewportSize()?.width ?? 412;
+    const box = await mode.boundingBox();
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeGreaterThan(width - 48);
+  });
+
+  test("the Lists toolbar drops its chevron and keeps the three-dot menu", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+    const band = page.getByTestId("lists-toolbar");
+
+    await expect(band.getByRole("button", { name: "open commands" })).toHaveCount(0);
+    await expect(band.getByRole("button", { name: "list menu" })).toBeVisible();
+    await expect(band.getByRole("button", { name: "sort list" })).toBeVisible();
   });
 });
 
@@ -235,6 +257,25 @@ test.describe("every command", () => {
     await expect(page.getByRole("dialog", { name: "Add a task" })).toBeVisible();
   });
 
+  test("Reload vault rereads the folder", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    // Another app writes a note while the screen holds its read.
+    await putNote(
+      page,
+      "Tasks/Written elsewhere.md",
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\n---\n\nA note from another app.\n",
+    );
+    await expect(row(page, "Written elsewhere")).toHaveCount(0);
+
+    await openPane(page);
+    await command(page, "reload").click();
+
+    await expect(page).toHaveURL("/");
+    await expect(row(page, "Written elsewhere")).toBeVisible();
+  });
+
   test("Go to Lists and Go to Planner change the screen", async ({ page }) => {
     await page.goto("/planner");
     await expect(page.getByTestId("day-heading")).toBeVisible();
@@ -280,119 +321,9 @@ test.describe("every command", () => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
-
     await command(page, "diagnostics").click();
     await expect(page).toHaveURL("/dev");
     await expectShut(page);
-  });
-});
-
-test.describe("the headers", () => {
-  test("the Planner header drops its chevron and its gear", async ({ page }) => {
-    await page.goto("/planner");
-    await expect(page.getByTestId("day-heading")).toBeVisible();
-    const band = page.getByTestId("header-band-planner").filter({ visible: true });
-
-    await expect(band.getByRole("button", { name: "open commands" })).toHaveCount(0);
-    await expect(band.getByRole("button", { name: "open settings" })).toHaveCount(0);
-
-    // The mode switch takes the row.
-    const mode = band.getByRole("tab", { name: "Month" });
-    const width = page.viewportSize()?.width ?? 412;
-    const box = await mode.boundingBox();
-    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeGreaterThan(width - 48);
-  });
-
-  test("the Lists toolbar drops its chevron and keeps the three-dot menu", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-    const band = page.getByTestId("header-band-lists").filter({ visible: true });
-
-    await expect(band.getByRole("button", { name: "open commands" })).toHaveCount(0);
-    await expect(band.getByRole("button", { name: "list menu" })).toBeVisible();
-    await expect(band.getByRole("button", { name: "sort list" })).toBeVisible();
-  });
-});
-
-test.describe("the page pull", () => {
-  test("a pull scrolled away from the top only scrolls", async ({ page }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-    const marker = row(page, undated.second);
-    const box = await page.getByTestId("lists-screen").boundingBox();
-    if (box == null) {
-      throw new Error("the list has no box");
-    }
-
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.wheel(0, 150);
-    await expect.poll(() => scrollTopOf(marker)).toBeGreaterThan(0);
-    const before = await scrollTopOf(marker);
-
-    // The pull reaches the top partway through and keeps going.
-    await touchFlick(page, page.getByTestId("lists-screen"), 300);
-
-    await expectShut(page);
-    await expect.poll(() => scrollTopOf(marker)).toBeLessThan(before);
-  });
-
-  test("the pager's sideways swipe leaves it shut", async ({ page }) => {
-    await page.goto("/planner");
-    await expect(page.getByTestId("day-heading")).toBeVisible();
-
-    await swipe(page, page.getByTestId("day-pager"), "left");
-
-    await expectShut(page);
-  });
-
-  test("a row drag leaves it shut", async ({ page }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-    await page.getByRole("button", { name: "sort list" }).click();
-    await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
-
-    await holdDrag(
-      page,
-      page.getByTestId(`reorder-grip:${undated.second}`),
-      row(page, undated.first),
-      { at: "upper", holdMs: 0 },
-    );
-
-    // The drag happened: the second row took first place.
-    await expectAbove(row(page, undated.second), row(page, undated.first));
-    await expectShut(page);
-  });
-
-  test("a day-split drag leaves it shut", async ({ page }) => {
-    await page.goto("/planner");
-    await expect(page.getByTestId("day-heading")).toBeVisible();
-    const grip = page.getByTestId("day-split:grip");
-    const before = Number(await grip.getAttribute("aria-valuenow"));
-
-    await holdDrag(page, grip, page.getByTestId("day-split:bottom"), {
-      holdMs: 0,
-    });
-
-    // The drag moved the split, and the pane stayed shut.
-    await expect
-      .poll(async () => Number(await grip.getAttribute("aria-valuenow")))
-      .not.toBe(before);
-    await expectShut(page);
-  });
-
-  test("a pull inside a sheet leaves the page shut", async ({ page }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-    await page.getByRole("button", { name: "add task" }).click();
-    const sheet = page.getByRole("dialog", { name: "Add a task" });
-    await expect(sheet).toBeVisible();
-
-    await touchFlick(page, sheet, 200);
-
-    await expectShut(page);
-    await expect(sheet).toBeVisible();
   });
 });
 

@@ -3,7 +3,6 @@ import { FlatList, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
-import { PagePull } from "@/components/motion/pull";
 import { renderMotionScroll } from "@/components/motion/scroll-view";
 import { Banner } from "@/components/ui/banner";
 import {
@@ -12,7 +11,6 @@ import {
   LoadingState,
 } from "@/components/ui/list-states";
 import { VaultPrompt } from "@/components/ui/vault-prompt";
-import { useCommandPane } from "@/hooks/use-command-pane";
 import { useStableCallback } from "@/hooks/use-stable-callback";
 import type { InboxNote } from "@/lib/inbox-notes/model";
 import { useInboxNotes } from "@/stores/inbox-notes/use-inbox-notes";
@@ -38,7 +36,6 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
     grant,
   } = useInboxNotes();
   const insets = useSafeAreaInsets();
-  const { show: showCommands } = useCommandPane();
 
   const reload = React.useCallback(async () => {
     await refresh();
@@ -100,8 +97,7 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
         </View>
       ) : null}
 
-      <PagePull onPull={showCommands}>
-        <FlatList
+      <FlatList
           data={cards}
           keyExtractor={(item, index) => item?.uri ?? `pad-${index}`}
           numColumns={2}
@@ -116,8 +112,7 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
               <NoteCard note={item} onPress={open} />
             )
           }
-        />
-      </PagePull>
+      />
 
       <BottomBar action={dock} />
     </View>

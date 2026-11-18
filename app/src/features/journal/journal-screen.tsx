@@ -1,5 +1,6 @@
 import * as React from "react";
 import {
+  RefreshControl,
   StyleSheet,
   View,
   type NativeScrollEvent,
@@ -8,11 +9,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { JournalDockSlot } from "@/components/bottom-bar/dock-slot";
-import { PagePull } from "@/components/motion/pull";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { ErrorState, LoadingState } from "@/components/ui/list-states";
 import { VaultPrompt } from "@/components/ui/vault-prompt";
-import { useCommandPane } from "@/hooks/use-command-pane";
 import { useToday } from "@/hooks/use-today";
 import { journalPage } from "@/lib/journal/format";
 import { useVault } from "@/lib/vault/vault-provider";
@@ -43,9 +42,8 @@ import { STICK_SLOP } from "./lib/page-grid";
  * It reads no task state. The note is its own query.
  */
 export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
-  const { styles } = useThemedStyles(makeStyles);
+  const { styles, colors } = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
-  const { show: showCommands } = useCommandPane();
   const day = isoOf(useToday());
   const read = useJournalNote(day);
   const refresh = useRefreshJournal(day);
@@ -59,10 +57,16 @@ export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
     [day, read.text],
   );
 
+  const [refreshing, setRefreshing] = React.useState(false);
   const [reference, setReference] = React.useState<string | null>(null);
 
   const reload = React.useCallback(async () => {
-    await refresh();
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
   }, [refresh]);
 
   // The page follows its end only while the reader is there. The first
@@ -126,32 +130,37 @@ export default function JournalScreen({ dock }: { dock: JournalDockSlot }) {
             hint="Pick the Obsidian vault to keep a journal in."
           />
         ) : null}
-        <PagePull onPull={showCommands}>
-          <MotionScrollView
-            ref={scroller}
-            style={styles.scroll}
-            contentContainerStyle={styles.content}
-            onContentSizeChange={onContentSizeChange}
-            onLayout={(event) => {
-              size.current.view = event.nativeEvent.layout.height;
-            }}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-          >
-            <JournalHeading day={day} />
-            {read.status === "loading" ? (
-              <LoadingState label="Reading today's note" />
-            ) : read.status === "error" ? (
-              <ErrorState
-                message={read.error ?? "Something went wrong."}
-                onRetry={() => void reload()}
-                retryLabel="retry journal read"
-              />
-            ) : (
-              <JournalPaper page={page} onReference={setReference} />
-            )}
-          </MotionScrollView>
-        </PagePull>
+        <MotionScrollView
+          ref={scroller}
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          onContentSizeChange={onContentSizeChange}
+          onLayout={(event) => {
+            size.current.view = event.nativeEvent.layout.height;
+          }}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void reload()}
+              tintColor={colors.inkMuted}
+            />
+          }
+        >
+          <JournalHeading day={day} />
+          {read.status === "loading" ? (
+            <LoadingState label="Reading today's note" />
+          ) : read.status === "error" ? (
+            <ErrorState
+              message={read.error ?? "Something went wrong."}
+              onRetry={() => void reload()}
+              retryLabel="retry journal read"
+            />
+          ) : (
+            <JournalPaper page={page} onReference={setReference} />
+          )}
+        </MotionScrollView>
       </View>
       <BottomBar
         action={dock({ day, onSend: () => setSent((count) => count + 1) })}

@@ -74,64 +74,59 @@ Alternative: open the pane from a per-screen drawer. We rejected it. It
 would duplicate the row list on every screen. It would also put the pane
 below the overlay host, outside the one focus system.
 
-## Amendment, 2026-11-18: the pull spans the page, the bar carries the opener
+## Amendment, 2026-11-18: the bar's gap opens the pane
 
-The operator picked this from a mockup on 2026-11-18. Three parts.
+The operator picked this from a mockup on 2026-11-18. It replaces the
+pull that ticket 0085 put on the header band.
 
-The pull now covers the page body, not only the header band. Each page
-scroller offers it on all four tabs. The scroller reads its own offset,
-and the pull acts only while that offset sits at the top. A pull that
-starts lower down only scrolls. The pull takes a downward travel alone.
-Upward travel keeps the scroll. A sideways drag with little downward
-travel leaves the pager its swipe. The row drag, the day split and a
-sheet never start it. A pull over a row arms the press guard, so the
-row does not open too.
+The command pane opens from the bottom bar. A downward swipe on the
+empty gap between the last tab and the split Add pill opens it. The
+pane still drops from the top edge. The gap holds no control, so the
+swipe reads as neither a tab press nor an Add.
 
-A pan around a scroller does not work for this. On Android the scroll
-view claims the first vertical drag, even at the top, and cancels the
-pan. On the web the browser does the same with its own scroll. So
-`MotionScrollView` reads the scroller's own touch events instead. A
-drag that starts at the top and travels down holds the page still. On
-the web it prevents the `touchmove` default. Upward travel stays with
-the scroll. The pane still springs from the top edge on the UI thread.
+We rejected a pull on the page body. A tab body holds rows, checkboxes,
+day cells and grips. A pull has to win the gesture from each one. Every
+miss costs the user a scroll or a drag. The bar is the one row every
+tab shares. Its gap is the one place with no job of its own.
 
-Alternative: set `touch-action: none` on a page at its top. We rejected
-it. It also blocks an upward drag, so a reader could not scroll down
-from the top of a page.
+The header band lost its pull too. One gesture in one place is easier
+to find than two nearly alike.
 
-Pull-to-refresh leaves Lists, Journal and Inbox Notes. The pull belongs
-to the pane on every page. The vault already rereads when the app
-returns to the foreground. The pane gains "Reload vault". It
-invalidates every vault query, so the shown screen rereads now. Another
-tab rereads when it mounts again.
+Pull-to-refresh comes back on Lists and Journal. The list body now
+belongs to the scroll and to the refresh, as it did before. Inbox
+Notes keeps its read on mount and on Reload vault.
 
-The opener moves into the bottom bar as a split Add pill. The left half
-draws the plus. The right half draws Phosphor's Command glyph. Each
-half is a 44pt square with its own name. A keyboard and TalkBack reach
-"add task" and "open commands" separately. The pill is about 89pt, so
-four tabs and the pill still fit a 360pt screen. The Add half keeps the
-tab's own action and name.
+The pane keeps "Reload vault". It invalidates every vault query, so the
+shown screen rereads now. Another tab rereads when it mounts again.
 
-The Planner header drops its chevron and its gear. The Lists toolbar
-drops its chevron too. The bar carries the opener on every tab, so a
-second one only shortens the row. Settings stays in the pane and in the
-Lists three-dot menu. A header band still pulls open the pane, so the
-always-visible chrome keeps a fast path.
+The opener's accessible half stays in the bar. The action is a split
+Add pill. The left half draws the plus and runs the tab's own Add. The
+right half draws Phosphor's Command glyph and opens the pane. Each half
+is a 44pt square with its own name, "add task" and "open commands". The pill is about 89pt, so four tabs and the pill still fit
+a 360pt screen. The Add half keeps the tab's own action and name. The
+gap between the nav and the pill is the swipe target, about 24pt wide
+at the narrowest. The gap sits at the screen's edge, so its swipe
+commits at 18pt: a longer pull runs out of screen. A phone has more
+room, but the same threshold works on both.
+
+The Planner header drops its chevron and its gear, and the Lists
+toolbar drops its chevron. The bar carries the opener on every tab.
+Settings stays in the pane and in the Lists three-dot menu.
 
 Alternatives we rejected:
 
 - Keep the opener out of the bar: thumbs cannot reach it.
 - Keep the word "Add": it does not fit beside two 44pt targets.
 - Use a magnifying glass: the operator read it as search.
-- Keep refresh on Inbox Notes: the top pull opens the pane.
-- Pull only the header band: the other tabs have no band.
+- Pull the page body: the body's controls need the gesture.
+- Keep the header-band pulls: two openers for one action.
 
-The scroller owns the offset, so the pane needs no screen to open. A
-sheet that draws over a page sits outside the page's provider. Its own
-scroller never opens the pane behind it.
+The bar gap's swipe starts only in the gap. A swipe on a tab keeps its
+tab, and a swipe on either Add half runs no Add. A swipe on a list body
+scrolls or refreshes and opens no pane.
 
-Proof: `e2e/specs/commands.spec.ts` pulls at the top of each tab. It
-pulls on a scrolled page and reads the scroll and the shut pane. It
-drags a row and the split grip, swipes the pager and pulls in a sheet.
-The emulator run reads the Lists and Journal pulls. It also reads a row
-drag, a page swipe and the bar at 360dp.
+Proof: `e2e/specs/commands.spec.ts` swipes the gap and reads the pane.
+It swipes a tab, both pill halves and a list body, and reads no pane.
+The emulator run repeats the gap swipe and checks the tab and pill
+swipes. It pulls a list body to refresh a note written from outside.
+It also reads the bar at 360dp.

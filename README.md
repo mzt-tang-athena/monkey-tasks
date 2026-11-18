@@ -336,13 +336,13 @@ route opens the editor sheet and steps back. For any other note, it
 shows the read-only viewer.
 
 `features/command` holds the command pane that ticket 0085 adds
-(ADR 20261111-command-pane). A downward pull at the top of a page, or
-the bar's Command half, drops it from the top edge. The search takes
+(ADR 20261111-command-pane). A downward swipe on the bottom bar's gap,
+or the bar's Command half, drops it from the top edge. The search takes
 focus, and a row runs one action and closes the pane. The screen
-behind is inert. A pull on a page scrolled away from its top only
-scrolls. A pager swipe, a row drag, the day split and a sheet never
-start the gesture. "Reload vault" rereads every vault query, and Theme
-and Sort mode open Settings rather than repeat its pickers.
+behind is inert. No tab, pill or list body starts the gesture, so a
+pull on a list body only scrolls or refreshes. "Reload vault" rereads
+every vault query. Theme and Sort mode open Settings rather than repeat
+its pickers.
 
 ### Planner
 
@@ -528,8 +528,9 @@ The app has four tabs today, Lists, Planner, Journal and Inbox Notes. The bar
 carries no labels; each tab's name lives in its accessibility label
 (ADR 20261117-phosphor-glyphs). The bar's action is a split Add pill.
 Its plus half runs the tab's Add. Its Command half opens the pane
-(ADR 20261111-command-pane). Both halves are 44pt, so four tabs and the
-pill fit a 360pt screen. The Lists tab
+(ADR 20261111-command-pane). A downward swipe on the empty gap between
+the tabs and the pill opens the pane too. Both halves are 44pt, so
+four tabs and the pill fit a 360pt screen. The Lists tab
 shows Main and the list notes. Main holds the tasks with no list. Any
 other tab shows the tasks whose `list` carries that name. My order makes
 each tab one flat list (ADR 0015 and its 2026-11-11 amendment,

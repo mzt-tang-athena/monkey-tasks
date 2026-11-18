@@ -1,7 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import { PullSurface } from "@/components/motion/pull";
 import { SegmentedControl, type Segment } from "@/components/ui/segmented-control";
-import { useCommandPane } from "@/hooks/use-command-pane";
 import type { Mode } from "@/features/planner/model";
 import { pageGutter, spacing } from "@/theme/tokens";
 import { PeriodStrip } from "./period-strip";
@@ -33,30 +31,27 @@ export function PlannerHeader({
   onMode: (mode: Mode) => void;
   inset?: boolean;
 }) {
-  const { show } = useCommandPane();
   return (
-    <PullSurface direction="down" onPull={show} testID="header-band-planner">
-      <View style={styles.header}>
-        {/* Period strip above the switch: days, weeks, or months to
-            match the mode. Tapping a period jumps to it. */}
-        <PeriodStrip
-          mode={mode}
-          selected={selected}
-          today={today}
-          onSelect={onSelect}
-        />
+    <View testID="planner-header" style={styles.header}>
+      {/* Period strip above the switch: days, weeks, or months to
+          match the mode. Tapping a period jumps to it. */}
+      <PeriodStrip
+        mode={mode}
+        selected={selected}
+        today={today}
+        onSelect={onSelect}
+      />
 
-        <View style={inset && styles.gutter}>
-          <SegmentedControl
-            segments={segments}
-            selected={mode}
-            onSelect={onMode}
-            label="planner mode"
-            stretch
-          />
-        </View>
+      <View style={inset && styles.gutter}>
+        <SegmentedControl
+          segments={segments}
+          selected={mode}
+          onSelect={onMode}
+          label="planner mode"
+          stretch
+        />
       </View>
-    </PullSurface>
+    </View>
   );
 }
 

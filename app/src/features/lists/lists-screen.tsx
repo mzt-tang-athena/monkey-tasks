@@ -5,7 +5,6 @@ import type { TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { Pager } from "@/components/motion/pager";
-import { PagePull, PullSurface } from "@/components/motion/pull";
 import { PreviewRow } from "@/components/preview-row";
 import { renderMotionScroll } from "@/components/motion/scroll-view";
 import {
@@ -15,7 +14,6 @@ import {
 } from "@/components/ui/list-states";
 import { VaultPrompt } from "@/components/ui/vault-prompt";
 import { useStableCallback } from "@/hooks/use-stable-callback";
-import { useCommandPane } from "@/hooks/use-command-pane";
 import { useTaskEditor } from "@/hooks/use-task-editor";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { toggleCompleted, useCompletedOpen } from "@/lib/folded-completed";
@@ -50,7 +48,6 @@ import type { ReorderEvent } from "@/components/motion/reorder";
  */
 export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const { styles } = useThemedStyles(makeStyles);
-  const { show: showCommands } = useCommandPane();
   const editor = useTaskEditor();
   const { rootUri, status, readError } = useStoreMeta();
   const toggleTask = useToggleTask();
@@ -101,9 +98,16 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   );
 
   // A real reload: the loader can fail when it talks to the vault, so
-  // the error state keeps its retry.
+  // the error state keeps its retry affordance (also wired to the
+  // list's pull to refresh).
+  const [refreshing, setRefreshing] = React.useState(false);
   const reload = React.useCallback(async () => {
-    await refresh();
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
   }, [refresh]);
 
   // The row callbacks have one identity for the screen's life, so a
@@ -177,24 +181,16 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           <VaultPrompt onGrant={() => void grant()} />
         ) : null}
         {/* The tab bar sits above the scroller: the page's fixed
-            chrome. Sections scroll beneath it, the bar never moves.
-            A downward pull on this band opens the command pane; the
-            list below never starts it (ticket 0085). */}
-        <PullSurface
-          direction="down"
-          onPull={showCommands}
-          testID="header-band-lists"
-        >
-          <ListsToolbar
-            tabs={tabState.tabs}
-            tab={tab}
-            onSelectTab={setTab}
-            sortMode={sortMode}
-            onSortMode={setSortMode}
-            completed={completed}
-            onClearCompleted={clearCompleted}
-          />
-        </PullSurface>
+            chrome. Sections scroll beneath it, the bar never moves. */}
+        <ListsToolbar
+          tabs={tabState.tabs}
+          tab={tab}
+          onSelectTab={setTab}
+          sortMode={sortMode}
+          onSortMode={setSortMode}
+          completed={completed}
+          onClearCompleted={clearCompleted}
+        />
         {/* A failed tick or field write leaves the list usable, so each
             one is a quiet banner over it, not the error state. */}
         {status !== "error" ? <FailureBanner /> : null}
@@ -229,39 +225,39 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                 {/* A tab is a different list, so its page starts at the
                     top, as its preview draws it. The pager's page
                     itself stays mounted (ticket 0087). */}
-                <PagePull onPull={showCommands}>
-                  <SectionList<TaskItem, ListsSection>
-                    key={tab}
-                    contentContainerStyle={styles.content}
-                    sections={folded}
-                    keyExtractor={keyExtractor}
-                    renderItem={renderItem}
-                    renderSectionHeader={renderSectionHeader}
-                    renderScrollComponent={renderMotionScroll}
-                    ListHeaderComponent={
-                      <>
-                        <RepairNotice repairs={repairs} />
-                        {status === "ready" && onlyCompleted ? (
-                          <EmptyState label={emptyListLabel(tab)} />
-                        ) : null}
-                      </>
-                    }
-                    ListEmptyComponent={
-                      status === "loading" ? (
-                        <LoadingState />
-                      ) : status === "error" ? (
-                        <ErrorState
-                          message={readError ?? "Something went wrong."}
-                          onRetry={() => void reload()}
-                        />
-                      ) : (
+                <SectionList<TaskItem, ListsSection>
+                  key={tab}
+                  contentContainerStyle={styles.content}
+                  onRefresh={reload}
+                  refreshing={refreshing}
+                  sections={folded}
+                  keyExtractor={keyExtractor}
+                  renderItem={renderItem}
+                  renderSectionHeader={renderSectionHeader}
+                  renderScrollComponent={renderMotionScroll}
+                  ListHeaderComponent={
+                    <>
+                      <RepairNotice repairs={repairs} />
+                      {status === "ready" && onlyCompleted ? (
                         <EmptyState label={emptyListLabel(tab)} />
-                      )
-                    }
-                    stickySectionHeadersEnabled={false}
-                    removeClippedSubviews={false}
-                  />
-                </PagePull>
+                      ) : null}
+                    </>
+                  }
+                  ListEmptyComponent={
+                    status === "loading" ? (
+                      <LoadingState />
+                    ) : status === "error" ? (
+                      <ErrorState
+                        message={readError ?? "Something went wrong."}
+                        onRetry={() => void reload()}
+                      />
+                    ) : (
+                      <EmptyState label={emptyListLabel(tab)} />
+                    )
+                  }
+                  stickySectionHeadersEnabled={false}
+                  removeClippedSubviews={false}
+                />
               </View>
             </ListPager>
           </ListReorder.Root>

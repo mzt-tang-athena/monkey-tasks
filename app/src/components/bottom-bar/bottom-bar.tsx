@@ -3,6 +3,9 @@ import { StyleSheet, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import { PullSurface } from "@/components/motion/pull";
+import { motion } from "@/lib/motion/tokens";
+import { useCommandPane } from "@/hooks/use-command-pane";
 import type { Progress } from "@/lib/motion/progress";
 import { bottomBar, measure, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -33,17 +36,18 @@ export function useBar(): BarState {
 }
 
 /**
- * The bottom bar every tab shares. Left: the Lists, Planner and Journal
- * nav items. Right: the `action` slot, which the screen's route fills
- * (the capture dock or the journal's Add button). The bar knows no
- * feature. The slot reads the bar's height and hands it the sheet's
- * clock, and the bar slides away on that clock with a transform.
+ * The bottom bar every tab shares. Left: the four nav items. Right: the
+ * `action` slot, which the screen's route fills (the split Add pill).
+ * The bar knows no feature. The gap between them takes a downward pull
+ * and opens the command pane. The slot reads the bar's height and hands
+ * it the sheet's clock, and the bar slides away on that clock.
  *
  * The bar's surface spans the window. Its row holds to the reading
  * measure, so the nav and the action sit in the content column.
  */
 export function BottomBar({ action }: { action: React.ReactNode }) {
   const { styles } = useThemedStyles(makeStyles);
+  const { show } = useCommandPane();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   // The sheet's clock, or null while no slot drives the bar.
@@ -118,8 +122,15 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
               onPress={() => router.navigate("/inbox")}
             />
           </View>
-          {/* The air between the nav and the action. */}
-          <View style={styles.spacer} />
+          {/* The air between the nav and the action. A downward pull
+              here opens the pane; the tabs and the pill keep theirs. */}
+          <PullSurface
+            direction="down"
+            onPull={show}
+            commit={motion.pull.bar}
+            testID="bar-gap"
+            style={styles.spacer}
+          />
           {action}
         </View>
       </Animated.View>
