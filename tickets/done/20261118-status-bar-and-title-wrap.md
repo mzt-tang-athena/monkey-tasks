@@ -58,6 +58,6 @@ Both fixed and proven on the release APK.
 - Budget and Midnight, status bar and titles.
 - Web preview at 412: the same two lines, from four runs.
 - Gate: tsc, eslint, 1186 vitest, Vale, records.
-- Web suite: PENDING.
+- Web suite: 612 passed, 26 skipped (CI).
 - PR: 171.
-- Evidence: `app/build/verify/evidence/android-20261118-105249/`.
+- Evidence: the 105249 emulator run.
