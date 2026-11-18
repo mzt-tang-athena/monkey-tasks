@@ -64,6 +64,22 @@ export const sampleNotes: Record<string, Record<string, string>> = {
     "Tasks/Water the plants.md":
       "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\n---\n",
   },
+  "inbox": {
+    "Inbox/20261022-indented-paste.md":
+      " - ## Slide 1\n     - behalf, trio to duo, completed sign\n     - challenge, UK onboarding had a large drop-off\n - ## Slide 2\n     - reorder the onboarding screens\n",
+    "Inbox/20261023-flight-email-tracker.md":
+      "Track the airline refund. The email came on the 21st.\n",
+    "Inbox/20261024-1830-thought-dump.md":
+      "The week planner needs a quieter header. The month view is close.\n\nNext: try the two layouts on the phone before deciding.\n",
+    "Inbox/202610251945.md":
+      "---\nkind: resource\ntags:\n  - reading\n---\n\nTwo books to find: Ursula Le Guin and a good atlas.\n",
+    "Inbox/202610260830.md":
+      "Coffee with Sam. Bring the notebook.\n",
+    "Inbox/declarative-vault-port.md":
+      "---\nkind: resource\ncreated: 2026-09-24\n---\n\nDeclarative vault architecture, the future idea of expressing the whole vault as one declaration file. A fresh install anywhere could be generated from it.\n",
+    "Inbox/have an agent monitor, organise and automate my emails.md":
+      "A standing agent that triages the family email inbox.\n",
+  },
   "repair": {
     "Tasks/Broken note.md":
       "---\nkind: \"[[tasks]]\"\n---\n\nNo created date.\n",

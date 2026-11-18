@@ -191,9 +191,10 @@ then. That keeps every group on the list full.
 |---|---|
 | `default` | 16 tasks, 9 list notes, one journal day and one reference. `vault:check` finds nothing. |
 | `repair` | `Broken note.md` and `Lists/Garden.md`, for the repair block. |
+| `inbox` | Seven `Inbox/` notes with the name shapes the cards must read. |
 
 With no `?vault=` in the page address, the preview loads `default`,
-then `repair`.
+then `repair`, then `inbox`.
 
 Metro cannot import a `.md` file, so the notes reach the app through
 the generated `sample/index.ts`. After a change to a sample note, run
@@ -237,13 +238,14 @@ The app code in `app/src` follows the Bulletproof React layout
 | Folder | Holds |
 |---|---|
 | `app` | expo-router routes and the providers. A route re-exports one screen or composes features in a few lines. |
-| `features/<name>` | The UI of one feature: `capture`, `command`, `diagnostics`, `journal`, `lists`, `planner`, `task-editor`. |
+| `features/<name>` | The UI of one feature: `capture`, `command`, `diagnostics`, `inbox-notes`, `journal`, `lists`, `planner`, `task-editor`. |
 | `components` | Shared UI. `components/ui` holds the primitives. |
 | `components/motion` | The motion surfaces (ADR 0046): `Pager`, `createDragSurface`, `Split`, `Landing`, `MotionScrollView` and the tick's `Celebration`. They own every gesture, worklet and thread crossing, so a feature passes data and plain functions. `internal/` is private to the folder. |
 | `hooks` | Shared hooks. |
 | `stores/tasks` | The task query and one mutation hook per write in `mutations/` (ADR 0037). The failure list, pure row updaters, selectors and the reminder sync. |
 | `stores/journal` | The daily note query, the reference read and the append mutation. It shares the vault scope and reads no task state. |
-| `lib` | App libraries: `vault` (the adapter port, its SAF and memory adapters, sample notes), `journal` (the note grammar and file I/O), `react-query`, `recurrence`, `notifications`. `lib/alerts` holds the ring shape and the acknowledged groups. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
+| `stores/inbox-notes` | The Inbox query and its create and save mutations. It shares the vault scope and reads no task state. |
+| `lib` | App libraries with no feature knowledge. `vault` holds the adapter port, its SAF and memory adapters, and the sample notes. `journal` holds the note grammar and file I/O. `inbox-notes` holds the card model and the Inbox file I/O. `react-query`, `recurrence`, `notifications` and `alerts` hold their own setup. `lib/motion` holds the motion tokens, the pure worklet math with its tests, and the clocks (`timing`, `spring`, `useProgress`). |
 | `types` | Shared types, such as `TaskItem`. |
 | `utils` | Pure helpers: dates, YAML, schema errors. |
 | `theme` | Design tokens. |
@@ -401,6 +403,34 @@ The journal does not use the task store. Its append shares `VAULT_SCOPE`
 with the task writes, so the vault takes one write at a time. The append
 stays out of the Lists failure banner.
 
+### Inbox Notes
+
+`features/inbox-notes` shows the notes in `Inbox/` as a two-column card
+grid, newest first. It reads no task state and does not use the task
+store. The tab's action is the note composer.
+
+| Piece | Holds |
+|---|---|
+| `inbox-notes-screen.tsx` | The read, the grid, the header and the bottom bar's action slot. |
+| `note-editor-screen.tsx` | The body-only editor and its conflict notice. |
+| `components/note-card.tsx` | One card: the name as the title and the body as the preview. |
+| `components/note-dock.tsx` | The Add button, the note sheet and the failure toast. |
+| `components/note-form.tsx` | The body field, the optional title and the send control. |
+| `hooks/use-note-sheet.ts` | The sheet's clock, the draft and the failure toast. |
+
+`lib/inbox-notes/model.ts` holds the name and preview rules as pure
+functions. A bare `YYYYMMDDHHmm` name shows as a local date and time.
+Every other name shows exactly as written, so a slug or a sentence
+keeps its words. A card shows up to eight lines of the body with the markdown
+marks gone and the indentation flattened. `lib/inbox-notes/read-inbox.ts`
+lists, reads, creates and saves the notes. A read never makes the
+folder; the first capture does.
+
+A save writes the body below the frontmatter through
+`writeNoteIfUnchanged`. A conflict keeps the draft and offers Save a
+copy, Reload note and Keep editing. ADR `20261117-inbox-note-model`
+records the model.
+
 Imports follow four zones:
 
 1. A feature imports no other feature.
@@ -475,7 +505,8 @@ The feature queue:
 - 0092 optional quests and evergreen tasks, a discovery
 - 0093 the task editor rebuild, shipped in #155. The phone pass for
   keyboard insets and Android back remains
-- 0095 a Notes tab from Inbox, starting with a design
+- 0095 the Inbox Notes tab, shipped in #164. The phone pass for
+  TalkBack on the four tabs and the note composer remains
 - 20261111 reminder weight shipped in #150, #152 and #153. The phone check
   remains (20261111-alert-weight-device-check)
 - 20261111 one list and a whole-tab order, decided. The children:
@@ -492,7 +523,7 @@ Open feature tickets:
 - 0065 the list menu actions
 - 0003, 0005 and 0008 carry the larger ideas.
 
-The app has three tabs today, Lists, Planner and Journal. The bar
+The app has four tabs today, Lists, Planner, Journal and Inbox Notes. The bar
 carries no labels; each tab's name lives in its accessibility label
 (ADR 20261117-phosphor-glyphs). The Lists tab
 shows Main and the list notes. Main holds the tasks with no list. Any

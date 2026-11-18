@@ -174,7 +174,7 @@ export const menuWidth = 216;
  */
 export const bottomBar = {
   row: 48,
-  tabWidth: 56,
+  tabWidth: 44,
   add: 48,
   addLabelSize: 16,
   addLabelLine: 22,

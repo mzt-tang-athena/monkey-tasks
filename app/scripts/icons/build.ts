@@ -16,6 +16,7 @@ const GLYPHS = {
   list: { phosphor: "List", size: 20 },
   calendar: { phosphor: "CalendarDot", size: 20 },
   journal: { phosphor: "Notebook", size: 20 },
+  inbox: { phosphor: "Tray", size: 20 },
   "calendar-mini": { phosphor: "CalendarDot", size: 11 },
   "clock-mini": { phosphor: "Clock", size: 11 },
   plus: { phosphor: "Plus", size: 18 },
