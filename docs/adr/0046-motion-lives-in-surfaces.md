@@ -482,3 +482,36 @@ The week card shows no fault in either run.
 Its grid carries a fixed height.
 Evidence: `app/build/verify/evidence/android-20261118-113528/`,
 `android-20261118-123618/` and `android-20261118-123853/`.
+
+## Amendment, 2026-11-18: Week and Month take the day's divider
+
+The operator scrolled the list under the week and month cards.
+The rows slid into the card with no edge.
+Day had a divider and a grip between its timeline and its list.
+
+Week and Month now use the same split file.
+A 28pt band carries the dashed rule and the grip bar.
+The list clips at its top edge.
+`SplitFit` holds the top pane at its content height and gives the
+list the rest.
+
+Week and Month do not resize.
+Their top pane is a card with an intrinsic height.
+The month draws six square rows.
+The week draws four boxes or seven lines.
+A drag could only clip the card or leave paper under it.
+The day's top pane is a timeline that scrolls, so its drag moves a
+real edge.
+The grip on Week and Month is the day's mark.
+It carries no drag and no slider role.
+
+Alternative: give both a fraction split with a live grip.
+The card would take a share of the body, so it would clip its last
+row or float in paper.
+
+Alternative: a border on the list's top edge alone.
+It draws no grip and reads as a card edge, not the day's divider.
+
+Proof: `planner-split.spec.ts` reads the card, the grip and the list
+in both modes, and finds no slider.
+The one-screen week layouts still pass their own checks.
