@@ -114,7 +114,8 @@ PY
   apksigner sign --ks "$ks" --ks-pass pass:android --key-pass pass:android \
     --ks-key-alias androiddebugkey "$work/aligned.apk"
   apksigner verify "$work/aligned.apk" || die "the signature does not verify"
-  signer() { apksigner verify --print-certs "$1" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p'; }
+  signer() { apksigner verify --print-certs "$1" | sed -n 's/^V[0-9.]* Signer: certificate SHA-256 digest: //p' | head -1; }
+  [ -n "$(signer "$work/aligned.apk")" ] || die "cannot read the new APK's signer"
   [ "$(signer "$work/aligned.apk")" = "$(signer "$keydir/base.apk")" ] \
     || die "$ks does not match the base APK's key"
   mkdir -p "$(dirname "$out")"
