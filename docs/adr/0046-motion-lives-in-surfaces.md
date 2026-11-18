@@ -432,4 +432,13 @@ It runs for the mouse and for CDP touch.
 It reads the bar between the two tabs.
 Its width sits between the two tab widths.
 Reduce motion holds the bar still.
-The Android emulator frames proof lands here.
+
+Android proof, release APK of `e0cbf5b` on the Pixel 7 emulator.
+The frame grid is 270 px wide, a quarter of the screen.
+- Main's rule spans x 21 to 45.
+- Errands' rule spans x 65 to 103.
+- Frames 1 to 21 walk the bar from 21 to 48.
+- Its width blends from 24 to 32 on the way.
+- The release lands it under Errands.
+- With motion off it jumps in one frame and holds.
+- Evidence: `app/build/verify/evidence/android-20261118-074823/`.
