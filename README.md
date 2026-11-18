@@ -466,6 +466,10 @@ burst from the checkbox, in the active palette (ADR
 20261116-completion-celebration). Every tick control plays it, the
 editor sheet's included, and only when the press marks the task done.
 
+The launcher icon is a flat matcha tile with a white tick (ADR
+`20261118-app-icon`). The sources live in `app/scripts/app-icon/source/`,
+and `npm run app-icon:build` rebuilds every icon asset from them.
+
 The design direction round started. `20261112-design-scale-guard`
 merged in `d26fcae`. It names the spacing and radius scale, moves
 fifteen stray values onto it, and adds a vitest guard. The guard fails a
