@@ -18,6 +18,10 @@ fails a bullet that wraps or runs past 64 characters.
 
 - Week starts on: Monday, or Sunday.
 
+### Fixes
+
+- A sheet sits 8pt above the keyboard, with no gap.
+
 ## 1.1.0 - 2026-11-18
 
 ### Inbox Notes

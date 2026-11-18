@@ -9,14 +9,19 @@ import { spacing } from "@/theme/tokens";
 import { OverlayHost } from "./overlay-host";
 import { Sheet } from "./sheet";
 
-// The sheet rides the keyboard's shared values. The test has no keyboard.
+// The sheet rides the keyboard's shared values. The test moves them.
+const keyboard = vi.hoisted(() => ({
+  height: { value: 0 },
+  progress: { value: 0 },
+}));
 vi.mock("react-native-keyboard-controller", async () => {
-  const { useSharedValue } = await import("react-native-reanimated");
+  const { makeMutable } = await import("react-native-reanimated");
+  const height = makeMutable(0);
+  const progress = makeMutable(0);
+  keyboard.height = height;
+  keyboard.progress = progress;
   return {
-    useReanimatedKeyboardAnimation: () => ({
-      height: useSharedValue(0),
-      progress: useSharedValue(0),
-    }),
+    useReanimatedKeyboardAnimation: () => ({ height, progress }),
   };
 });
 
@@ -32,7 +37,13 @@ vi.mock("react-native-safe-area-context", () => ({
   }),
 }));
 
-function Harness({ initial = true }: { initial?: boolean }) {
+function Harness({
+  initial = true,
+  rideKeyboard = false,
+}: {
+  initial?: boolean;
+  rideKeyboard?: boolean;
+}) {
   const [open, setOpen] = React.useState(initial);
   const [mounted, setMounted] = React.useState(initial);
   const progress = useProgress(open, {
@@ -63,6 +74,7 @@ function Harness({ initial = true }: { initial?: boolean }) {
             onDismiss={() => setOpen(false)}
             label="Add a task"
             closeLabel="close capture"
+            rideKeyboard={rideKeyboard}
             scrim
           >
             <TextInput placeholder="Add a task" />
@@ -93,6 +105,8 @@ function inert(element: HTMLElement): boolean {
 describe("Sheet", () => {
   afterEach(() => {
     safe.bottom = 0;
+    keyboard.height.value = 0;
+    keyboard.progress.value = 0;
   });
 
   it("reports a named modal dialog", () => {
@@ -157,6 +171,26 @@ describe("Sheet", () => {
 
     const dock = screen.getByTestId("sheet-dock");
     expect(parseFloat(getComputedStyle(dock).bottom)).toBe(spacing.s + 48);
+  });
+
+  it("lifts the panel by the keyboard above the inset, for an 8pt gap", async () => {
+    safe.bottom = 48;
+    render(<Harness rideKeyboard />);
+    await act(async () => {
+      // The library reports a negative height, a translate that clears
+      // the keyboard.
+      keyboard.height.value = -300;
+      keyboard.progress.value = 1;
+      await new Promise<void>((resolve) => setTimeout(resolve, 32));
+    });
+
+    // The panel's bottom sits the dock's gap plus the lift above the
+    // window. The keyboard is 300 tall, so 8 of gap leaves 300 - 48 of
+    // travel once the dock has cleared the 48pt inset.
+    const dock = screen.getByTestId("sheet-dock");
+    const lift = dock.parentElement as HTMLElement;
+    expect(parseFloat(getComputedStyle(dock).bottom)).toBe(spacing.s + 48);
+    expect(getComputedStyle(lift).transform).toContain("-252px");
   });
 
   it("is not drawn while closed", async () => {

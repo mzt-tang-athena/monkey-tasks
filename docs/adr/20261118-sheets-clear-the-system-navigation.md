@@ -52,3 +52,34 @@ that until iOS ships.
 
 The drag to close did not change. The drag moves the panel inside the
 dock, so the inset and the drag never share a style.
+
+## Amendment 2026-11-18: the keyboard covers the inset
+
+The trade-off above did not hold. With the keyboard open, every sheet
+kept a band of the bottom inset between its panel and the keyboard.
+The band was about 48dp in three-button navigation and about 24dp in
+gesture navigation. The list behind showed through it.
+
+The library does not report its height above the system navigation on
+Android 15. The app draws edge to edge, so the provider marks the
+navigation bar translucent. The native height is then the whole IME
+inset, system bar included. The sheet then added the safe-area inset
+on top. On the emulator, three-button navigation left the panel 56dp
+above the keyboard. That is the 8dp gap plus 48dp of bar. Gestures
+left 32dp, the 8dp gap plus 24dp of bar.
+
+The lift now carries only the part of the keyboard above the bar. The
+library reports a negative height, a translate that clears the
+keyboard. The lift adds the inset to it and clamps the sum at zero:
+`min(keyboard.height + insets.bottom, 0)`. The dock keeps its 8pt
+above the inset, so the two cannot add. The panel's bottom lands 8pt
+above whichever is higher, the keyboard or the bar. The lift works the
+sum out on the UI thread, so the keyboard's motion stays smooth.
+
+With the keyboard down nothing changes. The panel sits 8pt above the
+inset, and a sheet that does not ride the keyboard still reads it.
+
+This also settles the iOS trade-off above. The keyboard's height
+covers the home indicator. The panel then floats 8pt above the
+keyboard there too, not one indicator higher. iOS has not shipped, so
+we expect that and have not measured it.
