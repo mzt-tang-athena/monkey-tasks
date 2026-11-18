@@ -81,19 +81,19 @@ The operator picked this from a mockup on 2026-11-18. Three parts.
 The pull now covers the page body, not only the header band. Each page
 scroller offers it on all four tabs. The scroller reads its own offset,
 and the pull acts only while that offset sits at the top. A pull that
-starts lower down only scrolls. The pan activates on a downward travel
-alone. Upward travel keeps the scroll. Sideways travel fails at the
-same 24pt as before, so the pager keeps its swipe. The row drag, the
-day split and a sheet never start it. A pull over a row arms the press
-guard, so the row does not open too.
+starts lower down only scrolls. The pull takes a downward travel alone.
+Upward travel keeps the scroll. A sideways drag with little downward
+travel leaves the pager its swipe. The row drag, the day split and a
+sheet never start it. A pull over a row arms the press guard, so the
+row does not open too.
 
-On the web, the browser owns a vertical touch drag. A pan that waits
-for its 12pt threshold loses the drag to the browser's scroll. So
-`MotionScrollView` also listens for the web's own touch events. A drag
-that starts at the top and travels down keeps the gesture. It prevents
-the `touchmove` default, so the page holds still. Upward travel stays
-with the browser. Native keeps the pan, where the platform arbitrates
-between the drag, the pager and the split.
+A pan around a scroller does not work for this. On Android the scroll
+view claims the first vertical drag, even at the top, and cancels the
+pan. On the web the browser does the same with its own scroll. So
+`MotionScrollView` reads the scroller's own touch events instead. A
+drag that starts at the top and travels down holds the page still. On
+the web it prevents the `touchmove` default. Upward travel stays with
+the scroll. The pane still springs from the top edge on the UI thread.
 
 Alternative: set `touch-action: none` on a page at its top. We rejected
 it. It also blocks an upward drag, so a reader could not scroll down
