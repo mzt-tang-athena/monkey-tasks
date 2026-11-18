@@ -515,3 +515,30 @@ It draws no grip and reads as a card edge, not the day's divider.
 Proof: `planner-split.spec.ts` reads the card, the grip and the list
 in both modes, and finds no slider.
 The one-screen week layouts still pass their own checks.
+
+## Amendment, 2026-11-18: the live page rides the track again
+
+Ticket 20261117 moved the live page out of the track because the
+track's box left the host at rest. Android skips a whole subtree when
+its parent's box lands off screen. Every list tab but Main then lost
+its rows in the accessibility tree. The move put the live page's
+place in a shared value. That place then trailed its content by a
+frame (ticket 20261118).
+
+The live page is inside the track again, at the track's origin. The
+track carries the live page's place as a plain `left`, `live * width`,
+and the animated offset stays `-pos * width`. The two cancel at rest,
+so the track's box stands over the host, and only the transform
+carries a swipe. A commit changes the plain `left` and the content in
+one render.
+
+`pagers.spec.ts` reads the live page at the host's origin and the
+track's box over the host on a non-first tab. That is the pair Android
+checks, so it fails on the shape that hid the rows.
+
+Proof: the release APK's `uiautomator` dump puts `pager-track` and
+`pager-live` at the pager's own box, `[0,274][1080,2105]`. The tab is
+not Main. The live page's contents, the repair notice and the empty
+state, read in the dump. Frame grids show no blank frame at a landing
+on the month, day and list pagers (ticket 20261118,
+`android-20261118-202843/`).

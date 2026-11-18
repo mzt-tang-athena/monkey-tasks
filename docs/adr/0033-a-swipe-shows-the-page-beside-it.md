@@ -171,3 +171,45 @@ registers no drag source and takes no press.
 The week body is a `PlanDrag.Grid` with a cell-owned ring. Its cells
 keep their targets across the preview, so a drag reads the same
 geometry on the live page.
+
+## Amendment, 2026-11-18: the place moves with the page
+
+A month swipe on the phone showed one frame of paper at the landing.
+The month strip already named the new month, and the card was blank.
+Ticket 20261118 holds the frame grids.
+
+Ticket 0087 carried the live page's place as a plain React style.
+PR 169 then moved the tracked page position onto one shared value,
+and the place followed it. A write from a layout effect reaches the
+UI thread after the content's native mount. The live page drew one
+page over for that frame. The web suite cannot see this, because
+Reanimated runs on the JS thread in a browser.
+
+The track now carries the live page's place as a plain `left`, one
+page per live page. The live page rides at the track's origin. A
+commit moves its content and its place in the same render. The
+animated style reads only the shared page position, so a drag stays
+on the UI thread. At rest the plain `left` and the animated offset
+cancel, so the track's box stands over the host. That keeps Android's
+rows and TalkBack (ADR 0046).
+
+Alternative: flip the place on the UI thread when a settle lands.
+Keep the incoming preview over the live page until its content
+mounts. That covers the frame only where a preview paints the whole
+page. The list preview draws one screenful.
+
+Proof: frame grids on the Pixel 7 emulator, release APK, motion on,
+four swipes per pager. A blank frame holds no card and no rows in the
+pager's body band. Lists read rows from 95 to 500. The month card
+reads from 140 to 340. The day body reads from 150 to 500. The frame
+is 270 by 600.
+
+- Before, on `30a2f4e`, one blank frame per swipe, so 12 of 12.
+- After, none in 12 swipes, three pagers, both directions.
+- The strip named the new page in the blank frame.
+
+The before grids sit in
+`app/build/verify/evidence/android-20261118-195734/`. The after grids
+sit in `android-20261118-202225/` for lists and
+`android-20261118-202843/` for month and day. The same release
+bundle, swapped into the cached APK, ran both.
