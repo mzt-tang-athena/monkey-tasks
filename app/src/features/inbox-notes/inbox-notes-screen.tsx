@@ -26,18 +26,26 @@ import { NoteCard } from "./components/note-card";
  */
 export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
   const { styles } = useThemedStyles(makeStyles);
-  const inbox = useInboxNotes();
+  const {
+    notes,
+    status,
+    folder,
+    unreadable,
+    readError,
+    refresh,
+    grant,
+  } = useInboxNotes();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const reload = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      await inbox.refresh();
+      await refresh();
     } finally {
       setRefreshing(false);
     }
-  }, [inbox.refresh]);
+  }, [refresh]);
 
   const open = useStableCallback((note: InboxNote) => {
     router.push(`/note/${encodeURIComponent(note.uri)}`);
@@ -45,15 +53,15 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
 
   // A lone last card keeps its column width, as a Keep board does.
   const cards: (InboxNote | null)[] =
-    inbox.notes.length % 2 === 1 ? [...inbox.notes, null] : inbox.notes;
+    notes.length % 2 === 1 ? [...notes, null] : notes;
 
   const empty =
-    inbox.status === "loading" ? (
+    status === "loading" ? (
       <LoadingState label="Loading notes" />
-    ) : inbox.status === "error" || inbox.status === "novault" ? null : (
+    ) : status === "error" || status === "novault" ? null : (
       <EmptyState
         label={
-          inbox.folder == null
+          folder == null
             ? "No notes yet. The first note makes the Inbox folder."
             : "No notes yet. Tap Add to write one."
         }
@@ -63,27 +71,27 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
   return (
     <View style={styles.screen}>
       <View style={[styles.statusStrip, { height: insets.top }]} />
-      <InboxHeader count={inbox.notes.length} />
+      <InboxHeader count={notes.length} />
 
-      {inbox.status === "novault" ? (
+      {status === "novault" ? (
         <VaultPrompt
           hint="Pick the Obsidian vault that holds your Inbox."
-          onGrant={() => void inbox.grant()}
+          onGrant={() => void grant()}
         />
       ) : null}
-      {inbox.status === "error" ? (
+      {status === "error" ? (
         <View style={styles.notice}>
           <ErrorState
-            message={inbox.readError ?? "The Inbox could not be read."}
+            message={readError ?? "The Inbox could not be read."}
             onRetry={() => void reload()}
           />
         </View>
       ) : null}
-      {inbox.unreadable.length > 0 ? (
+      {unreadable.length > 0 ? (
         <View style={styles.notice}>
           <Banner
             tone="info"
-            lines={[`${inbox.unreadable.length} notes could not be read.`]}
+            lines={[`${unreadable.length} notes could not be read.`]}
             actions={[
               {
                 label: "Retry",
@@ -104,7 +112,7 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
         renderScrollComponent={renderMotionScroll}
         onRefresh={reload}
         refreshing={refreshing}
-        ListEmptyComponent={empty}
+        ListEmptyComponent={empty ?? undefined}
         renderItem={({ item }) =>
           item == null ? (
             <View style={styles.fill} />

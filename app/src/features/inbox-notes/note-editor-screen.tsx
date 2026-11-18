@@ -104,11 +104,11 @@ function NoteEditor({ note }: { note: InboxNote }) {
   const [saving, setSaving] = React.useState(false);
 
   const read = React.useCallback(async () => {
-    setPhase("loading");
-    setError(null);
     try {
       // The read joins the vault queue, so it never lands over a write.
       await vaultIdle(client);
+      setPhase("loading");
+      setError(null);
       const next = await adapter.read(note.uri);
       const parts = splitNote(next);
       setText(next);
@@ -124,6 +124,9 @@ function NoteEditor({ note }: { note: InboxNote }) {
   }, [adapter, client, note.uri]);
 
   React.useEffect(() => {
+    // The file is the external system here. Every state change lands
+    // after the read's await, never during the effect's render pass.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void read();
   }, [read]);
 

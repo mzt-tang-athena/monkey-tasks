@@ -213,6 +213,24 @@ test.describe("touch targets", () => {
     await expectTargets(page);
   });
 
+  test("Inbox Notes", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("tab", { name: "Inbox Notes", exact: true }).click();
+    await expect(page.getByTestId("note-card:202610260830.md")).toBeVisible();
+    await expectTargets(page);
+  });
+
+  test("the open note composer", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("tab", { name: "Inbox Notes", exact: true }).click();
+    await page.getByRole("button", { name: "add note" }).click();
+    await expect(page.getByRole("dialog", { name: "New note" })).toHaveCSS(
+      "opacity",
+      "1",
+    );
+    await expectTargets(page);
+  });
+
   test("Planner in day mode", async ({ page }) => {
     await openPlanner(page, "day");
     await expectTargets(page);

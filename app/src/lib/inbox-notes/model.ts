@@ -209,10 +209,10 @@ export function plainLine(line: string): string {
   if (/^(-{3,}|\*{3,}|_{3,})$/.test(text)) {
     return "";
   }
-  text = text.replace(/^#{1,6}\s+/, "");
-  text = text.replace(/^>\s?/, "");
   text = text.replace(/^([-*+]|\d+\.)\s+/, "");
   text = text.replace(/^\[[ xX]\]\s+/, "");
+  text = text.replace(/^>\s?/, "");
+  text = text.replace(/^#{1,6}\s+/, "");
   text = text.replace(/!\[\[[^\]]*\]\]/g, "");
   text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
   text = text.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, target, alias) =>

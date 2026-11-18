@@ -11,7 +11,7 @@ import { sampleNotes } from "./index";
 export const SAMPLE_DAY = "2026-10-26";
 
 /** What the preview loads when the page asks for no seed. */
-export const PREVIEW_SEEDS = ["default", "repair"];
+export const PREVIEW_SEEDS = ["default", "repair", "inbox"];
 
 /** The block between the opening and closing `---`. */
 const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
