@@ -259,7 +259,7 @@ const makeStyles = (colors: Palette) => ({
       flexDirection: "row",
     },
     cell: {
-      width: "14.28%",
+      flex: 1,
       aspectRatio: 1,
       alignItems: "center",
       justifyContent: "center",
