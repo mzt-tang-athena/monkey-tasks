@@ -17,6 +17,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check record names
         run: scripts/check-records.sh
+      - name: Check changelog bullets
+        run: scripts/check-changelog.sh
       - uses: actions/setup-node@v4
         with:
           node-version: 22

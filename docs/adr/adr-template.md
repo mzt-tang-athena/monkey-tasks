@@ -13,6 +13,8 @@ agent instructions; the short version:
 3. Common verbs (keep, run, copy, move), not fancy ones.
 4. Facts over drama: state importance once, plainly.
 5. One name per thing, forever.
+6. A bullet fits one phone line, about 60 characters. Split or cut a
+   longer one.
 
 Example of the voice:
 "We migrate ntfy first. ntfy is a single container on the tailnet. That makes
