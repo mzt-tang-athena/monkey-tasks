@@ -12,6 +12,11 @@ fails a bullet that wraps or runs past 64 characters.
 
 - The month card you swipe to shows its dates at once.
 - Week and month lists sit under the day's divider.
+- Weeks run Monday to Sunday, and the month grid follows.
+
+### Settings
+
+- Week starts on: Monday, or Sunday.
 
 ## 1.1.0 - 2026-11-18
 

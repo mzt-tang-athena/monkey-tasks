@@ -1,4 +1,19 @@
+import type { WeekStart } from "@/lib/settings";
+
 const pad = (n: number) => String(n).padStart(2, "0");
+
+/** How many days into its week a date falls, by the week-start setting.
+    A Monday start puts Sunday last, at 6. */
+export function dayOfWeek(date: Date, weekStart: WeekStart): number {
+  const first = weekStart === "monday" ? 1 : 0;
+  return (date.getDay() - first + 7) % 7;
+}
+
+/** The same seven names, in the order the week runs. */
+export function weekOrder<T>(names: readonly T[], weekStart: WeekStart): T[] {
+  const first = weekStart === "monday" ? 1 : 0;
+  return Array.from({ length: 7 }, (_, at) => names[(first + at) % 7]);
+}
 
 export function formatLocal(date: Date, withTime: boolean): string {
   const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;

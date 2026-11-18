@@ -14,6 +14,7 @@ import {
   type Mode,
 } from "@/features/planner/model";
 import { MONTHS_SHORT, WEEKDAYS } from "@/features/planner/lib/labels";
+import { useSetting } from "@/lib/settings-store";
 import { fonts, pageGutter, periodStep, radius, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 
@@ -182,6 +183,7 @@ export function PeriodStrip({
   onSelect: (date: Date) => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
+  const [weekStart] = useSetting("weekStart");
   const todayStart = startOfDay(today).getTime();
   const selStart = startOfDay(selected).getTime();
 
@@ -244,11 +246,12 @@ export function PeriodStrip({
     // One week per cell, current week first, rail rebasing per the
     // lazy-follow rule when the selected week walks off its end.
     const selWeekIdx = Math.round(
-      (startOfWeek(selected).getTime() - startOfWeek(today).getTime()) /
+      (startOfWeek(selected, weekStart).getTime() -
+        startOfWeek(today, weekStart).getTime()) /
         (7 * 86400000),
     );
     const startIdx = railStartIdx(0, selWeekIdx, 12);
-    const railBase = startOfWeek(today);
+    const railBase = startOfWeek(today, weekStart);
     return (
       <PeriodRail
         key="week"

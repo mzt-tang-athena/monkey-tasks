@@ -83,7 +83,7 @@ describe("SourceToggle", () => {
       </TestPlannerList>,
     );
 
-    expect(chip().textContent).toContain("Due 8 to 14 Nov");
+    expect(chip().textContent).toContain("Due 9 to 15 Nov");
   });
 
   it("opens the chooser from its own view when held", () => {

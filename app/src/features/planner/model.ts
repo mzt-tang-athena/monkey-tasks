@@ -1,6 +1,7 @@
 import { taskIsDone } from "@monkey-tasks/schemas";
 import {
   addDays,
+  dayOfWeek,
   formatLocal,
   formatTime,
   isoOf,
@@ -8,6 +9,7 @@ import {
   startOfDay,
 } from "@/utils/dates";
 import type { TaskItem } from "@/types/task";
+import type { WeekStart } from "@/lib/settings";
 import { occursOn } from "@/lib/recurrence";
 import { MONTHS, MONTHS_SHORT, WEEKDAYS } from "@/features/planner/lib/labels";
 
@@ -43,6 +45,7 @@ export function sourceLabel(
   mode: Mode,
   day: Date,
   today: Date,
+  weekStart: WeekStart,
 ): string {
   if (source !== "due-period") {
     return source;
@@ -51,7 +54,7 @@ export function sourceLabel(
     return `Due ${dayName(day, today)}`;
   }
   if (mode === "week") {
-    return `Due ${weekName(day, today)}`;
+    return `Due ${weekName(day, today, weekStart)}`;
   }
   return `Due ${monthName(day, today)}`;
 }
@@ -78,9 +81,9 @@ function dayName(day: Date, today: Date): string {
   return `${WEEKDAYS[day.getDay()]}, ${day.getDate()} ${MONTHS_SHORT[day.getMonth()]}${yearSuffix(day, today)}`;
 }
 
-function weekName(day: Date, today: Date): string {
-  const first = startOfWeek(day);
-  if (first.getTime() === startOfDay(startOfWeek(today)).getTime()) {
+function weekName(day: Date, today: Date, weekStart: WeekStart): string {
+  const first = startOfWeek(day, weekStart);
+  if (first.getTime() === startOfDay(startOfWeek(today, weekStart)).getTime()) {
     return "this week";
   }
   const last = addDays(first, 6);
@@ -273,9 +276,9 @@ export function withKeptTime(
   );
 }
 
-/** Sunday of the week holding date. */
-export function startOfWeek(date: Date): Date {
-  return addDays(date, -date.getDay());
+/** The first day of the week holding date, by the week-start setting. */
+export function startOfWeek(date: Date, weekStart: WeekStart): Date {
+  return addDays(date, -dayOfWeek(date, weekStart));
 }
 
 /** The first of the month holding date. */

@@ -59,9 +59,20 @@ describe("quickDays", () => {
 });
 
 describe("monthRows", () => {
+  it("lays October 2026 out in weeks from Monday", () => {
+    const rows = monthRows(new Date(2026, 9, 1), "monday");
+    // 1 October 2026 is a Thursday: three blanks, then the days.
+    expect(rows[0].map((cell) => cell?.getDate() ?? null)).toEqual([
+      null, null, null, 1, 2, 3, 4,
+    ]);
+    expect(rows).toHaveLength(5);
+    expect(rows.at(-1)?.map((cell) => cell?.getDate() ?? null)).toEqual([
+      26, 27, 28, 29, 30, 31, null,
+    ]);
+  });
+
   it("lays October 2026 out in weeks from Sunday", () => {
-    const rows = monthRows(new Date(2026, 9, 1));
-    // 1 October 2026 is a Thursday: four blanks, then the days.
+    const rows = monthRows(new Date(2026, 9, 1), "sunday");
     expect(rows[0].map((cell) => cell?.getDate() ?? null)).toEqual([
       null, null, null, null, 1, 2, 3,
     ]);
@@ -69,6 +80,16 @@ describe("monthRows", () => {
     expect(rows.at(-1)?.map((cell) => cell?.getDate() ?? null)).toEqual([
       25, 26, 27, 28, 29, 30, 31,
     ]);
+  });
+
+  it("takes the lead from the month edge under each setting", () => {
+    // 1 November 2026 is a Sunday: Monday starts it six cells in.
+    const monday = monthRows(new Date(2026, 10, 1), "monday");
+    expect(monday[0].map((cell) => cell?.getDate() ?? null)).toEqual([
+      null, null, null, null, null, null, 1,
+    ]);
+    const sunday = monthRows(new Date(2026, 10, 1), "sunday");
+    expect(sunday[0][0]?.getDate()).toBe(1);
   });
 });
 

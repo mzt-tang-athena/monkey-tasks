@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
 import { motion } from "@/lib/motion/tokens";
+import { useSetting } from "@/lib/settings-store";
 import { fonts, radius, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import {
@@ -29,8 +30,9 @@ export function SourceToggle({ mode, day }: { mode: Mode; day: Date }) {
   const [pressed, setPressed] = React.useState(false);
   const [held, setHeld] = React.useState(false);
 
-  const label = sourceLabel(source, mode, day, today);
-  const nextLabel = sourceLabel(nextSource(source), mode, day, today);
+  const [weekStart] = useSetting("weekStart");
+  const label = sourceLabel(source, mode, day, today, weekStart);
+  const nextLabel = sourceLabel(nextSource(source), mode, day, today, weekStart);
 
   React.useEffect(
     () => () => {

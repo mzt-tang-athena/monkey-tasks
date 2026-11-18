@@ -269,10 +269,10 @@ test.describe("the source toggle names the period on screen", () => {
       "task source: Due this week",
     );
 
-    // Weeks start on Sunday: 8 November 2026 is one.
-    await page.getByRole("tab", { name: /week of Nov 8-14/ }).click();
+    // Weeks start on Monday: 9 November 2026 is one.
+    await page.getByRole("tab", { name: /week of Nov 9-15/ }).click();
     await expect(sourceToggle(page)).toHaveAccessibleName(
-      "task source: Due 8 to 14 Nov",
+      "task source: Due 9 to 15 Nov",
     );
   });
 

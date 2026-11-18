@@ -45,6 +45,7 @@ function mount(
           tasks={tasks}
           today={monday}
           selected={monday}
+          weekStart="monday"
           interactive={handlers.interactive ?? true}
           onSelect={handlers.onSelect ?? (() => undefined)}
           onOpenDay={handlers.onOpenDay ?? (() => undefined)}

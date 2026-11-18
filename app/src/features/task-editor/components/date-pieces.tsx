@@ -4,7 +4,8 @@ import { Icon } from "@/components/ui/icon";
 import { IconButton } from "@/components/ui/icon-button";
 import { Pressable } from "@/components/ui/pressable";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { isSameDay } from "@/utils/dates";
+import { useSetting } from "@/lib/settings-store";
+import { isSameDay, weekOrder } from "@/utils/dates";
 import { radii, spacing, touchTarget, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { dayHour, faceHour, monthRows, type Clock } from "../lib/when";
@@ -42,6 +43,7 @@ export function DateGrid({
   onPick: (day: Date) => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
+  const [weekStart] = useSetting("weekStart");
   const step = (by: number) =>
     onMonth(new Date(month.getFullYear(), month.getMonth() + by, 1));
   return (
@@ -60,13 +62,13 @@ export function DateGrid({
         </IconButton>
       </View>
       <View style={styles.week} aria-hidden>
-        {WEEKDAY_LETTERS.map((letter, at) => (
+        {weekOrder(WEEKDAY_LETTERS, weekStart).map((letter, at) => (
           <Text key={at} style={styles.weekday}>
             {letter}
           </Text>
         ))}
       </View>
-      {monthRows(month).map((row, at) => (
+      {monthRows(month, weekStart).map((row, at) => (
         <View key={at} style={styles.week}>
           {row.map((day, column) =>
             day == null ? (
