@@ -180,9 +180,10 @@ export function Split({
       >
         {top}
       </Animated.View>
-      <View style={styles.divider}>
-        <View style={[styles.line, hot && styles.lineHot]} />
-        <View style={styles.gripSlot}>
+      <Divider
+        testID={testID}
+        hot={hot}
+        grip={
           <GestureDetector gesture={gesture}>
             <Animated.View
               ref={gripRef}
@@ -214,14 +215,14 @@ export function Split({
                 onHoverOut: () => setHot(false),
               } as object)}
             >
-            <Animated.View
-              testID={testID == null ? undefined : `${testID}:bar`}
-              style={[styles.bar, barStyle]}
-            />
+              <Animated.View
+                testID={testID == null ? undefined : `${testID}:bar`}
+                style={[styles.bar, barStyle]}
+              />
             </Animated.View>
           </GestureDetector>
-        </View>
-      </View>
+        }
+      />
       <Animated.View
         testID={testID == null ? undefined : `${testID}:bottom`}
         style={[styles.pane, bottomStyle]}
@@ -243,22 +244,75 @@ export function SplitStill(props: Omit<SplitProps, "onResize">) {
       >
         {props.top}
       </View>
-      <View style={styles.divider}>
-        <View style={styles.line} />
-        <View style={styles.gripSlot}>
-          <View style={styles.grip}>
-            <View
-              testID={props.testID == null ? undefined : `${props.testID}:bar`}
-              style={[styles.bar, styles.barRest]}
-            />
-          </View>
-        </View>
-      </View>
+      <Divider testID={props.testID} />
       <View
         testID={props.testID == null ? undefined : `${props.testID}:bottom`}
         style={[styles.pane, { flexGrow: 1 - props.fraction }]}
       >
         {props.bottom}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * The split held still, with the top pane at its own height: the week
+ * and month cards. The card keeps the height its content gives it, the
+ * divider draws the day's edge, and the list below fills the rest and
+ * clips at its top. The grip is the day's mark and carries no drag,
+ * because a card with an intrinsic height has nothing to grow into.
+ */
+export function SplitFit({
+  top,
+  bottom,
+  testID,
+}: {
+  top: React.ReactNode;
+  bottom: React.ReactNode;
+  testID?: string;
+}) {
+  const { styles } = useThemedStyles(makeStyles);
+  return (
+    <View testID={testID} style={styles.root}>
+      <View testID={testID == null ? undefined : `${testID}:top`} style={styles.fit}>
+        {top}
+      </View>
+      <Divider testID={testID} />
+      <View
+        testID={testID == null ? undefined : `${testID}:bottom`}
+        style={styles.fill}
+      >
+        {bottom}
+      </View>
+    </View>
+  );
+}
+
+/** The one divider: a dashed rule with the grip's box centered on it.
+    A live split hands in the grip with its gesture; the still shapes
+    draw the resting bar. */
+function Divider({
+  testID,
+  hot = false,
+  grip,
+}: {
+  testID?: string;
+  hot?: boolean;
+  grip?: React.ReactNode;
+}) {
+  const { styles } = useThemedStyles(makeStyles);
+  return (
+    <View style={styles.divider}>
+      <View style={[styles.line, hot && styles.lineHot]} />
+      <View style={styles.gripSlot}>
+        {grip ?? (
+          <View style={styles.grip}>
+            <View
+              testID={testID == null ? undefined : `${testID}:bar`}
+              style={[styles.bar, styles.barRest]}
+            />
+          </View>
+        )}
       </View>
     </View>
   );
@@ -272,6 +326,16 @@ const makeStyles = (colors: Palette) => ({
     },
     pane: {
       flexBasis: 0,
+      overflow: "hidden",
+    },
+    // The fit shape: the top pane keeps its content height, so a card
+    // never stretches or clips.
+    fit: {
+      flexShrink: 0,
+    },
+    // The list under a fit top fills the rest and clips at the divider.
+    fill: {
+      flex: 1,
       overflow: "hidden",
     },
     divider: {

@@ -2,11 +2,12 @@ import * as React from "react";
 import { StyleSheet, Text, View, type ViewProps } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { Pressable } from "@/components/ui/pressable";
-import { addDays, isoOf, isSameDay } from "@/utils/dates";
+import { addDays, dayOfWeek, isoOf, isSameDay, weekOrder } from "@/utils/dates";
 import { occurrencesBetween } from "@/lib/recurrence";
 import { isDone, startOfMonth } from "@/features/planner/model";
 import { PlanDrag } from "@/features/planner/lib/plan-drag";
 import { MONTHS, WEEKDAYS, WEEKDAYS_FULL } from "@/features/planner/lib/labels";
+import { useSetting } from "@/lib/settings-store";
 import { fonts, radius, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 
@@ -38,10 +39,11 @@ export function MonthGrid({
   onPick?: (day: Date) => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
+  const [weekStart] = useSetting("weekStart");
   const year = viewMonth.getFullYear();
   const monthIdx = viewMonth.getMonth();
   const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-  const lead = startOfMonth(viewMonth).getDay();
+  const lead = dayOfWeek(startOfMonth(viewMonth), weekStart);
 
   // One rule pass per task over the whole grid, lead blanks included.
   // The range ends at the close of the last week row, so trailing
@@ -49,7 +51,7 @@ export function MonthGrid({
   const { dotted, counts } = React.useMemo(() => {
     const year = viewMonth.getFullYear();
     const monthIdx = viewMonth.getMonth();
-    const lead = startOfMonth(viewMonth).getDay();
+    const lead = dayOfWeek(startOfMonth(viewMonth), weekStart);
     const days = new Date(year, monthIdx + 1, 0).getDate();
     const gridStart = addDays(startOfMonth(viewMonth), -lead);
     const gridEnd = addDays(gridStart, Math.ceil((lead + days) / 7) * 7 - 1);
@@ -66,7 +68,7 @@ export function MonthGrid({
       }
     }
     return { dotted: iso, counts: tally };
-  }, [tasks, viewMonth]);
+  }, [tasks, viewMonth, weekStart]);
 
   // Six rows, always: a month that needs five pads with trailing
   // blanks, so the card is the same height every month and the pane
@@ -90,8 +92,11 @@ export function MonthGrid({
         {MONTHS[monthIdx]} {year}
       </Text>
       <View style={styles.card}>
-        <View style={styles.head}>
-          {WEEKDAYS.map((name) => (
+        <View
+          testID={interactive ? "month-weekdays" : undefined}
+          style={styles.head}
+        >
+          {weekOrder(WEEKDAYS, weekStart).map((name) => (
             <Text key={name} style={styles.headCell}>
               {name[0]}
             </Text>

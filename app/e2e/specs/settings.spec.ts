@@ -259,3 +259,86 @@ test.describe("accessibility", () => {
     });
   }
 });
+
+test.describe("the week start", () => {
+  test("runs Monday to Sunday by default, and Sunday to Saturday when picked", async ({
+    page,
+  }) => {
+    await page.goto("/planner");
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
+    await expect(page.getByTestId("week-day:2026-10-26")).toBeVisible();
+
+    /** The day boxes in grid order, as ISO dates. */
+    const order = () =>
+      page
+        .locator('[data-testid^="week-day:"]')
+        .evaluateAll((boxes) =>
+          boxes.map((box) => box.getAttribute("data-testid")?.slice("week-day:".length)),
+        );
+    const rail = page.getByRole("tablist", { name: "weeks" });
+
+    expect(await order()).toEqual([
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+      "2026-11-01",
+    ]);
+    await expect(
+      rail.getByRole("tab", { name: /week of Oct 26-1 W44/ }),
+    ).toHaveAttribute("aria-selected", "true");
+
+    await openFromPlanner(page);
+    const field = page.getByRole("tablist", { name: "week starts on" });
+    await expect(field.getByRole("tab", { name: "Monday" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await press(page, field.getByRole("tab", { name: "Sunday" }));
+    await expect(field.getByRole("tab", { name: "Sunday" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    // The planner stayed mounted, so the new order redraws it.
+    await page.goBack();
+    await expect(page).toHaveURL(/mode=week/);
+    await expect(page.getByTestId("week-day:2026-10-25")).toBeVisible();
+    expect(await order()).toEqual([
+      "2026-10-25",
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+    ]);
+    await expect(
+      rail.getByRole("tab", { name: /week of Oct 25-31/ }),
+    ).toHaveAttribute("aria-selected", "true");
+
+    // The month grid's header follows the same setting.
+    await page.getByRole("tab", { name: "Month", exact: true }).click();
+    await expect(page.getByTestId("month-weekdays")).toHaveText("SMTWTFS");
+
+    // The choice survives a reload.
+    await page.reload();
+    await expect(page.getByTestId("month-weekdays")).toHaveText("SMTWTFS");
+    await page.goto("/settings");
+    await expect(
+      page
+        .getByRole("tablist", { name: "week starts on" })
+        .getByRole("tab", { name: "Sunday" }),
+    ).toHaveAttribute("aria-selected", "true");
+
+    // Back to Monday, so the suite's other specs see the default.
+    await press(page, page.getByRole("tab", { name: "Monday" }));
+    await expect(
+      page
+        .getByRole("tablist", { name: "week starts on" })
+        .getByRole("tab", { name: "Monday" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+});

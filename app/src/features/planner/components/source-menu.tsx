@@ -6,6 +6,7 @@ import {
   type Mode,
   type Source,
 } from "@/features/planner/model";
+import { useSetting } from "@/lib/settings-store";
 import type { MenuAnchor } from "@/features/planner/hooks/use-planner-source";
 
 /** Stands in for the anchor while the chooser is closed. */
@@ -35,15 +36,16 @@ export function SourceMenu({
   onChoose: (source: Source) => void;
   onClose: () => void;
 }) {
+  const [weekStart] = useSetting("weekStart");
   const items = React.useMemo<MenuItem[]>(
     () =>
       SOURCES.map((option) => ({
         key: option,
-        label: sourceLabel(option, mode, day, today),
+        label: sourceLabel(option, mode, day, today, weekStart),
         selected: option === source,
         onPress: () => onChoose(option),
       })),
-    [source, mode, day, today, onChoose],
+    [source, mode, day, today, weekStart, onChoose],
   );
   return (
     <Menu

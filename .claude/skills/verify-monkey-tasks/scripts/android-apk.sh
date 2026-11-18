@@ -11,7 +11,7 @@
 # CLEAN=1, and a tagged commit forces the full path here.
 #
 # Env: APK_CACHE (default ~/code/monkey-tasks/apk-cache),
-#      BUILD_APK (default /tmp/opencode/build-apk.sh),
+#      BUILD_APK (default android-build.sh next to this script),
 #      SWAP_ON_TAG=1 to swap on a tagged commit.
 #
 # stdout is for scripts: mode, fingerprint, base, apk, seconds.
@@ -25,7 +25,7 @@ src=$(cd "$1" && pwd)
 app=$src/app
 out=$app/android/app/build/outputs/apk/release/app-release.apk
 cache=${APK_CACHE:-$HOME/code/monkey-tasks/apk-cache}
-build=${BUILD_APK:-/tmp/opencode/build-apk.sh}
+build=${BUILD_APK:-$(cd "$(dirname "$0")" && pwd)/android-build.sh}
 mode=swap
 [ "${2:-}" = --full ] && mode=full
 

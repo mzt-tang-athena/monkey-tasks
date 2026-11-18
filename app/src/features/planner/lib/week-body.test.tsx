@@ -21,7 +21,7 @@ function task(name: string, due: string, completed?: string): TaskItem {
   };
 }
 
-/** Monday 26 October 2026: the week runs Sunday 25 to Saturday 31. */
+/** Monday 26 October 2026. The default week runs 26 October to 1 November. */
 const monday = new Date(2026, 9, 26);
 const thursday = new Date(2026, 9, 29);
 
@@ -39,8 +39,32 @@ describe("weekChipCount", () => {
 });
 
 describe("weekDays", () => {
-  it("lists the selected day's week from Sunday to Saturday", () => {
-    const days = weekDays({ tasks: [], selected: thursday, today: monday });
+  it("lists the selected day's week from Monday to Sunday", () => {
+    const days = weekDays({
+      tasks: [],
+      selected: thursday,
+      today: monday,
+      weekStart: "monday",
+    });
+
+    expect(days.map((day) => day.iso)).toEqual([
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+      "2026-11-01",
+    ]);
+  });
+
+  it("runs Sunday to Saturday when the week starts on Sunday", () => {
+    const days = weekDays({
+      tasks: [],
+      selected: thursday,
+      today: monday,
+      weekStart: "sunday",
+    });
 
     expect(days.map((day) => day.iso)).toEqual([
       "2026-10-25",
@@ -54,7 +78,12 @@ describe("weekDays", () => {
   });
 
   it("marks today and the selected day", () => {
-    const days = weekDays({ tasks: [], selected: thursday, today: monday });
+    const days = weekDays({
+      tasks: [],
+      selected: thursday,
+      today: monday,
+      weekStart: "monday",
+    });
 
     expect(days.filter((day) => day.isToday).map((day) => day.iso)).toEqual(["2026-10-26"]);
     expect(days.filter((day) => day.isSelected).map((day) => day.iso)).toEqual(["2026-10-29"]);
@@ -68,10 +97,15 @@ describe("weekDays", () => {
       task("Saturday", "2026-10-31"),
     ];
 
-    const days = weekDays({ tasks, selected: monday, today: monday });
+    const days = weekDays({
+      tasks,
+      selected: monday,
+      today: monday,
+      weekStart: "monday",
+    });
 
-    expect(days[2].items.map((item) => item.name)).toEqual(["Morning", "Evening"]);
-    expect(days[6].items.map((item) => item.name)).toEqual(["Saturday"]);
+    expect(days[1].items.map((item) => item.name)).toEqual(["Morning", "Evening"]);
+    expect(days[5].items.map((item) => item.name)).toEqual(["Saturday"]);
     expect(days[0].items).toEqual([]);
   });
 });

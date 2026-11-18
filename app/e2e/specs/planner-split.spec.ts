@@ -269,10 +269,10 @@ test.describe("the source toggle names the period on screen", () => {
       "task source: Due this week",
     );
 
-    // Weeks start on Sunday: 8 November 2026 is one.
-    await page.getByRole("tab", { name: /week of Nov 8-14/ }).click();
+    // Weeks start on Monday: 9 November 2026 is one.
+    await page.getByRole("tab", { name: /week of Nov 9-15/ }).click();
     await expect(sourceToggle(page)).toHaveAccessibleName(
-      "task source: Due 8 to 14 Nov",
+      "task source: Due 9 to 15 Nov",
     );
   });
 
@@ -351,4 +351,47 @@ test("the month keeps its picked day after a visit to Day", async ({ page }) => 
 
   await expect(sectionHeader(page, "Wednesday 28")).toBeVisible();
   await expect(page.getByRole("button", { name: "open this day" })).toBeVisible();
+});
+
+test.describe("the week and month lists take the day's divider", () => {
+  const modes = [
+    { mode: "Week", split: "week-split", card: "week-view:spread" },
+    { mode: "Month", split: "month-split", card: "month-pager" },
+  ] as const;
+
+  for (const { mode, split, card } of modes) {
+    test(`${mode}: the list starts under the divider`, async ({ page }) => {
+      await page.getByRole("tab", { name: mode, exact: true }).click();
+      await expect(page.getByTestId(card)).toBeVisible();
+
+      const box = async (id: string) => {
+        const at = await page.getByTestId(id).boundingBox();
+        expect(at, id).not.toBeNull();
+        return at as NonNullable<typeof at>;
+      };
+      const top = await box(`${split}:top`);
+      const bar = await box(`${split}:bar`);
+      const bottom = await box(`${split}:bottom`);
+
+      // The card ends above the grip, and the grip above the list.
+      expect(top.y + top.height).toBeLessThanOrEqual(bar.y + 1);
+      expect(bar.y + bar.height).toBeLessThanOrEqual(bottom.y + 1);
+
+      // The list's own head sits in the pane under the divider, so a
+      // scrolled row can never paint over the card.
+      const toggle = sourceToggle(page);
+      await expect(toggle).toBeVisible();
+      const head = await toggle.boundingBox();
+      expect(head?.y).toBeGreaterThanOrEqual(bottom.y);
+    });
+  }
+
+  test("the grip holds still, so it offers no slider", async ({ page }) => {
+    await page.getByRole("tab", { name: "Week", exact: true }).click();
+    await expect(page.getByTestId("week-split:bar")).toBeVisible();
+    await expect(page.getByRole("slider")).toHaveCount(0);
+    await page.getByRole("tab", { name: "Month", exact: true }).click();
+    await expect(page.getByTestId("month-split:bar")).toBeVisible();
+    await expect(page.getByRole("slider")).toHaveCount(0);
+  });
 });
