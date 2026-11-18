@@ -29,7 +29,8 @@ function over(ms: number) {
  * release past the threshold or a flick lands on the next page. The
  * live page renders `children` in one element for the pager's life, so
  * a page keeps its state across a swipe. A neighbour on screen renders
- * `renderPreview(page)`. The screen only sets `index`: one page away
+ * `renderPreview(page)` at the host's measured box, so it lays out
+ * before it shows. The screen only sets `index`: one page away
  * slides, and a longer jump cuts. A landing calls `onPage(next)` once
  * (ADR 0033, ADR 0046). A `follow` publishes the live page position,
  * so chrome can track the swipe on the UI thread.
@@ -63,10 +64,12 @@ export function Pager({
   const pressCancel = usePressCancel();
   const reduced = useReducedMotion();
   const width = useSharedValue(0);
-  // The same width as React state, so the live page's own offset
-  // applies in the same render as its content. A shared value alone
-  // updates the track one frame later and shows a blank strip.
-  const [hostWidth, setHostWidth] = React.useState(0);
+  // The same box as React state, so a preview lays out at the live
+  // page's size in the render that mounts it. A shared value alone
+  // updates the track one frame later and shows a blank strip. A
+  // preview that reads a percentage instead takes its height from the
+  // track, which holds only positioned children and so has none.
+  const [host, setHost] = React.useState({ width: 0, height: 0 });
   // A follow lends its own value, so tracking costs no extra write.
   const ownPos = useSharedValue(0);
   const pos = tracker?.progress ?? ownPos;
@@ -219,9 +222,11 @@ export function Pager({
   }));
 
   const onLayout = (event: LayoutChangeEvent) => {
-    const next = event.nativeEvent.layout.width;
+    const { width: next, height } = event.nativeEvent.layout;
     width.set(next);
-    setHostWidth(next);
+    setHost((was) =>
+      was.width === next && was.height === height ? was : { width: next, height },
+    );
   };
 
   return (
@@ -232,7 +237,10 @@ export function Pager({
             <View
               key={`preview:${rel}`}
               testID={`preview:${origin + rel}`}
-              style={[styles.preview, { left: rel * hostWidth }]}
+              style={[
+                styles.preview,
+                { left: rel * host.width, width: host.width, height: host.height },
+              ]}
             >
               {renderPreview(origin + rel)}
             </View>
@@ -273,7 +281,5 @@ const styles = StyleSheet.create({
   preview: {
     position: "absolute",
     top: 0,
-    bottom: 0,
-    width: "100%",
   },
 });
