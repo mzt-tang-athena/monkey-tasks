@@ -3,7 +3,7 @@ title: Week starts on Monday, as a setting
 created: 2026-11-18
 priority: high
 assignee: omp
-pr:
+pr: 177
 depends: []
 ---
 
