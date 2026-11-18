@@ -442,3 +442,43 @@ The frame grid is 270 px wide, a quarter of the screen.
 - The release lands it under Errands.
 - With motion off it jumps in one frame and holds.
 - Evidence: `app/build/verify/evidence/android-20261118-074823/`.
+
+## Amendment, 2026-11-18: a preview takes the host's box
+
+The operator swiped the month planner on the phone.
+The incoming card arrived with every date at the top of the card.
+The landed card was right.
+
+The pager put a preview in a positioned box with `width: "100%"`
+and `top: 0; bottom: 0`.
+The box took its height from the track.
+The track holds only positioned children, so the track has no height.
+A month cell took its height from `aspectRatio: 1` over a
+percentage width.
+In that subtree the width resolved and the height came out 0.
+The landed page sat in flow at the host's width, so it came out right.
+
+A preview now takes the host's measured width and height, in pixels.
+A preview is then the same box as the live page.
+A month cell divides its row with `flex` instead of a percentage.
+No part of the card depends on a percentage chain.
+
+Alternative: leave the surface and give the month grid a row height
+in points.
+That fixes one caller and leaves every preview box zero tall.
+The list preview and the week preview carry their own height, so
+they hid the fault.
+
+Cost: a preview is the host's box. A neighbour taller than the live
+page would clip.
+Every neighbour today has the same shape as its page.
+The day and list previews already filled the host.
+
+Proof: a frame grid of a month swipe on the emulator.
+The 1.1.0 release APK shows the incoming card with its dates at the
+top until it lands.
+This branch lays the same card out on its first frame.
+The week card shows no fault in either run.
+Its grid carries a fixed height.
+Evidence: `app/build/verify/evidence/android-20261118-113528/`,
+`android-20261118-123618/` and `android-20261118-123853/`.

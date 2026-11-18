@@ -6,6 +6,12 @@ comes first. The same text goes into the GitHub release notes.
 Each bullet fits one line on a phone. `scripts/check-changelog.sh`
 fails a bullet that wraps or runs past 64 characters.
 
+## 1.2.0 - 2026-11-18
+
+### Fixes
+
+- The month card you swipe to shows its dates at once.
+
 ## 1.1.0 - 2026-11-18
 
 ### Inbox Notes

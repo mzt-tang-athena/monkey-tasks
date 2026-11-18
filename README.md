@@ -287,6 +287,7 @@ layer order and the shadows (ADR 0040). `theme/theme-provider.tsx` owns
 the active palette (ADR 20261111-runtime-theme-provider). A component
 keeps its styles in a `makeStyles(palette)` factory. It reads them
 through `useThemedStyles`. A theme switch then repaints it in place.
+The root layout draws the status bar in the palette's icon colour.
 `lib/settings-store.ts` holds the live sort order, task form and week
 view for the mounted Lists and Planner screens. `features/settings` is
 the one screen that writes the palette and those settings (ADR
@@ -422,7 +423,8 @@ store. The tab's action is the note composer.
 functions. A bare `YYYYMMDDHHmm` name shows as a local date and time.
 Every other name shows exactly as written, so a slug or a sentence
 keeps its words. A card shows up to eight lines of the body with the markdown
-marks gone and the indentation flattened. `lib/inbox-notes/read-inbox.ts`
+marks gone and the indentation flattened. A long name wraps after a hyphen,
+never inside a word. `lib/inbox-notes/read-inbox.ts`
 lists, reads, creates and saves the notes. A read never makes the
 folder; the first capture does.
 
