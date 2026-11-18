@@ -1128,25 +1128,24 @@ test("a page lays out at the pager's origin, so Android can read it", async ({ p
   // Android's virtualized list clips a page's rows against its layout
   // box. A page laid out one width over is offscreen for that check, so
   // TalkBack and uiautomator lose every row, although the transform
-  // draws the page at 0. The painted box reads 0 either way, so read
-  // the layout offset.
+  // draws the page at 0. It also skips a whole subtree when a parent's
+  // box lands off screen, so the track must stay over the host at rest.
   await page.goto("/");
   await expect(row(page, undated.second)).toBeVisible();
-  const layoutX = () =>
-    page
-      .getByTestId("pager-live")
-      .evaluate((element) => (element as HTMLElement).offsetLeft);
-  expect(await layoutX()).toBe(0);
+  const standing = async () => {
+    const host = await pagerBox(page, "list-pager");
+    const live = await pagerBox(page, "pager-live");
+    const track = await pagerBox(page, "pager-track");
+    const overlap =
+      Math.min(track.x + track.width, host.x + host.width) -
+      Math.max(track.x, host.x);
+    return { x: Math.round(live.x - host.x), overlap: Math.round(overlap) };
+  };
+  expect((await standing()).x).toBe(0);
 
   await press(page, listTab(page, focus));
   await expect(listTab(page, focus)).toHaveAttribute("aria-selected", "true");
-  expect(await layoutX()).toBe(0);
-  // The live page must not ride in the moving track. A transformed
-  // ancestor puts its layout box off screen, and Android then skips
-  // every child, so the rows go missing again (ticket 20261117).
-  expect(
-    await page
-      .getByTestId("pager-live")
-      .evaluate((element) => element.parentElement?.getAttribute("data-testid")),
-  ).not.toBe("pager-track");
+  const after = await standing();
+  expect(after.x, "the live page stands at the pager's origin").toBe(0);
+  expect(after.overlap, "the track stays over the host").toBeGreaterThan(0);
 });
