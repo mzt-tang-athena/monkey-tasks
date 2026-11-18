@@ -3,7 +3,33 @@
 What each release adds or changes, in plain words. The newest release
 comes first. The same text goes into the GitHub release notes.
 
-## 1.0.0 - 2026-11-20
+## 1.1.0 - 2026-11-18
+
+### Inbox Notes
+
+- A fourth tab shows the notes in the vault's `Inbox/` folder as cards
+  in two columns, newest first.
+- A name like `202611181230` reads as a date and time. Any other name
+  shows exactly as the file has it.
+- Add opens one body field, so a thought is type and send. Add title
+  reveals a title. A new note has no frontmatter.
+- If a save fails, the draft stays, with Retry and Dismiss.
+- Tap a card to edit its body. The note's frontmatter stays byte for
+  byte.
+- A save never overwrites a change made in Obsidian. The app offers
+  Save a copy, Reload note or Keep editing.
+
+### Look and feel
+
+- The bottom bar holds four destinations and Add. Each tab is a little
+  narrower, so all five still fit a small phone.
+
+### Fixes
+
+- The tick's burst now stops at the bottom bar. Before, its dots could
+  paint over the bar for a moment.
+
+## 1.0.0 - 2026-11-18
 
 The first release. It runs on one phone, against one Obsidian vault,
 with no server.
