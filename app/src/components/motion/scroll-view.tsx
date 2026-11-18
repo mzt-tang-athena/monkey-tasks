@@ -77,11 +77,12 @@ type ListScrollProps = ScrollViewProps & {
  * For a `SectionList` or `FlatList`:
  * `renderScrollComponent={renderMotionScroll}`. A list that asks for a
  * refresh gets the control here: a custom scroll component replaces
- * the list's default one, which is what builds it.
+ * the list's default one, which is what builds it. The browser draws no
+ * pull, so the web keeps the bare scroller and its pager swipes.
  */
 export function renderMotionScroll(props: ListScrollProps) {
   const { onRefresh, refreshing, ...rest } = props;
-  if (onRefresh == null) {
+  if (onRefresh == null || Platform.OS === "web") {
     return <MotionScrollView {...rest} />;
   }
   return (
