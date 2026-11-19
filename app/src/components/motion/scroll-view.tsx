@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Platform, type ScrollViewProps, type View } from "react-native";
-import { ScrollView } from "react-native-gesture-handler";
+import { RefreshControl, ScrollView } from "react-native-gesture-handler";
 import { useAnimatedRef } from "react-native-reanimated";
 import { ClipContext, DraggingContext, SessionContext } from "./internal/contexts";
 import { useRegistry } from "./internal/session";
@@ -68,7 +68,29 @@ export function MotionScrollView({ ref: outer, ...props }: MotionScrollProps) {
   );
 }
 
-/** For a `SectionList` or `FlatList`: `renderScrollComponent={renderMotionScroll}`. */
-export function renderMotionScroll(props: ScrollViewProps) {
-  return <MotionScrollView {...props} />;
+type ListScrollProps = ScrollViewProps & {
+  onRefresh?: () => void;
+  refreshing?: boolean;
+};
+
+/**
+ * For a `SectionList` or `FlatList`:
+ * `renderScrollComponent={renderMotionScroll}`. A list that asks for a
+ * refresh gets the control here: a custom scroll component replaces
+ * the list's default one, which is what builds it. The browser draws no
+ * pull, so the web keeps the bare scroller and its pager swipes.
+ */
+export function renderMotionScroll(props: ListScrollProps) {
+  const { onRefresh, refreshing, ...rest } = props;
+  if (onRefresh == null || Platform.OS === "web") {
+    return <MotionScrollView {...rest} />;
+  }
+  return (
+    <MotionScrollView
+      {...rest}
+      refreshControl={
+        <RefreshControl refreshing={refreshing === true} onRefresh={onRefresh} />
+      }
+    />
+  );
 }

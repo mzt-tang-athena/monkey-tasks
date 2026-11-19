@@ -114,34 +114,34 @@ export function DaySpread({
           so the date strip and the mode switch never move. */}
       <View style={bodyFrame}>
         <Pager
-          testID="day-pager"
-          index={index}
-          onPage={onPage}
-          renderPreview={(page) => (
-            <DayPreview
-              date={addDays(origin, page)}
+            testID="day-pager"
+            index={index}
+            onPage={onPage}
+            renderPreview={(page) => (
+              <DayPreview
+                date={addDays(origin, page)}
+                today={today}
+                tasks={tasks}
+                now={now}
+                fraction={fraction}
+                scroll={saved(page)}
+              />
+            )}
+            fill
+          >
+            <DayPage
+              date={date}
               today={today}
-              tasks={tasks}
+              rows={rows}
               now={now}
               fraction={fraction}
-              scroll={saved(page)}
+              onResize={onResize}
+              onTimelineScroll={onTimelineScroll}
+              onListScroll={onListScroll}
+              restorePage={index}
+              restoreTimeline={restore.timeline}
+              restoreList={restore.list}
             />
-          )}
-          fill
-        >
-          <DayPage
-            date={date}
-            today={today}
-            rows={rows}
-            now={now}
-            fraction={fraction}
-            onResize={onResize}
-            onTimelineScroll={onTimelineScroll}
-            onListScroll={onListScroll}
-            restorePage={index}
-            restoreTimeline={restore.timeline}
-            restoreList={restore.list}
-          />
         </Pager>
       </View>
     </View>

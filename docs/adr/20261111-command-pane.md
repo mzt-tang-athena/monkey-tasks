@@ -73,3 +73,60 @@ that gesture, so a phone check is still open.
 Alternative: open the pane from a per-screen drawer. We rejected it. It
 would duplicate the row list on every screen. It would also put the pane
 below the overlay host, outside the one focus system.
+
+## Amendment, 2026-11-18: the bar's gap opens the pane
+
+The operator picked this from a mockup on 2026-11-18. It replaces the
+pull that ticket 0085 put on the header band.
+
+The command pane opens from the bottom bar. A downward swipe on the
+empty gap between the last tab and the split Add pill opens it. The
+pane still drops from the top edge. The gap holds no control, so the
+swipe reads as neither a tab press nor an Add.
+
+We rejected a pull on the page body. A tab body holds rows, checkboxes,
+day cells and grips. A pull has to win the gesture from each one. Every
+miss costs the user a scroll or a drag. The bar is the one row every
+tab shares. Its gap is the one place with no job of its own.
+
+The header band lost its pull too. One gesture in one place is easier
+to find than two nearly alike.
+
+Pull-to-refresh comes back on Lists and Journal. The list body now
+belongs to the scroll and to the refresh, as it did before. Inbox
+Notes keeps its read on mount and on Reload vault.
+
+The pane keeps "Reload vault". It invalidates every vault query, so the
+shown screen rereads now. Another tab rereads when it mounts again.
+
+The opener's accessible half stays in the bar. The action is a split
+Add pill. The left half draws the plus and runs the tab's own Add. The
+right half draws Phosphor's Command glyph and opens the pane. Each half
+is a 44pt square with its own name, "add task" and "open commands". The pill is about 89pt, so four tabs and the pill still fit
+a 360pt screen. The Add half keeps the tab's own action and name. The
+gap between the nav and the pill is the swipe target, about 24pt wide
+at the narrowest. The gap sits at the screen's edge, so its swipe
+commits at 18pt: a longer pull runs out of screen. A phone has more
+room, but the same threshold works on both.
+
+The Planner header drops its chevron and its gear, and the Lists
+toolbar drops its chevron. The bar carries the opener on every tab.
+Settings stays in the pane and in the Lists three-dot menu.
+
+Alternatives we rejected:
+
+- Keep the opener out of the bar: thumbs cannot reach it.
+- Keep the word "Add": it does not fit beside two 44pt targets.
+- Use a magnifying glass: the operator read it as search.
+- Pull the page body: the body's controls need the gesture.
+- Keep the header-band pulls: two openers for one action.
+
+The bar gap's swipe starts only in the gap. A swipe on a tab keeps its
+tab, and a swipe on either Add half runs no Add. A swipe on a list body
+scrolls or refreshes and opens no pane.
+
+Proof: `e2e/specs/commands.spec.ts` swipes the gap and reads the pane.
+It swipes a tab, both pill halves and a list body, and reads no pane.
+The emulator run repeats the gap swipe and checks the tab and pill
+swipes. It pulls a list body to refresh a note written from outside.
+It also reads the bar at 360dp.

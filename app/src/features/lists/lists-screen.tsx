@@ -6,7 +6,6 @@ import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { Pager } from "@/components/motion/pager";
 import { usePageFollow } from "@/components/motion/page-follow";
-import { PullSurface } from "@/components/motion/pull";
 import { PreviewRow } from "@/components/preview-row";
 import { renderMotionScroll } from "@/components/motion/scroll-view";
 import {
@@ -16,7 +15,6 @@ import {
 } from "@/components/ui/list-states";
 import { VaultPrompt } from "@/components/ui/vault-prompt";
 import { useStableCallback } from "@/hooks/use-stable-callback";
-import { useCommandPane } from "@/hooks/use-command-pane";
 import { useTaskEditor } from "@/hooks/use-task-editor";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { toggleCompleted, useCompletedOpen } from "@/lib/folded-completed";
@@ -51,7 +49,6 @@ import type { ReorderEvent } from "@/components/motion/reorder";
  */
 export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const { styles } = useThemedStyles(makeStyles);
-  const { show: showCommands } = useCommandPane();
   const editor = useTaskEditor();
   const { rootUri, status, readError } = useStoreMeta();
   const toggleTask = useToggleTask();
@@ -188,25 +185,17 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           <VaultPrompt onGrant={() => void grant()} />
         ) : null}
         {/* The tab bar sits above the scroller: the page's fixed
-            chrome. Sections scroll beneath it, the bar never moves.
-            A downward pull on this band opens the command pane; the
-            list below never starts it (ticket 0085). */}
-        <PullSurface
-          direction="down"
-          onPull={showCommands}
-          testID="header-band-lists"
-        >
-          <ListsToolbar
-            tabs={tabState.tabs}
-            tab={tab}
-            onSelectTab={setTab}
-            follow={follow}
-            sortMode={sortMode}
-            onSortMode={setSortMode}
-            completed={completed}
-            onClearCompleted={clearCompleted}
-          />
-        </PullSurface>
+            chrome. Sections scroll beneath it, the bar never moves. */}
+        <ListsToolbar
+          tabs={tabState.tabs}
+          tab={tab}
+          onSelectTab={setTab}
+          follow={follow}
+          sortMode={sortMode}
+          onSortMode={setSortMode}
+          completed={completed}
+          onClearCompleted={clearCompleted}
+        />
         {/* A failed tick or field write leaves the list usable, so each
             one is a quiet banner over it, not the error state. */}
         {status !== "error" ? <FailureBanner /> : null}

@@ -41,7 +41,7 @@ export function useJournalNote(day: string): JournalRead {
   };
 }
 
-/** Read the day again, as pull to refresh does. */
+/** Read the day again, as the pane's Reload vault does. */
 export function useRefreshJournal(day: string): () => Promise<void> {
   const client = useQueryClient();
   const { root } = useVault();

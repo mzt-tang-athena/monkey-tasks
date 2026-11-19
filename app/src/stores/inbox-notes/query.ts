@@ -8,8 +8,8 @@ import { vaultIdle } from "@/lib/vault/read-gate";
 /**
  * The Inbox notes' read. The cache holds the modeled cards, sorted. The
  * policy is the task and journal stores': one read on mount, one on a
- * grant, one on pull to refresh, one on the return to the foreground,
- * and never behind a write.
+ * grant, one on the pane's Reload vault, one on the return to the
+ * foreground, and never behind a write.
  */
 
 /** The first part of every inbox key. */

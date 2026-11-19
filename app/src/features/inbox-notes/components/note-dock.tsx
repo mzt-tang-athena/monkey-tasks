@@ -1,30 +1,29 @@
 import * as React from "react";
 import { useIsFocused } from "expo-router";
-import { StyleSheet, Text } from "react-native";
 import { useBar } from "@/components/bottom-bar/bottom-bar";
-import { Icon } from "@/components/ui/icon";
-import { Pressable } from "@/components/ui/pressable";
+import {
+  SplitAddPill,
+  type SplitAddPillRef,
+} from "@/components/bottom-bar/split-add-pill";
 import { Sheet } from "@/components/ui/sheet";
 import { Toast } from "@/components/ui/toast";
-import { bottomBar, fonts, radii, spacing, type Palette } from "@/theme/tokens";
-import { useThemedStyles } from "@/theme/theme-provider";
+import { spacing } from "@/theme/tokens";
 import { useNoteSheet } from "../hooks/use-note-sheet";
 import { NoteForm } from "./note-form";
 
 /**
- * The Inbox dock: the Add button in the bottom bar's action slot, the
- * sheet it opens, and the toast for a failed write. The sheet and the
- * toast draw in the overlay host, above every screen.
+ * The Inbox dock: the bar's split Add pill, the sheet its Add half
+ * opens, and the toast for a failed write. The sheet and the toast draw
+ * in the overlay host, above every screen.
  */
 export function NoteDock() {
-  const { styles } = useThemedStyles(makeStyles);
   const bar = useBar();
   const focused = useIsFocused();
   const sheet = useNoteSheet({ bar, focused });
 
-  const addRef = React.useRef<React.ComponentRef<typeof Pressable>>(null);
+  const addRef = React.useRef<SplitAddPillRef | null>(null);
   // The overlay outlives `open` by the exit, and the page stays inert
-  // until it goes. The Add button takes focus back only once the sheet
+  // until it goes. The Add half takes focus back only once the sheet
   // has left the tree.
   const wasMounted = React.useRef(false);
   React.useEffect(() => {
@@ -40,16 +39,7 @@ export function NoteDock() {
 
   return (
     <>
-      <Pressable
-        ref={addRef}
-        style={({ pressed }) => [styles.add, pressed && styles.addPressed]}
-        onPress={sheet.toggle}
-        accessibilityRole="button"
-        accessibilityLabel="add note"
-      >
-        <Icon name="plus" color="onAccent" />
-        <Text style={styles.addLabel}>Add</Text>
-      </Pressable>
+      <SplitAddPill ref={addRef} label="add note" onPress={sheet.toggle} />
 
       {sheet.mounted ? (
         <Sheet
@@ -90,28 +80,3 @@ export function NoteDock() {
   );
 }
 
-const makeStyles = (colors: Palette) => ({
-  styles: StyleSheet.create({
-    // The same unmistakable button the other docks draw. A
-    // presentational control is copied, not shared (ADR 0022).
-    add: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.s,
-      minHeight: bottomBar.add,
-      paddingHorizontal: spacing.l,
-      borderRadius: radii.pill,
-      backgroundColor: colors.accent,
-    },
-    addPressed: {
-      backgroundColor: colors.accentDeep,
-    },
-    addLabel: {
-      color: colors.onAccent,
-      fontSize: bottomBar.addLabelSize,
-      lineHeight: bottomBar.addLabelLine,
-      fontFamily: fonts.body,
-      fontWeight: "600",
-    },
-  }),
-});

@@ -2,15 +2,17 @@ import { AxeBuilder } from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { tabs, undated } from "../data";
-import { holdDrag, swipe } from "../gestures";
-import { expectBefore, expectAbove, listTab, row } from "../locators";
+import { holdDrag, swipe, touchFlick } from "../gestures";
+import { expectBefore, listTab, row } from "../locators";
+import { putNote } from "../vault";
 
 /**
- * Ticket 0085: the command pane slides down over the current screen.
- * A downward pull on the header band, or its button, opens it. The
- * search takes focus, a command runs and closes the pane, and only the
- * header band starts the gesture. The list scroll, the pager swipe and
- * a row drag leave it shut.
+ * Ticket 0085 and its 2026-11-18 amendment: the command pane slides
+ * down over the current screen. A downward swipe on the bottom bar's
+ * gap opens it, and so does the bar's Command half. The search takes
+ * focus, a command runs and closes the pane, and no tab, pill, list
+ * body or header band starts the gesture. The bar's split Add pill
+ * opens the tab's own sheet from its plus half.
  */
 
 function pane(page: Page): Locator {
@@ -54,45 +56,29 @@ async function expectShut(page: Page): Promise<void> {
   await expect(pane(page)).toHaveCount(0);
 }
 
-/** A two-finger touch drag down over `from`, through CDP. */
-async function twoFingerPull(page: Page, from: Locator, dy: number): Promise<void> {
-  const box = await from.boundingBox();
-  if (box == null) {
-    throw new Error("the pull source has no box");
-  }
-  const cdp = await page.context().newCDPSession(page);
-  const at = [0.4, 0.6].map((share) => ({
-    x: box.x + box.width * share,
-    y: box.y + box.height / 2,
-  }));
-  const send = (type: "touchStart" | "touchMove" | "touchEnd", points = at) =>
-    cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points });
-  await send("touchStart");
-  for (let step = 1; step <= 14; step += 1) {
-    await send(
-      "touchMove",
-      at.map((point) => ({ x: point.x, y: point.y + (dy * step) / 14 })),
-    );
-    await page.waitForTimeout(16);
-  }
-  await send("touchEnd", []);
-  await cdp.detach();
-}
-
 test.describe("opening", () => {
-  test("a downward pull on the Lists header band opens it with the search focused", async ({
+  test("a downward swipe on the bar's gap opens it with the search focused", async ({
     page,
   }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
-    await pull(page, page.getByTestId("header-band-lists").filter({ visible: true }), 140);
+    await touchFlick(page, page.getByTestId("bar-gap"), 120);
 
     await expect(pane(page)).toBeVisible();
     await expect(search(page)).toBeFocused();
   });
 
-  test("the header button opens it, and Escape puts focus back on the button", async ({
+  test("a mouse pull on the bar's gap opens it too", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    await pull(page, page.getByTestId("bar-gap"), 140);
+
+    await expect(pane(page)).toBeVisible();
+  });
+
+  test("the bar's Command half opens it, and Escape puts focus back", async ({
     page,
   }) => {
     await page.goto("/");
@@ -102,36 +88,11 @@ test.describe("opening", () => {
     await opener.focus();
     await opener.click();
     await expect(pane(page)).toBeVisible();
+    await expect(search(page)).toBeFocused();
 
     await page.keyboard.press("Escape");
     await expectShut(page);
     await expect(opener).toBeFocused();
-  });
-
-  test("a downward pull on the Planner header band opens it too", async ({ page }) => {
-    await page.goto("/planner");
-    await expect(page.getByTestId("day-heading")).toBeVisible();
-
-    await pull(
-      page,
-      page.getByTestId("header-band-planner").filter({ visible: true }),
-      140,
-    );
-
-    await expect(pane(page)).toBeVisible();
-  });
-
-  test("a two-finger swipe down on the header band opens it", async ({ page }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-
-    await twoFingerPull(
-      page,
-      page.getByTestId("header-band-lists").filter({ visible: true }),
-      140,
-    );
-
-    await expect(pane(page)).toBeVisible();
   });
 
   test("a pull up on the pane's top edge closes it", async ({ page }) => {
@@ -146,6 +107,101 @@ test.describe("opening", () => {
     await pull(page, page.getByTestId("command-search"), -70);
 
     await expectShut(page);
+  });
+});
+
+test.describe("the bar's own controls keep their gestures", () => {
+  test("a swipe down on a tab opens nothing and keeps its tab", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    await touchFlick(page, listTab(page, tabs.main), 120);
+
+    await expectShut(page);
+    await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("a swipe down on the Add half opens nothing and no sheet", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    await touchFlick(
+      page,
+      page.getByRole("button", { name: "add task" }).filter({ visible: true }),
+      120,
+    );
+
+    await expectShut(page);
+    await expect(page.getByRole("dialog", { name: "Add a task" })).toHaveCount(0);
+  });
+});
+
+test.describe("no page starts the pane", () => {
+  test("a pull on a list body opens no pane and keeps the row", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    await touchFlick(page, page.getByTestId("lists-screen"), 160);
+
+    await expectShut(page);
+    await expect(row(page, undated.second)).toBeVisible();
+  });
+
+  test("a pull on the Planner body opens no pane", async ({ page }) => {
+    await page.goto("/planner");
+    await expect(page.getByTestId("day-heading")).toBeVisible();
+
+    await touchFlick(page, page.getByTestId("timeline-scroller"), 160);
+
+    await expectShut(page);
+  });
+
+  test("a pager swipe and a row drag leave it shut", async ({ page }) => {
+    await page.goto("/planner");
+    await expect(page.getByTestId("day-heading")).toBeVisible();
+    await swipe(page, page.getByTestId("day-pager"), "left");
+    await expectShut(page);
+
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+    await page.getByRole("button", { name: "sort list" }).click();
+    await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
+    await holdDrag(
+      page,
+      page.getByTestId(`reorder-grip:${undated.second}`),
+      row(page, undated.first),
+      { at: "upper", holdMs: 0 },
+    );
+    await expectShut(page);
+  });
+});
+
+test.describe("the headers", () => {
+  test("the Planner header drops its chevron and its gear", async ({ page }) => {
+    await page.goto("/planner");
+    await expect(page.getByTestId("day-heading")).toBeVisible();
+    const header = page.getByTestId("planner-header");
+
+    await expect(header.getByRole("button", { name: "open commands" })).toHaveCount(0);
+    await expect(header.getByRole("button", { name: "open settings" })).toHaveCount(0);
+
+    // The mode switch takes the row.
+    const mode = header.getByRole("tab", { name: "Month" });
+    const width = page.viewportSize()?.width ?? 412;
+    const box = await mode.boundingBox();
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeGreaterThan(width - 48);
+  });
+
+  test("the Lists toolbar drops its chevron and keeps the three-dot menu", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+    const band = page.getByTestId("lists-toolbar");
+
+    await expect(band.getByRole("button", { name: "open commands" })).toHaveCount(0);
+    await expect(band.getByRole("button", { name: "list menu" })).toBeVisible();
+    await expect(band.getByRole("button", { name: "sort list" })).toBeVisible();
   });
 });
 
@@ -201,6 +257,25 @@ test.describe("every command", () => {
     await expect(page.getByRole("dialog", { name: "Add a task" })).toBeVisible();
   });
 
+  test("Reload vault rereads the folder", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    // Another app writes a note while the screen holds its read.
+    await putNote(
+      page,
+      "Tasks/Written elsewhere.md",
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\n---\n\nA note from another app.\n",
+    );
+    await expect(row(page, "Written elsewhere")).toHaveCount(0);
+
+    await openPane(page);
+    await command(page, "reload").click();
+
+    await expect(page).toHaveURL("/");
+    await expect(row(page, "Written elsewhere")).toBeVisible();
+  });
+
   test("Go to Lists and Go to Planner change the screen", async ({ page }) => {
     await page.goto("/planner");
     await expect(page.getByTestId("day-heading")).toBeVisible();
@@ -246,51 +321,59 @@ test.describe("every command", () => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
-
     await command(page, "diagnostics").click();
     await expect(page).toHaveURL("/dev");
     await expectShut(page);
   });
 });
 
-test.describe("the three exclusions", () => {
-  test("a downward pull on a list row leaves it shut", async ({ page }) => {
+test.describe("the bar's split Add pill", () => {
+  test("the Add half opens the tab's sheet and the Command half opens the pane", async ({
+    page,
+  }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
-    await pull(page, row(page, undated.second), 140);
+    await page.getByRole("button", { name: "add task" }).click();
+    await expect(page.getByRole("dialog", { name: "Add a task" })).toBeVisible();
+    await page.keyboard.press("Escape");
 
-    await expectShut(page);
+    await openButton(page).click();
+    await expect(pane(page)).toBeVisible();
   });
 
-  test("a pager swipe and a pull on the pager body leave it shut", async ({ page }) => {
-    await page.goto("/planner");
-    await expect(page.getByTestId("day-heading")).toBeVisible();
-    const pager = page.getByTestId("day-pager");
-
-    await swipe(page, pager, "left");
-    await expectShut(page);
-
-    await pull(page, pager, 140);
-    await expectShut(page);
-  });
-
-  test("a row drag leaves it shut", async ({ page }) => {
+  test("both halves are 44pt, and four tabs and the pill fit 360 wide", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
-    await page.getByRole("button", { name: "sort list" }).click();
-    await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
 
-    await holdDrag(
-      page,
-      page.getByTestId(`reorder-grip:${undated.second}`),
-      row(page, undated.first),
-      { at: "upper", holdMs: 0 },
+    const targets = ["Lists", "Planner", "Journal", "Inbox Notes", "add task", "open commands"];
+    for (const name of targets) {
+      const box = await page
+        .getByRole(name === "add task" || name === "open commands" ? "button" : "tab", {
+          name,
+        })
+        .filter({ visible: true })
+        .boundingBox();
+      expect(box, name).not.toBeNull();
+      // Every target is 44pt and sits inside the 360pt bar.
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(43.5);
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(43.5);
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(360.5);
+    }
+
+    // The gap is the swipe target, so it keeps a real box too.
+    const gap = await page.getByTestId("bar-gap").boundingBox();
+    expect(gap?.width ?? 0).toBeGreaterThanOrEqual(23.5);
+    expect(gap?.height ?? 0).toBeGreaterThanOrEqual(43.5);
+
+    // Nothing spills sideways: the bar fits the phone.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
-
-    // The drag happened: the second row took first place.
-    await expectAbove(row(page, undated.second), row(page, undated.first));
-    await expectShut(page);
+    expect(overflow).toBeLessThanOrEqual(0);
   });
 });
 

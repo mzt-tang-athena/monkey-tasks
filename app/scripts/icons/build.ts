@@ -34,6 +34,7 @@ const GLYPHS = {
   note: { phosphor: "Note", size: 14 },
   close: { phosphor: "X", size: 13 },
   check: { phosphor: "Check", size: 10 },
+  command: { phosphor: "Command", size: 18 },
 } as const;
 
 type Weight = "regular" | "fill";

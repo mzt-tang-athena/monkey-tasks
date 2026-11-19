@@ -75,30 +75,30 @@ export function MonthPane({
 
   return (
     <MonthView
-      viewMonth={viewMonth}
-      today={today}
-      tasks={tasks}
-      picked={picked}
-      onPick={pick}
-      onSelectMonth={onSelectMonth}
-    >
-      {/* The pane under the card: the source's month list until a day
-          is picked, then that day's tasks. */}
-      <TaskListSection
-        style={layout.paneScroll}
-        mode="month"
-        day={day}
-        tasks={pickedDay == null ? monthRows : pickedTasks}
-        header={header}
-        footer={footer}
-        emptyLabel={
-          pickedDay == null
-            ? source === "due-period"
-              ? "Nothing scheduled this month."
-              : `Nothing on ${source} yet.`
-            : "Nothing scheduled."
-        }
-      />
+        viewMonth={viewMonth}
+        today={today}
+        tasks={tasks}
+        picked={picked}
+        onPick={pick}
+        onSelectMonth={onSelectMonth}
+      >
+        {/* The pane under the card: the source's month list until a day
+            is picked, then that day's tasks. */}
+        <TaskListSection
+          style={layout.paneScroll}
+          mode="month"
+          day={day}
+          tasks={pickedDay == null ? monthRows : pickedTasks}
+          header={header}
+          footer={footer}
+          emptyLabel={
+            pickedDay == null
+              ? source === "due-period"
+                ? "Nothing scheduled this month."
+                : `Nothing on ${source} yet.`
+              : "Nothing scheduled."
+          }
+        />
     </MonthView>
   );
 }

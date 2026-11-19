@@ -4,9 +4,9 @@ import { useVault } from "@/lib/vault/vault-provider";
 import { tasksKey } from "./query";
 
 /**
- * Read the granted folder again, as pull to refresh does. The read
- * waits for the writes still pending. With no folder there is nothing
- * to read, so nothing runs.
+ * Read the granted folder again, as the pane's Reload vault does. The
+ * read waits for the writes still pending. With no folder there is
+ * nothing to read, so nothing runs.
  */
 export function useRefreshTasks(): () => Promise<void> {
   const client = useQueryClient();

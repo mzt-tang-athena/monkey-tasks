@@ -36,15 +36,9 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
     grant,
   } = useInboxNotes();
   const insets = useSafeAreaInsets();
-  const [refreshing, setRefreshing] = React.useState(false);
 
   const reload = React.useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refresh();
-    } finally {
-      setRefreshing(false);
-    }
+    await refresh();
   }, [refresh]);
 
   const open = useStableCallback((note: InboxNote) => {
@@ -69,7 +63,7 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
     );
 
   return (
-    <View style={styles.screen}>
+    <View testID="inbox-notes-screen" style={styles.screen}>
       <View style={[styles.statusStrip, { height: insets.top }]} />
       <InboxHeader count={notes.length} />
 
@@ -104,22 +98,20 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
       ) : null}
 
       <FlatList
-        data={cards}
-        keyExtractor={(item, index) => item?.uri ?? `pad-${index}`}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.content}
-        renderScrollComponent={renderMotionScroll}
-        onRefresh={reload}
-        refreshing={refreshing}
-        ListEmptyComponent={empty ?? undefined}
-        renderItem={({ item }) =>
-          item == null ? (
-            <View style={styles.fill} />
-          ) : (
-            <NoteCard note={item} onPress={open} />
-          )
-        }
+          data={cards}
+          keyExtractor={(item, index) => item?.uri ?? `pad-${index}`}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.content}
+          renderScrollComponent={renderMotionScroll}
+          ListEmptyComponent={empty ?? undefined}
+          renderItem={({ item }) =>
+            item == null ? (
+              <View style={styles.fill} />
+            ) : (
+              <NoteCard note={item} onPress={open} />
+            )
+          }
       />
 
       <BottomBar action={dock} />
