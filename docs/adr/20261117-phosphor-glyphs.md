@@ -61,3 +61,32 @@ drift test says when.
 `react-native-svg` is a native module. Expo Go cannot load it, so use a
 development build or the local release APK. The browser preview and the
 end-to-end suite run its web build.
+
+## Amendment, 2026-11-19: the chrome glyphs grow to 24pt
+
+The bar's tabs drew a 20pt glyph and the split pill 18pt.
+The Lists band drew its sort and overflow marks at 20pt.
+The operator chose 24pt for the bar and the header bands.
+The glyph fills more of its box, and every target stays 44pt.
+
+A small glyph inside a row or a chip grows 2pt.
+The capture chip's calendar, clock and repeat marks are 13.
+The section and source chevrons, the picker check and the settings
+row's chevrons are 12.
+The sheet's close mark is 15, and the bell and note marks are 16.
+The form toggle's Rows and Pill marks are 16 and 18.
+The editor's property marks are 18.
+
+A row that shares a glyph with the bar passes its own box.
+The list picker's rows and the editor's list row draw the list mark
+at 22.
+
+Alternatives:
+- Grow every glyph by 4. A 14 check crowds a picker row's name, and a
+  14 chevron overpowers a section label.
+- Set 24 everywhere. A 24 chevron in a settings row would own the row.
+
+Proof: before and after shots at 360 and 412 wide in the budget and
+midnight palettes, under `app/build/verify/evidence/`.
+`commands.spec.ts` reads each of the six bar glyphs at 24 in its 44pt
+target at 360.

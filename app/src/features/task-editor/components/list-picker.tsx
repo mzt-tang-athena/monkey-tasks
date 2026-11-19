@@ -63,7 +63,7 @@ export function ListPicker({
                 accessibilityLabel={name}
                 aria-pressed={chosen}
               >
-                <Icon name="list" color={chosen ? "accent" : "inkMuted"} />
+                <Icon name="list" size={22} color={chosen ? "accent" : "inkMuted"} />
                 <Text style={[styles.name, chosen && styles.nameChosen]}>{name}</Text>
                 {chosen ? <Icon name="check" color="accent" /> : null}
               </Pressable>
