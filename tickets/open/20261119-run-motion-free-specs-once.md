@@ -24,7 +24,7 @@ The slowest specs on 2026-11-19, summed over both projects:
 | theme | 154 |
 
 Some specs check nothing that motion changes. Find which ones, and run
-those in one project only. Keep both projects for every spec that
+those in a single project. Keep both projects for every spec that
 checks motion or its absence.
 
 Measure first. Name what limits the wall time before you change it.
