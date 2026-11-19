@@ -98,6 +98,7 @@ Proof standards:
 
 - Drive the user path: buttons, gestures and typing. Use `__vault` hooks only to read notes, or to act as another app writing the vault (`putNote` then `returnToTab`). Never set app state through them.
 - Screenshot the action and the result. Scroll the target into view first (`locator.scrollIntoViewIfNeeded()`), or the shot proves nothing.
+- Wait for the screen to settle before a shot. A list fills in stages: the first rows by about 100 ms, the whole window by about 1 s. Wait for the last section you expect, not the first row.
 - Check the side effect. A write has proof when `noteText` shows the note changed, and the row survives `returnToTab` (a fresh vault read).
 - Compare against the base for a regression claim. Launch the base branch in a second worktree on another port and drive the same journey.
 - Name what the web cannot prove. See the list at the top.
@@ -159,6 +160,34 @@ flock -o /tmp/monkey-tasks-heavy.lock env MONKEY_HEAVY_LOCK=1 \
 ```
 
 Logs land in `$MONKEY_LOG_DIR`, default `/tmp/monkey-tasks`.
+
+### Lanes share the queue
+
+A lane is an agent working one PR in its own worktree. Lanes wait on
+the heavy lock, so every slot one takes delays the rest.
+
+- Set up a new worktree from `main/` with hard links, not `npm ci`:
+
+  ```sh
+  cp -al ../main/node_modules node_modules
+  cp -al ../main/app/node_modules app/node_modules
+  git submodule update --init
+  (cd app && npx tsc -p ../contracts/packages/schemas/tsconfig.build.json)
+  npx vale-rules sync
+  ```
+
+- Iterate on the web preview and targeted specs.
+- Run the full web suite once, on the final tree.
+- Use the emulator once, for the final Android proof.
+- `android-apk.sh` swaps a JS-only change into a cached APK.
+- Put launch, drive, `android-cleanup.sh` and `adb kill-server` in one
+  script under one lock hold.
+- The gate: `tsc`, `eslint --max-warnings 0`, vitest, Vale on changed
+  docs, `check-records.sh`, `check-changelog.sh`, the full web suite.
+- A change a user can see adds a bullet to `CHANGELOG.md` under the
+  next version.
+- Stop at merge-ready. Report the PR, head SHA, gate counts and
+  evidence paths.
 
 ### Get an APK
 
