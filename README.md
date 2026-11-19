@@ -344,8 +344,8 @@ or the bar's Command half, drops it from the top edge. The search takes
 focus, and a row runs one action and closes the pane. The screen
 behind is inert. No tab, pill or list body starts the gesture, so a
 pull on a list body only scrolls or refreshes. "Reload vault" rereads
-every vault query. Theme and Sort mode open Settings rather than repeat
-its pickers.
+every vault query. A Go to row reaches each of the four tabs. Theme and
+Sort mode open Settings rather than repeat its pickers.
 
 ### Planner
 

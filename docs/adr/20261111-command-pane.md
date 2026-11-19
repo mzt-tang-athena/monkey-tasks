@@ -130,3 +130,24 @@ It swipes a tab, both pill halves and a list body, and reads no pane.
 The emulator run repeats the gap swipe and checks the tab and pill
 swipes. It pulls a list body to refresh a note written from outside.
 It also reads the bar at 360dp.
+
+## Amendment, 2026-11-19: the pane reaches every tab
+
+The pane carried a Go to Lists row and a Go to Planner row.
+The app has four tabs: Lists, Planner, Journal and Inbox Notes.
+Journal and Inbox Notes had no row, so the pane could not reach them.
+
+The pane now carries a Go to Journal row and a Go to Inbox Notes row.
+They sit after Go to Planner, in tab order.
+Each one navigates to its tab.
+
+The rows carry the words their screen uses.
+Journal matches "daily", "diary" and "food".
+Inbox Notes matches "notes" and "scratch".
+
+The resting pane now draws 11 rows of its 12-row cap.
+One more command would push Diagnostics off the pane.
+
+Proof: `commands.spec.ts` opens the pane from Lists and presses each of
+the four rows in turn.
+Each lands its screen, and the pane shuts.

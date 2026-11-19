@@ -9,6 +9,8 @@ function sources(overrides: Partial<CommandSources> = {}): CommandSources {
     addTask: vi.fn(),
     goLists: vi.fn(),
     goPlanner: vi.fn(),
+    goJournal: vi.fn(),
+    goInbox: vi.fn(),
     switchList: vi.fn(),
     openSettings: vi.fn(),
     openDiagnostics: vi.fn(),
@@ -52,14 +54,27 @@ describe("buildCommands", () => {
     expect(openSettings).toHaveBeenCalledTimes(1);
   });
 
+  it("offers one Go to row per tab, in tab order", () => {
+    const ids = buildCommands(sources()).map((command) => command.id);
+    expect(ids.indexOf("lists")).toBeLessThan(ids.indexOf("planner"));
+    expect(ids.indexOf("planner")).toBeLessThan(ids.indexOf("journal"));
+    expect(ids.indexOf("journal")).toBeLessThan(ids.indexOf("inbox"));
+    expect(byId("journal").label).toBe("Go to Journal");
+    expect(byId("inbox").label).toBe("Go to Inbox Notes");
+  });
+
   it("wires the navigation and diagnostic actions", () => {
     const context = sources();
     byId("lists", context).run();
     byId("planner", context).run();
+    byId("journal", context).run();
+    byId("inbox", context).run();
     byId("diagnostics", context).run();
     byId("capture", context).run();
     expect(context.goLists).toHaveBeenCalledTimes(1);
     expect(context.goPlanner).toHaveBeenCalledTimes(1);
+    expect(context.goJournal).toHaveBeenCalledTimes(1);
+    expect(context.goInbox).toHaveBeenCalledTimes(1);
     expect(context.openDiagnostics).toHaveBeenCalledTimes(1);
     expect(context.addTask).toHaveBeenCalledTimes(1);
   });
