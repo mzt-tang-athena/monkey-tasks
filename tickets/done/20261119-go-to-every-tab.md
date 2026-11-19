@@ -3,7 +3,7 @@ title: Reach every tab from the command pane
 created: 2026-11-19
 priority: normal
 assignee: omp
-pr:
+pr: 183
 depends: []
 ---
 
@@ -34,3 +34,18 @@ Inbox Notes matches "notes" and "scratch".
 - [ ] A shot shows the pane with all four rows.
 
 ## Outcome
+
+Shipped in #183. The pane carries four Go to rows, one per tab, in the
+bar's order. Go to Journal and Go to Inbox Notes each land their screen
+and close the pane.
+
+The resting pane draws 11 rows of its 12-row cap. A later command
+would push Diagnostics off.
+
+Gate on `bad0923`: tsc, eslint with `--max-warnings 0`, 1206 vitest
+tests and Vale pass. `check-records.sh` and `check-changelog.sh` pass.
+The full web suite: 644 passed, 26 skipped.
+
+`commands.spec.ts` presses all four rows in turn: 46 passed in both
+projects. Shots of the pane at 412 and 360 in budget, and 412 in
+midnight, sit under `app/build/verify/evidence/20261119-064750/`.
