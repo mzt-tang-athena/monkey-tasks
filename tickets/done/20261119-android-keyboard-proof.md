@@ -3,7 +3,7 @@ title: Android keyboard proof
 created: 2026-11-19
 priority: high
 assignee: omp
-pr:
+pr: 180
 depends: []
 ---
 
@@ -28,15 +28,15 @@ Make the proof ask the window manager what has drawn.
 
 ## Acceptance
 
-- [ ] `android-drive.sh keyboard up` waits for the drawn, settled
+- [x] `android-drive.sh keyboard up` waits for the drawn, settled
       keyboard and fails on a request alone
-- [ ] `android-handle.mjs` reads the handle and the caret from a shot
+- [x] `android-handle.mjs` reads the handle and the caret from a shot
       and calls a handle off the caret's line stranded
-- [ ] the reader calls the lane's `f8-editor-gesture-keyboard.png`
+- [x] the reader calls the lane's `f8-editor-gesture-keyboard.png`
       stranded and its `b1-editor-three-keyboard.png` fine
-- [ ] the journey reports the keyboard settled and the handle with the
+- [x] the journey reports the keyboard settled and the handle with the
       caret in five tries per navigation mode
-- [ ] the skill lists the step, the reader and the journey
+- [x] the skill lists the step, the reader and the journey
 
 ## Outcome
 
