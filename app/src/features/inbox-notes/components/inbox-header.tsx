@@ -7,7 +7,7 @@ import { useThemedStyles } from "@/theme/theme-provider";
 export function InboxHeader({ count }: { count: number }) {
   const { styles } = useThemedStyles(makeStyles);
   return (
-    <View style={styles.header}>
+    <View testID="inbox-header" style={styles.header}>
       <Text style={styles.title}>Inbox Notes</Text>
       <Text style={styles.count}>
         {count === 1 ? "1 note" : `${count} notes`}

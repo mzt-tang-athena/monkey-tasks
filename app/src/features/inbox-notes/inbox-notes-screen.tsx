@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
+import { ScrollEdge } from "@/components/motion/scroll-edge";
 import { renderMotionScroll } from "@/components/motion/scroll-view";
 import { Banner } from "@/components/ui/banner";
 import {
@@ -97,7 +98,8 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
         </View>
       ) : null}
 
-      <FlatList
+      <View style={styles.list}>
+        <FlatList
           data={cards}
           keyExtractor={(item, index) => item?.uri ?? `pad-${index}`}
           numColumns={2}
@@ -112,7 +114,9 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
               <NoteCard note={item} onPress={open} />
             )
           }
-      />
+        />
+        <ScrollEdge testID="inbox-edge" />
+      </View>
 
       <BottomBar action={dock} />
     </View>
@@ -131,6 +135,9 @@ const makeStyles = (colors: Palette) => ({
     notice: {
       paddingHorizontal: pageGutter,
       paddingBottom: spacing.s,
+    },
+    list: {
+      flex: 1,
     },
     content: {
       paddingHorizontal: pageGutter,

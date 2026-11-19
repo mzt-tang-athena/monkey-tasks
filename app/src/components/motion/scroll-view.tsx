@@ -1,9 +1,10 @@
 import * as React from "react";
 import { Platform, type ScrollViewProps, type View } from "react-native";
 import { RefreshControl, ScrollView } from "react-native-gesture-handler";
-import { useAnimatedRef } from "react-native-reanimated";
+import { useAnimatedRef, useScrollOffset } from "react-native-reanimated";
 import { ClipContext, DraggingContext, SessionContext } from "./internal/contexts";
 import { useRegistry } from "./internal/session";
+import type { ScrollOffset } from "./scroll-edge";
 
 /** What a caller needs from the scroller: the imperative scroll calls. */
 export type MotionScrollRef = {
@@ -14,6 +15,8 @@ export type MotionScrollRef = {
 
 type MotionScrollProps = Omit<ScrollViewProps, "ref"> & {
   ref?: React.Ref<MotionScrollRef>;
+  /** The scroller writes its offset here, on the UI thread. */
+  offset?: ScrollOffset;
 };
 
 function prevent(event: TouchEvent) {
@@ -27,12 +30,13 @@ function prevent(event: TouchEvent) {
  * web a `touchmove` listener holds it, because `overflow: hidden`
  * makes the browser cancel the drag (ADR 0046).
  */
-export function MotionScrollView({ ref: outer, ...props }: MotionScrollProps) {
+export function MotionScrollView({ ref: outer, offset, ...props }: MotionScrollProps) {
   const session = React.useContext(SessionContext);
   const dragging = React.useContext(DraggingContext);
   const [id] = React.useState(() => session?.nextId() ?? -1);
   const ref = useAnimatedRef<View>();
   useRegistry(session?.ui.clips, id, ref);
+  useScrollOffset(offset == null ? null : ref, offset);
 
   React.useEffect(() => {
     if (!dragging || Platform.OS !== "web") {

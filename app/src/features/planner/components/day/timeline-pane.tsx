@@ -2,6 +2,11 @@ import * as React from "react";
 import { StyleSheet, View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import {
+  ScrollEdge,
+  edgeScroll,
+  useScrollEdgeOffset,
+} from "@/components/motion/scroll-edge";
+import {
   MotionScrollView,
   type MotionScrollRef,
 } from "@/components/motion/scroll-view";
@@ -12,8 +17,9 @@ import { Timeline } from "../timeline";
 /**
  * The timeline pane: the section header over the ruler, in the split's
  * top pane. The ruler scrolls inside the pane and holds still while a
- * drag is active. The swipe preview draws the same pane with `copy`, so
- * it carries no targets and no test ids.
+ * drag is active. A hairline marks the cut once hours pass under the
+ * header; a page at its top carries no line. The swipe preview draws the
+ * same pane with `copy`, so it carries no targets and no test ids.
  */
 export const TimelinePane = React.memo(function TimelinePane({
   tasks,
@@ -40,6 +46,7 @@ export const TimelinePane = React.memo(function TimelinePane({
   restoreTop?: number;
 }) {
   const live = React.useRef<MotionScrollRef>(null);
+  const edge = useScrollEdgeOffset();
   // A page change swaps the content and restores that page's offset
   // before paint, so the landing matches the preview.
   React.useLayoutEffect(() => {
@@ -63,33 +70,47 @@ export const TimelinePane = React.memo(function TimelinePane({
   return (
     <View style={layout.pane}>
       <SectionHeader label="Timeline" count={tasks.length} />
-      {copy ? (
-        <View style={[layout.paneScroll, styles.clip]}>
-          <View style={{ transform: [{ translateY: -(scrollTop ?? 0) }] }}>
-            {ruler}
+      <View style={layout.paneScroll}>
+        {copy ? (
+          <View style={[styles.body, styles.clip]}>
+            <View style={{ transform: [{ translateY: -(scrollTop ?? 0) }] }}>
+              {ruler}
+            </View>
           </View>
-        </View>
-      ) : (
-        <MotionScrollView
-          ref={live}
-          testID="timeline-scroller"
-          style={layout.paneScroll}
-          showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onScroll={
-            onScrollTop == null
-              ? undefined
-              : (event) => onScrollTop(event.nativeEvent.contentOffset.y)
-          }
-        >
-          {ruler}
-        </MotionScrollView>
-      )}
+        ) : (
+          <MotionScrollView
+            ref={live}
+            offset={edge}
+            testID="timeline-scroller"
+            style={styles.body}
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScroll={
+              onScrollTop == null
+                ? undefined
+                : (event) => onScrollTop(event.nativeEvent.contentOffset.y)
+            }
+          >
+            {ruler}
+          </MotionScrollView>
+        )}
+        {copy ? (
+          <ScrollEdge
+            testID="timeline-edge"
+            shown={(scrollTop ?? 0) > edgeScroll}
+          />
+        ) : (
+          <ScrollEdge testID="timeline-edge" offset={edge} />
+        )}
+      </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
+  body: {
+    flex: 1,
+  },
   clip: {
     overflow: "hidden",
   },

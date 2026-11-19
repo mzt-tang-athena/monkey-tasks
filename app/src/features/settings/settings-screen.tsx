@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
 import { SegmentedControl, type Segment } from "@/components/ui/segmented-control";
 import { SectionHeader } from "@/components/ui/section-header";
+import { ScrollEdge } from "@/components/motion/scroll-edge";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { useVault } from "@/lib/vault/vault-provider";
 import { useSetting } from "@/lib/settings-store";
@@ -91,131 +92,134 @@ export default function SettingsScreen() {
           onPress={() => router.back()}
         />
       </View>
-      <MotionScrollView contentContainerStyle={styles.content}>
-        <Text accessibilityRole="header" style={styles.title}>
-          Settings
-        </Text>
+      <View style={styles.body}>
+        <MotionScrollView contentContainerStyle={styles.content}>
+          <Text accessibilityRole="header" style={styles.title}>
+            Settings
+          </Text>
 
-        <Section label="Appearance">
-          <ThemePicker />
-        </Section>
+          <Section label="Appearance">
+            <ThemePicker />
+          </Section>
 
-        <Section label="Lists and planner">
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Sort order</Text>
-            <SegmentedControl
-              segments={sortOptions}
-              selected={sortMode}
-              onSelect={setSortMode}
-              label="sort order"
-              stretch
-            />
-            <Text style={styles.fieldHint}>
-              My order keeps the order you drag rows into.
-            </Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Task form</Text>
-            <SegmentedControl
-              segments={formOptions}
-              selected={taskForm}
-              onSelect={setTaskForm}
-              label="task form"
-              stretch
-            />
-            <Text style={styles.fieldHint}>
-              Rows tick in place. Chips drag first.
-            </Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Week view</Text>
-            <SegmentedControl
-              segments={weekOptions}
-              selected={weekView}
-              onSelect={setWeekView}
-              label="week view"
-              stretch
-            />
-            <Text style={styles.fieldHint}>
-              Spread pairs two days per row. Rows stack all seven.
-            </Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Week starts on</Text>
-            <SegmentedControl
-              segments={weekStartOptions}
-              selected={weekStart}
-              onSelect={setWeekStart}
-              label="week starts on"
-              stretch
-            />
-            <Text style={styles.fieldHint}>
-              The week grid, the month grid and the week strip follow it.
-            </Text>
-          </View>
-        </Section>
-
-        {Platform.OS === "android" ? (
-          <Section label="Alerts">
-            <Pressable
-              role="button"
-              accessibilityLabel="Alerts past Do Not Disturb"
-              onPress={() => void openNotificationPolicy()}
-              style={({ pressed }) => [
-                styles.action,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.actionLabel}>Alerts past Do Not Disturb</Text>
-              <Icon name="chevron-right" color="inkFaint" />
-            </Pressable>
+          <Section label="Lists and planner">
             <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Sort order</Text>
+              <SegmentedControl
+                segments={sortOptions}
+                selected={sortMode}
+                onSelect={setSortMode}
+                label="sort order"
+                stretch
+              />
               <Text style={styles.fieldHint}>
-                A harsh alert stays below Do Not Disturb until you grant this.
+                My order keeps the order you drag rows into.
+              </Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Task form</Text>
+              <SegmentedControl
+                segments={formOptions}
+                selected={taskForm}
+                onSelect={setTaskForm}
+                label="task form"
+                stretch
+              />
+              <Text style={styles.fieldHint}>
+                Rows tick in place. Chips drag first.
+              </Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Week view</Text>
+              <SegmentedControl
+                segments={weekOptions}
+                selected={weekView}
+                onSelect={setWeekView}
+                label="week view"
+                stretch
+              />
+              <Text style={styles.fieldHint}>
+                Spread pairs two days per row. Rows stack all seven.
+              </Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Week starts on</Text>
+              <SegmentedControl
+                segments={weekStartOptions}
+                selected={weekStart}
+                onSelect={setWeekStart}
+                label="week starts on"
+                stretch
+              />
+              <Text style={styles.fieldHint}>
+                The week grid, the month grid and the week strip follow it.
               </Text>
             </View>
           </Section>
-        ) : null}
 
-        <Section label="Diagnostics">
-          <CrashLogCard />
-          <Divider />
-          <Pressable
-            role="button"
-            accessibilityLabel="Open diagnostics"
-            onPress={() => router.push("/dev")}
-            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
-          >
-            <Text style={styles.actionLabel}>Open diagnostics</Text>
-            <Icon name="chevron-right" color="inkFaint" />
-          </Pressable>
-        </Section>
+          {Platform.OS === "android" ? (
+            <Section label="Alerts">
+              <Pressable
+                role="button"
+                accessibilityLabel="Alerts past Do Not Disturb"
+                onPress={() => void openNotificationPolicy()}
+                style={({ pressed }) => [
+                  styles.action,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.actionLabel}>Alerts past Do Not Disturb</Text>
+                <Icon name="chevron-right" color="inkFaint" />
+              </Pressable>
+              <View style={styles.field}>
+                <Text style={styles.fieldHint}>
+                  A harsh alert stays below Do Not Disturb until you grant this.
+                </Text>
+              </View>
+            </Section>
+          ) : null}
 
-        <Section label="About">
-          <InfoRow label="Version" value={version} />
-          <Divider />
-          <InfoRow label="Build channel" value={channel} />
-          <Divider />
-          <InfoRow label="Vault folder" value={root} />
-          <Divider />
-          <Pressable
-            role="link"
-            tabIndex={0}
-            accessibilityLabel="Repository"
-            onPress={() => void Linking.openURL(REPO)}
-            style={({ pressed }) => [
-              styles.infoRow,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.infoLabel}>Repository</Text>
-            <Text style={styles.link}>{REPO}</Text>
-          </Pressable>
-        </Section>
-      </MotionScrollView>
+          <Section label="Diagnostics">
+            <CrashLogCard />
+            <Divider />
+            <Pressable
+              role="button"
+              accessibilityLabel="Open diagnostics"
+              onPress={() => router.push("/dev")}
+              style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+            >
+              <Text style={styles.actionLabel}>Open diagnostics</Text>
+              <Icon name="chevron-right" color="inkFaint" />
+            </Pressable>
+          </Section>
+
+          <Section label="About">
+            <InfoRow label="Version" value={version} />
+            <Divider />
+            <InfoRow label="Build channel" value={channel} />
+            <Divider />
+            <InfoRow label="Vault folder" value={root} />
+            <Divider />
+            <Pressable
+              role="link"
+              tabIndex={0}
+              accessibilityLabel="Repository"
+              onPress={() => void Linking.openURL(REPO)}
+              style={({ pressed }) => [
+                styles.infoRow,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.infoLabel}>Repository</Text>
+              <Text style={styles.link}>{REPO}</Text>
+            </Pressable>
+          </Section>
+        </MotionScrollView>
+        <ScrollEdge testID="settings-edge" />
+      </View>
     </View>
   );
 }
@@ -269,11 +273,15 @@ const makeStyles = (colors: Palette) => ({
       paddingHorizontal: pageGutter - spacing.s,
       paddingVertical: spacing.s,
     },
+    body: {
+      flex: 1,
+    },
     content: {
       maxWidth: measure,
       width: "100%",
       alignSelf: "center",
       paddingHorizontal: pageGutter,
+      paddingTop: spacing.m,
       paddingBottom: spacing.xxl,
       gap: spacing.xl,
     },
