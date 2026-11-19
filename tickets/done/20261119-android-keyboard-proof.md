@@ -53,3 +53,12 @@ method's slow appearance on this host, where no keyboard had drawn yet.
 
 The app carries no change. No JavaScript path can place the handle.
 The current tree puts it on the caret on every frame we caught.
+
+The handle then fades on its own, which is what Android does.
+`android.widget.Editor` sets `DELAY_BEFORE_HANDLE_FADES_OUT = 4000`
+(line 183) and posts the hide runnable from `hideAfterDelay()` (line
+5818). The journey reads the handle inside that window. A later shot
+with no handle reads `no handle`, and that matches the platform.
+
+Source:
+<https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android15-release/core/java/android/widget/Editor.java>

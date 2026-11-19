@@ -56,5 +56,19 @@ The handle check needs the accent ink and the caret in one frame. A
 shot where the caret blinks off reads `no caret`, and it counts
 neither way.
 
+Android fades the insertion handle on its own. `android.widget.Editor`
+holds `DELAY_BEFORE_HANDLE_FADES_OUT = 4000` (line 183 on
+`android15-release`). `InsertionPointCursorController.show()` calls
+`hideAfterDelay()` (line 6734), and that posts the hide runnable at
+line 5818. A shot after those four seconds shows no handle, and that
+is correct.
+
+The journey reads the handle inside that window. Its frames run from
+one second before the tap to two seconds after. The settled shot that
+follows reports what it sees and judges nothing.
+
+Source:
+<https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android15-release/core/java/android/widget/Editor.java>
+
 The earlier lane's screenshots keep their value as history. The
 conclusions drawn from them do not.

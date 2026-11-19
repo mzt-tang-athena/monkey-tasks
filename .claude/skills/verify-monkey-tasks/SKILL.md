@@ -333,6 +333,11 @@ made, under `app/build/verify/evidence/android-<stamp>/`.
   one pass finds both. A stranded handle is the fault a sheet leaves
   when it lifts a text field with a transform.
 
+  Android fades the handle out by itself, 4000 ms after it shows
+  (`DELAY_BEFORE_HANDLE_FADES_OUT` in `android.widget.Editor`). Read the
+  handle from a frame taken at the tap. A shot after that window reads
+  `no handle`, and that matches the platform.
+
 Proof standards: drive the user path, capture the action and the
 result, and read the note back for every write. For motion, compare a
 `frames` grid with motion on against one with `motion off`. A claim

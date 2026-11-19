@@ -6,9 +6,15 @@
 #
 # Android places the handle from the text field's frame. A sheet that
 # lifts the field with a transform leaves that frame behind, so the
-# handle can land where the field used to be. The shots that follow the
-# tap catch the handle while it is on screen; scripts/android-handle.mjs
-# reads the handle and the caret out of each one.
+# handle can land where the field used to be. The frames that follow the
+# tap catch the handle while it is on screen, and
+# scripts/android-handle.mjs reads the handle and the caret out of each.
+#
+# Android fades the handle out 4000 ms after it shows
+# (`DELAY_BEFORE_HANDLE_FADES_OUT` in `android.widget.Editor`). The
+# frames run from one second before the tap to two seconds after, so
+# they land inside that window. The settled shot that follows reports a
+# missing handle as expected, and it never fails the run.
 #
 # Run it on an instance from android-launch.sh with the vault granted.
 # It sets `show_ime_with_hard_keyboard 1`, flips the navigation overlay
@@ -16,8 +22,8 @@
 #
 #   journeys/android-editor-keyboard.sh [tries]
 #
-# Evidence lands in a new run folder: every frame of the tap per try, a settled shot
-# and dump, and the run's log.
+# Evidence lands in a new run folder: every frame of the tap per try, a
+# settled shot and dump, and the run's log.
 set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 scripts="$here/../scripts"
@@ -76,8 +82,14 @@ for mode in three gesture; do
       echo "$mode try $i: the keyboard did not settle up" >&2
       stranded=$((stranded + 1))
     fi
-    "$drive" shot "editor-$mode-$i-settled" >/dev/null
-    "$drive" dump "editor-$mode-$i-settled" >/dev/null
+    settled="editor-$mode-$i-settled"
+    "$drive" shot "$settled" >/dev/null
+    "$drive" dump "$settled" >/dev/null
+    read after < <(node "$handle" "$run/$settled.png")
+    case $after in
+      *"no handle"*) echo "$mode try $i settled: $after, past the fade window" ;;
+      *) echo "$mode try $i settled: $after" ;;
+    esac
     "$drive" key BACK >/dev/null 2>&1
     sleep 1
     "$drive" key BACK >/dev/null 2>&1
