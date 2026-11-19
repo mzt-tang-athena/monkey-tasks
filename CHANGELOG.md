@@ -6,32 +6,42 @@ comes first. The same text goes into the GitHub release notes.
 Each bullet fits one line on a phone. `scripts/check-changelog.sh`
 fails a bullet that wraps or runs past 64 characters.
 
-## 1.2.0 - 2026-11-18
+## 1.2.0 - 2026-11-19
+
+### Command pane
+
+- Swipe down on the bar's empty middle to open it.
+- Add is a split pill now: plus, then ⌘ for commands.
+- Go to Journal and Go to Inbox Notes join the list.
+- Pull down on Lists and Journal to refresh, as before.
+- Reload vault is a command too.
 
 ### Planner
 
+- The header drops its chevron and gear.
 - The month card you swipe to shows its dates at once.
-- Week and month lists sit under the day's divider.
-- Weeks run Monday to Sunday, and the month grid follows.
+- Week and Month have the day's divider.
+- Weeks start on Monday by default.
 
 ### Settings
 
-- Week starts on: Monday, or Sunday.
-
-### Fixes
-
-- A sheet sits 8pt above the keyboard, with no gap.
-- A pager no longer blinks blank when a swipe lands.
-
-### Commands
-
-- The command pane reaches Journal and Inbox Notes.
+- Week starts on: Monday or Sunday.
 
 ### Look and feel
 
-- A header carries a hairline where content scrolls under it.
-- The day's timeline shows its line once hours pass under it.
-- Bigger icons in the bar, the headers, the rows and the chips.
+- A new app icon: a white tick on matcha green.
+- The list underline follows your swipe.
+- Bigger icons in the bar, headers, rows and chips.
+- Inbox Notes and Settings have a line under the header.
+- The day's timeline shows a line once hours scroll under.
+- Dark status bar icons on the light themes.
+
+### Fixes
+
+- Sheets no longer hide under three-button navigation.
+- A sheet sits right above the keyboard.
+- Long note names wrap at a hyphen, not mid-word.
+- A swipe no longer blinks a blank page as it lands.
 
 ## 1.1.0 - 2026-11-18
 
