@@ -282,9 +282,17 @@ $D scroll-to "task-row:Fix bike light" [up]      # scroll until it is clear of t
 $D swipe "~TODAY" -600 0 300                     # swipe from a node's center
 $D hold-drag "task-row:Call Mum" 0 -300 600      # press, hold, then move in steps
 $D type "Buy milk tomorrow"; $D key ENTER
+$D keyboard up                                   # wait for the drawn, settled keyboard
 $D motion off                                    # animation scales to 0, restart the app
 $D list                                          # every labelled node on screen
 ```
+
+`keyboard up` and `keyboard down` read the window manager, not the
+app's request. `mInputShown` turns true before the input method's
+window draws, and a shot taken then shows no keyboard. The step waits
+for the window to draw and for its frame to stop moving. It takes as
+long as the host needs. Give it a timeout in seconds as the second
+argument.
 
 A handle matches `content-desc` (the accessibility label), then
 `resource-id` (the `testID`), then text. A handle matches exactly, or as a
@@ -301,7 +309,9 @@ Proven on the emulator so far: `tap`, `wait`, `scroll-to`, `swipe`,
 exist but have not yet run on an APK. Check them before you rely on them.
 
 Make a journey safe to run again: `journeys/android-list-swipe.sh` is
-the model, since it undoes its own change. The feature map says which
+the model, since it undoes its own change.
+`journeys/android-editor-keyboard.sh` proves the keyboard and the text
+handle in the task editor, in both navigation modes. The feature map says which
 recipes run on Android.
 
 ### Evidence
@@ -316,10 +326,17 @@ made, under `app/build/verify/evidence/android-<stamp>/`.
 - `$D dump <name>` saves the screen tree as `.xml` and a readable `.txt`.
 - `$D note "Tasks/<name>.md" <tag>` prints a note from the device and keeps it as `note-<tag>.md`.
 - `$D log [name]` saves the React Native and crash log, and the app process log.
+- `scripts/android-handle.mjs <shot.png> ...` reads a shot and reports
+  the text field's insertion handle against the caret. It prints `ok`,
+  `no caret`, `no handle` or `stranded`, one line per shot, and exits
+  nonzero when any shot reads stranded. Both draw in the accent ink, so
+  one pass finds both. A stranded handle is the fault a sheet leaves
+  when it lifts a text field with a transform.
 
 Proof standards: drive the user path, capture the action and the
 result, and read the note back for every write. For motion, compare a
-`frames` grid with motion on against one with `motion off`. Leave the
+`frames` grid with motion on against one with `motion off`. A claim
+about the keyboard needs `$D keyboard up` before the shot. Leave the
 app with motion on.
 
 ### Cleanup
@@ -375,3 +392,4 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 - `android-seed.ts <out dir> <YYYY-MM-DD> [seeds]` writes the sample vault for a day. Run it from `app/` with `npx tsx`.
 - `android-ui.mjs <dump.xml> find|text|list [handle]` reads a screen tree.
 - `android-frames.mjs <frames.raw> <out dir> [columns]` turns raw `screenrecord` frames into PNGs and a grid.
+- `android-handle.mjs <shot.png> ...` reads the insertion handle and the caret from a shot.
