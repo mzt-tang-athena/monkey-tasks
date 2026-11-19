@@ -27,6 +27,7 @@ fails a bullet that wraps or runs past 64 characters.
 
 - A header carries a hairline where content scrolls under it.
 - The day's timeline shows its line once hours pass under it.
+- Bigger icons in the bar, the headers, the rows and the chips.
 
 ## 1.1.0 - 2026-11-18
 

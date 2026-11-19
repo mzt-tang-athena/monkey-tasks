@@ -69,7 +69,7 @@ export function AlertsPicker({
       {/* The timed due rings by itself, so its row has no remove. */}
       {atDue ? (
         <View style={[styles.reminder, styles.atDue]}>
-          <Icon name="bell" size={16} />
+          <Icon name="bell" />
           <Text style={styles.atDueText}>At due</Text>
           <Text style={styles.atDueHint}>From the due time</Text>
         </View>
@@ -79,7 +79,7 @@ export function AlertsPicker({
       ) : null}
       {sorted.map((at) => (
         <View key={at} style={styles.reminder}>
-          <Icon name="bell" size={16} />
+          <Icon name="bell" />
           <Text style={styles.reminderText}>{whenWords(at, today)}</Text>
           <IconButton
             label={`remove reminder ${whenWords(at, today)}`}
@@ -128,7 +128,7 @@ export function AlertsPicker({
           accessibilityRole="button"
           accessibilityLabel="add reminder"
         >
-          <Icon name="plus" color="accent" size={16} />
+          <Icon name="plus" color="accent" size={18} />
           <Text style={styles.addText}>Add reminder</Text>
         </Pressable>
       )}

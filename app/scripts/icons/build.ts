@@ -11,30 +11,34 @@ import { join } from "node:path";
 /** Where `@phosphor-icons/react` keeps one module per glyph. */
 export const DEFS = "node_modules/@phosphor-icons/react/dist/defs";
 
-/** The table the app draws from: app name, Phosphor name, and the box. */
+/**
+ * The table the app draws from: app name, Phosphor name, and the box.
+ * The bottom bar and the header bands draw at 24pt. A glyph inside a
+ * row or a chip sits 2pt over the box it had before (ADR 20261119).
+ */
 const GLYPHS = {
-  list: { phosphor: "List", size: 20 },
-  calendar: { phosphor: "CalendarDot", size: 20 },
-  journal: { phosphor: "Notebook", size: 20 },
-  inbox: { phosphor: "Tray", size: 20 },
-  "calendar-mini": { phosphor: "CalendarDot", size: 11 },
-  "clock-mini": { phosphor: "Clock", size: 11 },
-  plus: { phosphor: "Plus", size: 18 },
-  sort: { phosphor: "SortDescending", size: 20 },
-  more: { phosphor: "DotsThreeVertical", size: 20 },
-  rows: { phosphor: "Rows", size: 14 },
-  pill: { phosphor: "Pill", size: 16 },
-  repeat: { phosphor: "ArrowClockwise", size: 11 },
+  list: { phosphor: "List", size: 24 },
+  calendar: { phosphor: "CalendarDot", size: 24 },
+  journal: { phosphor: "Notebook", size: 24 },
+  inbox: { phosphor: "Tray", size: 24 },
+  "calendar-mini": { phosphor: "CalendarDot", size: 13 },
+  "clock-mini": { phosphor: "Clock", size: 13 },
+  plus: { phosphor: "Plus", size: 24 },
+  sort: { phosphor: "SortDescending", size: 24 },
+  more: { phosphor: "DotsThreeVertical", size: 24 },
+  rows: { phosphor: "Rows", size: 16 },
+  pill: { phosphor: "Pill", size: 18 },
+  repeat: { phosphor: "ArrowClockwise", size: 13 },
   grip: { phosphor: "DotsSixVertical", size: 15 },
   "grip-bars": { phosphor: "Equals", size: 10 },
   settings: { phosphor: "Gear", size: 18 },
-  "chevron-right": { phosphor: "CaretRight", size: 10 },
-  "chevron-down": { phosphor: "CaretDown", size: 10 },
-  bell: { phosphor: "Bell", size: 14 },
-  note: { phosphor: "Note", size: 14 },
-  close: { phosphor: "X", size: 13 },
-  check: { phosphor: "Check", size: 10 },
-  command: { phosphor: "Command", size: 18 },
+  "chevron-right": { phosphor: "CaretRight", size: 12 },
+  "chevron-down": { phosphor: "CaretDown", size: 12 },
+  bell: { phosphor: "Bell", size: 16 },
+  note: { phosphor: "Note", size: 16 },
+  close: { phosphor: "X", size: 15 },
+  check: { phosphor: "Check", size: 12 },
+  command: { phosphor: "Command", size: 24 },
 } as const;
 
 type Weight = "regular" | "fill";

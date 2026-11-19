@@ -375,6 +375,26 @@ test.describe("the bar's split Add pill", () => {
     );
     expect(overflow).toBeLessThanOrEqual(0);
   });
+
+  test("the bar's glyphs draw at 24pt inside their 44pt targets", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    const glyphs = ["list", "calendar", "journal", "inbox", "plus", "command"];
+    for (const name of glyphs) {
+      const box = await page
+        .locator(`[data-testid="icon:${name}"], [data-testid="icon:${name}:fill"]`)
+        .filter({ visible: true })
+        .first()
+        .boundingBox();
+      expect(box, name).not.toBeNull();
+      expect(box?.width ?? 0, name).toBeCloseTo(24, 0);
+      expect(box?.height ?? 0, name).toBeCloseTo(24, 0);
+    }
+  });
 });
 
 test.describe("access", () => {

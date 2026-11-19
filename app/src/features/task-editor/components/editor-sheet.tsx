@@ -195,7 +195,7 @@ export function EditorSheet({
               // carries it (WCAG 2.5.3).
               accessibilityLabel={`change list, ${draft.list ?? "Main"}`}
             >
-              <Icon name="list" color="inkMuted" />
+              <Icon name="list" size={22} color="inkMuted" />
               <Text style={styles.listName} numberOfLines={1}>
                 {draft.list ?? "Main"}
               </Text>
@@ -439,7 +439,7 @@ const failedWords: Record<WriteFailure, string> = {
 };
 
 /** A property's glyph, sized to read beside its label. */
-const glyph = 16;
+const glyph = 18;
 
 /**
  * One property with a value: its label and words, a clear control where
