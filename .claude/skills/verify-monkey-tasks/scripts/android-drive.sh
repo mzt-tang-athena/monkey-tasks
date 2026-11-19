@@ -11,6 +11,7 @@
 #   android-drive.sh peek                         read the screen tree into $UIXML only
 #   android-drive.sh type <text>                  type into the focused field
 #   android-drive.sh key <keycode>                BACK, ENTER, ESCAPE, ...
+#   android-drive.sh keyboard <up|down> [secs]    wait for the keyboard to settle
 #   android-drive.sh swipe <handle> <dx> <dy> [ms]       swipe from a node's center
 #   android-drive.sh drag <handle> <dx> <dy> [ms]        long press, then move
 #   android-drive.sh hold-drag <handle> <dx> <dy> [hold ms]  press, hold, move in steps
@@ -94,6 +95,40 @@ find_node() {
 
 center() { set -- $1; echo "$1 $2"; }
 
+# One sample of the soft keyboard, as the window manager sees it: `up`
+# or `down`, then the input method window's frame. The frame moves while
+# the inset animation runs, so two matching frames mean the keyboard has
+# settled. `dumpsys input_method` alone does not tell: it reports
+# `mInputShown=true` before the window draws, and a shot taken then
+# shows no keyboard.
+keyboard_state() {
+  local shown
+  shown=$(adb shell dumpsys input_method | tr -d '\r' | grep -c 'mInputShown=true' || true)
+  adb shell dumpsys window windows | tr -d '\r' | awk -v shown="$([[ $shown -gt 0 ]] && echo yes || echo no)" '
+    /Window #[0-9]+ Window\{.*\}:/ { inside = ($0 ~ / InputMethod\}/); next }
+    inside && /mDrawState=/ { draw = $0 }
+    inside && /^ *isVisible=/ { vis = $0 }
+    inside && /^ *Frames:/ { frame = $0 }
+    END {
+      drawn = (shown == "yes" && draw ~ /HAS_DRAWN/ && vis ~ /isVisible=true/)
+      printf "%s %s\n", (drawn ? "up" : "down"), (frame == "" ? "none" : frame)
+    }'
+}
+
+keyboard() {
+  local want=$1 deadline=$((SECONDS + ${2:-20})) last="" same=0 state
+  while :; do
+    state=$(keyboard_state)
+    if [[ $state == "$last" ]]; then same=$((same + 1)); else same=0; last=$state; fi
+    if [[ $state == "$want"* ]] && ((same >= 1)); then
+      echo "keyboard $want, settled at $state"
+      return 0
+    fi
+    ((SECONDS < deadline)) || die "the keyboard did not settle $want in ${2:-20} s. Last sample: $state"
+    sleep 0.2
+  done
+}
+
 clamp() { local v=$1 max=$2; ((v < 1)) && v=1; ((v > max - 1)) && v=$((max - 1)); echo "$v"; }
 
 wait_first_row() {
@@ -150,6 +185,9 @@ case "$cmd" in
     ;;
   key)
     adb shell input keyevent "KEYCODE_${1:?keycode}"
+    ;;
+  keyboard)
+    keyboard "${1:?up or down}" "${2:-20}"
     ;;
   swipe | drag)
     at=$(find_node "${1:?handle}" 20) || die "no node '$1' on screen"
