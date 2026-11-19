@@ -276,18 +276,24 @@ test.describe("every command", () => {
     await expect(row(page, "Written elsewhere")).toBeVisible();
   });
 
-  test("Go to Lists and Go to Planner change the screen", async ({ page }) => {
-    await page.goto("/planner");
-    await expect(page.getByTestId("day-heading")).toBeVisible();
-    await openPane(page);
-    await command(page, "lists").click();
-    await expect(page).toHaveURL("/");
-    await expectShut(page);
+  test("the four Go to commands change the screen", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
 
-    await openPane(page);
-    await command(page, "planner").click();
-    await expect(page).toHaveURL("/planner");
-    await expectShut(page);
+    const stops = [
+      { id: "journal", url: "/journal", testId: "journal-screen" },
+      { id: "inbox", url: "/inbox", testId: "inbox-notes-screen" },
+      { id: "lists", url: "/", testId: "lists-screen" },
+      { id: "planner", url: "/planner", testId: "day-heading" },
+    ] as const;
+
+    for (const stop of stops) {
+      await openPane(page);
+      await command(page, stop.id).click();
+      await expect(page).toHaveURL(stop.url);
+      await expect(page.getByTestId(stop.testId).first()).toBeVisible();
+      await expectShut(page);
+    }
   });
 
   test("Switch list goes to Lists on the next list", async ({ page }) => {

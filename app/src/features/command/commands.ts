@@ -17,6 +17,8 @@ export type CommandSources = {
   addTask: () => void;
   goLists: () => void;
   goPlanner: () => void;
+  goJournal: () => void;
+  goInbox: () => void;
   switchList: () => void;
   openSettings: () => void;
   openDiagnostics: () => void;
@@ -64,6 +66,18 @@ export function buildCommands(sources: CommandSources): Command[] {
       label: "Go to Planner",
       keywords: ["calendar", "day", "week", "month"],
       run: sources.goPlanner,
+    },
+    {
+      id: "journal",
+      label: "Go to Journal",
+      keywords: ["daily", "diary", "food"],
+      run: sources.goJournal,
+    },
+    {
+      id: "inbox",
+      label: "Go to Inbox Notes",
+      keywords: ["notes", "scratch"],
+      run: sources.goInbox,
     },
     ...switches,
     {

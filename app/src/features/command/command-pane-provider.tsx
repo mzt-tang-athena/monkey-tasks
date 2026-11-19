@@ -49,6 +49,8 @@ export function CommandPaneProvider({ children }: { children: React.ReactNode })
     addTask: requestCapture,
     goLists: () => router.navigate("/"),
     goPlanner: () => router.navigate("/planner"),
+    goJournal: () => router.navigate("/journal"),
+    goInbox: () => router.navigate("/inbox"),
     switchList: () => {
       if (nextList != null) {
         selectList(nextList);
