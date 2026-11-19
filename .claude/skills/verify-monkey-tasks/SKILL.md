@@ -311,8 +311,8 @@ exist but have not yet run on an APK. Check them before you rely on them.
 Make a journey safe to run again: `journeys/android-list-swipe.sh` is
 the model, since it undoes its own change.
 `journeys/android-editor-keyboard.sh` proves the keyboard and the text
-handle in the task editor, in both navigation modes. The feature map says which
-recipes run on Android.
+handle in the task editor, in both navigation modes. The feature map
+says which recipes run on Android.
 
 ### Evidence
 
