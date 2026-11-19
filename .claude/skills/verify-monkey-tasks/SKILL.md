@@ -163,31 +163,22 @@ Logs land in `$MONKEY_LOG_DIR`, default `/tmp/monkey-tasks`.
 
 ### Lanes share the queue
 
-A lane is an agent working one PR in its own worktree. Lanes wait on
-the heavy lock, so every slot one takes delays the rest.
+A lane is an agent working one PR in its own worktree. Set up the
+worktree with `scripts/worktree-setup.sh`. Run `scripts/gate.sh`
+before the PR. Lanes wait on the heavy lock, so every slot one takes
+delays the rest.
 
-- Set up a new worktree from `main/` with hard links, not `npm ci`:
+Speed tips for this repo:
 
-  ```sh
-  cp -al ../main/node_modules node_modules
-  cp -al ../main/app/node_modules app/node_modules
-  git submodule update --init
-  (cd app && npx tsc -p ../contracts/packages/schemas/tsconfig.build.json)
-  npx vale-rules sync
-  ```
-
-- Iterate on the web preview and targeted specs.
-- Run the full web suite once, on the final tree.
-- Use the emulator once, for the final Android proof.
+- `.worktree.env` holds this worktree's `VERIFY_PORT`. Source it, or
+  two lanes both take 8300.
 - `android-apk.sh` swaps a JS-only change into a cached APK.
 - Put launch, drive, `android-cleanup.sh` and `adb kill-server` in one
   script under one lock hold.
-- The gate: `tsc`, `eslint --max-warnings 0`, vitest, Vale on changed
-  docs, `check-records.sh`, `check-changelog.sh`, the full web suite.
-- A change a user can see adds a bullet to `CHANGELOG.md` under the
-  next version.
-- Stop at merge-ready. Report the PR, head SHA, gate counts and
-  evidence paths.
+
+The gate needs a bullet in `CHANGELOG.md` when a change is visible.
+Add one under the next version, or write `Changelog: none` in a
+commit message.
 
 ### Get an APK
 
