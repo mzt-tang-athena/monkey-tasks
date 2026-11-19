@@ -11,6 +11,7 @@ desktop.ini
 # Environment and secrets
 .env
 .env.*
+.worktree.env
 *.pem
 *.key
 
