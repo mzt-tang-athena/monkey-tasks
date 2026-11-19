@@ -78,15 +78,10 @@ export function Pager({
   const pending = useSharedValue(none);
   const anchor = useSharedValue(0);
   const page = useSharedValue(index - origin);
-  // The live page's offset from the origin, as a shared value so the
-  // track's animated style reads only shared values. A plain variable
-  // would be captured once and never follow a tab change.
-  const liveAt = useSharedValue(index - origin);
   const edges = useSharedValue<PageBounds>({});
 
   React.useLayoutEffect(() => {
     page.set(index - origin);
-    liveAt.set(index - origin);
     edges.set({
       first: bounds.first === undefined ? undefined : bounds.first - origin,
       last: bounds.last === undefined ? undefined : bounds.last - origin,
@@ -208,18 +203,20 @@ export function Pager({
     .map(Number)
     .filter((rel) => rel !== live);
 
-  // The previews ride in a track that carries the whole page position,
-  // so the track rests one page over and Android skips it as offscreen.
-  // The live page is its sibling, directly in the host, and carries only
-  // the distance from the track's resting place. Its layout box stays at
-  // the host's origin, so Android's virtualized list keeps its rows and
-  // TalkBack reads the tab (ticket 0079, again in ticket 20261117).
+  // The track moves through page space, so a page `rel` sits at
+  // `(rel - live) * width` in it. The track also carries the live page's
+  // own place as a plain offset, which keeps its box over the host at
+  // rest. The live page rides at the track's origin, so a commit swaps
+  // its content and its place in the same render, and the animated
+  // style moves only the track. Taking the offset from a shared value
+  // instead puts the live page one page over for a frame at each
+  // landing (ticket 20261118). The track's box stays on screen at rest,
+  // so Android keeps the live page's rows and TalkBack reads the tab
+  // (ticket 0079, again in ticket 20261117).
   const track = useAnimatedStyle(() => ({
     transform: [{ translateX: -pos.value * width.value }],
   }));
-  const livePage = useAnimatedStyle(() => ({
-    transform: [{ translateX: (liveAt.value - pos.value) * width.value }],
-  }));
+  const shift = { left: live * host.width };
 
   const onLayout = (event: LayoutChangeEvent) => {
     const { width: next, height } = event.nativeEvent.layout;
@@ -232,28 +229,33 @@ export function Pager({
   return (
     <GestureDetector gesture={gesture}>
       <View testID={testID} style={[styles.host, fill && styles.fill]} onLayout={onLayout}>
-        <Animated.View testID="pager-track" style={[fill && styles.fill, track]}>
+        <Animated.View
+          testID="pager-track"
+          style={[fill && styles.fill, shift, track]}
+        >
+          {/* One element for the pager's life, at the track's origin.
+              Keeping it mounted keeps the page's scroll and rows across
+              a swipe, and its place stays plain, so a commit moves it
+              with its content. */}
+          <View testID="pager-live" style={fill && styles.live}>
+            {children}
+          </View>
           {previews.map((rel) => (
             <View
               key={`preview:${rel}`}
               testID={`preview:${origin + rel}`}
               style={[
                 styles.preview,
-                { left: rel * host.width, width: host.width, height: host.height },
+                {
+                  left: (rel - live) * host.width,
+                  width: host.width,
+                  height: host.height,
+                },
               ]}
             >
               {renderPreview(origin + rel)}
             </View>
           ))}
-        </Animated.View>
-        {/* One element for the pager's life, outside the moving track.
-            Keeping it mounted keeps the page's scroll and rows across a
-            swipe, and its parent stays put for Android's tree. */}
-        <Animated.View
-          testID="pager-live"
-          style={[fill && styles.live, livePage]}
-        >
-          {children}
         </Animated.View>
       </View>
     </GestureDetector>
