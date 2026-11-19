@@ -141,6 +141,7 @@ const makeStyles = (colors: Palette) => ({
     },
     content: {
       paddingHorizontal: pageGutter,
+      paddingTop: spacing.m,
       paddingBottom: spacing.xxl,
       gap: spacing.s,
       flexGrow: 1,

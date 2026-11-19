@@ -48,13 +48,20 @@ The line sits on the scroller's top edge and takes the palette
 hairline. It draws no rule for a day at its top, because it follows
 the scroller's offset on the UI thread.
 
+The Inbox grid and Settings both start their content 12pt below the
+line.
+No card border doubles it at rest, and a scroll still takes the cards
+under it.
+
 Gate on `0fcedb6`: tsc, eslint with `--max-warnings 0`, 1205 vitest
 tests and Vale all pass. `check-records.sh` and `check-changelog.sh`
 pass. The full web suite: 642 passed, 26 skipped.
 
 `scroll-edge.spec.ts` holds the three edges in both projects, so
-motion and reduced motion each pass. The component test scrolls a
-`MotionScrollView` and reads its line with one render.
+motion and reduced motion each pass. It reads the Inbox card row
+starting 12pt clear of the line, then a scroll taking it under. The
+component test scrolls a `MotionScrollView` and reads its line with
+one render.
 
 Web shots at 412 and 360 in Budget and Midnight:
 `app/build/verify/evidence/20261119-031342/`.

@@ -72,8 +72,19 @@ test("the inbox line always shows under the title", async ({ page }) => {
   const firstCard = page.getByTestId("note-card:202610260830.md");
   const edgeTop = await topOf(edge);
   expect(edgeTop).toBeGreaterThan(await topOf(header));
-  // The line sits on the list's first row, where a scroll cuts it.
-  expect(Math.abs(edgeTop - (await topOf(firstCard)))).toBeLessThan(1);
+  // The grid starts 12pt clear of the line, so no card border doubles it.
+  expect((await topOf(firstCard)) - edgeTop).toBeGreaterThanOrEqual(12);
+
+  // A scroll takes the cards under the line, and the line stays.
+  // The default viewport fits every card, so a shorter one scrolls.
+  await page.setViewportSize({ width: 412, height: 560 });
+  const next = page.getByTestId("note-card:20261023-flight-email-tracker.md");
+  const before = await topOf(next);
+  await page.mouse.move(206, 300);
+  await page.mouse.wheel(0, 160);
+  await expect.poll(() => topOf(next)).toBeLessThan(before - 100);
+  expect(await topOf(next)).toBeLessThan(edgeTop);
+  expect(await opacity(edge)).toBe(1);
 });
 
 test("the settings line always shows under Back", async ({ page }) => {
