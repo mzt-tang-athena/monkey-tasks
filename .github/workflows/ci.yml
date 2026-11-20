@@ -66,6 +66,10 @@ jobs:
             echo "::error::vale exited with $vale_exit and printed no alerts. Its error is above."
             exit 1
           fi
+      # Needs the Vale setup above. The hook lists the staged files, so a
+      # renamed file must stay in that list (ticket 20261120).
+      - name: Test the commit hook
+        run: scripts/test-pre-commit.sh
 
   code:
     runs-on: ubuntu-latest
