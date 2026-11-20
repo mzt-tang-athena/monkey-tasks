@@ -8,7 +8,11 @@ set -e
 root=$(git rev-parse --show-toplevel)
 # One name per line, unquoted. Some names hold spaces, so each list goes
 # to xargs NUL separated.
-staged=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACM)
+#
+# A rename is R, and every ticket close renames the file it edits. Each
+# list here holds the new name of a rename, so the file still gets its
+# checks. A deleted file stays out: it holds nothing to check.
+staged=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR)
 
 code=$(printf '%s\n' "$staged" | grep -E '^app/(src|scripts|e2e)/.*\.(ts|tsx)$' || true)
 docs=$(printf '%s\n' "$staged" | grep -E '\.md$' || true)
