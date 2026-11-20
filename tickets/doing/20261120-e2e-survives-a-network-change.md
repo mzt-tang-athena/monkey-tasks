@@ -2,7 +2,7 @@
 title: The e2e suite survives a host network change
 created: 2026-11-20
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
