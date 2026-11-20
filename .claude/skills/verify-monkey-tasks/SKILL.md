@@ -243,15 +243,16 @@ shows`. It saves `launch.png` and `launch.xml` in a new run folder and
 prints that folder.
 
 The folder grant lives in the AVD's data. It survives a cold boot, a
-reinstall and a reseed, because the folder keeps its path. As a result, launch
-walks the system picker only when the app shows `connect vault folder`.
-That happens on a new AVD, or with `FRESH=1`, which clears the app data
-first. The
-walk reads the picker's header (`Files on ...`, `Files in Documents`,
-`Files in obsidian-vault`), takes one step, and waits for the header to
-change. It ends on `USE THIS FOLDER` and `ALLOW`. App settings such as
-the sort order also persist between launches. Use `FRESH=1` when a
-check needs them at their defaults.
+reinstall and a reseed, because the folder keeps its path. As a result,
+launch walks the system picker only when the app shows `connect vault
+folder`. That happens on a new AVD, or with `FRESH=1`, which clears the
+app data first. A clear drops the notification permission too, so launch
+grants it back before the app starts. The walk reads the picker's header
+(`Files on ...`, `Files in Documents`, `Files in obsidian-vault`), takes
+one step, and waits for the header to change. It ends on `USE THIS
+FOLDER` and `ALLOW`. App settings such as the sort order also persist
+between launches. Use `FRESH=1` when a check needs them at their
+defaults.
 
 Timings on this host (4 cores) follow. A cold boot took 99 to 150 s and
 the install 19 to 45 s. They run slower when other work loads the host. The picker
@@ -399,7 +400,8 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 - A starved emulator stops drawing (screenshots come back black) and drops taps. The picker walk then fails with `picker-stuck.txt`. Wait for the host to calm down, or stop the other load, and launch again. Once the grant exists, launch no longer needs the picker.
 - Heavy screen capture can spoil a gesture. A `screencap` loop during a swipe left the page unturned. `frames` uses `screenrecord`, and the same swipe turned the page.
 - A swipe that ends off screen reads as a system gesture. Drive clamps the end to the screen.
-- `FRESH=1` clears the app data, so the notification prompt comes back. It can cover the app before the first row draws. Answer it, or launch again without `FRESH`.
+- `FRESH=1` clears the app data, so the notification permission goes.
+  Launch grants it again, so no prompt covers the app.
 - After `force-stop` the old window lingers in the screen tree for a moment. `$D restart` waits for it to go.
 - An APK built before ADR 0045 keeps the old tail of a note after a shorter write (ticket 0076). Compare notes byte for byte after an edit that removes text.
 
