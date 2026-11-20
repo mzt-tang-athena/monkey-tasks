@@ -1,0 +1,17 @@
+# Files every repo copies from project-template, one path per line.
+# `scripts/sync-template.sh` reads this list from the template, so a new
+# line reaches a repo before the repo has to know about it.
+# These files are the same bytes everywhere. Never edit one in a repo.
+scripts/sync-template.sh
+scripts/template-files.txt
+scripts/changed-paths.sh
+scripts/check-records.sh
+scripts/check-secrets.sh
+scripts/check-tickets.sh
+scripts/gate.sh
+scripts/sync-vale-packages.sh
+scripts/test-check-records.sh
+scripts/test-check-tickets.sh
+scripts/test-gate.sh
+scripts/test-template-sync.sh
+template.mk
