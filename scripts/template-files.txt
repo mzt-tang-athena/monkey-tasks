@@ -12,6 +12,7 @@ scripts/gate.sh
 scripts/sync-vale-packages.sh
 scripts/test-check-records.sh
 scripts/test-check-tickets.sh
+scripts/test-git-env.sh
 scripts/test-gate.sh
 scripts/test-template-sync.sh
 template.mk

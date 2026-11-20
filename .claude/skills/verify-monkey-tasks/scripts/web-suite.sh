@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# One heavy job at a time on this 15 GB machine: builds, full e2e runs and
-# emulator passes all queue on one lock. -o keeps children from holding it.
-if [ -z "${MONKEY_HEAVY_LOCK:-}" ]; then exec env MONKEY_HEAVY_LOCK=1 flock -o /tmp/monkey-tasks-heavy.lock "$0" "$@"; fi
-# Full web suite for one checkout, under the shared e2e lock.
-# Usage: web-suite.sh <checkout> <tag> <port>
+# Full web suite for one checkout, under one heavy slot.
+# Usage: web-suite.sh <checkout> <tag> <port> [--background]
+. "$(dirname "$0")/heavy.sh" web-suite "$@" || exit 1
 logs=${MONKEY_LOG_DIR:-/tmp/monkey-tasks}
 mkdir -p "$logs"
 cd "$1/app" || exit 1

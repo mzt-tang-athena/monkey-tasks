@@ -63,17 +63,20 @@ move_ticket() {
 }
 
 run_check() {
+    local dir="$1" base="$2"
+    shift 2
     set +e
-    out="$(cd "$1" && "$checker" --base "$2" 2>"$tmp/stderr")"
+    out="$(cd "$dir" && "$checker" "$@" --base "$base" 2>"$tmp/stderr")"
     code=$?
     set -e
     err="$(cat "$tmp/stderr")"
 }
 
-# pass_case <label> <dir> <base> [exact stdout]
+# pass_case <label> <dir> <base> [exact stdout] [checker args...]
 pass_case() {
     local label="$1" dir="$2" base="$3" want_out="${4:-}"
-    run_check "$dir" "$base"
+    shift 4
+    run_check "$dir" "$base" "$@"
     [ "$code" -eq 0 ] || fail "$label: expected exit 0, got $code; stderr: $err"
     case "$out" in
         'ticket move: ok ('*) ;;
@@ -87,9 +90,10 @@ pass_case() {
 }
 
 # fail_case <label> <dir> <base> <text stderr must name>
+# The strict mode is the one that blocks a merge or a CI run.
 fail_case() {
     local label="$1" dir="$2" base="$3" want="$4"
-    run_check "$dir" "$base"
+    run_check "$dir" "$base" --strict
     [ "$code" -eq 1 ] || fail "$label: expected exit 1, got $code; stderr: $err"
     case "$err" in
         *"$want"*) ;;
@@ -98,6 +102,27 @@ fail_case() {
     case "$err" in
         'ticket move: '*) ;;
         *) fail "$label: stderr missing the ticket move prefix: $err" ;;
+    esac
+    case "$err" in
+        'ticket move: warning: '*) fail "$label: strict mode added the warning label: $err" ;;
+    esac
+    assertions=$((assertions + 1))
+}
+
+# warn_case <label> <dir> <base> <text stderr must name>
+# The default warns, so a lane can push and open its PR before the ticket
+# carries a `pr:`.
+warn_case() {
+    local label="$1" dir="$2" base="$3" want="$4"
+    run_check "$dir" "$base"
+    [ "$code" -eq 0 ] || fail "$label: expected exit 0, got $code; stderr: $err"
+    case "$out" in
+        'ticket move: warned ('*) ;;
+        *) fail "$label: unexpected stdout: $out" ;;
+    esac
+    case "$err" in
+        *"warning: "*"$want"*) ;;
+        *) fail "$label: stderr does not warn about $want: $err" ;;
     esac
     assertions=$((assertions + 1))
 }
@@ -121,6 +146,10 @@ move_ticket "$dir" open doing 20261120-stuck
 commit "$dir" "chore(tickets): claim stuck"
 fail_case "ticket left in doing" "$dir" "$base" "tickets/doing/20261120-stuck.md"
 
+# The same tree only warns by default, so a lane can push before its PR exists.
+warn_case "ticket left in doing warns by default" "$dir" "$base" \
+    "tickets/doing/20261120-stuck.md"
+
 # The trailer lets that ticket stay open.
 dir="$(new_repo trailer)"
 write_ticket "$dir" open 20261120-trailer 7 "Done."
@@ -131,6 +160,8 @@ commit "$dir" "chore(tickets): claim trailer
 
 Ticket: stays-open"
 pass_case "trailer keeps a ticket open" "$dir" "$base" "ticket move: ok (1 moved)"
+pass_case "trailer keeps a ticket open under --strict" "$dir" "$base" \
+    "ticket move: ok (1 moved)" --strict
 
 # A long log must not lose the trailer. `grep -q` stops at the first match,
 # and a pipeline that also holds `git log` then reads as no match under
@@ -173,6 +204,8 @@ move_ticket "$dir" open "done" 20261120-no-pr
 write_ticket "$dir" "done" 20261120-no-pr "" "Pull request #7 carries it."
 commit "$dir" "chore(tickets): close no-pr"
 fail_case "empty pr" "$dir" "$base" "moved to done with an empty pr:"
+warn_case "empty pr warns by default" "$dir" "$base" \
+    "moved to done with an empty pr:"
 
 # A ticket moved into done/ with an empty Outcome fails.
 dir="$(new_repo no-outcome)"

@@ -4,13 +4,16 @@
 set -euo pipefail
 
 base=origin/main
+strict=false
 
 usage() {
     cat <<'EOF'
-usage: scripts/check-tickets.sh [--base <ref>]
+usage: scripts/check-tickets.sh [--strict] [--base <ref>]
 
 Checks the ticket folders at <ref> and at HEAD, for the commits in <ref>..HEAD.
 <ref> defaults to origin/main. The check skips when <ref> does not resolve.
+Each finding prints as a warning and the check exits 0. With --strict it
+leaves out the warning label and exits 1.
 EOF
 }
 
@@ -20,6 +23,9 @@ while [ $# -gt 0 ]; do
             [ $# -ge 2 ] || { usage >&2; exit 2; }
             base=$2
             shift
+            ;;
+        --strict)
+            strict=true
             ;;
         -h|--help)
             usage
@@ -47,11 +53,15 @@ fi
 fork_sha="$(git merge-base "$base_sha" HEAD 2>/dev/null || true)"
 [ -n "$fork_sha" ] || fork_sha="$base_sha"
 
-status=0
+findings=0
 
 report() {
-    printf 'ticket move: %s: %s\n' "$1" "$2" >&2
-    status=1
+    findings=$((findings + 1))
+    if $strict; then
+        printf 'ticket move: %s: %s\n' "$1" "$2" >&2
+    else
+        printf 'ticket move: warning: %s: %s\n' "$1" "$2" >&2
+    fi
 }
 
 stems_at() {
@@ -118,8 +128,12 @@ while IFS= read -r stem; do
     esac
 done < <(moved_into "done")
 
-if [ "$status" -ne 0 ]; then
-    exit 1
+if [ "$findings" -ne 0 ]; then
+    if $strict; then
+        exit 1
+    fi
+    echo "ticket move: warned ($findings finding(s), $moved moved)"
+    exit 0
 fi
 
 echo "ticket move: ok ($moved moved)"
