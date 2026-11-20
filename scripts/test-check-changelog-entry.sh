@@ -106,6 +106,25 @@ printf 'export const value = 2;\n' > "$escaped/app/src/app.ts"
 commit_in "$escaped" "Refactor the value|Changelog: none"
 pass_case "trailer escape" "$escaped"
 
+# A long log must keep the escape. `grep -q` stops at the first match, and a
+# pipeline that also holds `git log` then reads as no match under pipefail,
+# because git log dies on SIGPIPE.
+long="$tmp/long"
+new_repo "$long"
+for i in $(seq 1 300); do
+    git -C "$long" commit -q --allow-empty -m "chore: pad $i
+
+Padding body for commit $i. It holds enough words to fill a pipe buffer
+once the log for three hundred commits is written in one go."
+done
+printf 'export const value = 2;\n' > "$long/app/src/app.ts"
+commit_in "$long" "Refactor the value|Changelog: none"
+pass_case "long log keeps the escape" "$long"
+case "$out" in
+    *'skipped by Changelog: none'*) assertions=$((assertions + 1)) ;;
+    *) fail "long log keeps the escape: wrong reason: $out" ;;
+esac
+
 test_only="$tmp/test-only"
 new_repo "$test_only"
 printf 'export const value = 3;\n' > "$test_only/app/src/app.test.ts"
