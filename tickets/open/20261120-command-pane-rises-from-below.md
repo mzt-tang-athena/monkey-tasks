@@ -32,7 +32,9 @@ Record the change as a dated amendment to the ADR.
 
 - [ ] The pane rises from the bottom edge, on the web and the emulator.
 - [ ] The search field sits above the keyboard when it opens.
-- [ ] A drag down closes it. Back closes it.
+- [ ] The rows read upward from the search field.
+- [ ] A drag down closes it.
+- [ ] Back closes it.
 - [ ] Reduced motion shows it with no slide.
 - [ ] The ADR has the dated amendment.
 

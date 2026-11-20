@@ -4,7 +4,7 @@ created: 2026-11-20
 priority: normal
 assignee:
 pr:
-depends: [20261120-planner-selected-day]
+depends: []
 ---
 
 ## Spec
@@ -25,8 +25,8 @@ position instead:
 Follow the shape #169 used for the tab underline. It reads the pager
 position on the UI thread and does not re-render per frame.
 
-This builds on the fix for the selected-day regression, so it waits
-for that ticket.
+This builds on the fix for the selected-day regression, which a lane
+is fixing now as `20261120-planner-selected-day`. Start after it merges.
 
 ## Acceptance
 
