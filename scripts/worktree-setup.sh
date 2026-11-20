@@ -41,6 +41,37 @@ link_modules() {
 link_modules node_modules
 link_modules app/node_modules
 
+# The web suite launches a real Chromium, and the pinned runner wants one
+# exact build. The shared browser cache can hold another, which fails the
+# gate at launch. Ask the installed runner where its builds belong, then
+# install only on a miss. A warm machine pays one second and no download.
+ensure_browser() {
+    local runner="$root/app/node_modules/.bin/playwright"
+    local wanted path missing=""
+
+    if [ ! -x "$runner" ]; then
+        echo "worktree-setup: app/node_modules has no playwright; run npm ci here"
+        return 1
+    fi
+
+    wanted="$("$runner" install chromium --dry-run | sed -n 's/^ *Install location: *//p')"
+    while IFS= read -r path; do
+        [ -n "$path" ] || continue
+        [ -d "$path" ] || missing="$missing ${path##*/}"
+    done <<< "$wanted"
+
+    if [ -n "$wanted" ] && [ -z "$missing" ]; then
+        echo "worktree-setup: playwright browsers present"
+        return 0
+    fi
+
+    echo "worktree-setup: playwright missing${missing:- its pinned builds}; installing"
+    "$runner" install chromium
+    echo "worktree-setup: playwright browsers ready"
+}
+
+ensure_browser
+
 # The contracts repository is private, so use https for this fetch.
 git -c url."https://github.com/".insteadOf="git@github.com:" \
     submodule update --init

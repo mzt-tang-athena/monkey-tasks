@@ -6,7 +6,11 @@ decision record. The tickets in `tickets/` are the work queue.
 ## Commands
 
 - Set up a linked worktree with `scripts/worktree-setup.sh`. It links
-  `node_modules`, inits `contracts`, builds the schemas and syncs Vale.
+  `node_modules`, inits `contracts`, builds the schemas, syncs Vale and
+  ensures the Playwright browser the pinned runner wants.
+- The web suite needs that browser too. Setup gets it for a worktree.
+  In the main checkout, run `cd app && npx playwright install chromium`
+  once, and again when `@playwright/test` moves.
 - Run `scripts/gate.sh` before a PR. It runs the repo's checks and
   leaves a receipt for HEAD. The steps live in the `lint` and `ci`
   Makefile targets: `ci` adds tsc, eslint, vitest and the web suite.
