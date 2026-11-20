@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { CaptureTarget, TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
+import { usePageFollow } from "@/components/motion/page-follow";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { ErrorState, LoadingState } from "@/components/ui/list-states";
 import { isoOf } from "@/utils/dates";
@@ -84,6 +85,10 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   const [taskForm, changeForm] = useSetting("taskForm");
   const [weekView] = useSetting("weekView");
   const [weekStart] = useSetting("weekStart");
+
+  // The period strip's mark and the week and month pagers share one
+  // live page position, so the mark tracks a swipe on the UI thread.
+  const follow = usePageFollow();
 
   const openTask = React.useCallback(
     (task: TaskItem) => {
@@ -175,6 +180,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
                 onSelect={setDay}
                 onMode={setMode}
                 inset
+                follow={follow}
               />
               {status === "loading" ? (
                 <View style={layout.gutter}>
@@ -202,6 +208,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
                   today={today}
                   onSelect={setDay}
                   onOpenDay={openDay}
+                  follow={follow}
                 />
               ) : null}
               {status === "ready" && mode === "month" ? (
@@ -212,6 +219,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
                   today={today}
                   onSelectMonth={setDay}
                   onOpenDay={openDay}
+                  follow={follow}
                 />
               ) : null}
             </View>

@@ -7,7 +7,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { tabUnderline, type TabBox } from "@/lib/motion/tab-math";
+import { markBetween, type MarkPlace } from "@/lib/motion/mark-math";
 import { motion } from "@/lib/motion/tokens";
 import type { Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -39,7 +39,7 @@ export function TabUnderline({
   /** The selected tab's index. Where the bar stands at mount. */
   selected: number;
   /** Each tab's place in the strip's content, or null before layout. */
-  boxes: readonly (TabBox | null)[];
+  boxes: readonly (MarkPlace | null)[];
   /** The bar's gap from each tab's edge, in px. */
   inset: number;
   testID?: string;
@@ -71,7 +71,7 @@ export function TabUnderline({
   }, [follow, selected, shown]);
 
   const bar = useAnimatedStyle(() => {
-    const box = tabUnderline(boxes, shown.value, inset);
+    const box = markBetween(boxes, shown.value, inset);
     return {
       left: box.left,
       width: box.width,

@@ -542,3 +542,67 @@ not Main. The live page's contents, the repair notice and the empty
 state, read in the dump. Frame grids show no blank frame at a landing
 on the month, day and list pagers (ticket 20261118,
 `android-20261118-202843/`).
+
+## Amendment, 2026-11-20: the period strip's mark rides the swipe
+
+The planner's period strip filled the cell of the selected day, week or
+month. The fill moved only when the pager committed, so the strip
+jumped at the end of a swipe. The list tabs lost that jump in the
+amendment above.
+
+A strip now measures its cells and paints one `PeriodMark` over them.
+The mark reads the pager's live page in a worklet. It blends between
+two cells, so half a page puts it halfway. A tap one cell away rides
+the pager's own slide. A longer jump cuts the page, so the mark
+crosses on its own clock. Reduced motion needs no path of its own.
+The pager does not follow the finger, so the mark holds and jumps with
+the window.
+
+The link gained the page the pager stands on. The mark's cell is
+`cell + progress - page`. That sum stays true while a render travels.
+A first draft read the rendered cell from a prop and the page from a
+shared value. One frame drew the old cell against the new page, and
+the mark stepped back a cell at each landing.
+
+The mark is opaque. It carries a copy of the row's labels in the accent
+ink, clipped to itself. The label under the mark reads lit wherever the
+mark lands. A label it leaves keeps its own colour. A mark drawn under
+the cells could not do that. The current period's tint is a cell
+background, so it would paint over the mark's edge.
+
+A strip's window holds its cells while the period on screen sits inside
+today's own window. There the mark rides the swipe. Past either end the
+window follows the shown period. The lazy-follow rule has done that
+since 1.0, so the dates slide under a mark that stays put. The operator
+chose that split on 2026-11-20. A window that also shifted inside
+today's block would move the cells under the mark at a landing.
+
+Costs:
+
+- The mark paints nothing on the strip's first frame, until layout
+  arrives. The tab rule carries the same cost.
+- The cells lost their own fill, and each one is 52 tall now. A label
+  no longer rises 4 px when the selection reaches it.
+- The mark paints over the pressed tint of the selected cell.
+- Inside today's window the rails' dates hold, so the mark moves.
+  Dates that slid under a standing mark would need the window to
+  advance with every page. That drops the current period's tint out of
+  the strip after one swipe.
+
+Alternative: light each cell's label with `interpolateColor` on its
+distance from the mark. That runs one worklet per label. It also puts
+the labels under the mark, so the tint needs a layer of its own.
+
+Proof: `planner-period.spec.ts` holds half a swipe in Day, Week and
+Month. It reads the mark between two cells, and a cancelled swipe back
+at rest. It covers:
+
+- A swipe over a month boundary.
+- Weeks that start on Sunday.
+- A month five months out.
+- A landing with no step back.
+- A day far from today, where the mark holds its cell.
+
+
+Emulator frames of a half swipe mid-gesture are in
+`app/build/verify/evidence/android-<stamp>/`.

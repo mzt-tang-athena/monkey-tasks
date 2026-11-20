@@ -1,6 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text } from "react-native";
 import type { TaskItem } from "@/types/task";
+import type { PageFollow } from "@/components/motion/page-follow";
 import { Pressable } from "@/components/ui/pressable";
 import { SectionHeader } from "@/components/ui/section-header";
 import { WEEKDAYS_FULL } from "@/features/planner/lib/labels";
@@ -26,6 +27,7 @@ export function MonthPane({
   today,
   onSelectMonth,
   onOpenDay,
+  follow,
 }: {
   /** The month state, held by the screen. */
   month: PlannerMonth;
@@ -35,6 +37,8 @@ export function MonthPane({
   /** A strip tap or a page landing picks the month. */
   onSelectMonth: (month: Date) => void;
   onOpenDay: (day: Date) => void;
+  /** The screen's pager link: the period mark and this pager share it. */
+  follow?: PageFollow;
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const { source } = usePlannerList();
@@ -81,6 +85,7 @@ export function MonthPane({
         picked={picked}
         onPick={pick}
         onSelectMonth={onSelectMonth}
+        follow={follow}
       >
         {/* The pane under the card: the source's month list until a day
             is picked, then that day's tasks. */}
