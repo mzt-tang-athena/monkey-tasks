@@ -41,12 +41,22 @@ async function openPane(page: Page): Promise<void> {
   await settled(page);
 }
 
-/** Waits for the pane's spring to land, so its grab area is on screen
-    and a raw mouse drag can start on it. */
+/** The travel the rise still has to make, in px, from its transform. */
+async function riseTravel(page: Page): Promise<number> {
+  const transform = await page
+    .getByTestId("command-rise")
+    .evaluate((element) => getComputedStyle(element).transform);
+  const matrix = /matrix\(([^)]*)\)/.exec(transform);
+  if (matrix == null) {
+    return 0;
+  }
+  return Number(matrix[1].split(",")[5]);
+}
+
+/** Waits for the pane's spring to land, so a raw mouse drag starts on
+    the grab area rather than on a panel still climbing past it. */
 async function settled(page: Page): Promise<void> {
-  await expect
-    .poll(async () => (await page.getByTestId("command-grab").boundingBox())?.y ?? -1)
-    .toBeGreaterThanOrEqual(0);
+  await expect.poll(() => riseTravel(page)).toBeLessThanOrEqual(0.5);
 }
 
 /** A mouse drag in a straight line from `from` by `dy`. */
