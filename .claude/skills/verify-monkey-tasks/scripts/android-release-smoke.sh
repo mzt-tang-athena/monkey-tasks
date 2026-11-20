@@ -33,10 +33,6 @@ step "launch"
 FRESH=1 $S/android-launch.sh "$APK" 2>&1 | tail -2
 RUN=$($D run)
 echo "run=$RUN"
-if $D wait permission_allow_button 20 >/dev/null 2>&1; then
-  $D tap permission_allow_button >/dev/null && pass "answered the notification prompt"
-  sleep 2
-fi
 $D wait "~task-row:" 60 >/dev/null && pass "task rows show" || fail "no task rows"
 $D shot s01-lists >/dev/null
 $D dump s01-lists >/dev/null
