@@ -3,7 +3,7 @@ title: Keep the no-changelog escape on a long branch
 created: 2026-11-20
 priority: high
 assignee: omp
-pr:
+pr: 196
 depends: []
 ---
 
@@ -27,4 +27,10 @@ it needs its own fix and test.
 
 ## Outcome
 
-(filled in before moving to done/)
+The checker reads the log before it matches, so a long branch keeps its
+`Changelog: none` escape. The 300 commit case fails on the base commit and
+passes here.
+
+`check-tickets.sh` and `check-changelog-entry.sh` in project-template #22
+take the same fix to the shared scripts. This repo gets them at its next
+`make sync-template`.
