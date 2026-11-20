@@ -3,7 +3,7 @@ title: Adopt the shared template files and the Vale package
 created: 2026-11-20
 priority: normal
 assignee: omp
-pr:
+pr: 199
 depends: []
 ---
 
@@ -23,10 +23,21 @@ it owns, and call the shared Vale script instead of the clone.
 
 ## Acceptance
 
-- [ ] `make sync-template` reports 0 differ and 0 missing
-- [ ] `make lint` runs the template checks plus this repo's own
-- [ ] `ensure-styles` and `WRITE_GOOD_SHA` leave the `Makefile`
-- [ ] CI fetches write-good with `scripts/sync-vale-packages.sh`
-- [ ] `make ci` passes
+- [x] `make sync-template` reports 0 differ and 0 missing
+- [x] `make lint` runs the template checks plus this repo's own
+- [x] `ensure-styles` and `WRITE_GOOD_SHA` leave the `Makefile`
+- [x] CI fetches write-good with `scripts/sync-vale-packages.sh`
+- [x] `make ci` passes
 
 ## Outcome
+
+Took the 13 shared files at project-template `05ff1ec`, added
+`include template.mk`, and kept this repo's own targets, worktree setup
+and test scripts. The `Makefile` lost `check-records`,
+`test-check-records`, `ensure-styles` and `WRITE_GOOD_SHA`.
+`scripts/worktree-setup.sh` calls `scripts/sync-vale-packages.sh` where
+it called `make ensure-styles`.
+
+Next: the other repos follow, and project-template still owns the
+shared-file list.
+
