@@ -2,7 +2,7 @@
 title: The command pane rises from below
 created: 2026-11-20
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
