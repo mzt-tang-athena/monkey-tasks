@@ -8,6 +8,12 @@ fails a bullet that wraps or runs past 64 characters.
 
 ## 1.3.0 - unreleased
 
+### Command pane
+
+- It rises from the bottom edge, as the thumb is.
+- Swipe up on the bar's gap to open it.
+- Drag the title down to close it.
+
 ### Planner
 
 - The planner's dates follow a swipe, as the tabs do.

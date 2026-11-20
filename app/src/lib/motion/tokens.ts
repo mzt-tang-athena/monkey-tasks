@@ -27,10 +27,6 @@ export const motion = {
   pull: {
     activate: 12,
     commit: 56,
-    /** The bar sits at the screen's edge: only ~24pt is left below it. */
-    bar: 18,
-    /** The pane's top block sits at the edge, so a close pull is shorter. */
-    close: 24,
     failX: 24,
   },
   swipe: {
