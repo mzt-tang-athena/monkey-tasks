@@ -37,19 +37,10 @@ jobs:
           tar -xzf vale.tgz vale
           install -m 0755 vale /usr/local/bin/vale
           vale --version
-      - name: Fetch write-good styles
-        env:
-          # Last good commit before upstream regenerated its rules on 2026-11-19.
-          WRITE_GOOD_SHA: c9ceca7f574248a201d5524b001099c5626c7519
+      - name: Sync Vale styles
         run: |
-          git init -q .vale/styles/write-good
-          git -C .vale/styles/write-good fetch -q --depth=1 https://github.com/errata-ai/write-good "$WRITE_GOOD_SHA"
-          git -C .vale/styles/write-good checkout -q FETCH_HEAD
-          cd .vale/styles/write-good
-          if [ -d write-good ]; then mv write-good/* .; rmdir write-good; fi
-          find . -maxdepth 1 -name '*.yml' | while read f; do grep -q extends "$f" || rm "$f"; done
-      - name: Sync shared Vale rules
-        run: npx vale-rules sync
+          scripts/sync-vale-packages.sh
+          npx vale-rules sync
       - name: Docs prose lint
         run: |
           # Vale exits zero on warnings, so the step fails on any output.
