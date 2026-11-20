@@ -25,6 +25,7 @@ on Android` section also runs on the emulator.
 - Capture a screenshot of the action and of the result, with the target scrolled into view.
 - Prove a change to a task by its note text and by the row after `returnToTab`.
 - Run both projects, `motion` and `reduced-motion`, for anything that moves.
+- Marking a journey motion-free in `app/e2e/motion.ts` runs it once.
 - Report a check the web cannot make (UI-thread motion, native gestures, keyboard, SAF, notifications) as not verified. Give the reason. Never pass it off as verified through the web.
 
 ## Feature entry contract

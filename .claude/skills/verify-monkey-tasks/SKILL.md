@@ -77,7 +77,10 @@ file or a whole directory:
 ```
 
 Each journey runs twice, as `motion` and `reduced-motion`, at 412 by
-915. Extra arguments go to `playwright test`. For a quick look without a
+915. A journey that checks nothing motion can change runs once: name its
+file in `app/e2e/motion.ts` with `runsIn: "once"` and the reason. That
+file also marks every spec, so a journey can look up a sibling there.
+Extra arguments go to `playwright test`. For a quick look without a
 journey, `cd app && npx playwright codegen http://localhost:$VERIFY_PORT` also
 works, but it leaves no evidence.
 
