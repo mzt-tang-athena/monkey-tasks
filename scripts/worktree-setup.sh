@@ -56,16 +56,10 @@ fi
 npx vale-rules sync
 echo "worktree-setup: shared Vale rules synced"
 
-# write-good is a clone, not a package. Copy main's pinned copy so a
-# fresh worktree never pulls upstream's latest rules.
-if [ ! -d .vale/styles/write-good ]; then
-    if [ -d "$main_path/.vale/styles/write-good" ]; then
-        cp -a "$main_path/.vale/styles/write-good" .vale/styles/
-        echo "worktree-setup: copied write-good styles from $main_path"
-    else
-        echo "worktree-setup: main has no write-good styles; run make ensure-styles"
-    fi
-fi
+# write-good is a clone, not a package. The Makefile fetches the pinned
+# commit, so a fresh worktree never takes upstream's latest rules.
+make -s ensure-styles
+echo "worktree-setup: write-good styles ready"
 
 git config --local core.hooksPath .githooks
 echo "worktree-setup: core.hooksPath set to .githooks"
