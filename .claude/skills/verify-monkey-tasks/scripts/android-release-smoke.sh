@@ -16,6 +16,8 @@ VAULT=/sdcard/Documents/obsidian-vault
 PKG=dev.monkey.monkeytasks
 cleanup() {
   echo "== cleanup"
+  adb -s $SERIAL shell settings put secure show_ime_with_hard_keyboard 0 >/dev/null 2>&1
+  adb -s $SERIAL shell cmd overlay enable com.android.internal.systemui.navbar.gestural >/dev/null 2>&1
   $S/android-cleanup.sh 2>&1 | tail -1
   adb kill-server >/dev/null 2>&1
 }
@@ -133,8 +135,63 @@ $D tap back >/dev/null && sleep 1
 $D shot s09-planner-midnight >/dev/null
 alive "theme switch"
 
+step "the bar's gap opens the command pane"
+$D tap Lists >/dev/null && sleep 1
+$D wait "~task-row:" 60 >/dev/null
+$D swipe "bar-gap" 0 350 250 >/dev/null
+$D wait command-search 20 >/dev/null && pass "a swipe on the bar's gap opens the pane" || fail "the gap swipe did not open the pane"
+$D shot s10-pane >/dev/null
+$D dump s10-pane >/dev/null
+commands=$(grep -c 'id="command:' "$RUN/s10-pane.txt")
+echo "command rows on screen: $commands"
+[ "$commands" -gt 0 ] && pass "the pane lists commands" || fail "the pane lists no commands"
+$D tap "close commands" >/dev/null 2>&1 || $D key BACK >/dev/null 2>&1
+$D gone command-search 10 >/dev/null && pass "the pane closes" || fail "the pane stayed open"
+alive "command pane"
+
+step "the task editor clears three-button navigation"
+nav_mode() { adb -s $SERIAL shell settings get secure navigation_mode 2>/dev/null | tr -d '\r'; }
+set_nav() {
+  adb -s $SERIAL shell cmd overlay enable "com.android.internal.systemui.navbar.$1" >/dev/null 2>&1
+  adb -s $SERIAL shell cmd overlay disable "com.android.internal.systemui.navbar.$2" >/dev/null 2>&1
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    [ "$(nav_mode)" = "$3" ] && return 0
+    sleep 1
+  done
+  return 1
+}
+set_nav threebutton gestural 0 && pass "three-button navigation on" || fail "three-button navigation did not take"
+$D restart >/dev/null 2>&1
+$D wait "~task-row:" 60 >/dev/null
+$D tap "~task-row:" >/dev/null && pass "a row picked from the screen opens the editor" || fail "no row on screen to open"
+$D wait sheet-handle 20 >/dev/null && pass "the editor shows" || fail "the editor did not show"
+sleep 1
+$D shot s11-editor-three-button >/dev/null
+$D dump s11-editor-three-button >/dev/null
+read -r _ _ _ _ _ sheet_bottom < <($D bounds sheet-dock 2>/dev/null)
+read -r _ _ _ nav_top _ _ < <($D bounds navigationBarBackground 2>/dev/null)
+echo "editor bottom ${sheet_bottom:-none}, nav bar top ${nav_top:-none}"
+if [ -n "$sheet_bottom" ] && [ -n "$nav_top" ] && [ "$sheet_bottom" -lt "$nav_top" ]; then
+  pass "the editor clears the nav bar by $((nav_top - sheet_bottom))px"
+else
+  fail "the editor sits under the nav bar, or a bound is missing"
+fi
+alive "three-button editor"
+$D key BACK >/dev/null
+sleep 1
+set_nav gestural threebutton 2 && pass "gesture navigation back on" || fail "gesture navigation did not come back"
+
 step "log"
-$D log s10-log >/dev/null
-n=$(grep -E "FATAL EXCEPTION" -A1 "$RUN/s10-log.log" 2>/dev/null | grep -c "$PKG")
+$D log s12-log >/dev/null
+n=$(grep -E "FATAL EXCEPTION" -A1 "$RUN/s12-log.log" 2>/dev/null | grep -c "$PKG")
 [ "$n" = 0 ] && pass "no app crash in the log" || fail "$n app crashes in the log"
+
+step "the editor keyboard journey"
+J=.claude/skills/verify-monkey-tasks/journeys/android-editor-keyboard.sh
+keyboard_out=$($J 1 2>&1) && keyboard_rc=0 || keyboard_rc=$?
+printf '%s\n' "$keyboard_out" | tail -8
+[ "$keyboard_rc" = 0 ] && pass "the keyboard journey passed" || fail "the keyboard journey failed"
+keyboard_run=$(printf '%s\n' "$keyboard_out" | sed -n 's/^evidence: //p' | tail -1)
+
 step "done $RUN"
+[ -n "${keyboard_run:-}" ] && echo "keyboard run=$keyboard_run"

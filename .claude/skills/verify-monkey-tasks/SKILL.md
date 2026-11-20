@@ -160,6 +160,38 @@ means you hold the lock, so a job runs in place and nothing nests.
 
 Logs land in `$MONKEY_LOG_DIR`, default `/tmp/monkey-tasks`.
 
+### The release pass
+
+`android-release-smoke.sh <apk>` is the whole release pass on the
+emulator. One launch carries every step, so a release needs no wrapper:
+
+- Lists: the tabs, a tick, Completed and delete all done.
+- The task sheet's drag, the journal, food and Inbox Notes.
+- The planner split and the theme switch.
+- A swipe down on the bar's gap opens the command pane.
+- The task editor clears three-button navigation.
+- The editor keyboard journey, one try per navigation mode.
+- The app log, for a crash.
+
+The smoke runs `journeys/android-editor-keyboard.sh 1` for the
+keyboard. That journey is the proof; run it with more tries when the
+keyboard itself is the change.
+
+Every step looks its row up on the current screen before it taps. The
+gap, editor and keyboard steps take whatever row the screen shows. A
+row below the fold cannot fail the pass and cost a second launch. The
+three-button step reads the editor's bottom and the navigation bar's top
+out of the same dump.
+
+```sh
+S=.claude/skills/verify-monkey-tasks/scripts
+$S/android-release-smoke.sh ~/code/monkey-tasks/archive/release-1.2.0/monkey-tasks-1.2.0.apk
+```
+
+It exports `ANDROID_VERIFY_PORT=5580` itself and prints one evidence
+folder. The keyboard journey writes a second one and the smoke prints
+both.
+
 ### Lanes share the queue
 
 A lane is an agent working one PR in its own worktree. Set up the
