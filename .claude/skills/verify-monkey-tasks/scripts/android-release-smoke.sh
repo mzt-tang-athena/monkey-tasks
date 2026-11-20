@@ -6,9 +6,9 @@
 . "$(dirname "$0")/heavy.sh" android-release-smoke "$@" || exit 1
 set -u
 cd "$(dirname "$0")/../../../.." || exit 1
-export ANDROID_VERIFY_PORT=5580
+export ANDROID_VERIFY_PORT=${ANDROID_VERIFY_PORT:-5580}
 export PATH=$HOME/Android/Sdk/platform-tools:$PATH
-SERIAL=emulator-5580
+SERIAL=emulator-$ANDROID_VERIFY_PORT
 S=.claude/skills/verify-monkey-tasks/scripts
 D=$S/android-drive.sh
 APK=${1:?apk}
@@ -31,7 +31,12 @@ alive() {
 note() { adb -s $SERIAL shell "cat '$VAULT/$1'" 2>/dev/null; }
 
 step "launch"
-FRESH=1 $S/android-launch.sh "$APK" 2>&1 | tail -2
+launch_out=$(FRESH=1 $S/android-launch.sh "$APK" 2>&1) && launch_rc=0 || launch_rc=$?
+printf '%s\n' "$launch_out" | tail -2
+if [ "$launch_rc" != 0 ]; then
+  fail "launch did not reach a task row"
+  exit 1
+fi
 RUN=$($D run)
 echo "run=$RUN"
 $D wait "~task-row:" 60 >/dev/null && pass "task rows show" || fail "no task rows"
@@ -194,4 +199,4 @@ printf '%s\n' "$keyboard_out" | tail -8
 keyboard_run=$(printf '%s\n' "$keyboard_out" | sed -n 's/^evidence: //p' | tail -1)
 
 step "done $RUN"
-[ -n "${keyboard_run:-}" ] && echo "keyboard run=$keyboard_run"
+echo "keyboard run=${keyboard_run:-none}"

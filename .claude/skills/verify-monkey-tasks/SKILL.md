@@ -188,9 +188,10 @@ S=.claude/skills/verify-monkey-tasks/scripts
 $S/android-release-smoke.sh ~/code/monkey-tasks/archive/release-1.2.0/monkey-tasks-1.2.0.apk
 ```
 
-It exports `ANDROID_VERIFY_PORT=5580` itself and prints one evidence
-folder. The keyboard journey writes a second one and the smoke prints
-both.
+It uses port 5580 unless `ANDROID_VERIFY_PORT` names another instance.
+It stops when the launch fails. An emulator another lane started on the
+port then cannot pass for this run. It prints one evidence folder, and
+the keyboard journey writes a second one.
 
 ### Lanes share the queue
 
