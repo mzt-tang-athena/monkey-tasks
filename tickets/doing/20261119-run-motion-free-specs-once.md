@@ -2,7 +2,7 @@
 title: Run motion-free specs once
 created: 2026-11-19
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
