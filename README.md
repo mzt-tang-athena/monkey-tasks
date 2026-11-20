@@ -99,6 +99,10 @@ package. `make lint` runs `npx vale-rules sync` before Vale, which copies
 the current rules into `.vale/styles/`. The pack holds the rule files.
 The repo-specific suppressions stay in `.vale.ini` (ADR 0044).
 
+`write-good` comes from the release zip in `.vale.ini`'s `Packages` line.
+`scripts/sync-vale-packages.sh` fetches it once per version, and
+`make lint` runs that script first.
+
 ## Install it on a phone
 
 The `android` workflow builds a sideloadable APK on a GitHub runner. A

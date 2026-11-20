@@ -25,7 +25,8 @@ __pycache__/
 .venv/
 *.pyc
 
-# Vale (write-good is cloned, and the shared pack is synced, not committed)
+# Vale (the shared pack is synced and write-good is fetched, not committed)
+.vale/packages.stamp
 .vale/styles/write-good/
 .vale/styles/MyRules/
 .vale/styles/Readability/

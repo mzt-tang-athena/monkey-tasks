@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Local gate: run this repo's CI steps and leave a receipt keyed by HEAD.
+# The status post is a report. A failed post warns, and the checks set the
+# exit code.
 set -euo pipefail
 
 usage() {
@@ -31,6 +33,7 @@ now_ms() {
 
 seconds_from_ms() {
     local ms=$1
+    if [ "$ms" -lt 0 ]; then ms=0; fi
     printf '%d.%03d' "$((ms / 1000))" "$((ms % 1000))"
 }
 
@@ -228,7 +231,6 @@ if $post_status; then
     elif [ "$dirty" = true ]; then
         printf 'local-gate: this run started on a dirty tree; skipped the status\n' >&2
     else
-        [ -n "$slug" ] || refuse "cannot read a github owner/repo from origin"
         final_steps="$(jq -r '.steps | length' "$receipt")"
         state=success
         description="$final_mode: $final_steps step(s) passed"
@@ -236,14 +238,15 @@ if $post_status; then
             state=failure
             description="$final_mode: $final_steps step(s), failed"
         fi
-        if gh api --method POST "repos/$slug/statuses/$head" \
+        if [ -z "$slug" ]; then
+            printf 'local-gate: warning: no github owner/repo in origin; skipped the status\n' >&2
+        elif gh api --method POST "repos/$slug/statuses/$head" \
             -f state="$state" \
             -f context=local-gate \
             -f description="$description" >/dev/null; then
             printf 'local-gate: posted %s on %s\n' "$state" "${head:0:12}"
         else
-            printf 'local-gate: status post failed\n' >&2
-            exit 1
+            printf 'local-gate: warning: could not post the status; the checks decide the exit code\n' >&2
         fi
     fi
 fi
