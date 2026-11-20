@@ -2,7 +2,7 @@
 title: The planner's dates follow the swipe
 created: 2026-11-20
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
