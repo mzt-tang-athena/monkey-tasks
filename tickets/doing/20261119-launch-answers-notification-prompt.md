@@ -2,7 +2,7 @@
 title: Launch answers the notification prompt
 created: 2026-11-19
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
