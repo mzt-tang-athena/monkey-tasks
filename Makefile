@@ -4,7 +4,7 @@ WRITE_GOOD_SHA = c9ceca7f574248a201d5524b001099c5626c7519
 
 .PHONY: lint ci typecheck eslint vitest web-suite ensure-styles hooks \
 	check-docs check-records check-changelog check-changelog-entry \
-	test-check-records
+	test-check-records test-pre-commit
 
 # What scripts/gate.sh runs for a prose-only branch. Vale reads only the
 # markdown the branch changed, so the run stays quick.
@@ -12,7 +12,7 @@ lint: ensure-styles check-docs check-records check-changelog check-changelog-ent
 
 # What scripts/gate.sh runs for code: the ci job's steps, then the web
 # suite. The suite takes the heavy lock itself.
-ci: typecheck eslint vitest lint web-suite
+ci: typecheck eslint vitest lint test-pre-commit web-suite
 
 typecheck:
 	cd app && npx tsc --noEmit
@@ -47,3 +47,6 @@ check-changelog-entry:
 
 test-check-records:
 	@bash scripts/test-check-records.sh
+
+test-pre-commit:
+	@bash scripts/test-pre-commit.sh
