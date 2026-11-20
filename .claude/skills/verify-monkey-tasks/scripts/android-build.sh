@@ -1,13 +1,12 @@
 #!/bin/bash
-# One heavy job at a time on this 15 GB machine: builds, full e2e runs and
-# emulator passes all queue on one lock. -o keeps children from holding it.
-if [ -z "${MONKEY_HEAVY_LOCK:-}" ]; then exec env MONKEY_HEAVY_LOCK=1 flock -o /tmp/monkey-tasks-heavy.lock "$0" "$@"; fi
-# Build the release APK for the checkout in $1, and leave it at
-# $1/app/android/app/build/outputs/apk/release/app-release.apk.
+# Build the release APK for the checkout in $1, under one heavy slot. It
+# lands at $1/app/android/app/build/outputs/apk/release/app-release.apk.
 # The build runs in one shared builder folder, so Gradle and CMake reuse
 # the native outputs of the last build. CLEAN=1 builds in place from
 # scratch instead, for a release, for every CPU type. A proof build
 # targets only the emulator's x86_64; set ARCHS to change that.
+# Usage: android-build.sh <checkout> [--background]
+. "$(dirname "$0")/heavy.sh" android-build "$@" || exit 1
 set -o pipefail
 logs=${MONKEY_LOG_DIR:-/tmp/monkey-tasks}
 mkdir -p "$logs"
