@@ -604,5 +604,11 @@ at rest. It covers:
 - A day far from today, where the mark holds its cell.
 
 
-Emulator frames of a half swipe mid-gesture are in
-`app/build/verify/evidence/android-<stamp>/`.
+Android proof: the release APK of `7b20414` on the Pixel 7 emulator,
+with today on Fri 20 Nov.
+- `half-1.png` and `half-2.png` are two frames of one slow day swipe.
+- The day mark sits between Sat 21 and Sun 22 in `half-2.png`.
+- `landed.png` shows Sat 21 marked, and Fri 20 still tinted.
+- `weekslow-3.png` is mid-way through a week swipe.
+- The week mark sits between W48 and W49, and W47 keeps its tint.
+- Evidence: `app/build/verify/evidence/android-20261120-060338/`.

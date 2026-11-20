@@ -34,7 +34,7 @@ async function strip(page: Page, name: "days" | "weeks" | "months") {
     .poll(async () => Math.round((await markLocator.boundingBox())?.width ?? 0))
     .toBe(44);
   const mark = (await markLocator.boundingBox())!;
-  return { rail, cells, count, read, mark };
+  return { cells, count, read, mark };
 }
 
 /**
