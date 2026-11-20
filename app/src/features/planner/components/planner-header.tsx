@@ -1,4 +1,5 @@
 import { StyleSheet, View } from "react-native";
+import type { PageFollow } from "@/components/motion/page-follow";
 import { SegmentedControl, type Segment } from "@/components/ui/segmented-control";
 import type { Mode } from "@/features/planner/model";
 import { pageGutter, spacing } from "@/theme/tokens";
@@ -23,6 +24,7 @@ export function PlannerHeader({
   onSelect,
   onMode,
   inset = false,
+  follow,
 }: {
   mode: Mode;
   selected: Date;
@@ -30,6 +32,8 @@ export function PlannerHeader({
   onSelect: (date: Date) => void;
   onMode: (mode: Mode) => void;
   inset?: boolean;
+  /** The pager whose swipe the period mark rides. */
+  follow?: PageFollow;
 }) {
   return (
     <View testID="planner-header" style={styles.header}>
@@ -40,6 +44,7 @@ export function PlannerHeader({
         selected={selected}
         today={today}
         onSelect={onSelect}
+        follow={follow}
       />
 
       <View style={inset && styles.gutter}>

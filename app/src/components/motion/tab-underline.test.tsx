@@ -2,11 +2,11 @@ import * as React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Text, View } from "react-native";
-import type { TabBox } from "@/lib/motion/tab-math";
+import type { MarkPlace } from "@/lib/motion/mark-math";
 import { usePageFollow } from "./page-follow";
 import { TabUnderline } from "./tab-underline";
 
-const boxes: TabBox[] = [
+const boxes: MarkPlace[] = [
   { x: 0, width: 68 },
   { x: 76, width: 100 },
   { x: 184, width: 84 },

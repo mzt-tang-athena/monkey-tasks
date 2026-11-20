@@ -2,6 +2,7 @@ import * as React from "react";
 import { StyleSheet, View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { Pager } from "@/components/motion/pager";
+import type { PageFollow } from "@/components/motion/page-follow";
 import { SplitFit } from "@/components/motion/split";
 import { startOfMonth } from "@/features/planner/model";
 import { pageGutter } from "@/theme/tokens";
@@ -26,6 +27,7 @@ export function MonthView({
   picked,
   onPick,
   onSelectMonth,
+  follow,
   children,
 }: {
   viewMonth: Date;
@@ -36,6 +38,8 @@ export function MonthView({
   onPick: (day: Date) => void;
   /** A strip tap or a page landing picks the month. */
   onSelectMonth: (month: Date) => void;
+  /** The screen's pager link: the period mark and this pager share it. */
+  follow?: PageFollow;
   /** The picked-day list pane; both halves share one column. */
   children?: React.ReactNode;
 }) {
@@ -60,6 +64,7 @@ export function MonthView({
           <Pager
             testID="month-pager"
             index={index}
+            follow={follow}
             onPage={onPage}
             renderPreview={(page) => (
               <MonthGrid

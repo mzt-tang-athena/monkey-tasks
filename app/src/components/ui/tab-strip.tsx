@@ -14,13 +14,11 @@ import {
 } from "@/components/motion/scroll-view";
 import type { PageFollow } from "@/components/motion/page-follow";
 import { TabUnderline } from "@/components/motion/tab-underline";
+import type { MarkPlace } from "@/lib/motion/mark-math";
 import { EdgeFade, edgeFadeWidth, fadedEdges } from "./edge-fade";
 import { Pressable } from "./pressable";
 import { radius, spacing, touchTarget, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
-
-/** A tab's place in the strip's content, in px. */
-type Place = { x: number; width: number };
 
 /**
  * A row of tabs that scrolls sideways, with a rule under the selected
@@ -53,7 +51,7 @@ export function TabStrip({
   const reduced = useReducedMotion();
   // Where each tab sits in the content, from its layout. A tab keeps
   // its place for the session, so one measure is enough.
-  const [places, setPlaces] = React.useState<Record<string, Place>>({});
+  const [places, setPlaces] = React.useState<Record<string, MarkPlace>>({});
   const [frame, setFrame] = React.useState({ view: 0, content: 0, x: 0 });
   const fade = fadedEdges(frame);
 
