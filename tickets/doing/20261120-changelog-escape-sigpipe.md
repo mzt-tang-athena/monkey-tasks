@@ -2,7 +2,7 @@
 title: Keep the no-changelog escape on a long branch
 created: 2026-11-20
 priority: high
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
