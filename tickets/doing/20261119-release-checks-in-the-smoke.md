@@ -2,7 +2,7 @@
 title: Release checks live in the release smoke
 created: 2026-11-19
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: [20261119-launch-answers-notification-prompt]
 ---
