@@ -3,7 +3,7 @@ title: Run motion-free specs once
 created: 2026-11-19
 priority: normal
 assignee: omp
-pr:
+pr: 201
 depends: []
 ---
 
@@ -60,5 +60,3 @@ held the heavy lock. The PR explains that.
 
 A lane can make one of the 17 specs check motion. That lane moves the
 mark to `both` and pays for the second run.
-
-pr: #0
