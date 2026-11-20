@@ -3,6 +3,15 @@
 Read `README.md` first. The ADRs in `docs/adr/` are the
 decision record. The tickets in `tickets/` are the work queue.
 
+## Commands
+
+- Set up a linked worktree with `scripts/worktree-setup.sh`. It links
+  `node_modules`, inits `contracts`, builds the schemas and syncs Vale.
+- Run `scripts/gate.sh` before a PR. It runs the repo's checks and
+  leaves a receipt for HEAD. The steps live in the `lint` and `ci`
+  Makefile targets: `ci` adds tsc, eslint, vitest and the web suite.
+  Prose-only changes get `fast`.
+
 ## Rules for any change
 
 0. Workflow: do not push to main. Work on a branch, open a PR, wait for
