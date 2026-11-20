@@ -46,7 +46,10 @@ if ! base_sha="$(git rev-parse --verify "${base}^{commit}" 2>/dev/null)"; then
 fi
 merge_base="$(git merge-base "$base_sha" HEAD 2>/dev/null || printf '%s' "$base_sha")"
 
-if git log --format=%B "$merge_base..HEAD" | grep -Fxq 'Changelog: none'; then
+# Read the log first. Through a pipe, `grep -q` exits at the first match and
+# `git log` dies on SIGPIPE, which `pipefail` reports as a failed pipeline.
+log="$(git log --format=%B "$merge_base..HEAD")"
+if [ -n "$log" ] && grep -Fxq 'Changelog: none' <<< "$log"; then
     echo "changelog entry: ok (skipped by Changelog: none)"
     exit 0
 fi

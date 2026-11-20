@@ -90,6 +90,10 @@ It runs ESLint on the staged app code in `src`, `scripts` and `e2e`,
 and Vale on the staged docs. An ESLint warning fails the commit. The
 typecheck, the tests and the bundle stay in CI.
 
+A staged rename counts as a staged file. A ticket close moves the
+ticket and edits it in one commit, so the hook must read it.
+`make test-pre-commit` proves that it does.
+
 The prose rules come from the shared `@mzt-tang-athena/vale-rules`
 package. `make lint` runs `npx vale-rules sync` before Vale, which copies
 the current rules into `.vale/styles/`. The pack holds the rule files.

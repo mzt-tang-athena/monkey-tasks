@@ -12,7 +12,8 @@
 # Launch walks the system picker only when the app asks for a folder.
 # Env: ANDROID_VERIFY_PORT (5580), ANDROID_VERIFY_AVD
 # (monkey-tasks-verify), ANDROID_VERIFY_MEMORY (2048 MB), MOTION (on),
-# FRESH=1 to clear the app data and grant the folder again.
+# FRESH=1 to clear the app data, then grant the folder and the
+# notification permission again.
 set -euo pipefail
 # A wrapper such as `flock` hands its lock to this script as an open
 # fd, on no fixed number. The emulator and the adb server outlive this
@@ -103,6 +104,10 @@ adb shell pm path "$PKG" >/dev/null 2>&1 || { echo "$PKG is not installed. Pass 
 adb shell am force-stop "$PKG"
 if [[ "${FRESH:-0}" == 1 ]]; then
   adb shell pm clear "$PKG" >/dev/null
+  # The clear drops the notification grant that install -g made, so
+  # grant it back. Otherwise the app asks on its first vault read and
+  # the prompt covers the app through the whole row wait.
+  adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS
   lap "cleared the app data"
 fi
 today=$(adb shell date +%F | tr -d '\r')
