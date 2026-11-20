@@ -2,6 +2,7 @@ import * as React from "react";
 import { View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { Pager } from "@/components/motion/pager";
+import { usePageFollow } from "@/components/motion/page-follow";
 import { addDays, startOfDay } from "@/utils/dates";
 import { dayRows } from "@/features/planner/lib/day-rows";
 import { dayIndexBetween, type Mode } from "@/features/planner/model";
@@ -50,6 +51,9 @@ export function DaySpread({
   // reads it, and a landing writes the day back through the screen.
   const [origin] = React.useState(() => startOfDay(date));
   const index = dayIndexBetween(origin.getTime(), startOfDay(date).getTime());
+  // The date strip's mark and the pager share one live page position,
+  // so the mark tracks a swipe on the UI thread (ADR 0046).
+  const follow = usePageFollow();
 
   // One clock for the live page and its preview: the now line must not
   // move when the page lands. It steps once a minute.
@@ -109,6 +113,7 @@ export function DaySpread({
         today={today}
         onSelect={onSelectStrip}
         onMode={onMode}
+        follow={follow}
       />
       {/* The pager sits under the header: only the day body slides,
           so the date strip and the mode switch never move. */}
@@ -116,6 +121,7 @@ export function DaySpread({
         <Pager
             testID="day-pager"
             index={index}
+            follow={follow}
             onPage={onPage}
             renderPreview={(page) => (
               <DayPreview

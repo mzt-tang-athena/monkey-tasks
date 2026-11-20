@@ -70,15 +70,22 @@ export function Pager({
   // preview that reads a percentage instead takes its height from the
   // track, which holds only positioned children and so has none.
   const [host, setHost] = React.useState({ width: 0, height: 0 });
-  // A follow lends its own value, so tracking costs no extra write.
+  // A follow lends its own values, so tracking costs no extra write.
   const ownPos = useSharedValue(0);
   const pos = tracker?.progress ?? ownPos;
   const landed = useSharedValue(0);
   // The page a settle is heading to, until it lands or a touch takes it.
   const pending = useSharedValue(none);
   const anchor = useSharedValue(0);
-  const page = useSharedValue(index - origin);
+  const ownPage = useSharedValue(index - origin);
+  const page = tracker?.page ?? ownPage;
   const edges = useSharedValue<PageBounds>({});
+
+  // A screen that swaps one pager for another on the same link leaves
+  // its live position behind. A fresh mount stands on its first page.
+  React.useLayoutEffect(() => {
+    tracker?.progress.set(0);
+  }, [tracker]);
 
   React.useLayoutEffect(() => {
     page.set(index - origin);

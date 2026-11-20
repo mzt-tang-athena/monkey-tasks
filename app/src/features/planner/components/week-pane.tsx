@@ -3,6 +3,7 @@ import { View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import type { WeekLayout } from "@/lib/settings";
 import { Pager } from "@/components/motion/pager";
+import type { PageFollow } from "@/components/motion/page-follow";
 import { SplitFit } from "@/components/motion/split";
 import { addDays } from "@/utils/dates";
 import { useSetting } from "@/lib/settings-store";
@@ -27,6 +28,7 @@ export function WeekPane({
   today,
   onSelect,
   onOpenDay,
+  follow,
 }: {
   layout: WeekLayout;
   /** Every valid task: the pool draws from the source. */
@@ -37,6 +39,8 @@ export function WeekPane({
   today: Date;
   onSelect: (day: Date) => void;
   onOpenDay: (day: Date) => void;
+  /** The screen's pager link: the period mark and this pager share it. */
+  follow?: PageFollow;
 }) {
   const { source } = usePlannerList();
   const [weekStart] = useSetting("weekStart");
@@ -63,6 +67,7 @@ export function WeekPane({
         <Pager
           testID="week-pager"
           index={index}
+          follow={follow}
           onPage={onPage}
           renderPreview={(page) => (
             <View style={layout.gutter}>
