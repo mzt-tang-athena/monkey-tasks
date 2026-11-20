@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
 # Local gate: run this repo's CI steps and leave a receipt keyed by HEAD.
-# The receipt and the status follow the local-gate skill; read it before
-# you rely on a receipt.
 set -euo pipefail
 
 usage() {
     cat <<'EOF'
 usage: scripts/gate.sh [fast|full] [--sha <sha>] [--no-status]
 
-  fast        prose checks only: Vale on changed docs, the record and
-              changelog checks
-  full        tsc, eslint, vitest, the same prose checks, then the full
-              web suite under the heavy lock
+  fast        run make lint
+  full        run make ci, else make lint then make check
   --sha       require this commit to be HEAD with a clean tree
   --no-status skip the local-gate commit status
 
@@ -35,9 +31,11 @@ now_ms() {
 
 seconds_from_ms() {
     local ms=$1
-    # A backward clock step would make the remainder negative.
-    [ "$ms" -ge 0 ] || ms=0
     printf '%d.%03d' "$((ms / 1000))" "$((ms % 1000))"
+}
+
+has_target() {
+    make -n "$1" >/dev/null 2>&1
 }
 
 mode=""
@@ -110,39 +108,21 @@ if [ -z "$mode" ]; then
     if [ -z "$changed" ]; then
         mode=full
     else
-        code=false
-        while IFS= read -r path; do
-            [ -n "$path" ] || continue
-            case "$path" in
-                *.md|docs/*|tickets/*|.vale.ini|.vale/*) ;;
-                *) code=true ;;
-            esac
-        done <<< "$changed"
-        if $code; then mode=full; else mode=fast; fi
+        code="$(printf '%s\n' "$changed" | scripts/changed-paths.sh | sed -n 's/^code=//p')"
+        if [ "$code" = false ]; then mode=fast; else mode=full; fi
     fi
 fi
 
-prose_steps=(
-    "scripts/check-docs.sh"
-    "scripts/check-records.sh"
-    "scripts/check-changelog.sh"
-    "scripts/check-changelog-entry.sh"
-)
-
-suite_port="${GATE_E2E_PORT:-8094}"
-suite=".claude/skills/verify-monkey-tasks/scripts/web-suite.sh \"$root\" ${head:0:12} $suite_port"
-
 steps=()
 if [ "$mode" = fast ]; then
-    steps=("${prose_steps[@]}")
+    if has_target lint; then steps+=("make lint"); fi
 else
-    steps=(
-        "(cd app && npx tsc --noEmit)"
-        "(cd app && npx eslint src scripts e2e --max-warnings 0)"
-        "(cd app && npx vitest run)"
-        "${prose_steps[@]}"
-        "$suite"
-    )
+    if has_target ci; then
+        steps+=("make ci")
+    else
+        if has_target lint; then steps+=("make lint"); fi
+        if has_target check; then steps+=("make check"); fi
+    fi
 fi
 
 started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -158,7 +138,7 @@ if [ "$step_count" -eq 0 ]; then
     step_count=1
     printf 'local-gate: no %s steps found\n' "$mode" >&2
 else
-    for cmd in "${steps[@]}"; do
+    for cmd in ${steps[@]+"${steps[@]}"}; do
         step_start="$(now_ms)"
         rc=0
         bash -o pipefail -c "$cmd" || rc=$?

@@ -50,6 +50,8 @@ Shipped in #186.
   change picked fast with no mode.
 - `scripts/gate.sh full` passed on the final head. The receipt and
   the per-step times are in the PR.
+- `scripts/gate.sh` is the project-template file, byte for byte. The
+  repo's steps live in the `lint` and `ci` Makefile targets.
 - `scripts/test-check-changelog-entry.sh` covers six cases, both ways.
 - ADR `20261119-changelog-line-for-visible-changes` records the rule.
 

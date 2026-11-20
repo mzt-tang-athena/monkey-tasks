@@ -8,8 +8,9 @@ decision record. The tickets in `tickets/` are the work queue.
 - Set up a linked worktree with `scripts/worktree-setup.sh`. It links
   `node_modules`, inits `contracts`, builds the schemas and syncs Vale.
 - Run `scripts/gate.sh` before a PR. It runs the repo's checks and
-  leaves a receipt for HEAD. `full` adds tsc, eslint, vitest and the
-  web suite. Prose-only changes get `fast`.
+  leaves a receipt for HEAD. The steps live in the `lint` and `ci`
+  Makefile targets: `ci` adds tsc, eslint, vitest and the web suite.
+  Prose-only changes get `fast`.
 
 ## Rules for any change
 
