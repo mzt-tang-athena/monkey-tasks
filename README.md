@@ -161,8 +161,8 @@ scripts/release.sh 1.3.0 --no-publish  # rehearse the local steps
 scripts/release.sh 1.3.0               # the real release
 ```
 
-`--no-publish` tags only in this clone, stops before the push and the
-release, and deletes the tag on the way out. `RELEASE_ARCHIVE` moves the
+`--no-publish` makes the tag only in this clone. It stops before the
+push and the release, then deletes the tag. `RELEASE_ARCHIVE` moves the
 output folder, which defaults to
 `~/code/monkey-tasks/archive/release-<version>`.
 

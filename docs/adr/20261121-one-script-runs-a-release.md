@@ -11,9 +11,7 @@ scripts in `/tmp`. The order lived in a session and not in the repo.
 Three tools promise to run releases:
 
 - release-it bumps a version, tags and makes a release.
-- It fits npm packages.
 - semantic-release picks the version and publishes from CI.
-- It fits npm packages too.
 - EAS builds in the cloud and submits to the app stores.
 
 This app is a sideloaded APK. It has no store listing and no npm

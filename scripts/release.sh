@@ -218,7 +218,7 @@ trap cleanup_tag EXIT
 if $publish; then
     say "the tag is pushed with the release, after the smoke"
 else
-    say "rehearsal: the tag stays in this clone and is deleted on the way out"
+    say "rehearsal: the tag is made only in this clone and deleted on the way out"
 fi
 
 say "3/8 build: a clean release build for every CPU type"
