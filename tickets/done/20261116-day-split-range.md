@@ -37,7 +37,7 @@ changes.
       invalid.
 - [x] Unit tests cover the clamp.
 - [x] The web E2E drags the grip to both edges and asserts the travel.
-- [x] Android frame or screenshot evidence sits under
+- [ ] Android frame or screenshot evidence sits under
       `app/build/verify/evidence/day-split-range/`.
 
 ## Outcome
@@ -64,3 +64,8 @@ both edges. Evidence sits under
 amendment for the floor.
 
 PR: #146.
+
+Correction, 2026-11-21: the Android evidence was never produced. Four
+emulator attempts died, and the merge pruned the lane worktree that
+would hold it. The web proof stands. Ticket
+`20261121-day-split-range-on-android` owns the device proof.
