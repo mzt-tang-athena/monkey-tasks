@@ -23,8 +23,17 @@ cleanup() {
 }
 trap cleanup EXIT
 step() { echo "== $*"; }
+smoke_fails=0
 pass() { echo "PASS: $*"; }
-fail() { echo "FAIL: $*"; }
+fail() { echo "FAIL: $*"; smoke_fails=$((smoke_fails + 1)); }
+finish() {
+  if [ "$smoke_fails" -eq 0 ]; then
+    echo "smoke: pass"
+    exit 0
+  fi
+  echo "smoke: fail ($smoke_fails failed check(s))"
+  exit 1
+}
 alive() {
   if adb -s $SERIAL shell pidof $PKG >/dev/null 2>&1; then pass "app alive after $1"; else fail "app died after $1"; fi
 }
@@ -35,7 +44,7 @@ launch_out=$(FRESH=1 $S/android-launch.sh "$APK" 2>&1) && launch_rc=0 || launch_
 printf '%s\n' "$launch_out" | tail -2
 if [ "$launch_rc" != 0 ]; then
   fail "launch did not reach a task row"
-  exit 1
+  finish
 fi
 RUN=$($D run)
 echo "run=$RUN"
@@ -208,3 +217,4 @@ keyboard_run=$(printf '%s\n' "$keyboard_out" | sed -n 's/^evidence: //p' | tail 
 
 step "done $RUN"
 echo "keyboard run=${keyboard_run:-none}"
+finish
