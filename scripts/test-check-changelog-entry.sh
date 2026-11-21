@@ -19,6 +19,9 @@ fail() {
 new_repo() {
     local dir="$1"
     git init -q "$dir"
+    mkdir -p "$dir/scripts"
+    cp "$here/visible-paths.sh" "$dir/scripts/"
+    chmod +x "$dir/scripts/visible-paths.sh"
     (
         cd "$dir"
         git config user.name Test

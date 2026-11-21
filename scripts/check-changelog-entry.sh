@@ -63,16 +63,7 @@ fi
 
 # What a user can see: the screens, the assets and the app config.
 # Tests and fixtures stay out.
-visible="$(printf '%s\n' "$changed" | while IFS= read -r path; do
-    case "$path" in
-        app/src/*|app/assets/*|app/app.json) ;;
-        *) continue ;;
-    esac
-    case "$path" in
-        *.test.ts|*.test.tsx|app/src/testing/*|app/src/lib/vault/sample/*) continue ;;
-    esac
-    printf '%s\n' "$path"
-done)"
+visible="$(printf '%s\n' "$changed" | scripts/visible-paths.sh)"
 
 if [ -z "$visible" ]; then
     echo "changelog entry: ok (no user-visible change)"
