@@ -6,28 +6,22 @@ import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
 
 /**
- * One pull, in one direction. A downward pull on the bottom bar's gap
- * opens the command pane; an upward pull on the pane's own top closes
- * it. The gesture starts only inside the wrapped view, and a sideways
- * travel fails it, so a tab strip's scroll and the pager keep their
- * swipes.
+ * One pull up. The bottom bar's gap takes it and opens the command
+ * pane, which rises the same way, so the pane meets the finger. The
+ * gesture starts only inside the wrapped view, and a sideways travel
+ * fails it, so a tab strip's scroll and the pager keep their swipes.
  *
  * `minPointers` stays at one, so a one-finger pull and a two-finger
- * swipe down both travel the same path. The two-finger case is not
- * proven on the emulator.
+ * pull up both travel the same path. The two-finger case is not proven
+ * on the emulator.
  */
 export function PullSurface({
-  direction,
   onPull,
-  commit: reach,
   testID,
   style,
   children,
 }: {
-  direction: "down" | "up";
   onPull: () => void;
-  /** The travel that commits, in points. The tokens hold the defaults. */
-  commit?: number;
   testID?: string;
   /** The wrapped view's layout, for a pull target that holds a gap. */
   style?: StyleProp<ViewStyle>;
@@ -45,11 +39,7 @@ export function PullSurface({
         if (event.canceled) {
           return;
         }
-        const travel =
-          direction === "down" ? event.translationY : -event.translationY;
-        const commit =
-          reach ?? (direction === "up" ? motion.pull.close : motion.pull.commit);
-        if (travel >= commit) {
+        if (-event.translationY >= motion.pull.commit) {
           toJS(onPull);
         }
       },
