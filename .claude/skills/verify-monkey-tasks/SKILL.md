@@ -197,9 +197,10 @@ $S/android-release-smoke.sh ~/code/monkey-tasks/archive/release-1.2.0/monkey-tas
 
 It uses port 5580 unless `ANDROID_VERIFY_PORT` names another instance.
 It stops when the launch fails. It exits non-zero when any check fails.
-Its last line counts the failed checks, so a release stops on it. An
-emulator another lane started on the port cannot pass for this run. It
-prints one evidence folder, and the keyboard journey writes a second one.
+It prints `smoke: pass` or `smoke: fail (N failed checks)`, so a release
+stops on it. An emulator another lane started on the port cannot pass for
+this run. It prints one evidence folder, and the keyboard journey writes
+a second one.
 
 ### Lanes share the queue
 

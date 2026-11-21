@@ -131,10 +131,11 @@ semantic-release and EAS. The app has no store listing and no npm
 package. The smoke must pass before we publish
 (ADR `20261121-one-script-runs-a-release`).
 
-1. Run `scripts/gate.sh full` on main and let the receipt pass.
-2. Set `expo.version` in `app/app.json`.
-3. Date the section for the version in `CHANGELOG.md`.
-4. Run `scripts/release.sh <version>`.
+1. Set `expo.version` in `app/app.json`.
+2. Date the section for the version in `CHANGELOG.md`.
+3. Commit both and push them to main.
+4. Run `scripts/gate.sh full` on main and wait for the receipt.
+5. Run `scripts/release.sh <version>`.
 
 It refuses unless main is clean, checked out and level with
 `origin/main`. The app version must match. The changelog section needs a
@@ -144,12 +145,12 @@ when one changed app code a user can see.
 
 Then it:
 
-- tags and pushes.
+- tags the gated commit.
 - builds for every CPU type.
 - copies the APK and its checksum to the archive.
 - runs the release smoke on the emulator.
 - cuts the notes from the tag's changelog.
-- makes the GitHub release.
+- pushes the tag and makes the GitHub release.
 - downloads it and checks the APK against the checksum.
 
 A failing smoke stops it before the release, and it exits non-zero.
