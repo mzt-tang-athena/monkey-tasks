@@ -123,6 +123,48 @@ the app runs without Metro.
 `CHANGELOG.md` lists what each release adds or changes, in plain words.
 Each GitHub release repeats its section.
 
+### Cut a release
+
+`scripts/release.sh <version>` runs the eight release steps in order.
+Releases 1.0 to 1.2 ran them by hand. A local script beat release-it,
+semantic-release and EAS. The app has no store listing and no npm
+package. The smoke must pass before we publish
+(ADR `20261121-one-script-runs-a-release`).
+
+1. Run `scripts/gate.sh full` on main and let the receipt pass.
+2. Set `expo.version` in `app/app.json`.
+3. Date the section for the version in `CHANGELOG.md`.
+4. Run `scripts/release.sh <version>`.
+
+It refuses unless main is clean, checked out and level with
+`origin/main`. The app version must match. The changelog section needs a
+date for the release. A full gate receipt must also pass for HEAD. It
+lists merged PRs since the last tag with no changelog line. It stops
+when one changed app code a user can see.
+
+Then it:
+
+- tags and pushes.
+- builds for every CPU type.
+- copies the APK and its checksum to the archive.
+- runs the release smoke on the emulator.
+- cuts the notes from the tag's changelog.
+- makes the GitHub release.
+- downloads it and checks the APK against the checksum.
+
+A failing smoke stops it before the release, and it exits non-zero.
+
+```bash
+scripts/release.sh 1.3.0 --dry-run     # print every step, change nothing
+scripts/release.sh 1.3.0 --no-publish  # rehearse the local steps
+scripts/release.sh 1.3.0               # the real release
+```
+
+`--no-publish` tags only in this clone, stops before the push and the
+release, and deletes the tag on the way out. `RELEASE_ARCHIVE` moves the
+output folder, which defaults to
+`~/code/monkey-tasks/archive/release-<version>`.
+
 ### Build the release APK on this machine
 
 When Actions has no minutes, or when a build should not leave the

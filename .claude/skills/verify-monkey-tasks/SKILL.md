@@ -166,7 +166,9 @@ Logs land in `$MONKEY_LOG_DIR`, default `/tmp/monkey-tasks`.
 ### The release pass
 
 `android-release-smoke.sh <apk>` is the whole release pass on the
-emulator. One launch carries every step, so a release needs no wrapper:
+emulator. One launch carries every step, so a release needs no wrapper.
+`scripts/release.sh <version>` calls it as one of its eight steps. It
+checks:
 
 - Lists: the tabs, a tick, Completed and delete all done.
 - The task sheet's drag, the journal, food and Inbox Notes.
@@ -194,9 +196,10 @@ $S/android-release-smoke.sh ~/code/monkey-tasks/archive/release-1.2.0/monkey-tas
 ```
 
 It uses port 5580 unless `ANDROID_VERIFY_PORT` names another instance.
-It stops when the launch fails. An emulator another lane started on the
-port then cannot pass for this run. It prints one evidence folder, and
-the keyboard journey writes a second one.
+It stops when the launch fails. It exits non-zero when any check fails.
+Its last line counts the failed checks, so a release stops on it. An
+emulator another lane started on the port cannot pass for this run. It
+prints one evidence folder, and the keyboard journey writes a second one.
 
 ### Lanes share the queue
 
