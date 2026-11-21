@@ -25,6 +25,9 @@ case "$*" in
             shift
         done
         cp "${RELEASE_ARCHIVE:?}"/* "$dir"/
+        if [ "${GH_DOWNLOAD_CORRUPT:-0}" = 1 ]; then
+            for f in "$dir"/*.apk; do printf 'broken\n' > "$f"; done
+        fi
         ;;
 esac
 EOF
@@ -275,6 +278,33 @@ grep -q '^gh release create' "$calls" || fail "the release create did not run"
 grep -q '^gh release download' "$calls" || fail "the download check did not run"
 [ -n "$(git -C "$origin" rev-parse -q --verify refs/tags/v0.1.0)" ] ||
     fail "the tag did not reach origin"
+
+dir="$(fixture download-fails)"
+GH_DOWNLOAD_CORRUPT=1 expect_failed "a failed download check" "$dir" \
+    "is live" 0.1.0
+case "$err" in
+    *"expected sha256:"*) ;;
+    *) fail "a failed download check: stderr misses the expected sum: $err" ;;
+esac
+case "$err" in
+    *"downloaded sha256:"*) ;;
+    *) fail "a failed download check: stderr misses the downloaded sum: $err" ;;
+esac
+case "$err" in
+    *"gh release edit v0.1.0 --draft"*) ;;
+    *) fail "a failed download check: stderr misses the draft command: $err" ;;
+esac
+case "$err" in
+    *"gh release delete v0.1.0 --yes"*) ;;
+    *) fail "a failed download check: stderr misses the delete command: $err" ;;
+esac
+if grep -q '^gh release delete' "$calls"; then
+    fail "the script retracted the release: $(cat "$calls")"
+fi
+[ -n "$(git -C "$dir" ls-remote --tags origin v0.1.0)" ] ||
+    fail "the release tag is not on origin"
+grep -q '^gh release create' "$calls" ||
+    fail "the failed check ran without a release"
 
 printf 'release script: ok (%d cases)\n' "$assertions"
 

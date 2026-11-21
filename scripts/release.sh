@@ -127,7 +127,7 @@ if $publish; then
     if [ -z "$(git rev-parse --verify -q origin/main)" ]; then
         block "origin/main is not fetched"
     elif [ "$(git rev-parse origin/main)" != "$head_sha" ]; then
-        block "HEAD is not origin/main; push main first"
+        block "HEAD is not origin/main"
     fi
 else
     say "rehearsal: branch ${branch:-a detached HEAD} and its place against origin/main are not checked"
@@ -262,8 +262,23 @@ if $publish; then
     say "8/8 verify: download the release and check it against the checksum"
     tmp="$(mktemp -d)"
     trap 'rm -rf "$tmp"' EXIT
-    gh release download "$tag" --dir "$tmp" --pattern "$apk*"
-    (cd "$tmp" && sha256sum -c "$sha_file")
+    download_rc=0
+    gh release download "$tag" --dir "$tmp" --pattern "$apk*" || download_rc=$?
+    want="$(awk '{print $1}' "$archive/$sha_file")"
+    got=""
+    if [ "$download_rc" -eq 0 ]; then
+        got="$(cd "$tmp" && sha256sum "$apk" 2>/dev/null | awk '{print $1}' || true)"
+    fi
+    if [ "$download_rc" -ne 0 ] || [ "$got" != "$want" ]; then
+        printf 'release: the download check failed; %s is live\n' "$tag" >&2
+        printf '  expected sha256: %s\n' "${want:-unknown}" >&2
+        printf '  downloaded sha256: %s\n' "${got:-missing}" >&2
+        printf '  files: %s\n' "$(ls "$tmp" 2>/dev/null | tr '\n' ' ')" >&2
+        printf '  retract it by hand; the script does not:\n' >&2
+        printf '    gh release edit %s --draft\n' "$tag" >&2
+        printf '    gh release delete %s --yes\n' "$tag" >&2
+        exit 1
+    fi
 
     say "$version is live at $tag"
 else
