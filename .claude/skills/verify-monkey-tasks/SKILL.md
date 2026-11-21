@@ -168,7 +168,9 @@ emulator. One launch carries every step, so a release needs no wrapper:
 - Lists: the tabs, a tick, Completed and delete all done.
 - The task sheet's drag, the journal, food and Inbox Notes.
 - The planner split and the theme switch.
-- A swipe down on the bar's gap opens the command pane.
+- A pull on the bar's gap opens the command pane. The smoke pulls up
+  first, then down, which still opens 1.2 and earlier APKs. The pass
+  line names the one that worked.
 - The task editor clears three-button navigation.
 - The editor keyboard journey, one try per navigation mode.
 - The app log, for a crash.

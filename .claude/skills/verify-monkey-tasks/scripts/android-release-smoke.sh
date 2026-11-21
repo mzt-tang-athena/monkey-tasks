@@ -143,8 +143,16 @@ alive "theme switch"
 step "the bar's gap opens the command pane"
 $D tap Lists >/dev/null && sleep 1
 $D wait "~task-row:" 60 >/dev/null
-$D swipe "bar-gap" 0 350 250 >/dev/null
-$D wait command-search 20 >/dev/null && pass "a swipe on the bar's gap opens the pane" || fail "the gap swipe did not open the pane"
+# The pane rises from the bottom edge, so an upward pull on the gap
+# opens it. 1.2 and earlier dropped it from the top on a downward pull,
+# and a release smoke may run against either, so the other way is tried
+# next. The pass line says which one worked.
+opened=
+for way in up down; do
+  if [ "$way" = up ]; then $D swipe "bar-gap" 0 -350 250 >/dev/null; else $D swipe "bar-gap" 0 350 250 >/dev/null; fi
+  if $D wait command-search 10 >/dev/null 2>&1; then opened=$way; break; fi
+done
+[ -n "$opened" ] && pass "a pull $opened on the bar's gap opens the pane" || fail "the gap pull did not open the pane"
 $D shot s10-pane >/dev/null
 $D dump s10-pane >/dev/null
 commands=$(grep -c 'id="command:' "$RUN/s10-pane.txt")
