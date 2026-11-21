@@ -48,15 +48,17 @@ One launch runs the whole release pass on the emulator:
 
 Proof, 1.2.0 release APK, `emulator-5582`, one launch:
 
-- Pass: `app/build/verify/evidence/android-20261121-021908`.
-- Keyboard: `app/build/verify/evidence/android-20261121-022734`.
+- Pass: `app/build/verify/evidence/android-20261121-033145`.
+- Keyboard: `app/build/verify/evidence/android-20261121-033901`.
+- The pass names the pull that opened the pane: down on 1.2.0.
 - Logs, frames, the guard and the wait-bound demo:
   `~/code/monkey-tasks/worktrees/evidence-release-smoke/`.
 
 Base smoke, found in this pass and left as is:
 
-- The journal, food and Inbox writes lost a character in one run.
-  `input text` at full speed can drop a key in a controlled field.
+- The journal, food and Inbox writes lost a character in the first
+  pass and passed in the second. `input text` at full speed can drop a
+  key in a controlled field on a slow host.
 - The theme step taps `open settings`, a handle the app lost in #168.
   It has switched nothing since 1.2.
 
