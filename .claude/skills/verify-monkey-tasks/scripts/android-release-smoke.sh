@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# One heavy job at a time on this 15 GB machine: builds, full e2e runs and
-# emulator passes all queue on one lock. -o keeps children from holding it.
-if [ -z "${MONKEY_HEAVY_LOCK:-}" ]; then exec env MONKEY_HEAVY_LOCK=1 flock -o /tmp/monkey-tasks-heavy.lock "$0" "$@"; fi
 # Release smoke for monkey-tasks on the emulator. Launch, drive and
-# cleanup run inside this one script, under one flock, so the lock and
-# the emulator leave together. Usage: android-release-smoke.sh <apk>
+# cleanup run inside this one script, under one heavy slot and one flock,
+# so the lock and the emulator leave together.
+# Usage: android-release-smoke.sh <apk> [--background]
+. "$(dirname "$0")/heavy.sh" android-release-smoke "$@" || exit 1
 set -u
 cd "$(dirname "$0")/../../../.." || exit 1
 export ANDROID_VERIFY_PORT=5580

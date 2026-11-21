@@ -87,9 +87,9 @@ fi
 npx vale-rules sync
 echo "worktree-setup: shared Vale rules synced"
 
-# write-good is a clone, not a package. The Makefile fetches the pinned
-# commit, so a fresh worktree never takes upstream's latest rules.
-make -s ensure-styles
+# write-good comes from the version pinned in .vale.ini, so a fresh
+# worktree never takes upstream's latest rules.
+scripts/sync-vale-packages.sh
 echo "worktree-setup: write-good styles ready"
 
 git config --local core.hooksPath .githooks

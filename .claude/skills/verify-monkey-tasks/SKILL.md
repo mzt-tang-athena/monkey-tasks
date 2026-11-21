@@ -77,7 +77,10 @@ file or a whole directory:
 ```
 
 Each journey runs twice, as `motion` and `reduced-motion`, at 412 by
-915. Extra arguments go to `playwright test`. For a quick look without a
+915. A journey that checks nothing motion can change runs once: name its
+file in `app/e2e/motion.ts` with `runsIn: "once"` and the reason. That
+file also marks every spec, so a journey can look up a sibling there.
+Extra arguments go to `playwright test`. For a quick look without a
 journey, `cd app && npx playwright codegen http://localhost:$VERIFY_PORT` also
 works, but it leaves no evidence.
 
@@ -136,28 +139,27 @@ instance runs per console port. The default is 5580. Set
 
 ### Heavy jobs take turns
 
-This host has 15 GB. Builds, full web suites and emulator passes share
-one lock, `/tmp/monkey-tasks-heavy.lock`, so only one runs at a time.
+This host has 15 GB, so one heavy job runs at a time.
 
-- `android-build.sh <checkout>`: the full release build.
 - `web-suite.sh <checkout> <tag> <port>`: the full web suite.
+- `android-build.sh <checkout>`: the full release build.
 - `android-release-smoke.sh <apk>`: the release smoke on the emulator.
+- `heavy-emulator.sh <script> [args]`: any emulator script.
 
-Each takes the heavy lock itself. Run each in its own systemd unit:
-
-```sh
-systemd-run --user --unit=<name> --collect -p MemoryMax=8G \
-  --setenv=HOME=$HOME --setenv=PATH=$PATH <script> <args>
-```
-
-Wrap your own emulator script as below. Take heavy first, then the
-emulator lock, never the reverse. `MONKEY_HEAVY_LOCK=1` tells the
-scripts above that you hold the lock already.
+Each starts itself in its own unit, capped at 8G, and queues on
+`/tmp/monkey-tasks-heavy.lock`. A plain run waits and exits with the
+job's code. `--background` returns at once with the unit name.
 
 ```sh
-flock -o /tmp/monkey-tasks-heavy.lock env MONKEY_HEAVY_LOCK=1 \
-  flock -o /tmp/monkey-tasks-emulator.lock <script>
+S=.claude/skills/verify-monkey-tasks/scripts
+$S/web-suite.sh . abc1234 8094
+$S/web-suite.sh . abc1234 8094 --background
+$S/heavy-emulator.sh $S/android-launch.sh
 ```
+
+`heavy-emulator.sh` takes the heavy lock, then the emulator lock, and
+leaves the emulator running for the next pass. `MONKEY_HEAVY_LOCK=1`
+means you hold the lock, so a job runs in place and nothing nests.
 
 Logs land in `$MONKEY_LOG_DIR`, default `/tmp/monkey-tasks`.
 
@@ -174,7 +176,7 @@ Speed tips for this repo:
   two lanes both take 8300.
 - `android-apk.sh` swaps a JS-only change into a cached APK.
 - Put launch, drive, `android-cleanup.sh` and `adb kill-server` in one
-  script under one lock hold.
+  script and run it with `heavy-emulator.sh`, so they share one slot.
 
 The gate needs a bullet in `CHANGELOG.md` when a change is visible.
 Add one under the next version, or write `Changelog: none` in a
@@ -261,18 +263,19 @@ an unchanged APK. Keep the emulator running between passes in one lane.
 Clean up once at the end, so each extra pass skips the boot.
 `MOTION=off` starts with the three animation scales at 0.
 
-Wrap launch in `flock -o`:
+Start launch through the emulator entry point. It takes both locks and
+leaves the emulator and the adb server running:
 
 ```sh
-flock -o /tmp/monkey-tasks-emulator.lock .claude/skills/verify-monkey-tasks/scripts/android-launch.sh
+S=.claude/skills/verify-monkey-tasks/scripts
+$S/heavy-emulator.sh $S/android-launch.sh
 ```
 
-The emulator and the adb server outlive the launch. A plain `flock`
-passes its open lock file to the command. A process that keeps a copy
-holds the lock for its whole life, so every later `flock` waits forever.
-`-o` closes that copy before the command starts. The script also
-closes every inherited file handle above 2 itself. A wrapper that
-forgets `-o` then still releases the lock when launch exits.
+A hand-written wrapper still needs `flock -o`. A plain `flock` passes
+its open lock file to the command. A process that keeps a copy holds the
+lock for its whole life, so every later `flock` waits forever. `-o`
+closes that copy before the command starts. The script also closes every
+inherited file handle above 2 itself.
 
 ### Doctor
 
@@ -409,9 +412,11 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 
 - `android-env.sh` holds the names, paths and state for one port. The other scripts source it.
 - `android-apk.sh <checkout> [--full]` returns an APK, swapping the JS bundle when it can.
-- `android-build.sh <checkout>` runs the full release build under the heavy lock.
-- `android-release-smoke.sh <apk>` runs the release smoke under the heavy lock.
-- `web-suite.sh <checkout> <tag> <port>` runs the full web suite under the heavy lock.
+- `android-build.sh <checkout>` runs the full release build in its own capped unit.
+- `android-release-smoke.sh <apk>` runs the release smoke in its own capped unit.
+- `web-suite.sh <checkout> <tag> <port>` runs the full web suite in its own capped unit.
+- `heavy-emulator.sh <script> [args]` runs an emulator script under both locks.
+- `heavy.sh` is the prelude the scripts above source.
 - `android-launch.sh [apk]` boots, installs, seeds, grants and waits.
 - `android-doctor.sh [--host]` is the read-only check.
 - `android-drive.sh <step>` drives and saves evidence.

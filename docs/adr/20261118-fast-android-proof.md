@@ -84,3 +84,33 @@ the 43 minutes went to that. The cost is that a proof APK does not
 install on the phone. A release still builds every CPU type with
 `CLEAN=1`. We rejected arm64 plus x86_64. No lane puts a proof APK
 on the phone, and arm64 doubles the native compile.
+
+## Amendment 2026-11-20: heavy jobs start their own unit
+
+Every heavy job used to arrive with two lines typed by hand. First a
+`systemd-run` wrapper with the memory cap. Then a wait loop on
+`systemctl --user is-active`. A lane that forgot the wrapper let a
+runaway build take OpenChamber down with it. A lane that forgot the wait
+read its own healthy job as a hang.
+
+The three scripts now do this themselves through one prelude,
+`scripts/heavy.sh`. Started from a shell, each script runs again in its
+own transient unit, capped at 8G. It waits for that unit and returns the
+job's exit code. `--background` starts the unit and returns its name at
+once. `MONKEY_HEAVY_LOCK=1` still means a caller holds the lock, so that
+run stays in place and nothing nests. The shared lock still runs one job
+at a time.
+
+The unit gets the caller's whole environment, not only `HOME` and
+`PATH`. The old wrapper dropped `CLEAN`, `ARCHS`, `MONKEY_LOG_DIR` and a
+lane's `ANDROID_VERIFY_PORT`. Forwarding the whole environment also
+means a new knob works without a change to the prelude.
+
+`heavy-emulator.sh <script>` runs any emulator script under both locks.
+It takes the heavy lock first, then the emulator lock. Its unit sets
+`KillMode=process`. A unit otherwise kills what its main process leaves
+behind. That would shut the emulator down at the end of every launch.
+
+Rejected: a wrapper script beside the three that callers run instead.
+Callers would still have to choose it, and the scripts would stay wrong
+on their own.
