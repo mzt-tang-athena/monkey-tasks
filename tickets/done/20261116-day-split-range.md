@@ -37,7 +37,7 @@ changes.
       invalid.
 - [x] Unit tests cover the clamp.
 - [x] The web E2E drags the grip to both edges and asserts the travel.
-- [x] Android frame or screenshot evidence sits under
+- [ ] Android frame or screenshot evidence sits under
       `app/build/verify/evidence/day-split-range/`.
 
 ## Outcome
