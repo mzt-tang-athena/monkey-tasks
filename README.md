@@ -133,8 +133,8 @@ package. The smoke must pass before we publish
 
 1. Set `expo.version` in `app/app.json`.
 2. Date the section for the version in `CHANGELOG.md`.
-3. Commit both and push them to main.
-4. Run `scripts/gate.sh full` on main and wait for the receipt.
+3. Land both through a pull request and merge it.
+4. Pull main, run `scripts/gate.sh full` and wait for the receipt.
 5. Run `scripts/release.sh <version>`.
 
 It refuses unless main is clean, checked out and level with
@@ -154,6 +154,10 @@ Then it:
 - downloads it and checks the APK against the checksum.
 
 A failing smoke stops it before the release, and it exits non-zero.
+
+If the download check fails, the release is already live. The script
+exits 1, names the mismatch, and prints the `gh release edit --draft` and
+`gh release delete` commands. It does not retract the release.
 
 ```bash
 scripts/release.sh 1.3.0 --dry-run     # print every step, change nothing

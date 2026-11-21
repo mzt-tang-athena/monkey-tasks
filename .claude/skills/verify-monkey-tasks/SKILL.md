@@ -167,7 +167,9 @@ Logs land in `$MONKEY_LOG_DIR`, default `/tmp/monkey-tasks`.
 
 `android-release-smoke.sh <apk>` is the whole release pass on the
 emulator. One launch carries every step, so a release needs no wrapper.
-`scripts/release.sh <version>` calls it as one of its eight steps. It
+`scripts/release.sh <version>` calls it as one of its eight steps. Run
+that script from main, after the version bump has merged through a pull
+request and `scripts/gate.sh full` has passed. It
 checks:
 
 - Lists: the tabs, a tick, Completed and delete all done.

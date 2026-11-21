@@ -43,6 +43,9 @@ publish.
 We make the tag at step 2 and push it at step 7. A failed smoke then
 leaves nothing public.
 
+A failed download check leaves the release live. The script exits 1 and
+prints the commands that retract it. The operator decides.
+
 The script needs local state: a full gate receipt for HEAD, the archive
 folder and the emulator. It refuses when one is missing rather than
 guessing.

@@ -51,6 +51,8 @@ it at step 7, so a failed smoke leaves nothing public.
   with no changelog line. It fails when a visible app change has none.
 - `--no-publish` runs every local step and deletes its tag.
 - The release smoke counts failed checks and exits non-zero.
+- A failed download check exits 1 and prints the retract commands. It
+  never retracts the release by itself.
 - Weighed release-it, semantic-release and EAS. ADR
   `20261121-one-script-runs-a-release` records why the local script won.
 - Rehearsal at 1.3.0 on `ae09385`, after a full gate pass. It made the
