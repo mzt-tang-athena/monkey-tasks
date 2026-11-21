@@ -266,8 +266,10 @@ hooks and slower JavaScript.
 ```
 
 It runs the host checks, creates the AVD when missing, and boots
-it cold (`-no-snapshot`, 2 cores, 2 GB). It then sets the zone to
-Pacific/Auckland and hides ANR dialogs. It installs the APK when its
+it cold (`-no-snapshot`, 2 cores, 2 GB). It stops after 180 s if no
+device appears. A launch that never sees an emulator then fails and
+frees the heavy lock. `ANDROID_VERIFY_WAIT` moves that bound. It sets
+the zone to Pacific/Auckland and hides ANR dialogs. It installs the APK when its
 hash changed. It writes the sample vault for the device's today with
 `android-seed.ts`, and replaces `/sdcard/Documents/obsidian-vault` with
 it. Then it starts the app. Ready means it printed `ready: a task row

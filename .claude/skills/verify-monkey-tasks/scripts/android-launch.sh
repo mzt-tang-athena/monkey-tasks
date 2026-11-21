@@ -12,8 +12,9 @@
 # Launch walks the system picker only when the app asks for a folder.
 # Env: ANDROID_VERIFY_PORT (5580), ANDROID_VERIFY_AVD
 # (monkey-tasks-verify), ANDROID_VERIFY_MEMORY (2048 MB), MOTION (on),
-# FRESH=1 to clear the app data, then grant the folder and the
-# notification permission again.
+# ANDROID_VERIFY_WAIT (180 s) for the wait on the device, FRESH=1 to
+# clear the app data, then grant the folder and the notification
+# permission again.
 set -euo pipefail
 # A wrapper such as `flock` hands its lock to this script as an open
 # fd, on no fixed number. The emulator and the adb server outlive this
@@ -59,7 +60,17 @@ else
 fi
 run=$(new_run)
 
-adb -s "$SERIAL" wait-for-device
+# adb waits forever for a device that never appears. A launch that holds
+# the heavy lock while it waits blocks every other lane, so bound the
+# wait and stop with the emulator's log in hand.
+wait_device() {
+  local secs=${1:-180}
+  if ! timeout "$secs" adb -s "$SERIAL" wait-for-device; then
+    echo "no device $SERIAL after $secs s. Its log: $LOGFILE" >&2
+    exit 1
+  fi
+}
+wait_device "${ANDROID_VERIFY_WAIT:-180}"
 deadline=$((SECONDS + 600))
 until booted; do
   ours "$pid" || { echo "the emulator exited. Its log: $LOGFILE" >&2; exit 1; }
@@ -69,7 +80,7 @@ done
 lap "booted"
 
 adb root >/dev/null
-adb wait-for-device
+wait_device "${ANDROID_VERIFY_WAIT:-180}"
 until booted; do sleep 1; done
 adb shell setprop persist.sys.timezone "$DEVICE_TZ"
 adb shell svc power stayon true
