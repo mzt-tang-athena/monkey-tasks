@@ -1,18 +1,20 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
-import { expect, test } from "../fixtures";
+import { expect, pauseClock, test } from "../fixtures";
 import { tabs, undated } from "../data";
 import { holdDrag, swipe, touchFlick } from "../gestures";
-import { expectBefore, listTab, row } from "../locators";
+import { expectAbove, listTab, row } from "../locators";
 import { putNote } from "../vault";
 
 /**
- * Ticket 0085 and its 2026-11-18 amendment: the command pane slides
- * down over the current screen. A downward swipe on the bottom bar's
- * gap opens it, and so does the bar's Command half. The search takes
- * focus, a command runs and closes the pane, and no tab, pill, list
- * body or header band starts the gesture. The bar's split Add pill
- * opens the tab's own sheet from its plus half.
+ * Ticket 0085 and its 2026-11-20 amendment: the command pane rises
+ * from the bottom edge, as the thumb and the bar's opener are there.
+ * The search sits at the bottom of the panel, the rows read up from it,
+ * and a drag down puts it back. An upward swipe on the bottom bar's gap
+ * opens it, and so does the bar's Command half. The search takes focus,
+ * a command runs and closes the pane, and no tab, pill, list body or
+ * header band starts the gesture. The bar's split Add pill opens the
+ * tab's own sheet from its plus half.
  */
 
 function pane(page: Page): Locator {
@@ -36,6 +38,25 @@ function command(page: Page, id: string): Locator {
 async function openPane(page: Page): Promise<void> {
   await openButton(page).click();
   await expect(pane(page)).toBeVisible();
+  await settled(page);
+}
+
+/** The travel the rise still has to make, in px, from its transform. */
+async function riseTravel(page: Page): Promise<number> {
+  const transform = await page
+    .getByTestId("command-rise")
+    .evaluate((element) => getComputedStyle(element).transform);
+  const matrix = /matrix\(([^)]*)\)/.exec(transform);
+  if (matrix == null) {
+    return 0;
+  }
+  return Number(matrix[1].split(",")[5]);
+}
+
+/** Waits for the pane's spring to land, so a raw mouse drag starts on
+    the grab area rather than on a panel still climbing past it. */
+async function settled(page: Page): Promise<void> {
+  await expect.poll(() => riseTravel(page)).toBeLessThanOrEqual(0.5);
 }
 
 /** A mouse drag in a straight line from `from` by `dy`. */
@@ -57,25 +78,70 @@ async function expectShut(page: Page): Promise<void> {
 }
 
 test.describe("opening", () => {
-  test("a downward swipe on the bar's gap opens it with the search focused", async ({
+  test("an upward swipe on the bar's gap opens it with the search focused", async ({
     page,
   }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
-    await touchFlick(page, page.getByTestId("bar-gap"), 120);
+    await touchFlick(page, page.getByTestId("bar-gap"), -120);
 
     await expect(pane(page)).toBeVisible();
     await expect(search(page)).toBeFocused();
   });
 
-  test("a mouse pull on the bar's gap opens it too", async ({ page }) => {
+  test("a mouse pull up on the bar's gap opens it too", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
-    await pull(page, page.getByTestId("bar-gap"), 140);
+    await pull(page, page.getByTestId("bar-gap"), -140);
 
     await expect(pane(page)).toBeVisible();
+  });
+
+  test("it rises from the bottom edge: it starts under the screen", async ({
+    page,
+    reducedMotion,
+  }) => {
+    test.skip(reducedMotion === "reduce", "the reduced project has no rise to catch");
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+    const height = page.viewportSize()?.height ?? 915;
+
+    await pauseClock(page);
+    await openButton(page).click();
+    // One frame in, the panel still climbs from under the edge.
+    await page.clock.runFor(16);
+    const climbing = await search(page).boundingBox();
+    expect(climbing?.y ?? 0).toBeGreaterThan(height);
+
+    await page.clock.runFor(1000);
+    await page.clock.resume();
+    await expect(pane(page)).toBeVisible();
+    await expect(search(page)).toBeFocused();
+    // The panel's bottom edge stands 8pt above the window's own, and
+    // the search is its lowest block, one padding above that.
+    const panel = await pane(page).boundingBox();
+    expect(
+      Math.abs((panel?.y ?? 0) + (panel?.height ?? 0) - (height - 8)),
+    ).toBeLessThanOrEqual(2);
+    const landed = await search(page).boundingBox();
+    expect(
+      Math.abs((landed?.y ?? 0) + (landed?.height ?? 0) - (height - 16)),
+    ).toBeLessThanOrEqual(2);
+  });
+
+  test("the search sits at the panel's bottom and the rows read up from it", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+    await openPane(page);
+
+    // The first row is the one nearest the search, so the ones after it
+    // sit above it.
+    await expectAbove(command(page, "planner"), command(page, "capture"));
+    await expectAbove(command(page, "capture"), search(page));
   });
 
   test("the bar's Command half opens it, and Escape puts focus back", async ({
@@ -95,40 +161,65 @@ test.describe("opening", () => {
     await expect(opener).toBeFocused();
   });
 
-  test("a pull up on the pane's top edge closes it", async ({ page }) => {
+  test("a drag down on the title row closes it", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
 
-    // The spring must land before the grab area is on screen.
-    await expect
-      .poll(async () => (await page.getByTestId("command-pull").boundingBox())?.y ?? -1)
-      .toBeGreaterThanOrEqual(0);
-    await pull(page, page.getByTestId("command-search"), -70);
+    await pull(page, page.getByTestId("command-grab"), 140);
 
     await expectShut(page);
+  });
+
+  test("a short drag down springs back", async ({ page }) => {
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+    await openPane(page);
+
+    await pull(page, page.getByTestId("command-grab"), 30);
+
+    await expect(pane(page)).toBeVisible();
+    await expect(search(page)).toBeVisible();
+  });
+
+  test("with reduced motion it shows with no slide", async ({
+    page,
+    reducedMotion,
+  }) => {
+    test.skip(reducedMotion !== "reduce", "the motion project plays the rise");
+    await page.goto("/");
+    await expect(row(page, undated.second)).toBeVisible();
+
+    await openButton(page).click();
+    const panel = pane(page);
+    await expect(panel).toBeVisible();
+    const look = await panel.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { opacity: style.opacity, transform: style.transform };
+    });
+    expect(look).toEqual({ opacity: "1", transform: "none" });
   });
 });
 
 test.describe("the bar's own controls keep their gestures", () => {
-  test("a swipe down on a tab opens nothing and keeps its tab", async ({ page }) => {
+  test("a swipe up on a tab opens nothing and keeps its tab", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
-    await touchFlick(page, listTab(page, tabs.main), 120);
+    await touchFlick(page, listTab(page, tabs.main), -120);
 
     await expectShut(page);
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
   });
 
-  test("a swipe down on the Add half opens nothing and no sheet", async ({ page }) => {
+  test("a swipe up on the Add half opens nothing and no sheet", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
     await touchFlick(
       page,
       page.getByRole("button", { name: "add task" }).filter({ visible: true }),
-      120,
+      -120,
     );
 
     await expectShut(page);
@@ -142,6 +233,7 @@ test.describe("no page starts the pane", () => {
     await expect(row(page, undated.second)).toBeVisible();
 
     await touchFlick(page, page.getByTestId("lists-screen"), 160);
+    await touchFlick(page, page.getByTestId("lists-screen"), -160);
 
     await expectShut(page);
     await expect(row(page, undated.second)).toBeVisible();
@@ -220,7 +312,7 @@ test.describe("searching and choosing", () => {
     await expectShut(page);
   });
 
-  test("the recent command moves to the front", async ({ page }) => {
+  test("the recent command moves to the front, nearest the search", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
@@ -232,7 +324,9 @@ test.describe("searching and choosing", () => {
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
 
-    await expectBefore(command(page, "planner"), command(page, "capture"));
+    // The rows read up from the search, so the front of the list is its
+    // lowest row.
+    await expectAbove(command(page, "capture"), command(page, "planner"));
   });
 });
 

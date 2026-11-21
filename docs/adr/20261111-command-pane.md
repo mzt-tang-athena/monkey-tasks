@@ -151,3 +151,96 @@ One more command would push Diagnostics off the pane.
 Proof: `commands.spec.ts` opens the pane from Lists and presses each of
 the four rows in turn.
 Each lands its screen, and the pane shuts.
+
+## Amendment, 2026-11-20: the pane rises from the bottom edge
+
+The operator used 1.2.0 on the phone.
+Obsidian's command pane rises from below.
+This app's opener sits in the bottom bar.
+A pane that drops from the top edge starts far from the finger.
+The operator asked for the rise on 2026-11-20.
+
+The pane now sits at the bottom edge.
+It rises to meet the finger.
+
+- The search is the panel's lowest block, above the keyboard.
+- The rows read up from the search, so the first row is nearest it.
+- The list rests at its end, so a filter shows the first match.
+- A drag down on the title row follows the finger and closes.
+- The bar's gap takes an upward swipe, and the pane rises with it.
+
+The search is the thumb's target, so the rows sit above it.
+The first command lands where the hand already is.
+The list opens scrolled to its end.
+The scrim, the focus and the two closes stay as they were.
+The press outside, the Close button and every row's words stay too.
+
+The panel rides the keyboard on the lift from
+`20261118-sheet-clears-the-keyboard`.
+Its cap holds to the room between the keyboard's top and the status bar.
+The search then sits above the keys.
+The first rows stay reachable while it shows.
+The web moves no keyboard, so its cap stays the 72% share.
+
+The search takes focus on open, as the app's sheets do with
+`autoFocus`.
+A focus from an effect left the phone's keyboard down, so the pane did
+not lift on the gap's swipe.
+`autoFocus` asks while the field mounts, and the keyboard arrives with
+the pane.
+A rising field sits under the window's edge.
+Its focus must not scroll the page.
+The pane clips at that edge, and the web asks the field for no scroll.
+
+A drag that lets go short of the sheet's swipe commit returns.
+The pane's spring carries it back.
+A release past it, or a downward flick, closes the pane.
+The clock carries the exit from wherever the finger let go.
+The drag and the clock share one transform.
+The further of the two travels, so a dismissed pane slides out once.
+Two translates would have moved it twice.
+
+The opener changed direction with it.
+A downward swipe calls up a pane from below, against the motion.
+The bar's gap now takes an upward swipe.
+The pane rises as the finger does, so it meets the finger's direction.
+It does not track the finger.
+A pane that tracks it must stay mounted while shut.
+This one leaves the tree when it closes.
+The spring reads the same and starts inside a frame.
+
+The bar's gap takes the app's pull commit, 56pt.
+The finger now travels into the screen, not into the 24pt below the bar.
+The old `bar` and `close` pull tokens left with it.
+The pane's own drag takes the sheet's swipe commit and flick.
+That is one pull rule and one drag rule for the whole app.
+
+Alternatives we rejected:
+
+- Keep the downward open swipe: it pulls against the rise.
+- Follow the opening finger: it needs a pane mounted while shut.
+- Travel the clock and the drag as two translates: the exit doubles.
+
+A reduced-motion window shows the pane at rest with no rise.
+The clock lands at once.
+
+Proof: `commands.spec.ts` catches the pane mid-rise.
+The search sits under the window's edge, and then it reads at rest.
+It sends the gap's upward swipe with a touch and with the mouse.
+It drags the title row down, and reads a short drag spring back.
+It reads the first row nearest the search in both motion projects.
+The reduced project reads no slide.
+
+Android proof, this branch's release APK on the Pixel 7 emulator:
+
+- The gap's upward swipe opens the pane with the keyboard up.
+- The search ends at 1474px and the keyboard starts at 1517px.
+  That is 16dp of air, the sheet's 8pt gap plus the panel's padding.
+- The tree reads Diagnostics at the top, Add task at the bottom.
+  Add task ends at 1328, above the search.
+- A drag down on the title row walks the panel off the bottom edge.
+- Back goes to the keyboard first, as the platform gives it, then the
+  second Back closes the pane.
+- With the animation scales off the pane stands at rest in one frame.
+- Frames and shots:
+  `app/build/verify/evidence/android-20261120-095625/`.
