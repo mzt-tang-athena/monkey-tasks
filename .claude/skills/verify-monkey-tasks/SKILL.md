@@ -163,6 +163,41 @@ means you hold the lock, so a job runs in place and nothing nests.
 
 Logs land in `$MONKEY_LOG_DIR`, default `/tmp/monkey-tasks`.
 
+### The release pass
+
+`android-release-smoke.sh <apk>` is the whole release pass on the
+emulator. One launch carries every step, so a release needs no wrapper:
+
+- Lists: the tabs, a tick, Completed and delete all done.
+- The task sheet's drag, the journal, food and Inbox Notes.
+- The planner split and the theme switch.
+- A pull on the bar's gap opens the command pane. The smoke pulls up
+  first, then down, which still opens 1.2 and earlier APKs. The pass
+  line names the one that worked.
+- The task editor clears three-button navigation.
+- The editor keyboard journey, one try per navigation mode.
+- The app log, for a crash.
+
+The smoke runs `journeys/android-editor-keyboard.sh 1` for the
+keyboard. That journey is the proof; run it with more tries when the
+keyboard itself is the change.
+
+Every step looks its row up on the current screen before it taps. The
+gap, editor and keyboard steps take whatever row the screen shows. A
+row below the fold cannot fail the pass and cost a second launch. The
+three-button step reads the editor's bottom and the navigation bar's top
+out of the same dump.
+
+```sh
+S=.claude/skills/verify-monkey-tasks/scripts
+$S/android-release-smoke.sh ~/code/monkey-tasks/archive/release-1.2.0/monkey-tasks-1.2.0.apk
+```
+
+It uses port 5580 unless `ANDROID_VERIFY_PORT` names another instance.
+It stops when the launch fails. An emulator another lane started on the
+port then cannot pass for this run. It prints one evidence folder, and
+the keyboard journey writes a second one.
+
 ### Lanes share the queue
 
 A lane is an agent working one PR in its own worktree. Set up the
@@ -236,8 +271,10 @@ hooks and slower JavaScript.
 ```
 
 It runs the host checks, creates the AVD when missing, and boots
-it cold (`-no-snapshot`, 2 cores, 2 GB). It then sets the zone to
-Pacific/Auckland and hides ANR dialogs. It installs the APK when its
+it cold (`-no-snapshot`, 2 cores, 2 GB). It stops after 180 s if no
+device appears. A launch that never sees an emulator then fails and
+frees the heavy lock. `ANDROID_VERIFY_WAIT` moves that bound. It sets
+the zone to Pacific/Auckland and hides ANR dialogs. It installs the APK when its
 hash changed. It writes the sample vault for the device's today with
 `android-seed.ts`, and replaces `/sdcard/Documents/obsidian-vault` with
 it. Then it starts the app. Ready means it printed `ready: a task row
