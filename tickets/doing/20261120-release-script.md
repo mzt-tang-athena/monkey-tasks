@@ -2,7 +2,7 @@
 title: One script runs a release
 created: 2026-11-20
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: [20261119-release-checks-in-the-smoke, 20261120-heavy-jobs-run-in-their-own-unit]
 ---
