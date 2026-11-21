@@ -61,8 +61,6 @@ if printf '%s\n' "$changed" | grep -qx 'CHANGELOG.md'; then
     exit 0
 fi
 
-# What a user can see: the screens, the assets and the app config.
-# Tests and fixtures stay out.
 visible="$(printf '%s\n' "$changed" | scripts/visible-paths.sh)"
 
 if [ -z "$visible" ]; then

@@ -75,8 +75,10 @@ EOF
         git add -A
         git commit -qm base
         git branch -m main
-        git update-ref refs/remotes/origin/main HEAD
     )
+    git init -q --bare "$tmp/origin-$name.git"
+    git -C "$dir" remote add origin "$tmp/origin-$name.git"
+    git -C "$dir" push -q -u origin main
     write_receipt "$dir"
     printf '%s\n' "$dir"
 }
@@ -198,7 +200,7 @@ git -C "$dir" tag -a v0.1.0 -m "already"
 expect_refused "an existing tag" "$dir" "already exists" 0.1.0
 
 dir="$(fixture smoke-fails)"
-SMOKE_RC=1 expect_failed "a failing smoke" "$dir" "nothing was published" \
+SMOKE_RC=1 expect_failed "a failing smoke" "$dir" "nothing was pushed" \
     0.1.0 --no-publish
 case "$err" in
     *"the smoke failed"*) ;;
@@ -215,6 +217,29 @@ SMOKE_FAILS=1 expect_failed "a FAIL line with exit 0" "$dir" "FAIL line" \
 if grep -q 'gh release create' "$calls"; then
     fail "a FAIL line published: $(cat "$calls")"
 fi
+
+dir="$(fixture release-smoke-fails)"
+SMOKE_RC=1 expect_failed "a failing smoke in a release" "$dir" \
+    "nothing was pushed" 0.1.0
+if grep -q 'gh release create' "$calls"; then
+    fail "a failing smoke made a release: $(cat "$calls")"
+fi
+[ -z "$(git -C "$dir" tag -l v0.1.0)" ] ||
+    fail "a failing smoke left the local tag"
+[ -z "$(git -C "$dir" ls-remote --tags origin v0.1.0)" ] ||
+    fail "a failing smoke pushed the tag"
+
+dir="$(fixture stale-main)"
+printf 'A local commit.\n' >> "$dir/README.md"
+git -C "$dir" commit -qam "a local commit"
+write_receipt "$dir"
+expect_refused "HEAD ahead of origin" "$dir" "HEAD is not origin/main" 0.1.0
+
+dir="$(fixture remote-tag)"
+git -C "$dir" tag -a v0.1.0 -m "elsewhere"
+git -C "$dir" push -q origin v0.1.0
+git -C "$dir" tag -d v0.1.0 >/dev/null
+expect_refused "a tag on origin" "$dir" "already exists on origin" 0.1.0
 
 dir="$(fixture rehearse)"
 expect_ok "the rehearsal" "$dir" 0.1.0 --no-publish
@@ -240,11 +265,7 @@ expect_refused "a release on a branch" "$dir" "checkout main" 0.1.0
 git -C "$dir" checkout -q main
 
 dir="$(fixture publish)"
-origin="$tmp/publish.git"
-git init -q --bare "$origin"
-git -C "$dir" remote add origin "$origin"
-git -C "$dir" push -q -u origin main
-git -C "$dir" update-ref refs/remotes/origin/main HEAD
+origin="$tmp/origin-publish.git"
 expect_ok "a published release" "$dir" 0.1.0
 case "$out" in
     *"is live at v0.1.0"*) ;;

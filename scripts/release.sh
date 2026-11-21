@@ -103,15 +103,13 @@ else
     say "rehearsal: the tag stays in this clone and no release is made"
 fi
 printf '  1/8 gate     the full gate receipt for %s\n' "$head"
-printf '  2/8 tag      git tag -a %s -m "monkey-tasks %s"' "$tag" "$version"
-if $publish; then printf '; git push origin %s' "$tag"; fi
-printf '\n'
+printf '  2/8 tag      git tag -a %s -m "monkey-tasks %s"\n' "$tag" "$version"
 printf '  3/8 build    CLEAN=1 .claude/skills/verify-monkey-tasks/scripts/android-build.sh %s\n' "$root"
 printf '  4/8 copy     %s and its .sha256 into %s\n' "$apk" "$archive"
 printf '  5/8 smoke    .claude/skills/verify-monkey-tasks/scripts/android-release-smoke.sh %s\n' "$archive/$apk"
 printf '  6/8 notes    cut ## %s from %s into %s\n' "$version" "$tag" "$archive/release-notes.md"
 if $publish; then
-    printf '  7/8 publish  gh release create %s --verify-tag with the APK and the checksum\n' "$tag"
+    printf '  7/8 publish  git push origin %s; gh release create %s --verify-tag\n' "$tag" "$tag"
     printf '  8/8 verify   download the release and check it against the checksum\n'
 else
     printf '  7/8 publish  skipped (--no-publish)\n'
@@ -132,7 +130,7 @@ if $publish; then
         block "HEAD is not origin/main; push main first"
     fi
 else
-    say "rehearsal: branch $branch and its place against origin/main are not checked"
+    say "rehearsal: branch ${branch:-a detached HEAD} and its place against origin/main are not checked"
 fi
 
 if [ -n "$(git status --porcelain)" ]; then
@@ -153,16 +151,20 @@ if ! grep -qE "^## $escaped - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md; then
 fi
 
 if git rev-parse --verify -q "refs/tags/$tag" >/dev/null; then
-    block "tag $tag already exists in this clone"
+    block "tag $tag already exists in this clone; delete it if the last run stopped before the push"
 fi
-if $publish && [ -n "$remote" ]; then
-    found=0
-    git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1 || found=$?
-    case "$found" in
-        0) block "tag $tag already exists on origin" ;;
-        2) ;;
-        *) block "could not ask origin about tag $tag" ;;
-    esac
+if $publish; then
+    if [ -z "$remote" ]; then
+        block "origin is not configured"
+    else
+        found=0
+        git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1 || found=$?
+        case "$found" in
+            0) block "tag $tag already exists on origin" ;;
+            2) ;;
+            *) block "could not ask origin about tag $tag" ;;
+        esac
+    fi
 fi
 
 if [ ! -f "$receipt" ]; then
@@ -179,11 +181,13 @@ else
     [ "$r_dirty" = false ] || block "the gate receipt was written on a dirty tree"
 fi
 
-if scripts/check-release-notes.sh; then
-    :
-else
-    block "a merged PR since the last tag lacks a changelog line"
-fi
+notes_rc=0
+scripts/check-release-notes.sh || notes_rc=$?
+case "$notes_rc" in
+    0) ;;
+    1) block "a merged PR since the last tag lacks a changelog line" ;;
+    *) block "the merged PR check could not run (exit $notes_rc)" ;;
+esac
 
 if $dry_run; then
     if [ ${#blockers[@]} -gt 0 ]; then
@@ -204,11 +208,16 @@ fi
 say "1/8 gate: the receipt for $head passed ($r_mode, $r_at)"
 
 say "2/8 tag: $tag"
+tag_pushed=false
+cleanup_tag() {
+    if $publish && $tag_pushed; then return; fi
+    git tag -d "$tag" >/dev/null 2>&1 || true
+}
 git tag -a "$tag" -m "monkey-tasks $version"
+trap cleanup_tag EXIT
 if $publish; then
-    git push origin "$tag"
+    say "the tag is pushed with the release, after the smoke"
 else
-    trap 'git tag -d "$tag" >/dev/null 2>&1 || true' EXIT
     say "rehearsal: the tag stays in this clone and is deleted on the way out"
 fi
 
@@ -228,7 +237,7 @@ smoke_rc=0
     tee "$smoke_log" || smoke_rc=$?
 fail_lines="$(grep -c '^FAIL:' "$smoke_log" 2>/dev/null || true)"
 if [ "$smoke_rc" -ne 0 ] || [ "${fail_lines:-0}" -ne 0 ]; then
-    die "the smoke failed (exit $smoke_rc, ${fail_lines:-0} FAIL line(s)); nothing was published"
+    die "the smoke failed (exit $smoke_rc, ${fail_lines:-0} FAIL line(s)); nothing was pushed and no release was made"
 fi
 
 say "6/8 notes: cut the $version section from $tag"
@@ -242,7 +251,9 @@ git show "$tag:CHANGELOG.md" | awk -v v="$version" '
 [ -s "$archive/release-notes.md" ] || die "the $version section is empty"
 
 if $publish; then
-    say "7/8 publish: gh release create $tag"
+    say "7/8 publish: push $tag and create the release"
+    git push origin "$tag"
+    tag_pushed=true
     gh release create "$tag" --verify-tag \
         --title "monkey-tasks $version" \
         --notes-file "$archive/release-notes.md" \
@@ -250,9 +261,9 @@ if $publish; then
 
     say "8/8 verify: download the release and check it against the checksum"
     tmp="$(mktemp -d)"
+    trap 'rm -rf "$tmp"' EXIT
     gh release download "$tag" --dir "$tmp" --pattern "$apk*"
     (cd "$tmp" && sha256sum -c "$sha_file")
-    rm -rf "$tmp"
 
     say "$version is live at $tag"
 else

@@ -86,15 +86,15 @@ while IFS=$'\t' read -r number title sha url; do
     fi
 
     missing=$((missing + 1))
-    short="${sha:0:10}"
-    printf 'release notes: #%s has no changelog line: %s\n' "$number" "$title" >&2
-    printf '  %s %s\n' "$short" "$url" >&2
     visible="$(printf '%s\n' "$files" | scripts/visible-paths.sh)"
     if [ -n "$visible" ]; then
+        printf 'release notes: #%s has no changelog line: %s\n' "$number" "$title" >&2
+        printf '  %s\n' "$url" >&2
         printf '%s\n' "$visible" | sed -n '1,3s/^/  /p' >&2
         stop=1
     else
-        printf '  changed no app code a user can see\n' >&2
+        printf 'release notes: #%s has no changelog line: %s' "$number" "$title" >&2
+        printf ' (changed no app code a user can see)\n' >&2
     fi
 done <<< "$prs"
 
