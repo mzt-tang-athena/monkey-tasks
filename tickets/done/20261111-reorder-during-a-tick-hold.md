@@ -3,7 +3,7 @@ title: A tick that lands mid-drag leaves the drop stale
 created: 2026-11-11
 priority: normal
 assignee: omp
-pr:
+pr: 214
 depends: ["0080-drag-after-tick-crashes"]
 ---
 
@@ -37,15 +37,37 @@ smaller, safe change. A rebase is better when proof exists.
 
 ## Acceptance
 
-- [ ] A test ticks a task while another row stays held, then drops. The
+- [x] A test ticks a task while another row stays held, then drops. The
       note keeps its old text, or the new order is correct. It never
       writes a wrong order.
-- [ ] The drag cancels or rebases, and the user sees which happened.
-- [ ] A drop after a stable tick still writes the order (the 0080 case).
-- [ ] The reorder tests, the list e2e and the no-crash case pass.
-- [ ] `npx tsc --noEmit`, `npx eslint src scripts e2e
+- [x] The drag cancels or rebases, and the user sees which happened.
+- [x] A drop after a stable tick still writes the order (the 0080 case).
+- [x] The reorder tests, the list e2e and the no-crash case pass.
+- [x] `npx tsc --noEmit`, `npx eslint src scripts e2e
       --max-warnings 0` and `npx vitest run` pass.
 
 ## Outcome
 
-(filled in before moving to done/)
+Fixed on 2026-11-24 on `fix/reorder-during-a-tick-hold`. Pull request
+#214.
+
+The drop now reads the group again at the release. `rebaseSpan` maps
+the pickup row keys onto the group's data indexes as they stand. A row
+that left since pick-up moves nobody. A drop cancels when its
+picked row left, or when the rows that remain no longer keep their
+pickup order. The row springs back, and no note changes. The ADR
+`20261124-a-drop-rebases-on-the-rows-it-shows` records both. It also
+records the one-commit window where the registry lags.
+
+The repro: five rows, drag the fourth to the top, tick the second, let
+its hold end, then drop. The base wrote `order: 1` on the fifth row and
+left the dragged row at 4. Head puts the dragged row first. A test in
+`lists-screen.test.tsx` holds the repro, and `reorder.spec.ts` runs the
+same race in a browser, in both motion projects.
+
+The spec's third case cancels: a grip step or a TalkBack increment
+under a held drag. The old indexes can write a passable order there,
+but the drag's shifts still come from the pickup layout.
+
+Next: nothing. A JS hand-off at the release would close the one-commit
+window. No surface needs it yet.

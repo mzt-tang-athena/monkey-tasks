@@ -41,9 +41,11 @@ A step under a held drag cancels. The old indexes may name a passable
 order there. The corners and shifts still come from the pickup layout.
 A rebase could then land where the user saw nothing move.
 
-The drop reads the indexes the last render wrote. A reorder can commit
-in the same frame as the release. The drop then reads the old set, and
-it cancels rather than guesses.
+The drop reads the item registry the last render wrote. A row can leave
+and the finger release within one commit of each other. The drop then
+reads the old indexes, and it lands as the old code did. A hand-off to
+the JS thread at the release would close that window. Nothing needs it
+yet.
 
 The alternative was to cancel on any change to the group. That is the
 smaller change. It also throws away a drag the user can still see. The
