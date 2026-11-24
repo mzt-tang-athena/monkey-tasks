@@ -3,9 +3,9 @@ import { ReferencePicker } from "@/components/references/reference-picker";
 import { useReferenceNotes } from "@/stores/references/use-references";
 
 /**
- * The capture sheet's reference picker. It mounts only while it shows,
- * so the References folder is read when a link is asked for, not every
- * time the capture sheet opens.
+ * The capture sheet's reference picker. It mounts with the sheet, so
+ * the References folder reads once when the sheet opens and stays
+ * cached for the picker and the editor that follows.
  */
 export function CaptureReference({
   open,
