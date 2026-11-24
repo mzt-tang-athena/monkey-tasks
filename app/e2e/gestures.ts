@@ -92,11 +92,9 @@ export async function swipe(
 export type DropAt = "center" | "upper";
 
 /**
- * Press `from` and hold. Gesture handler's web long press is a
- * `setTimeout`, so the hold pauses the page clock and steps it past
- * `holdMs`: real time would race a busy runner, and a paused clock
- * would stall the press. The clock runs again before the move, so the
- * drag and the rest of a spec run on real time.
+ * Press `from` and step the stopped page clock past `holdMs`. The clock
+ * stays stopped, so the caller decides when real time runs again: no
+ * timer, the hold's included, can fire while the press runs.
  */
 async function pressAndHold(page: Page, from: Locator, holdMs: number) {
   const start = await boxOf(from);
@@ -104,7 +102,6 @@ async function pressAndHold(page: Page, from: Locator, holdMs: number) {
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
   await page.mouse.down();
   await page.clock.runFor(holdMs + 50);
-  await page.clock.resume();
 }
 
 /**
@@ -112,6 +109,11 @@ async function pressAndHold(page: Page, from: Locator, holdMs: number) {
  * `src/lib/motion/tokens.ts`), then move onto `to` and let go. `upper`
  * drops a quarter of the way down the target, so a row lands above
  * it. A `holdMs` of 0 suits a grip, which lifts at once.
+ *
+ * The move and the release run on the stopped clock too, and real time
+ * starts again after the release (ticket 20261121-press-hold-margin). A
+ * press shorter than the hold therefore cannot reach it: a stalled
+ * runner advances no page time, so the release always lands first.
  */
 export async function holdDrag(
   page: Page,
@@ -125,12 +127,14 @@ export async function holdDrag(
   await pressAndHold(page, from, holdMs);
   await page.mouse.move(toX, toY, { steps: 12 });
   await page.mouse.up();
+  await page.clock.resume();
 }
 
 /**
  * Press `from`, hold past the pick delay, then move to a page point and
  * stay there with the button down. The caller ends the gesture with
- * `page.mouse.up()`. A test that reads the drag ghost needs this.
+ * `page.mouse.up()`. A test that reads the drag ghost needs this, so
+ * real time runs again as soon as the press is over.
  */
 export async function holdDragTo(
   page: Page,
@@ -139,6 +143,7 @@ export async function holdDragTo(
   { holdMs = 400 }: { holdMs?: number } = {},
 ) {
   await pressAndHold(page, from, holdMs);
+  await page.clock.resume();
   await page.mouse.move(point.x, point.y, { steps: 12 });
 }
 
