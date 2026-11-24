@@ -3,7 +3,7 @@ title: The app icon is the operator's monkey
 created: 2026-11-24
 priority: high
 assignee: omp
-pr:
+pr: 216
 depends: []
 ---
 
