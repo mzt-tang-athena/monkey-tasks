@@ -3,7 +3,7 @@ title: The smoke's typing drops a character
 created: 2026-11-21
 priority: normal
 assignee: opencode
-pr:
+pr: 215
 depends: []
 ---
 
@@ -22,10 +22,19 @@ smoke is flaky here.
 
 ## Acceptance
 
-- [ ] A run before the fix drops a key and names the cause.
-- [ ] Twenty typing runs in a row keep every character.
-- [ ] A mismatch fails the step with both strings printed.
+- [x] A run before the fix drops a key and names the cause.
+- [x] Twenty typing runs in a row keep every character.
+- [x] A mismatch fails the step with both strings printed.
 
 ## Outcome
 
-(filled in before moving to done/)
+`android-drive.sh type` now sends one key per `input text` and reads the
+focused field back.
+
+- Cause: a controlled field drops the tail of a key burst. The base
+  helper lost the tail in 20 of 20 rounds. One key per call at 0.15 s
+  kept every character in 5 of 5.
+- At this head, 20 short rounds and 3 long ones kept every character. A
+  mismatch prints both strings and exits 1.
+- The smoke's three typing steps now FAIL when the field does not read
+  back. The skill documents the pacing and the new verb.
