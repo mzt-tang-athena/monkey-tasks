@@ -3,7 +3,7 @@ title: A caller holding the heavy lock cannot wrap a heavy script
 created: 2026-11-20
 priority: normal
 assignee: opencode
-pr:
+pr: 210
 depends: []
 ---
 
@@ -32,11 +32,19 @@ Make the footgun fail fast instead of hanging:
 
 ## Acceptance
 
-- [ ] A parent process holding the lock runs the script in place.
-- [ ] A stranger holding the lock still waits.
-- [ ] Both cases tested without a real hang.
-- [ ] The skill's heavy section says not to wrap the scripts.
+- [x] A parent process holding the lock runs the script in place.
+- [x] A stranger holding the lock still waits.
+- [x] Both cases tested without a real hang.
+- [x] The skill's heavy section says not to wrap the scripts.
 
 ## Outcome
 
-(filled in before moving to done/)
+`heavy.sh` reads the lock's holder from `lslocks` (`/proc/locks`) and
+walks this shell's parent chain. When a parent holds the lock, the job
+runs in place with one printed line. A stranger's lock still waits.
+
+`test-heavy.sh` proves both directions with a `timeout` on each case and
+runs in `make ci`. `MONKEY_HEAVY_LOCK_FILE` points the test lock away from
+the shared one. The skill's heavy section now says never to wrap the
+scripts. Not fixed: a caller that holds the lock still loses the 8G cap
+for that run. The printed line names it.
