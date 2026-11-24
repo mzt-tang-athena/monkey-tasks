@@ -195,6 +195,69 @@ describe("createReorderSurface", () => {
     ]);
   });
 
+  it("drops a held row against the group it finds at the drop", async () => {
+    // A row leaves the group while another is held: a tick's regroup
+    // or a step. The pickup snapshot still counts it, so the drop reads
+    // the picked row's data index off the group as it stands now.
+    const onReorder = vi.fn();
+    const five = [
+      { name: "Alpha", index: 0 },
+      { name: "Bravo", index: 1 },
+      { name: "Charlie", index: 2 },
+      { name: "Delta", index: 3 },
+      { name: "Echo", index: 4 },
+    ];
+    const place = (rows: Shown[]) =>
+      rows.forEach(({ name }, at) => {
+        placeBox(screen.getByTestId(`reorder-item:${name}`), {
+          x: 0,
+          y: at * 48,
+          width: 390,
+          height: 48,
+        });
+        placeBox(screen.getByTestId(`reorder-grip:${name}`), {
+          x: 360,
+          y: at * 48,
+          width: 44,
+          height: 44,
+        });
+      });
+    const { rerender } = render(<Screen rows={five} count={5} onReorder={onReorder} />);
+    place(five);
+    const grip = screen.getByTestId("reorder-grip:Delta");
+
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerdown", 370, 156));
+    });
+    await wait(50);
+    expect(screen.getByTestId("drag-ghost"), "the grip picked the row up").toBeTruthy();
+    for (let step = 0; step < 2; step += 1) {
+      await act(async () => {
+        grip.dispatchEvent(pointer("pointermove", 370, 6));
+      });
+      await wait(16);
+    }
+
+    // Bravo left the group, and the rows below it moved up one.
+    const four = [
+      { name: "Alpha", index: 0 },
+      { name: "Charlie", index: 1 },
+      { name: "Delta", index: 2 },
+      { name: "Echo", index: 3 },
+    ];
+    rerender(<Screen rows={four} count={4} onReorder={onReorder} />);
+    place(four);
+
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerup", 370, 6));
+    });
+    await wait(50);
+
+    expect(onReorder.mock.calls).toEqual([
+      [{ payload: { name: "Delta" }, group: "Today", from: 2, to: 0 }],
+    ]);
+  });
+
   it("steps a row one place from the keyboard through the drop's event", async () => {
     const onReorder = vi.fn();
     render(

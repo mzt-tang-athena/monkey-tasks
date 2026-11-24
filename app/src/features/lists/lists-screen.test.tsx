@@ -22,6 +22,10 @@ const spy = vi.hoisted(() => ({
   completed: [] as string[],
   listeners: new Set<() => void>(),
   sortMode: "due" as "due" | "manual",
+  /** Each reorder write, as the names and orders it would send. */
+  writes: [] as [string, number][][],
+  /** How long the stand-in row's tick holds before it lets go. */
+  tickSettleMs: 320,
 }));
 
 vi.mock("react-native-safe-area-context", () => ({
@@ -82,7 +86,9 @@ vi.mock("@/stores/tasks/mutations/use-toggle-task", () => ({
   },
 }));
 vi.mock("@/stores/tasks/mutations/use-reorder-section", () => ({
-  useReorderSection: () => async () => undefined,
+  useReorderSection: () => async (changes: { task: TaskItem; order: number }[]) => {
+    spy.writes.push(changes.map(({ task: item, order }) => [item.name, order]));
+  },
 }));
 vi.mock("@/stores/tasks/mutations/use-clear-completed", () => ({
   useClearCompleted: () => async () => undefined,
@@ -121,7 +127,7 @@ vi.mock("@/components/task-row", async () => {
       if (!done) {
         return;
       }
-      const timer = setTimeout(() => onTickSettled?.(task), 320);
+      const timer = setTimeout(() => onTickSettled?.(task), spy.tickSettleMs);
       return () => clearTimeout(timer);
     }, [done, task, onTickSettled]);
     return (
@@ -244,6 +250,8 @@ beforeEach(() => {
   spy.open.mockClear();
   spy.sortMode = "due";
   spy.completed = [];
+  spy.writes = [];
+  spy.tickSettleMs = 320;
   selectList("Main");
   setCompletedOpen("Main", false);
   setCompletedOpen("Errands", false);
@@ -439,6 +447,160 @@ describe("ListsScreen", () => {
 
     expect(spy.screenRenders, "a crossing renders the screen").toBe(pickedScreen);
     expect(spy.renders, "a crossing renders a task row").toEqual(pickedRows);
+  });
+
+  /** Places `names` as one group of 48 px rows. */
+  function placeRows(names: string[]) {
+    names.forEach((name, index) => {
+      placeBox(screen.getByTestId(`reorder-item:${name}`), {
+        x: 0,
+        y: index * 48,
+        width: 390,
+        height: 48,
+      });
+      placeBox(screen.getByTestId(`reorder-grip:${name}`), {
+        x: 360,
+        y: index * 48 + 12,
+        width: 44,
+        height: 44,
+      });
+    });
+  }
+
+  /** Picks row `from` up by its grip and holds it over the first slot. */
+  async function holdOverTop(grip: HTMLElement, from: number) {
+    const start = from * 48 + 12;
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerdown", 370, start));
+    });
+    await wait(50);
+    // The grip keeps no pointer capture, so the move out of its box
+    // comes first and the move to the top carries the new point.
+    for (const y of [start - 60, 60, 6]) {
+      await act(async () => {
+        grip.dispatchEvent(pointer("pointermove", 370, y));
+      });
+      await wait(16);
+    }
+  }
+
+  async function release(grip: HTMLElement) {
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerup", 370, 6));
+    });
+    await wait(50);
+  }
+
+  /** The store takes write `at`: the rows carry their new numbers, so
+      the next render reads the group in the order it wrote. */
+  function landed(at: number) {
+    const orders = new Map(spy.writes[at]);
+    spy.tasks = (spy.tasks as TaskItem[]).map((item) => {
+      const order = orders.get(item.name);
+      return order == null ? item : { ...item, data: { ...item.data!, order } };
+    });
+    act(() => spy.listeners.forEach((listener) => listener()));
+  }
+
+  /** A tick from a second finger: its own press, then its click, so
+      the drag's one-click guard lets the press through. */
+  function tapTick(name: string) {
+    const button = screen.getByLabelText(`tick ${name}`);
+    fireEvent.pointerDown(button);
+    fireEvent.click(button);
+  }
+
+  it("drops a held row into the order a tick left behind", async () => {
+    // Ticket 20261111-reorder-during-a-tick-hold: the tick's hold ends
+    // between pick-up and drop, so the group loses the ticked row while
+    // the drop still counts it. The picked row's data index then names
+    // the row below it, and that row takes the drop.
+    vi.useRealTimers();
+    spy.sortMode = "manual";
+    const names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
+    spy.tasks = names.map((name) => task(name));
+    render(<ListsScreen dock={dock} />);
+    placeRows(names);
+    const grip = screen.getByTestId("reorder-grip:Delta");
+
+    await holdOverTop(grip, 3);
+    expect(screen.getByTestId("drag-ghost"), "the grip picked the row up").toBeTruthy();
+
+    // The tick's hold ends here, before the drop, so the group loses
+    // Bravo while the drag still counts it.
+    spy.tickSettleMs = 10;
+    tapTick("Bravo");
+    await wait(100);
+    expect(
+      screen.queryByTestId("row:Bravo"),
+      "the ticked row left the group",
+    ).toBeNull();
+
+    await release(grip);
+
+    expect(spy.writes).toEqual([
+      [
+        ["Delta", 1],
+        ["Alpha", 2],
+        ["Charlie", 3],
+        ["Echo", 4],
+      ],
+    ]);
+  });
+
+  it("drops a held row into the group its tick has not left yet", async () => {
+    vi.useRealTimers();
+    spy.sortMode = "manual";
+    const names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
+    spy.tasks = names.map((name) => task(name));
+    render(<ListsScreen dock={dock} />);
+    placeRows(names);
+    const grip = screen.getByTestId("reorder-grip:Delta");
+
+    await holdOverTop(grip, 3);
+
+    // The tick is in its hold, so the row still sits in the group.
+    tapTick("Bravo");
+    await release(grip);
+
+    expect(spy.writes).toEqual([
+      [
+        ["Delta", 1],
+        ["Alpha", 2],
+        ["Bravo", 3],
+        ["Charlie", 4],
+        ["Echo", 5],
+      ],
+    ]);
+  });
+
+  it("cancels a drop whose group a step reordered under it", async () => {
+    vi.useRealTimers();
+    spy.sortMode = "manual";
+    const names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
+    spy.tasks = names.map((name) => task(name));
+    render(<ListsScreen dock={dock} />);
+    placeRows(names);
+    const grip = screen.getByTestId("reorder-grip:Delta");
+
+    await holdOverTop(grip, 3);
+
+    // A grip step on another row runs while Delta is held. The step
+    // writes its own order, and the drop either way must not read the
+    // pickup indexes as the group's order now.
+    screen.getByTestId("reorder-grip:Charlie").focus();
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+    });
+    await wait(50);
+    const stepped = spy.writes.length;
+    landed(0);
+
+    await release(grip);
+
+    expect(stepped, "the step wrote its own order").toBe(1);
+    expect(spy.writes, "the drop wrote nothing").toHaveLength(1);
+    expect(screen.queryByTestId("drag-ghost"), "the drag canceled").toBeNull();
   });
 
   it("renders nothing at a swipe start, and caps the preview rows", async () => {
