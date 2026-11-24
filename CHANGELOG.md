@@ -6,6 +6,15 @@ comes first. The same text goes into the GitHub release notes.
 Each bullet fits one line on a phone. `scripts/check-changelog.sh`
 fails a bullet that wraps or runs past 64 characters.
 
+## 1.4.0 - unreleased
+
+### Deeds
+
+- The app reads your deeds, as tasks with a status.
+- A dated deed shows on its day in the planner.
+- Main and the lists show plain tasks only.
+- A deed with no status waits in the vault, unseen.
+
 ## 1.3.0 - unreleased
 
 ### Command pane
