@@ -3,7 +3,7 @@
     "name": "monkey-tasks",
     "slug": "monkey-tasks",
     "scheme": "monkeytasks",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "dev.monkey.monkeytasks",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "SCHEDULE_EXACT_ALARM",
         "ACCESS_NOTIFICATION_POLICY"
