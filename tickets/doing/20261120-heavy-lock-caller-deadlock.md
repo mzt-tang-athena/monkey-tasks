@@ -2,7 +2,7 @@
 title: A caller holding the heavy lock cannot wrap a heavy script
 created: 2026-11-20
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
