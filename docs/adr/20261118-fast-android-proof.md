@@ -114,3 +114,49 @@ behind. That would shut the emulator down at the end of every launch.
 Rejected: a wrapper script beside the three that callers run instead.
 Callers would still have to choose it, and the scripts would stay wrong
 on their own.
+
+## Amendment 2026-11-24: the environment reaches the unit in a file
+
+The unit still gets the caller's whole environment. It now arrives in a
+mode-600 file under `$XDG_RUNTIME_DIR`, not in `--setenv` flags.
+
+`--setenv=NAME=value` put every value in `systemd-run`'s argv. That
+argv is world readable in `/proc/PID/cmdline`. `--pipe` keeps the
+process alive for the whole job. An OpenChamber session exports
+`OPENCODE_JWT_SECRET`, `OPENCHAMBER_UI_PASSWORD` and others, so any
+local user could read them for a whole build.
+
+`heavy.sh` writes the environment to
+`monkey-heavy-env.<unit>.<random>`. It starts the unit with
+`-p EnvironmentFile=`. Each line is `NAME="value"`.
+
+Inside the quotes systemd reads only `\` and `"` specially. The writer
+escapes those two, and every other byte stays literal, a newline
+included. A NUL byte cannot arrive, and an environment value never
+holds one.
+
+The unit unlinks the file as its first act. The job's first line then
+finds no file. The prelude unlinks the file again once `systemd-run`
+returns, which covers a unit that never started. `-p Type=exec` makes
+that return mean the unit has exec'd its command. The manager reads
+the file before that exec, so the second unlink cannot race it.
+
+Rejected: `systemctl --user set-environment`. The value lands in the
+manager's environment. Every unit the user starts then sees it, not
+only the heavy job. It stays until a reboot.
+
+Rejected: `--setenv` for values that look harmless, the file for the
+rest. That needs a list of secret names. The list rots the first time
+a session exports a new token.
+
+Consequences:
+
+- A process of the same user can still read the job's
+  `/proc/PID/environ`. The job needs the values, so no forwarding
+  avoids that.
+- A prelude killed between the write and the unit start leaves one
+  mode-600 file in the runtime directory. tmpfs clears it at logout.
+- A unit whose command is missing now fails the call. `Type=simple`
+  reported success at the fork.
+- The unit's first process is `/bin/sh`. It unlinks the file and execs
+  the job in place, so the pid and the exit code still carry.
