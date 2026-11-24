@@ -10,9 +10,10 @@ task with a status. Its child ticket `20261124-app-reads-deeds-as-tasks`
 gets deeds into the app. The board ticket `20261124-deed-board`
 follows.
 
-That ADR decides Main. It leaves four things to the app. Where does a
+That ADR decides Main. It leaves five things to the app. Where does a
 deed show beside the planner? What does a tick write on a deed? What
-does an untick write? What happens to a deed note with no status?
+does an untick write? What does a recurring deed's next note hold?
+What happens to a deed note with no status?
 
 ## Decision
 
@@ -24,6 +25,8 @@ does an untick write? What happens to a deed note with no status?
 - A tick writes `completed` and `status: "[[done]]"` together, as the
   vocabulary says. An untick removes `completed` and writes
   `status: "[[backlog]]"`.
+- A ticked deed's next recurring note is a plain task. It copies the
+  due date, the rule and the list, and carries no status.
 - The first app write of a deed note also writes the task kind. When
   the note has no `created` date, it writes one, because a task note
   needs it.
@@ -39,3 +42,8 @@ lowest claim, and the board's status picker sets the real value.
 
 A deed that needs a list waits for the board. A list tab ignores it,
 because one list is a plain-task bucket today.
+
+No deed in the vault recurs today. A ticked deed's next note is a
+plain task, so a series would lose the status. Copying the status
+forward would keep it. It would also put a status on every later
+note, before the board can change it. We wait for a deed that recurs.
