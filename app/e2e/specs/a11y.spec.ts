@@ -568,6 +568,7 @@ test.describe("axe", () => {
       picker.getByRole("button", { name: "oatmeal, physical, recipes" }),
     );
     await press(page, page.getByRole("button", { name: "Done", exact: true }));
+    await expect(page.getByRole("dialog", { name: "Reference" })).toHaveCount(0);
 
     await press(
       page,

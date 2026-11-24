@@ -79,6 +79,9 @@ test("a reference attaches, previews, survives a re-read and detaches", async ({
     page.getByRole("button", { name: `${references.oatmeal}, physical, recipes` }),
   ).toBeVisible();
   await press(page, page.getByRole("button", { name: "Done", exact: true }));
+  // The picker leaves the tree before the preview opens, so only one
+  // dialog named Reference shows at a time.
+  await expect(page.getByRole("dialog", { name: "Reference" })).toHaveCount(0);
 
   // The tile lists both links.
   await expect(
