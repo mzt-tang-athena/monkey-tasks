@@ -126,13 +126,19 @@ export function selectOpenTasks(tasks: TaskItem[], now: Date): TaskItem[] {
  * [[that name]]. Focus is a list note like the rest. See ADR
  * 20261111-one-list-and-tab-order and the 2026-11-11 amendment to ADR
  * 0015.
+ *
+ * A task with a status is a deed, and a deed is never a list row. Main
+ * would otherwise hold every deed, because none of them carries a
+ * list. The board shows deeds (ADR `20261124-deeds-are-tasks-with-a-status`).
  */
 export function selectTabTasks(
   tasks: TaskItem[],
   tab: ListTab,
   now: Date,
 ): TaskItem[] {
-  const shown = tasks.filter((task) => !isHiddenOccurrence(task, now));
+  const shown = tasks.filter(
+    (task) => task.data?.status == null && !isHiddenOccurrence(task, now),
+  );
   if (tab === "Main") {
     return shown.filter((task) => !task.data?.list);
   }

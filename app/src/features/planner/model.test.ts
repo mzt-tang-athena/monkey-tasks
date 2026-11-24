@@ -203,6 +203,18 @@ describe("inSourceList", () => {
     expect(inSourceList(loose, "Main")).toBe(true);
     expect(inSourceList(loose, "Focus")).toBe(false);
   });
+
+  it("keeps a deed off a named source, on its day or not", () => {
+    const deed = task("Charlie", {
+      kind: "[[tasks]]",
+      created: "2026-10-20",
+      "alert weight": "harsh",
+      status: "[[active]]",
+      due: "2026-10-22",
+    });
+    expect(inSourceList(deed, "Main")).toBe(false);
+    expect(inSourceList(deed, "Focus")).toBe(false);
+  });
 });
 
 describe("parseMode", () => {

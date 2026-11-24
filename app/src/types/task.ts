@@ -18,6 +18,12 @@ export type TaskItem = {
   data: TaskFrontmatter | null;
   /** Body below the frontmatter. */
   body: string;
+  /**
+   * Set for a note read from `Deeds/`. Absent means `Tasks/`. The app
+   * keeps the folder here because a note's kind no longer says where it
+   * lives: a deed reads as a task.
+   */
+  folder?: "deeds";
   /** Why the frontmatter failed, when it did. Absent on a valid note. */
   errors?: string[];
   /**

@@ -25,6 +25,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "both",
     why: "watches the burst per frame, and that reduce paints none",
   },
+  "deeds.spec.ts": {
+    runsIn: "both",
+    why: "opens a deed from a row that animates, and reads the note it writes",
+  },
   "motion.spec.ts": {
     runsIn: "both",
     why: "reads the swipe on a stopped clock, then the reduce path",

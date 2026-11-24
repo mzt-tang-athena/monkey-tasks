@@ -28,7 +28,7 @@ describe("the sample notes", () => {
           file: "Tasks/Broken note.md",
           line: 2,
           kind: "invalid",
-          reason: "created: Invalid input: expected string, received undefined",
+          reason: "created: a task note needs a created date",
         },
         {
           file: "Tasks/Descale the kettle.md",
@@ -49,6 +49,13 @@ describe("the sample notes", () => {
           reason: "created: Invalid input: expected string, received undefined",
         },
       ],
+    });
+  });
+
+  it("pass vault:check in the deeds seed", () => {
+    expect(checkVault(join(sampleDir, "deeds"))).toEqual({
+      notes: 3,
+      findings: [],
     });
   });
 });

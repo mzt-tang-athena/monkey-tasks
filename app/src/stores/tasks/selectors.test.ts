@@ -21,6 +21,7 @@ type TaskFields = {
   completed?: string;
   recurrence?: string;
   "recurrence previous"?: string;
+  status?: TaskFrontmatter["status"];
 };
 
 function task(name: string, fields: TaskFields = {}): TaskItem {
@@ -103,6 +104,18 @@ describe("selectOpenTasks", () => {
   it("returns an empty pool for no tasks", () => {
     expect(selectOpenTasks([], NOW)).toEqual([]);
   });
+
+  it("keeps a deed in the pool, for its day and its overdue group", () => {
+    const tasks = [
+      task("Water the beds", { status: "[[active]]", due: "2026-10-22" }),
+      task("Plan the week", { status: "[[backlog]]" }),
+    ];
+
+    expect(names(selectOpenTasks(tasks, NOW))).toEqual([
+      "Water the beds",
+      "Plan the week",
+    ]);
+  });
 });
 
 describe("selectTabTasks", () => {
@@ -154,6 +167,21 @@ describe("selectTabTasks", () => {
 
   it("shows nothing for a tab with no matching tasks", () => {
     expect(selectTabTasks(tasks, "Someday", NOW)).toEqual([]);
+  });
+
+  it("keeps a deed off Main and off every list tab", () => {
+    const active = task("Water the beds", { status: "[[active]]" });
+    const filed = task("Garden plan", {
+      status: "[[backlog]]",
+      list: "[[Focus]]",
+    });
+
+    expect(names(selectTabTasks([active, filed, ...tasks], "Main", NOW))).toEqual(
+      ["Call bank"],
+    );
+    expect(names(selectTabTasks([active, filed, ...tasks], "Focus", NOW))).toEqual(
+      ["Plan week", "Second focus"],
+    );
   });
 
   it("hides a spawned occurrence until its due day", () => {

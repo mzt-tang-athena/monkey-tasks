@@ -12,7 +12,6 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import * as yaml from "js-yaml";
 import {
-  deedFrontmatter,
   listFrontmatter,
   parseFrontmatter,
   taskFrontmatter,
@@ -47,12 +46,13 @@ const BARE_SCALAR = /^[^:#\s][^:]*:\s*\[\[[^\]]+\]\]\s*$/;
 
 /**
  * The schema for a note, by its folder. `null` means the app does not
- * read this note; only the wikilink check applies to it.
+ * read this note; only the wikilink check applies to it. A deed note
+ * gets the task schema, because a deed is a task with a status.
  */
 function schemaFor(file: string) {
   if (/^Tasks\/Lists\/[^/]+\.md$/.test(file)) return listFrontmatter;
   if (/^Tasks\/[^/]+\.md$/.test(file)) return taskFrontmatter;
-  if (/^Deeds\/[^/]+\.md$/.test(file)) return deedFrontmatter;
+  if (/^Deeds\/[^/]+\.md$/.test(file)) return taskFrontmatter;
   return null;
 }
 
@@ -85,6 +85,24 @@ function lineOfKey(block: string, key: string): number {
   const lines = block.split(/\r?\n/);
   const index = lines.findIndex((line) => line.startsWith(`${key}:`));
   return index === -1 ? 2 : index + 2;
+}
+
+/**
+ * The line of the property a warning names. A task warning says which
+ * value it replaced or which two disagree, so the key the message
+ * repeats is the one to fix. The longest key wins, so `alert weight`
+ * beats a shorter property it holds.
+ */
+function lineOfWarning(block: string, warning: string): number {
+  const keys = block
+    .split(/\r?\n/)
+    .flatMap((line) => {
+      const pair = /^([^:\s][^:]*):/.exec(line);
+      return pair == null ? [] : [pair[1].trim()];
+    })
+    .sort((a, b) => b.length - a.length);
+  const named = keys.find((key) => warning.includes(`${key} `));
+  return named == null ? 2 : lineOfKey(block, named);
 }
 
 /** A value as the file holds it, for a finding's reason. */
@@ -163,7 +181,7 @@ function checkNote(file: string, text: string): Finding[] {
     for (const warning of taskWarnings(note.values)) {
       findings.push({
         file,
-        line: lineOfKey(block, "alert weight"),
+        line: lineOfWarning(block, warning),
         kind: "warning",
         reason: warning,
       });

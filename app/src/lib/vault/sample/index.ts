@@ -2,6 +2,14 @@
 // file. Do not edit it: a test fails when it is out of date.
 
 export const sampleNotes: Record<string, Record<string, string>> = {
+  "deeds": {
+    "Deeds/Brainstorm.md":
+      "---\nkind: \"[[deeds]]\"\nparent deed: \"[[Garden]]\"\n---\n\nIdeas that wait for a status.\n",
+    "Deeds/Water the beds.md":
+      "---\nkind: \"[[deeds]]\"\nstatus: \"[[active]]\"\ncreated: 2026-09-12\ndue: 2026-10-28\nparent deed: \"[[Garden]]\"\ncategories:\n  - \"[[digital]]\"\ntypes:\n  - \"[[project]]\"\nafter: \"[[Order things]]\"\nalert weight: quiet\n---\n\nWater the beds before the heat.\n",
+    "Tasks/Plain task.md":
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-10-26T09:00\n---\n\nThe only plain task in this vault.\n",
+  },
   "default": {
     "Journal/Daily/2026-10-26.md":
       "---\nbanner_image: Attachments/Banners/office.jpg\nbanner_position: 20\n---\n\n**To-do**\n\n- [ ] Reply to the plumber\n- [ ] Send the meter reading\n\n8:05\n- Woke up early, before the alarm\n- Walked to the bakery and back\n\n12:40\n- Ate: [[oatmeal]] with milk and brown sugar #food\n- Ate: [[chinese-steamed-eggs]] #food #protein\n\n16:20\n- Paid the water bill\n- Fixed the monkey-budget category and groups issues\n\n19:52\n- Went out for dessert with others\n- Plan the weekend hike\n\n![[daily.base]]\n",
