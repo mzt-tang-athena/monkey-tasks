@@ -2,7 +2,7 @@
 title: The smoke's typing drops a character
 created: 2026-11-21
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
