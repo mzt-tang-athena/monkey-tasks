@@ -3,7 +3,7 @@ title: Heavy jobs keep the caller's secrets off argv
 created: 2026-11-24
 priority: high
 assignee: opencode
-pr:
+pr: 219
 depends: []
 ---
 
@@ -42,4 +42,25 @@ confirmed the leak against two running lanes.
 
 ## Outcome
 
-(filled in before moving to done/)
+Shipped in #219.
+
+- `heavy.sh` writes the caller's environment to a mode-600
+  `monkey-heavy-env.<unit>.<random>` file under `$XDG_RUNTIME_DIR` and
+  starts the unit with `-p EnvironmentFile=`. No value reaches an argv.
+- The unit unlinks the file before its first line. The prelude unlinks
+  it again once `systemd-run` returns, which covers a failed start.
+  `-p Type=exec` makes that return a real start.
+- Escaping every `\` and `"` carries a newline, `$`, a backtick, `%`,
+  a tab and unicode intact. A NUL byte cannot arrive, and a value never
+  holds one.
+- The forwarded names do not change, so `CLEAN`, `ARCHS`, `MONKEY_LOG_DIR`
+  and `ANDROID_VERIFY_PORT` still reach the job.
+- Proof: `make test-heavy` passes, and three mutations fail it: the old
+  `--setenv` path, no unit-side unlink, and the escape dropped. A live
+  unit matched a 107-byte odd value by sha256. A `/proc/*/cmdline` scan
+  during a job found no marker, and the same scan caught a planted
+  `--setenv` leak.
+- Amendment 2026-11-24 in ADR `20261118-fast-android-proof` records the
+  transport and the rejected alternatives.
+- `scripts/gate.sh full` passed at bc9f4d8 in 1732 s, 497 e2e passed.
+  The close commit is prose, so it gets `fast`.
