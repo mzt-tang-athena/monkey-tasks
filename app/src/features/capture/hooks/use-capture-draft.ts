@@ -9,6 +9,10 @@ export type CaptureDraft = {
   targets: CaptureTarget[];
   target: CaptureTarget;
   cycleTarget: () => void;
+  /** The references the task will point at, by note name. */
+  references: string[];
+  addReference: (name: string) => void;
+  removeReference: (name: string) => void;
   canSend: boolean;
   sending: boolean;
   error: string | null;
@@ -34,10 +38,12 @@ export function useCaptureDraft({
   onSend: (
     parsed: ParsedCapture,
     target: CaptureTarget,
+    references: string[],
   ) => void | Promise<void>;
 }): CaptureDraft {
   const [text, setText] = React.useState("");
   const [targetIndex, setTargetIndex] = React.useState(defaultTargetIndex);
+  const [references, setReferences] = React.useState<string[]>([]);
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -70,7 +76,7 @@ export function useCaptureDraft({
     setSending(true);
     let write: void | Promise<void>;
     try {
-      write = onSend(capture, target);
+      write = onSend(capture, target, references);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
       setSending(false);
@@ -79,6 +85,7 @@ export function useCaptureDraft({
     void Promise.resolve(write).then(
       () => {
         setText("");
+        setReferences([]);
         setSending(false);
       },
       (failure: unknown) => {
@@ -90,7 +97,18 @@ export function useCaptureDraft({
 
   const reset = () => {
     setText("");
+    setReferences([]);
     setError(null);
+  };
+
+  const addReference = (name: string) => {
+    setReferences((current) =>
+      current.includes(name) ? current : [...current, name],
+    );
+  };
+
+  const removeReference = (name: string) => {
+    setReferences((current) => current.filter((held) => held !== name));
   };
 
   const cycleTarget = () => {
@@ -104,6 +122,9 @@ export function useCaptureDraft({
     targets,
     target: targets[targetIndex] ?? targets[0],
     cycleTarget,
+    references,
+    addReference,
+    removeReference,
     canSend,
     sending,
     error,

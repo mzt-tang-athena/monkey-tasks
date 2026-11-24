@@ -547,6 +547,40 @@ test.describe("axe", () => {
     await scan(page, "capture sheet");
   });
 
+  test("the reference picker and its preview", async ({ page }) => {
+    await openLists(page);
+    await press(
+      page,
+      row(page, undated.second).getByRole("button", { name: undated.second }),
+    );
+    const editor = page.getByRole("dialog", { name: "Task" });
+    await expect(editor.getByRole("textbox", { name: "Task name" })).toBeVisible();
+
+    await press(page, editor.getByRole("button", { name: "link a reference" }));
+    const picker = page.getByRole("dialog", { name: "Reference" });
+    await expect(picker).toHaveCSS("opacity", "1");
+    await expectTargets(page);
+    await scan(page, "reference picker");
+
+    await page.getByRole("textbox", { name: "Find a reference" }).fill("oats");
+    await press(
+      page,
+      picker.getByRole("button", { name: "oatmeal, physical, recipes" }),
+    );
+    await press(page, page.getByRole("button", { name: "Done", exact: true }));
+    await expect(page.getByRole("dialog", { name: "Reference" })).toHaveCount(0);
+
+    await press(
+      page,
+      editor.getByRole("button", { name: "open reference oatmeal" }),
+    );
+    const preview = page.getByRole("dialog", { name: "Reference" });
+    await expect(preview.getByText(/Rolled oats with milk/)).toBeVisible();
+    await expect(preview).toHaveCSS("opacity", "1");
+    await expectTargets(page);
+    await scan(page, "reference preview");
+  });
+
   for (const palette of ["budget", "midnight"] as const) {
     test(`the Journal page in ${palette} at 360`, async ({ page }) => {
       await openJournal(page);

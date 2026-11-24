@@ -16,6 +16,10 @@ export type CaptureSheetState = {
   progress: Progress;
   /** The failure toast, or null when there is nothing to report. */
   toast: { message: string; retry: () => void; dismiss: () => void } | null;
+  /** The reference picker shows over the sheet. */
+  referenceOpen: boolean;
+  openReferences: () => void;
+  closeReferences: () => void;
   /** The Add button: opens the sheet, or closes it when it is open. */
   toggle: () => void;
   /** Opens the sheet, for the command pane. */
@@ -60,9 +64,9 @@ export function useCaptureSheet({
   // out. A failure raises the toast and keeps the draft for Retry. A
   // success clears the toast.
   const write = React.useCallback(
-    async (parsed: ParsedCapture, target: CaptureTarget) => {
+    async (parsed: ParsedCapture, target: CaptureTarget, references: string[]) => {
       try {
-        await capture(parsed, target, dueDay);
+        await capture(parsed, target, dueDay, references);
         setFailure(null);
       } catch (error) {
         setFailure({ dismissed: false });
@@ -83,6 +87,7 @@ export function useCaptureSheet({
   // after a focus close, so the bar still ends shown.
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
+  const [referenceOpen, setReferenceOpen] = React.useState(false);
   const progress = useProgress(open, {
     ms: motion.ms.sheet,
     onSettled: (at) => at === 0 && setMounted(false),
@@ -102,10 +107,14 @@ export function useCaptureSheet({
     setMounted(false);
   }
 
-  const close = React.useCallback(() => setOpen(false), []);
+  const close = React.useCallback(() => {
+    setReferenceOpen(false);
+    setOpen(false);
+  }, []);
 
   const openSheet = () => {
     setFailure(null);
+    setReferenceOpen(false);
     // The sent draft is cleared here, not on send, so the closing frame
     // keeps the input's height and the sheet never jumps as it leaves.
     draft.reset();
@@ -135,6 +144,9 @@ export function useCaptureSheet({
     draft,
     progress,
     toast,
+    referenceOpen,
+    openReferences: () => setReferenceOpen(true),
+    closeReferences: () => setReferenceOpen(false),
     toggle: () => (open ? close() : openSheet()),
     show: openSheet,
     close,

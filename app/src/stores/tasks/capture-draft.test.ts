@@ -113,4 +113,27 @@ describe("month-end rules (ticket 0066)", () => {
     expect(draft.data.recurrence).toBe(rule);
     expect(parsed(draft.content).recurrence).toBe(rule);
   });
+
+  it("writes one reference line each, under the heading, in the body", () => {
+    const text = captureContent(sample, "Focus", CREATED, [
+      "oatmeal",
+      "miso-soup",
+    ]);
+
+    expect(text).toContain(
+      "---\n\n## Reference\n\n[[oatmeal]]\n[[miso-soup]]\n",
+    );
+    expect(parsed(text)).not.toHaveProperty("Reference");
+  });
+
+  it("gives the optimistic row the body it will hold", () => {
+    const draft = captureDraft(
+      { name: "buy oats" },
+      { kind: "list", name: "Groceries" },
+      undefined,
+      ["oatmeal"],
+    );
+
+    expect(draft.body).toBe("\n## Reference\n\n[[oatmeal]]\n");
+  });
 });

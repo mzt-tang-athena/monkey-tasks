@@ -117,3 +117,14 @@ With reduced motion the panel still follows the finger.
 The spring back and the slide out then land at once.
 Screen readers skip the handle.
 The scrim button and Android back stay as the accessible ways to close.
+
+## Amendment 2026-11-24: Reference joins as its own tile
+
+Ticket 0091 adds a Reference property.
+It keeps its own tile rather than the generic one.
+Each link is a press on its own row, and the row's close detaches it.
+A generic tile holds one press and one clear control.
+It cannot open a link and remove another link side by side.
+The chip stays in the add strip while links are present.
+The next link then has one place to start.
+

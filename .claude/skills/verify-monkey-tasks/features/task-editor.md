@@ -16,6 +16,7 @@ ADR `20261116-task-editor-sheet` is the decision. Ticket 0093 built it.
 - `editor-repeat` picks a preset or writes an RRULE in Advanced.
 - `editor-list` picks one list, or Main.
 - `editor-alerts` adds and removes reminders, and sets the alert weight.
+- `editor-reference` links a note from `References/`, previews it and detaches it.
 - `editor-note` edits the note body in a full height field.
 - `editor-failed` keeps the draft and offers Retry.
 - `editor-delete` removes the note, with Undo for five seconds.
@@ -47,6 +48,15 @@ Preconditions: a fresh page on `/`.
   `alert weight: quiet`, and the `change alerts` tile then ends in
   "Quiet". `Harsh` takes the key off the note. The weight hides while a
   reminder is in the add flow.
+- **Reference.** `link a reference` opens the dialog `Reference`. The
+  search field `Find a reference` matches a note by name or by an
+  ingredient. A result reads `<name>, <category>, <type>` and a press
+  attaches it; a second press attaches another. `browse the References
+  folder` lists them all. `Done` closes. The tile lists each link as
+  `open reference <name>`, which opens the preview dialog `Reference`,
+  and `remove reference <name>`, which writes the section out. A link
+  to a note that left the folder says so and offers
+  `detach the missing reference`.
 - **Note.** `edit note` opens the dialog `Note`. `done with the note`
   writes the body.
 - **Title.** Fill `Task name`, then click `close the task`. The row
@@ -64,9 +74,12 @@ Preconditions: a fresh page on `/`.
   only the handle. `e2e/specs/sheet-drag.spec.ts` covers each case.
 - **Side effect.** `noteText` shows `due`, `recurrence`, `list`,
   `reminders`, `alert weight` and the body. Undo puts the exact text
-  back.
-- **Width.** At 360 wide the four chips `add due date`, `add repeat`,
-  `add reminder` and `add note` fit inside the sheet. The testID
+  back. A reference writes `## Reference` and one `[[name]]` per line in
+  the body. The frontmatter and every other body line keep their place.
+- **Reference proof.** `journeys/references.journey.ts` takes search,
+  attach, preview, re-read and detach, with the note on disk each time.
+- **Width.** At 360 wide, four chips fit inside the sheet. They are
+  `add due date`, `add repeat`, `add reminder` and `add note`. The testID
   `strip-fade-end` shows only when a chip waits past the edge.
 - **Proof.** Screenshot the sheet at rest, each picker, the weight, the
   failed row, the toast and the sheet at 360. The journey
