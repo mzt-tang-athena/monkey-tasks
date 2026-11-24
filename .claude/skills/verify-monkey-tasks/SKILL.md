@@ -365,6 +365,17 @@ for the window to draw and for its frame to stop moving. It takes as
 long as the host needs. Give it a timeout in seconds as the second
 argument.
 
+`type` reads the focused field back, so a key it loses cannot pass
+quietly. A controlled field can drop keys: one `input text` sends a
+burst faster than the app writes its value back. The keys after that
+last write never land. Measured on the 1.2.0 APK under load, a burst
+lost the tail in 20 of 20 rounds. The step sends one key per
+`input text`, a tenth of a second apart, and reads the field after.
+When it still does not match, it empties the field and sends the whole
+text again. It tries three times at most, then fails with the text it
+wanted and the text it read. A field that already held text appends;
+both readings pass.
+
 A handle matches `content-desc` (the accessibility label), then
 `resource-id` (the `testID`), then text. A handle matches exactly, or as a
 substring with a leading `~`. `outer>>inner` finds inner within outer's bounds.
@@ -376,7 +387,7 @@ on the gesture. Handles in this app: the tab names, `add task`,
 `task-row:<name>`, `list-pager`, `repair-notice`, `reorder-grip:<name>`.
 
 Proven on the emulator so far: `tap`, `wait`, `scroll-to`, `swipe`,
-`frames`, `record`, `note` and `log`. `hold-drag`, `drag` and `type`
+`frames`, `record`, `note`, `type` and `log`. `hold-drag` and `drag`
 exist but have not yet run on an APK. Check them before you rely on them.
 
 Make a journey safe to run again: `journeys/android-list-swipe.sh` is
@@ -469,6 +480,6 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 - `android-drive.sh <step>` drives and saves evidence.
 - `android-cleanup.sh [--delete-avd]` stops our emulator.
 - `android-seed.ts <out dir> <YYYY-MM-DD> [seeds]` writes the sample vault for a day. Run it from `app/` with `npx tsx`.
-- `android-ui.mjs <dump.xml> find|text|list [handle]` reads a screen tree.
+- `android-ui.mjs <dump.xml> find|text|focused|list [handle]` reads a screen tree.
 - `android-frames.mjs <frames.raw> <out dir> [columns]` turns raw `screenrecord` frames into PNGs and a grid.
 - `android-handle.mjs <shot.png> ...` reads the insertion handle and the caret from a shot.

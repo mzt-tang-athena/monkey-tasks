@@ -26,6 +26,15 @@ step() { echo "== $*"; }
 smoke_fails=0
 pass() { echo "PASS: $*"; }
 fail() { echo "FAIL: $*"; smoke_fails=$((smoke_fails + 1)); }
+# Typing reads the field back, so a lost key is a FAIL here, with the two
+# strings on the helper's own line, instead of a missing note later.
+typed() {
+  if $D type "$1" >/dev/null; then
+    pass "typed '$1'"
+  else
+    fail "typing '$1' did not read back, both strings are above"
+  fi
+}
 finish() {
   if [ "$smoke_fails" -eq 0 ]; then
     echo "smoke: pass"
@@ -92,13 +101,15 @@ step "journal entry and food entry"
 $D tap Journal >/dev/null && sleep 2
 day=$(adb -s $SERIAL shell date +%F | tr -d '\r')
 $D tap "add entry" >/dev/null && sleep 1
-$D type "Release smoke entry" && sleep 1
+typed "Release smoke entry"
+sleep 1
 $D tap "send entry" >/dev/null && sleep 2
 note "Journal/Daily/$day.md" | grep -q "^- Release smoke entry" && pass "journal entry written" || fail "journal entry missing"
 $D tap "add entry" >/dev/null 2>&1 || { $D tap Journal >/dev/null; sleep 1; $D tap "add entry" >/dev/null; }
 sleep 1
 $D tap "food entry: off" >/dev/null && sleep 1
-$D type "toast" && sleep 1
+typed "toast"
+sleep 1
 $D tap "send entry" >/dev/null && sleep 2
 note "Journal/Daily/$day.md" | grep -q "^- Ate: toast #food" && pass "food entry written" || fail "food entry missing"
 note "Journal/Daily/$day.md" | tail -2 | grep -q '!\[\[daily.base\]\]' && pass "embed stays last" || fail "embed moved"
@@ -115,7 +126,9 @@ if $D tap "Inbox Notes" >/dev/null 2>&1; then
   $D shot s07a-inbox >/dev/null
   n0=$(adb -s $SERIAL shell "ls $VAULT/Inbox/ | wc -l" | tr -d '\r')
   $D tap "add note" >/dev/null && sleep 1
-  $D tap "note text" >/dev/null 2>&1; $D type "Release smoke note" && sleep 1
+  $D tap "note text" >/dev/null 2>&1
+  typed "Release smoke note"
+  sleep 1
   $D shot s07b-composer >/dev/null
   $D tap "save note" >/dev/null && sleep 2
   n1=$(adb -s $SERIAL shell "ls $VAULT/Inbox/ | wc -l" | tr -d '\r')
