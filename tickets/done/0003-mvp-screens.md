@@ -3,8 +3,8 @@ id: 0003
 title: MVP screens
 created: 2026-10-17
 priority: normal
-assignee:
-pr:
+assignee: omp
+pr: 209
 depends: [0002]
 ---
 
@@ -26,3 +26,7 @@ children close.
 - [ ] focus list shows and edits today's items
 - [ ] upcoming reminders render from vault notes
 - [ ] the app can create, edit, and complete tasks
+
+## Outcome
+
+Done before this close. Its children shipped: 0009, 0010, 0011 and 0012, and PR #155 rebuilt the editor. The lists, the planner and the editor all ship. Closed in the 2026-11-24 ticket sort.

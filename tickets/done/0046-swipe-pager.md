@@ -86,3 +86,8 @@ The phone pass this ticket kept open moves into ticket 0059. The
 list's vertical shift on landing and the day and month flicker at the
 commit move with it. Both come from the pager's commit, which ADR 0036
 and ticket 0059 rebuild. Nothing else remains open here.
+
+## Closed, 2026-11-24
+
+The phone pass moved to 0059, which closed. The 2026-11-24 ticket sort
+moved this ticket to done/ in PR #209.
