@@ -145,7 +145,9 @@ export const PROPERTIES: readonly Property[] = [
     title: "Note",
     chip: "Note",
     icon: "note",
-    isSet: (draft) => draft.body.trim() !== "",
+    // The reference section is its own tile, so it never makes an empty
+    // Note tile show.
+    isSet: (draft) => bodyWithoutReferences(draft.body).trim() !== "",
     many: false,
     wide: true,
     words: (draft) => noteLines(draft.body),

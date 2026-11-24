@@ -104,6 +104,12 @@ describe("a reference", () => {
       noteLines("\nBuy oats\n\n## Reference\n\n[[oatmeal]]\n"),
     ).toBe("Buy oats");
   });
+
+  it("does not count a reference section as a note", () => {
+    expect(note.isSet(draft({ body: "\n## Reference\n\n[[oatmeal]]\n" }))).toBe(
+      false,
+    );
+  });
 });
 
 describe("a due and a note", () => {
