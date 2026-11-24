@@ -2,8 +2,8 @@
 title: Reminder weight
 created: 2026-11-11
 priority: high
-assignee:
-pr:
+assignee: omp
+pr: PRNUM
 depends: ["0094-review-the-task-note-schema"]
 ---
 
@@ -196,4 +196,4 @@ The emulator pass ran on 2026-11-17. Its evidence and the phone checklist are in
 
 ## Outcome
 
-(filled in before moving to done/)
+Done before this close. The ADR holds the decisions, and the schema, alerts and editor tickets are all in `done/`. The phone proof lives in `20261111-alert-weight-device-check`. Closed in the 2026-11-24 ticket sort.

@@ -4,7 +4,7 @@ title: Planner route
 created: 2026-10-20
 priority: high
 assignee: omp
-pr:
+pr: PRNUM
 depends: [0009]
 ---
 
@@ -36,3 +36,6 @@ Remaining work: expand a recurrence across the visible range. That way
 a weekly task shows on each matching day, not only on its stored due
 date.
 
+## Outcome
+
+Done before this close. The last open box, recurrence expansion, landed in PR #39 (`72fc580`). Closed in the 2026-11-24 ticket sort.

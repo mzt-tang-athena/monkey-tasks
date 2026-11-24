@@ -4,7 +4,7 @@ title: Task editor and note viewer
 created: 2026-10-20
 priority: normal
 assignee: omp
-pr:
+pr: PRNUM
 depends: [0009]
 ---
 
@@ -26,3 +26,7 @@ name do not follow. The editor warns once on the first rename.
 - [ ] editing a task's properties writes correct frontmatter
 - [ ] renaming a task renames the file and updates in place
 - [ ] a deed note opens read-only with body and frontmatter shown
+
+## Outcome
+
+Done before this close. PR #155 rebuilt the editor as a sheet, with the rename path in `task-editor-provider.tsx`. The deed viewer went with ticket 0094, since the app never reads deeds. Closed in the 2026-11-24 ticket sort.
