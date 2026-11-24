@@ -2,7 +2,7 @@
 title: The short-press test needs more margin than 150 ms
 created: 2026-11-21
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
