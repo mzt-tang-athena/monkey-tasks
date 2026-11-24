@@ -449,7 +449,7 @@ test.describe("the bar's split Add pill", () => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
-    const targets = ["Lists", "Planner", "Journal", "Inbox Notes", "add task", "open commands"];
+    const targets = ["Lists", "Planner", "Inbox Notes", "Journal", "add task", "open commands"];
     for (const name of targets) {
       const box = await page
         .getByRole(name === "add task" || name === "open commands" ? "button" : "tab", {

@@ -6,6 +6,12 @@ comes first. The same text goes into the GitHub release notes.
 Each bullet fits one line on a phone. `scripts/check-changelog.sh`
 fails a bullet that wraps or runs past 64 characters.
 
+## 1.4.0 - unreleased
+
+### Tabs
+
+- The tabs run Lists, Planner, Inbox, Journal.
+
 ## 1.3.0 - unreleased
 
 ### Command pane

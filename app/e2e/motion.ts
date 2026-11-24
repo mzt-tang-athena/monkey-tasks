@@ -69,6 +69,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "both",
     why: "checks the spring back from a short drag",
   },
+  "tab-order.spec.ts": {
+    runsIn: "both",
+    why: "the bar and the pane's order, which do not depend on the motion setting",
+  },
   "vault.spec.ts": {
     runsIn: "both",
     why: "checks the tick's wash while the write is slow, and reduce's own",

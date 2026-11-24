@@ -592,7 +592,7 @@ Open feature tickets:
 - 0065 the list menu actions
 - 0003 and 0008 carry the larger ideas.
 
-The app has four tabs today, Lists, Planner, Journal and Inbox Notes. The bar
+The app has four tabs today, Lists, Planner, Inbox Notes and Journal. The bar
 carries no labels; each tab's name lives in its accessibility label
 (ADR 20261117-phosphor-glyphs). The bar's action is a split Add pill.
 Its plus half runs the tab's Add. Its Command half opens the pane
