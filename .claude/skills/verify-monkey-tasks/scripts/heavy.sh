@@ -13,6 +13,12 @@
 # runs in place. The caller's exported variables and directory reach the
 # unit, so CLEAN, ARCHS and MONKEY_LOG_DIR still apply.
 #
+# A caller that wraps the whole job in its own flock also holds the lock,
+# and the unit's flock would then wait on that same caller forever. The
+# ancestry check below spots that holder before the unit starts and runs
+# the job in place instead. MONKEY_HEAVY_LOCK_FILE points the lock at
+# another file, which the tests use.
+#
 # Sourcing matters: the branch that runs in place must return to the body.
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
@@ -36,7 +42,7 @@ if [ "${1:-}" = --keep-child ]; then
 fi
 
 heavy_self=$(realpath "$0") || exit 1
-heavy_lock=/tmp/monkey-tasks-heavy.lock
+heavy_lock=${MONKEY_HEAVY_LOCK_FILE:-/tmp/monkey-tasks-heavy.lock}
 heavy_cap=${MONKEY_HEAVY_CAP:-8G}
 
 if [ -n "${MONKEY_HEAVY_LOCK:-}" ]; then
@@ -45,6 +51,37 @@ fi
 
 if [ -n "${MONKEY_HEAVY_UNIT:-}" ]; then
     exec env MONKEY_HEAVY_LOCK=1 flock -o "$heavy_lock" "$heavy_self" "$@"
+fi
+
+# Print the pid of an ancestor of this shell that holds the heavy lock,
+# or nothing. lslocks reads /proc/locks, so it names the holder without
+# taking the lock itself, and it ships with flock's own package.
+heavy_ancestor_holder() {
+    local holder ancestor
+    [ -e "$heavy_lock" ] || return 0
+    while read -r holder; do
+        case $holder in
+            "" | *[!0-9]*) continue ;;
+        esac
+        ancestor=$$
+        while [ -n "$ancestor" ] && [ "$ancestor" -gt 1 ]; do
+            if [ "$ancestor" = "$holder" ]; then
+                printf '%s\n' "$holder"
+                return 0
+            fi
+            ancestor=$(awk '{ sub(/^.*\) /, ""); print $2 }' \
+                "/proc/$ancestor/stat" 2>/dev/null) || break
+        done
+    done < <(lslocks -n -o PID,PATH 2>/dev/null |
+        awk -v want="$heavy_lock" '$2 == want { print $1 }')
+    return 0
+}
+
+heavy_holder=$(heavy_ancestor_holder)
+if [ -n "$heavy_holder" ]; then
+    printf 'heavy: %s held by ancestor %s; running in place\n' \
+        "$heavy_lock" "$heavy_holder"
+    return 0
 fi
 
 heavy_background=0

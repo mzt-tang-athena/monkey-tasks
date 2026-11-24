@@ -298,16 +298,14 @@ export function parseMode(value: string | string[] | undefined): Mode {
   return raw === "week" || raw === "month" ? raw : "day";
 }
 
-/** The day a URL param names: local midnight, or the start of today
-    when it does not name a real date (2026-02-30 rolls, so it falls
-    back rather than filing the screen under the wrong month). */
+/** The day a URL param names: local midnight, or null when it names no
+    real date. */
 export function parsePlannerDay(
   value: string | string[] | undefined,
-  today: Date,
-): Date {
+): Date | null {
   const raw = Array.isArray(value) ? value[0] : value;
   const parsed = raw == null ? null : parseStoredDate(raw);
-  return parsed != null && !parsed.hasTime ? parsed.date : startOfDay(today);
+  return parsed != null && !parsed.hasTime ? parsed.date : null;
 }
 
 /** The day param a route writes: the plain calendar date. */
