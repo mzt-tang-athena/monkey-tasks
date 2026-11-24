@@ -8,6 +8,7 @@ import {
   press,
   row,
   sectionHeader,
+  useDueOrder,
 } from "../locators";
 import { noteText, putNote, returnToTab } from "../vault";
 
@@ -17,6 +18,12 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("tab swipe", () => {
+  // The page turns on a date section, so the list reads in Due date as
+  // an existing phone has it saved.
+  test.beforeEach(async ({ page }) => {
+    await useDueOrder(page);
+  });
+
   test("a swipe left turns to the next list", async ({ page }) => {
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
 
@@ -62,6 +69,10 @@ test.describe("tab swipe", () => {
 
 test.describe("tab swipe on a touch screen", () => {
   test.use({ hasTouch: true, isMobile: true });
+
+  test.beforeEach(async ({ page }) => {
+    await useDueOrder(page);
+  });
 
   test("a touch swipe turns the page", async ({ page }) => {
     // B2: the pager sets `touch-action: pan-y`, so the browser leaves

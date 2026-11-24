@@ -1,10 +1,11 @@
 import { expect, test } from "../fixtures";
 import { capture, undated } from "../data";
-import { expectInSection, row, sectionHeader } from "../locators";
+import { expectInSection, row, sectionHeader, useDueOrder } from "../locators";
 
 test("a capture with a date phrase lands on its day", async ({ page }) => {
   await page.goto("/");
   await expect(row(page, undated.second)).toBeVisible();
+  await useDueOrder(page);
 
   await page.getByRole("button", { name: "add task" }).click();
   await page.getByPlaceholder("Add a task").fill(capture.typed);

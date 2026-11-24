@@ -103,13 +103,13 @@ const three = [
 describe("ListsToolbar", () => {
   it("fills the sort glyph for a non-default order and an open menu", () => {
     setWindowSize(390, 800);
-    const { rerender } = render(<Harness sortMode="due" />);
+    const { rerender } = render(<Harness sortMode="manual" />);
     expect(screen.getByTestId("icon:sort")).toBeTruthy();
 
-    rerender(<Harness sortMode="manual" />);
+    rerender(<Harness sortMode="due" />);
     expect(screen.getByTestId("icon:sort:fill")).toBeTruthy();
 
-    rerender(<Harness sortMode="due" />);
+    rerender(<Harness sortMode="manual" />);
     expect(screen.getByTestId("icon:sort")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "sort list" }));
@@ -125,6 +125,26 @@ describe("ListsToolbar", () => {
 
     expect(screen.getByTestId("icon:more:fill")).toBeTruthy();
     expect(screen.getByTestId("icon:sort")).toBeTruthy();
+  });
+
+  it("lists My order above Due date in the sort menu", async () => {
+    setWindowSize(390, 800);
+    render(<Harness sortMode="manual" />);
+    placeBox(screen.getByTestId("sort-menu-anchor"), {
+      x: 300,
+      y: 40,
+      width: 44,
+      height: 44,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "sort list" }));
+
+    const group = await screen.findByRole("radiogroup", { name: "Sort list" });
+    const labels = [...group.querySelectorAll('[role="radio"]')].map(
+      (item) => item.getAttribute("aria-label") ?? item.textContent ?? "",
+    );
+    expect(labels[0]).toContain("My order");
+    expect(labels[1]).toContain("Due date");
   });
 });
 
