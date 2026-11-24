@@ -3,8 +3,8 @@ id: 0072
 title: Keep the planner's picked day across a tab round trip
 created: 2026-11-07
 priority: normal
-assignee:
-pr:
+assignee: opencode
+pr: 213
 depends: []
 ---
 
@@ -42,4 +42,26 @@ with no params, so each return drops `?day=`.
 
 ## Outcome
 
-(filled in before moving to done/)
+Every in-app route into the tab dropped `?day=`, and the route read the
+missing param as today. The picked day now lives in a module store
+beside the route, `features/planner/lib/picked-day.ts`. A route that
+names no day opens on the last day the planner named. A link still wins
+on the day it names.
+
+`parsePlannerDay` reports "no day" again, so it invents no date.
+The hook picks the param, the remembered day, then today.
+A run with no pick still moves on at midnight.
+
+Proof, on PR 213:
+
+- `planner-day.spec.ts` picks Wed 28, then rounds through Lists,
+  Journal and Inbox Notes. It also enters again through the command
+  pane's Planner command. It failed 4 of 4 at the base code. It passed
+  4 of 4 at the fix, in both motion projects.
+- The emulator kept the picked day through the same trip. The APK was
+  a release build from this branch.
+- ADR `20261124-planner-picked-day` records the choice against putting
+  `?day=` on the two navigates.
+
+Not kept: the mode resets as before, and a reload starts at today.
+
