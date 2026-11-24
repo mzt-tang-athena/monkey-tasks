@@ -2,7 +2,7 @@
 title: The app reads deeds as tasks with a status
 created: 2026-11-24
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
