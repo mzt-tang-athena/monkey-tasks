@@ -4,7 +4,7 @@ title: Reference notes on a task
 created: 2026-11-11
 priority: normal
 assignee: opencode
-pr:
+pr: 222
 depends: [0083]
 ---
 
@@ -72,4 +72,41 @@ policy. A missing note says so and offers to detach.
 
 ## Outcome
 
-(filled in before moving to done/)
+Built on `feat/0091-references`, pull request #222.
+
+The link is a `## Reference` section in the task body, one wikilink per
+line. One module reads, attaches and detaches it, and the editor, the
+capture sheet and the row call that module. No contract changed.
+
+The picker is a stacked sheet over the editor. It reuses the List
+picker's search row and the shared picker sheet. That sheet moved to
+`components/ui` so capture could use it too. The picker reads
+`References/*.md` through the vault adapter. The list stays cached
+until the app returns to the foreground. Search scores a file name
+above an ingredient, and whole letters above letters in order. The
+browse control lists the whole folder.
+
+The preview is a stacked read-only sheet. A missing note says so and
+detaches its link. The row shows the link names under its meta line,
+and the row's name carries them for a screen reader.
+
+Capture offers the link after the title when the target is a list.
+It writes the same section through the same functions.
+
+The editor's Reference tile carries its own rows. Each link is a
+press, and its close detaches that one link. The shared sheet clock,
+clamped height and picker sheet moved out of the editor feature (ADR
+20261116 amendment).
+
+Proof:
+
+- `scripts/gate.sh full` passed on the branch head.
+- Web e2e ran in both motion projects, 6 passed. Evidence:
+  `~/code/monkey-tasks/worktrees/evidence-references/web-20261124-110520`
+- The Android emulator on port 5576 ran attach, preview and detach.
+  The run read the note on the device each time. Evidence:
+  `~/code/monkey-tasks/worktrees/evidence-references/android-20261124-111528`
+
+Open limits. A note added in Obsidian while the app stays open shows
+on the next foreground. The Android run used a swapped APK, so it
+proves JavaScript, not a native build.
