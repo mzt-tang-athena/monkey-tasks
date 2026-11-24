@@ -61,10 +61,17 @@ export function CaptureDock(slot: CaptureSlot) {
           onDismiss={sheet.close}
           rideKeyboard
           scrim
+          covered={sheet.referenceOpen}
           label="Add a task"
           closeLabel="close capture"
         >
-          <CaptureForm draft={sheet.draft} onClose={sheet.close} />
+          <CaptureForm
+            draft={sheet.draft}
+            onClose={sheet.close}
+            referenceOpen={sheet.referenceOpen}
+            onOpenReferences={sheet.openReferences}
+            onCloseReferences={sheet.closeReferences}
+          />
         </Sheet>
       ) : null}
 

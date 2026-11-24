@@ -14,10 +14,10 @@ export function referencesKey(
 
 /**
  * The read of the References folder. The picker filters the cached list
- * in memory, so a keystroke never reads the folder. A mount asks for a
- * fresh read, and a return to the app reads it again, so a note added
- * in Obsidian shows up without a restart. The app never writes this
- * folder, so nothing else has to invalidate it.
+ * in memory, so a keystroke never reads the folder. The list holds
+ * until the app returns to the foreground, when the read runs again so
+ * a note added in Obsidian shows up without a restart. The app never
+ * writes this folder, so nothing else has to invalidate it.
  */
 export function referencesQueryOptions(
   adapter: VaultAdapter,
@@ -29,5 +29,6 @@ export function referencesQueryOptions(
     enabled: root != null,
     networkMode: "always",
     refetchOnWindowFocus: "always",
+    staleTime: Infinity,
   });
 }
