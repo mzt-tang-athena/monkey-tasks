@@ -4,7 +4,7 @@ title: Bulletproof refactor and motion rebuild
 created: 2026-10-26
 priority: high
 assignee: claude-code
-pr:
+pr: 209
 depends: []
 ---
 
@@ -56,4 +56,4 @@ other.
 
 ## Outcome
 
-(filled in before moving to done/)
+Done before this close. Every child ticket is in `done/`, and the epic merged in PR #68 (`b3acdb1`). Tickets 0064 and 0065 stay open on their own. Closed in the 2026-11-24 ticket sort.

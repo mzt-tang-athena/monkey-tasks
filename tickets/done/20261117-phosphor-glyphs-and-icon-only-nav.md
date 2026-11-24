@@ -3,7 +3,7 @@ title: Phosphor glyphs and an icon-only nav
 created: 2026-11-17
 priority: high
 assignee: omp
-pr: 157
+pr: 209
 depends: []
 ---
 
@@ -52,4 +52,4 @@ palettes. Extend the gallery spec to walk it.
 
 ## Outcome
 
-(filled in before moving to done/)
+Done before this close. PR #157 (`62a6799`) landed the glyphs, the label drop, the 48 row, the gallery section and the ADR. Closed in the 2026-11-24 ticket sort.
