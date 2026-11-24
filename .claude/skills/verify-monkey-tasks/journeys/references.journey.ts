@@ -14,8 +14,13 @@ import { noteText, putNote, returnToTab } from "../../../../app/e2e/vault";
 
 const path = references.path;
 
-async function openEditor(page: import("@playwright/test").Page) {
-  await page.goto("/");
+async function openEditor(
+  page: import("@playwright/test").Page,
+  fresh = true,
+) {
+  if (fresh) {
+    await page.goto("/");
+  }
   await expect(row(page, references.task)).toBeVisible();
   await press(
     page,
@@ -42,9 +47,9 @@ test("a reference is found, attached, read, kept and detached", async ({
   const shot = (name: string) =>
     page.screenshot({ path: info.outputPath(`${name}.png`) });
 
+  const editor = await openEditor(page);
   const before = await noteText(page, path);
   expect(before).not.toBeNull();
-  const editor = await openEditor(page);
   await checkTargets(page, "the editor with its chips");
   await shot("01-editor-with-reference-chip");
 
@@ -80,7 +85,7 @@ test("a reference is found, attached, read, kept and detached", async ({
     .click();
   await expect
     .poll(() => noteText(page, path))
-    .toContain(`[[${references.eggs}]]\n[[${references.oatmeal}]]`);
+    .toContain(`[[${references.oatmeal}]]\n[[${references.eggs}]]`);
   await find.fill("");
   await shot("05-picker-both-linked");
 
@@ -101,7 +106,7 @@ test("a reference is found, attached, read, kept and detached", async ({
     contentType: "text/plain",
   });
   expect(attached).toBe(
-    `${before}## Reference\n\n[[${references.eggs}]]\n[[${references.oatmeal}]]\n`,
+    `${before}## Reference\n\n[[${references.oatmeal}]]\n[[${references.eggs}]]\n`,
   );
 
   // The tile holds both links, and a press reads one.
@@ -134,14 +139,14 @@ test("a reference is found, attached, read, kept and detached", async ({
   await returnToTab(page);
   await expect(
     row(page, references.task).getByText(
-      `${references.eggs}, ${references.oatmeal}`,
+      `${references.oatmeal}, ${references.eggs}`,
     ),
   ).toBeVisible();
   await shot("09-row-after-reread");
   expect(await noteText(page, path)).toBe(attached);
 
   // The editor shows them again, and detaches both, one line each.
-  const again = await openEditor(page);
+  const again = await openEditor(page, false);
   await again
     .getByRole("button", { name: `remove reference ${references.eggs}` })
     .click();
