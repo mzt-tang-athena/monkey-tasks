@@ -4,7 +4,7 @@ title: Optional quests and evergreen tasks in the planner
 created: 2026-11-11
 priority: low
 assignee: opencode-quests-lane
-pr:
+pr: 212
 depends: []
 ---
 
