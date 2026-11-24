@@ -69,7 +69,7 @@ The numbers below count the 72.
 - `after`: 6 deeds, plus 1 that spells it `do this after`.
 - `created`: 57 deeds. 15 lack it.
 - `due`, `reminders`, `completed`, `recurrence`, `blocked by`: 0.
-- Bodies: 157 checkboxes in 31 deeds, 138 of them open.
+- Bodies: 157 checkboxes in 34 deeds, 138 of them open.
 - 7 deed bodies embed a note from `20-Projects/`.
 
 The 15 task notes, for scale: 11 completed, 8 due, 7 list,
