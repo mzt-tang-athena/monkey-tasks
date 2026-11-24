@@ -42,7 +42,7 @@ We rejected subtasks as a `parent` field. A parent chain in frontmatter
 is a second ordering system, and lists and references already express
 most of it. If subtasks earn their place later, they start there.
 
-We rejected rewriting the 72 deed notes into tasks here. That decision
+We rejected rewriting the 73 deed notes into tasks here. That decision
 needs the deed spike, and it stands as its own model question.
 
 ## Consequences
