@@ -130,6 +130,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "once",
     why: "a swipe's landed day, week or month, and what it holds",
   },
+  "references.spec.ts": {
+    runsIn: "once",
+    why: "the picker's matches, the note on disk and the sheet at rest",
+  },
   "settings.spec.ts": {
     runsIn: "once",
     why: "the picker's stored choice and the screens it repaints",

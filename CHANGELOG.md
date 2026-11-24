@@ -8,6 +8,14 @@ fails a bullet that wraps or runs past 64 characters.
 
 ## 1.4.0 - unreleased
 
+### References
+
+- A task can link a note from References.
+- Search the folder by note name or ingredient.
+- Browse the folder, then tap a note to link it.
+- Tap a link on the task to read the note.
+- Remove a link from its own row.
+
 ### Tabs
 
 - The tabs run Lists, Planner, Inbox, Journal.

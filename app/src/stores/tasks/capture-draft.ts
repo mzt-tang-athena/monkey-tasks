@@ -1,6 +1,7 @@
 import { nowStamp } from "@/utils/dates";
 import { serializeValue } from "@/utils/yaml";
-import type { TaskFrontmatter } from "@monkey-tasks/schemas";
+import { parseFrontmatter, type TaskFrontmatter } from "@monkey-tasks/schemas";
+import { attachReference } from "@/lib/references/links";
 import type { CaptureTarget, ParsedCapture } from "@/types/task";
 import { safeFileName } from "@/lib/vault/file-name";
 import { monthEndRule } from "@/lib/recurrence";
@@ -17,6 +18,7 @@ export function captureContent(
   parsed: ParsedCapture,
   listName?: string,
   created = nowStamp(),
+  references: string[] = [],
 ): string {
   const lines = ["---", 'kind: "[[tasks]]"', `created: ${created}`];
   if (parsed.due) {
@@ -33,7 +35,10 @@ export function captureContent(
     lines.push(`recurrence: "${recurrence}"`);
   }
   lines.push("---", "");
-  return `${lines.join("\n")}\n`;
+  const content = `${lines.join("\n")}\n`;
+  // The reference links are body paragraphs, written by the one rule
+  // the editor uses, so a capture and a later attach cannot differ.
+  return references.reduce((text, name) => attachReference(text, name), content);
 }
 
 /**
@@ -45,21 +50,31 @@ export function captureDraft(
   parsed: ParsedCapture,
   target: CaptureTarget,
   preselectedDue?: string,
+  references: string[] = [],
 ): {
   name: string;
   fileName: string;
   content: string;
+  /** The body the note holds, so the optimistic row draws its links. */
+  body: string;
   data: TaskFrontmatter;
 } {
   const due = preselectedDue && !parsed.due ? preselectedDue : parsed.due;
   const listName = target.kind === "list" ? target.name : undefined;
   const created = nowStamp();
   const recurrence = ruleFor({ ...parsed, due });
-  const content = captureContent({ ...parsed, due }, listName, created);
+  const fileName = `${safeFileName(parsed.name)}.md`;
+  const content = captureContent(
+    { ...parsed, due },
+    listName,
+    created,
+    references,
+  );
   return {
     name: parsed.name,
-    fileName: `${safeFileName(parsed.name)}.md`,
+    fileName,
     content,
+    body: parseFrontmatter(fileName, content).body,
     data: {
       kind: "[[tasks]]",
       created,

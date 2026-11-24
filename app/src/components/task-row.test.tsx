@@ -148,4 +148,14 @@ describe("TaskRow", () => {
 
     expect(screen.getAllByTestId("task-row:Buy milk")).toHaveLength(1);
   });
+
+  it("shows a linked reference under the name and reads it in the name", () => {
+    const item = { ...task("Buy oats"), body: "\n## Reference\n\n[[oatmeal]]\n" };
+    render(<TaskRow task={item} onOpen={vi.fn()} onToggle={vi.fn()} />);
+
+    expect(screen.getByText("oatmeal")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Buy oats, oatmeal" }),
+    ).toBeTruthy();
+  });
 });

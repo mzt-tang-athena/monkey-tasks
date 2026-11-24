@@ -10,6 +10,10 @@ vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
+vi.mock("@/stores/references/use-references", () => ({
+  useReferenceNotes: () => ({ notes: [], error: null }),
+}));
+
 vi.mock("react-native-keyboard-controller", async () => {
   const { useSharedValue } = await import("react-native-reanimated");
   return {

@@ -16,6 +16,8 @@ import { useKeyboardState } from "react-native-keyboard-controller";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { useTickBurst } from "@/components/motion/celebration";
 import { SheetGrab } from "@/components/motion/sheet-drag";
+import { ReferencePicker } from "@/components/references/reference-picker";
+import { ReferenceSheet } from "@/components/references/reference-sheet";
 import { Banner } from "@/components/ui/banner";
 import { EdgeFade, fadedEdges } from "@/components/ui/edge-fade";
 import { Icon } from "@/components/ui/icon";
@@ -23,7 +25,14 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Menu } from "@/components/ui/menu";
 import { Pressable } from "@/components/ui/pressable";
 import { Sheet } from "@/components/ui/sheet";
+import { PickerSheet } from "@/components/ui/picker-sheet";
+import {
+  attachReference,
+  detachReference,
+  parseReferences,
+} from "@/lib/references/links";
 import type { Progress } from "@/lib/motion/progress";
+import { useReferenceNotes } from "@/stores/references/use-references";
 import type { TaskEdit } from "@/types/task";
 import {
   radii,
@@ -34,14 +43,14 @@ import {
   type Palette,
 } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
-import { useClampedHeight } from "../hooks/use-clamped-height";
+import { useClampedHeight } from "@/hooks/use-clamped-height";
 import { bodyOf, noteText, PROPERTIES, type Property } from "../model";
 import type { WriteFailure, WriteState } from "../lib/session";
 import { AlertsPicker } from "./alerts-picker";
 import { DuePicker } from "./due-picker";
 import { ListPicker } from "./list-picker";
 import { NoteEditor } from "./note-editor";
-import { PickerSheet } from "./picker-sheet";
+import { ReferenceTile } from "./reference-tile";
 import { RepeatPicker } from "./repeat-picker";
 
 // A browser textarea holds two rows by default. The title follows its
@@ -52,7 +61,7 @@ const autoSizedTitle = Platform.select({
 });
 
 /** The sheet's open pickers: one at a time, over the editor. */
-export type Picker = "due" | "repeat" | "list" | "alerts" | null;
+export type Picker = "due" | "repeat" | "list" | "alerts" | "reference" | null;
 
 /**
  * The task editor's sheet: the list, the menu, the title, then the
@@ -95,6 +104,10 @@ export function EditorSheet({
   const keyboard = useKeyboardState((state) => state.height);
   const [picker, setPicker] = React.useState<Picker>(null);
   const [noteOpen, setNoteOpen] = React.useState(false);
+  // The linked note the preview shows, by name, or null.
+  const [preview, setPreview] = React.useState<string | null>(null);
+  const references = useReferenceNotes();
+  const linked = parseReferences(draft.body);
   // The field's text as typed, or null when it holds the draft's name.
   // A press handler belongs to an earlier render, so the typed text is
   // a ref the field writes on every keystroke. The field reads the
@@ -160,7 +173,7 @@ export function EditorSheet({
         progress={progress}
         rideKeyboard
         scrim
-        covered={picker != null || noteOpen}
+        covered={picker != null || noteOpen || preview != null}
         label="Task"
         closeLabel="close the task"
       >
@@ -257,21 +270,33 @@ export function EditorSheet({
           <View style={styles.body} onLayout={body.onLayout}>
             {showing.length > 0 ? (
               <View style={styles.tiles}>
-                {showing.map((property) => (
-                  <PropertyTile
-                    key={property.key}
-                    property={property}
-                    draft={draft}
-                    today={today}
-                    onPress={() => openPicker(property)}
-                    onClear={() => {
-                      const patch = property.clear(draft);
-                      if (patch != null) {
-                        onChange(patch);
+                {showing.map((property) =>
+                  property.key === "reference" ? (
+                    <ReferenceTile
+                      key={property.key}
+                      names={linked}
+                      onOpen={setPreview}
+                      onRemove={(name) =>
+                        onChange({ body: detachReference(draft.body, name) })
                       }
-                    }}
-                  />
-                ))}
+                      onAdd={() => setPicker("reference")}
+                    />
+                  ) : (
+                    <PropertyTile
+                      key={property.key}
+                      property={property}
+                      draft={draft}
+                      today={today}
+                      onPress={() => openPicker(property)}
+                      onClear={() => {
+                        const patch = property.clear(draft);
+                        if (patch != null) {
+                          onChange(patch);
+                        }
+                      }}
+                    />
+                  ),
+                )}
               </View>
             ) : null}
             {missing.length > 0 ? (
@@ -363,6 +388,39 @@ export function EditorSheet({
           onWeight={(alertWeight) => onChange({ alertWeight })}
         />
       </PickerSheet>
+
+      <ReferencePicker
+        open={picker === "reference"}
+        onClose={() => setPicker(null)}
+        notes={references.notes}
+        attached={linked}
+        onAttach={(name) =>
+          onChange({ body: attachReference(draft.body, name) })
+        }
+        error={references.error}
+      />
+
+      <ReferenceSheet
+        open={preview != null}
+        name={preview ?? ""}
+        note={
+          preview == null
+            ? null
+            : (references.notes?.find((note) => note.name === preview) ?? null)
+        }
+        loading={
+          preview != null &&
+          references.notes == null &&
+          references.error == null
+        }
+        onClose={() => setPreview(null)}
+        onDetach={() => {
+          if (preview != null) {
+            onChange({ body: detachReference(draft.body, preview) });
+            setPreview(null);
+          }
+        }}
+      />
 
       <NoteEditor
         open={noteOpen}

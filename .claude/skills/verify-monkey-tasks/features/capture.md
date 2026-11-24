@@ -10,6 +10,7 @@ section on the current list.
 - `capture-open` opens the sheet from the bottom bar on Lists and on Planner.
 - `capture-parse` shows day and time chips for a date phrase.
 - `capture-send` writes the note and lands the row.
+- `capture-reference` links a References note when the target is a list.
 - `capture-fail` keeps the draft and offers Retry when the write fails.
 
 ## How to get to it (user POV)
@@ -25,8 +26,9 @@ Preconditions: a fresh page on `/`.
 - **Type.** `getByPlaceholder("Add a task").fill(capture.typed)`. Chips `Fri 30` and `5:00 PM` show.
 - **Send.** `getByRole("button", { name: "send task" }).click()`. `row(page, capture.name)` shows under `Fri, 30 Oct` with `5:00 PM`.
 - **Side effect.** `noteText(page, "Tasks/Buy stamps for card.md")` contains `due: 2026-10-30`. After `returnToTab` the row is still there.
+- **Reference.** With a list target the sheet shows `link a reference` after the field. The picker searches `References` by name or ingredient. The chosen name stays as `remove reference <name>`, and Send writes `## Reference` with one link per line. The control hides on Main.
 - **Failure.** Call `failNextWrite(page, "<name>.md")` before Send. A toast offers `retry capture` and `dismiss capture failure`. Retry writes the note once.
-- **Proof.** `journeys/capture.journey.ts` runs the open, type, send and side-effect steps with four screenshots.
+- **Proof.** `journeys/capture.journey.ts` runs the open, type, send and side-effect steps with four screenshots. `journeys/references.journey.ts` covers the link on a list target.
 
 ## Gotchas
 

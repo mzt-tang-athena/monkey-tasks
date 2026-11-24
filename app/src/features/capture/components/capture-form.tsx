@@ -2,6 +2,7 @@ import * as React from "react";
 import {
   Platform,
   StyleSheet,
+  Text,
   TextInput,
   View,
   useWindowDimensions,
@@ -11,9 +12,21 @@ import type { CaptureDraft } from "@/features/capture/hooks/use-capture-draft";
 import { targetLabel } from "@/features/capture/lib/chip-labels";
 import { CaptureChips } from "./capture-chips";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Pill } from "@/components/ui/pill";
-import { captureText, fonts, sheetMaxShare, sheetReserve, spacing, type Palette } from "@/theme/tokens";
+import { Pressable } from "@/components/ui/pressable";
+import {
+  captureText,
+  fonts,
+  radii,
+  spacing,
+  sheetMaxShare,
+  sheetReserve,
+  type,
+  type Palette,
+} from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
+import { CaptureReference } from "./capture-reference";
 
 // The sheet input carries focus by caret and placeholder alone: no
 // app ring, and the browser's own focus outline is suppressed on
@@ -31,17 +44,24 @@ const autoSizedInput = Platform.select({
 });
 
 /**
- * The content of the capture sheet: the input, the parse chips and the
- * action row. Everything that changes lives in the draft or in the
- * props. The form only renders them. The `Sheet` around it owns the
- * scrim, the keyboard lift and the dialog.
+ * The content of the capture sheet: the input, the reference the task
+ * points at, the parse chips and the action row. Everything that
+ * changes lives in the draft or in the props. The form only renders
+ * them. The `Sheet` around it owns the scrim, the keyboard lift and the
+ * dialog.
  */
 export function CaptureForm({
   draft,
   onClose,
+  referenceOpen,
+  onOpenReferences,
+  onCloseReferences,
 }: {
   draft: CaptureDraft;
   onClose: () => void;
+  referenceOpen: boolean;
+  onOpenReferences: () => void;
+  onCloseReferences: () => void;
 }) {
   const { styles, colors } = useThemedStyles(makeStyles);
   const window = useWindowDimensions();
@@ -71,6 +91,10 @@ export function CaptureForm({
   };
 
   const label = targetLabel(draft.target);
+  // A link is offered after the title when the task lands on a list. A
+  // link already attached stays on screen on any target, so the sheet
+  // never hides what the task will carry.
+  const linking = draft.target.kind === "list" || draft.references.length > 0;
 
   return (
     <>
@@ -91,6 +115,33 @@ export function CaptureForm({
         autoFocus
         selectionColor={colors.accent}
       />
+      {linking ? (
+        <View style={styles.links}>
+          {draft.references.map((name) => (
+            <Pressable
+              key={name}
+              style={({ pressed }) => [styles.link, pressed && styles.pressed]}
+              onPress={() => draft.removeReference(name)}
+              accessibilityRole="button"
+              accessibilityLabel={`remove reference ${name}`}
+            >
+              <Text style={styles.linkText} numberOfLines={1}>
+                {name}
+              </Text>
+              <Icon name="close" size={12} color="accent" />
+            </Pressable>
+          ))}
+          {draft.target.kind === "list" ? (
+            <Pill
+              label="Link a reference"
+              accessibilityLabel="link a reference"
+              onPress={onOpenReferences}
+            >
+              <Icon name="plus" size={14} color="accent" />
+            </Pill>
+          ) : null}
+        </View>
+      ) : null}
       <CaptureChips parsed={draft.parsed} />
       <View style={styles.actions}>
         <Pill
@@ -109,6 +160,12 @@ export function CaptureForm({
           accessibilityLabel="send task"
         />
       </View>
+      <CaptureReference
+        open={referenceOpen}
+        attached={draft.references}
+        onAttach={draft.addReference}
+        onClose={onCloseReferences}
+      />
     </>
   );
 }
@@ -124,6 +181,30 @@ const makeStyles = (colors: Palette) => ({
       paddingHorizontal: spacing.s,
       paddingVertical: spacing.m,
       ...noFocusOutline,
+    },
+    links: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+      gap: spacing.s,
+    },
+    link: {
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingHorizontal: spacing.m,
+      borderRadius: radii.pill,
+      backgroundColor: colors.accentSoft,
+    },
+    linkText: {
+      ...type.control,
+      maxWidth: 200,
+      color: colors.accent,
+      fontWeight: "600",
+    },
+    pressed: {
+      backgroundColor: colors.pressed,
     },
     actions: {
       flexDirection: "row",
