@@ -289,7 +289,8 @@ read a shorter swipe than the phone does for the same hand.
 
 The three jobs sit on the button for a screen reader and a keyboard.
 The custom actions are "Open commands", "Next tab" and "Previous tab".
-The arrow keys work while the button holds focus. The split pill's
+On the web, the arrow keys work while the button holds focus. A phone's
+hardware keyboard sends no key event to React Native. The split pill's
 Command half was a keyboard user's only way in, and a swipe reaches
 neither.
 

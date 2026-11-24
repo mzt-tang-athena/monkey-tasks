@@ -22,9 +22,10 @@ export function useArrowKeys(
 
 /**
  * Arrow keys on a focused control, for the web, as the swipes a bar
- * action takes: down for the commands, left and right for a tab. It
- * keeps every job of the target a key away, on a phone with a keyboard
- * as on the web.
+ * action takes: down for the commands, left and right for a tab. A
+ * browser keyboard reaches every job of the target. A phone's hardware
+ * keyboard has no key event in React Native, so TalkBack's custom
+ * actions carry the same three jobs there.
  */
 export function useSwipeKeys(
   ref: React.RefObject<unknown>,
