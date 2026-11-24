@@ -29,7 +29,9 @@ fails a bullet that wraps or runs past 64 characters.
 ### Command pane
 
 - It rises from the bottom edge, as the thumb is.
-- Swipe up on the bar's gap to open it.
+- Add is one wide button again, with a plus and its word.
+- Swipe down on Add to open the commands.
+- Swipe left or right on Add to change tab.
 - Drag the title down to close it.
 
 ### Planner
