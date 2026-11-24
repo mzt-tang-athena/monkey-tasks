@@ -50,4 +50,25 @@ adaptive and splash backgrounds to the tile colour.
 - [ ] ADR `20261118-app-icon` carries a dated amendment with the rejects.
 
 ## Outcome
-(filled in before moving to done/)
+
+The launcher icon, the splash and the favicon are the operator's monkey.
+
+- `app/scripts/app-icon/monkey.ts` holds the drawing and the palette.
+- `npm run app-icon:build` writes six PNGs and the docs preview.
+- `adaptiveIcon.backgroundColor` is `#DFB431`. `expo-splash-screen`
+  draws the mark on the same yellow.
+- The test guards the tile colour and the splash colour.
+- It also holds the safe circle, the sizes and the full bleed.
+- ADR `20261118-app-icon` carries a dated amendment with the rejects.
+- Ticket `20261124-choose-the-app-icon-in-settings` follows this one.
+
+The release APK ran on the Pixel 7 emulator, API 35. The masked icon
+showed on the home screen and in the app drawer. With Themed icons on,
+the mono mark took the system tint. With them off, the colour icon came
+back. The splash showed the mark on the tile yellow. `aapt2` shows the
+three adaptive layers and the splash colour in the APK.
+
+The web export served `dist/favicon.ico` at 16, 32 and 48 px.
+
+Gate: `scripts/gate.sh full` at the PR head, and the receipt is in the
+PR. Evidence is in `worktrees/evidence-app-icon/`.
