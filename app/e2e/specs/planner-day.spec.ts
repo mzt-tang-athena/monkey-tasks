@@ -29,8 +29,8 @@ test("the planner keeps its picked day across a round trip through every tab", a
 
   const tabs = [
     ["Lists", "/"],
-    ["Journal", "/journal"],
     ["Inbox Notes", "/inbox"],
+    ["Journal", "/journal"],
   ] as const;
   for (const [tab, path] of tabs) {
     await page.getByRole("tab", { name: tab, exact: true }).click();

@@ -110,16 +110,16 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
               onPress={() => router.navigate("/planner")}
             />
             <NavTab
-              label="Journal"
-              icon="journal"
-              active={pathname === "/journal"}
-              onPress={() => router.navigate("/journal")}
-            />
-            <NavTab
               label="Inbox Notes"
               icon="inbox"
               active={pathname === "/inbox"}
               onPress={() => router.navigate("/inbox")}
+            />
+            <NavTab
+              label="Journal"
+              icon="journal"
+              active={pathname === "/journal"}
+              onPress={() => router.navigate("/journal")}
             />
           </View>
           {/* The air between the nav and the action. An upward pull
