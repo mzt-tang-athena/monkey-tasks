@@ -2,7 +2,7 @@
 title: A tick that lands mid-drag leaves the drop stale
 created: 2026-11-11
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: ["0080-drag-after-tick-crashes"]
 ---
