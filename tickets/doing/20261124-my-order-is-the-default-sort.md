@@ -2,7 +2,7 @@
 title: My order is the default sort, first in the menu
 created: 2026-11-24
 priority: normal
-assignee:
+assignee: poteto-mode
 pr:
 depends: []
 ---
