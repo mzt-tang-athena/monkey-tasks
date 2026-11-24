@@ -51,9 +51,10 @@ smaller, safe change. A rebase is better when proof exists.
 Fixed on 2026-11-24 on `fix/reorder-during-a-tick-hold`. Pull request
 #214.
 
-The drop now reads the group again at the release. `rebaseSpan` maps
-the pickup row keys onto the group's data indexes as they stand. A row
-that left since pick-up moves nobody. A drop cancels when its
+The drop now reports the rows it picked up and the slots it moves
+between. The screen reads those slots against its own rows, which are
+the rows it writes. `rebaseSpan` turns them into the group's data
+indexes, and a row that left since pick-up moves nobody. A drop cancels when its
 picked row left, or when the rows that remain no longer keep their
 pickup order. The row springs back, and no note changes. The ADR
 `20261124-a-drop-rebases-on-the-rows-it-shows` records both. It also
@@ -69,8 +70,8 @@ The spec's third case cancels: a grip step or a TalkBack increment
 under a held drag. The old indexes can write a passable order there,
 but the drag's shifts still come from the pickup layout.
 
-The drop reads the item registry on the JS side, where the rows change.
-The pickup still takes its snapshot in a worklet. Native runs read a
-stale worklet copy once in six. Those wrote the row below the held one
-first. The JS-side read did not, in 8 runs of the same race on the
-emulator.
+The first two versions read the surface's item registry, one from a
+worklet and one from the JS side. Both wrote the row below the held one
+first, three runs in sixteen on the emulator. The registry follows the
+last render, and a frame can lag the data. Reading the screen's own rows
+passed 15 runs in a row.

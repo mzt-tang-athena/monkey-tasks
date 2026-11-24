@@ -16,7 +16,6 @@ import { taskRowFace } from "@/components/task-row-face";
 import { Overlay } from "@/components/ui/overlay-host";
 import {
   cardPosition,
-  rebaseSpan,
   slotForY,
   slotIndexes,
   slotTops,
@@ -67,15 +66,18 @@ type ReorderState = {
 export type ReorderEvent<P> = {
   payload: P;
   group: string;
+  /** A drop: the slot the row was picked from, and the slot it lands
+      on, as positions in `keys`. A step has no keys, and sends the
+      group's data indexes instead. */
   from: number;
   to: number;
+  /** A drop's pick-up, top down: the ids the group mounted. The handler
+      reads the move again from them, because a tick's regroup or a step
+      can change the group under a held drag. A step carries none. */
+  keys: readonly string[];
 };
 
 type ReorderHandlers = SessionHandlers & {
-  /** A drop: the picked row's slot and the slot it lands on, as mount
-      positions of `keys`. The surface reads the group's data indexes
-      here, on the JS side, because the group can change under a held
-      drag and this side is where it changes. */
   reorder: (
     generation: number,
     source: number,
@@ -103,6 +105,7 @@ type ItemValue = {
 const StateContext = React.createContext<ReorderState | null>(null);
 const ItemContext = React.createContext<ItemValue | null>(null);
 const none: RowSpan[] = [];
+const noKeys: readonly string[] = [];
 
 function useStateContext(name: string): ReorderState {
   const state = React.useContext(StateContext);
@@ -178,21 +181,6 @@ function snapshotOf(state: ReorderState, group: string) {
   return { snapshot, keys, rows, slots, indexes };
 }
 
-/** Each row of the group, by key, with its data index now. The Item's
-    own effect writes it, so the JS side reads the rows the last render
-    drew. A drop reads it here, not in its worklet, because this is the
-    side the rows change on. */
-function liveIndexes(state: ReorderState, group: string): Record<string, number> {
-  const live: Record<string, number> = {};
-  const entries = state.items.value;
-  for (const key in entries) {
-    const entry = entries[key];
-    if (entry.group === group) {
-      live[key] = entry.index;
-    }
-  }
-  return live;
-}
 /**
  * A reorderable list. A screen makes one at module scope,
  * `const ListReorder = createReorderSurface<TaskItem>()`, and passes
@@ -224,7 +212,7 @@ export function createReorderSurface<P>() {
     // the same event a drop writes, with no pickup to settle.
     const move = React.useCallback<Move>(
       (payload, group, from, to) => {
-        latest.current({ payload, group, from, to });
+        latest.current({ payload, group, from, to, keys: noKeys });
       },
       [],
     );
@@ -273,19 +261,13 @@ export function createReorderSurface<P>() {
         }
         const payload = self.payloads.get(source) as P | undefined;
         setActive(null);
-        // A tick's regroup or a step can land between pick-up and drop,
-        // so the pickup's data indexes may name other rows by now.
-        const span = rebaseSpan(from, to, keys, liveIndexes(state, group));
-        if (payload === undefined || span === null) {
-          scheduleOnUI(clearShifts, self.ui.generation, shifts, generation);
-          return;
-        }
-        if (span.from !== span.to) {
-          recordBreadcrumb("drag-drop", `${group} ${span.from}->${span.to}`);
-          latest.current({ payload, group, from: span.from, to: span.to });
-        }
         dropped.current = generation;
         setDrops((count) => count + 1);
+        if (payload === undefined) {
+          return;
+        }
+        recordBreadcrumb("drag-drop", `${group} ${from}->${to}`);
+        latest.current({ payload, group, from, to, keys });
       },
     }), pressCancel);
     React.useEffect(() => () => void guard.close(), [guard]);
@@ -629,9 +611,6 @@ export function createReorderSurface<P>() {
             canceled: event.canceled,
           });
           if (effect === "drop") {
-            // The JS side reads the group: this side keeps its own copy
-            // of the item registry, and a slow frame can leave it behind
-            // the rows a tick or a step just moved.
             toJS(
               session.handlers.reorder,
               ui.generation.value,

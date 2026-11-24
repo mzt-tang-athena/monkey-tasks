@@ -110,11 +110,19 @@ describe("createReorderSurface", () => {
     await wait(50);
 
     expect(onReorder.mock.calls).toEqual([
-      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3 }],
+      [
+        {
+          payload: { name: "Echo" },
+          group: "Today",
+          from: 1,
+          to: 0,
+          keys: ["Delta", "Echo"],
+        },
+      ],
     ]);
     expect(readBreadcrumbs().map((crumb) => [crumb.kind, crumb.detail])).toEqual([
       ["drag-start", undefined],
-      ["drag-drop", "Today 4->3"],
+      ["drag-drop", "Today 1->0"],
     ]);
   });
 
@@ -191,14 +199,22 @@ describe("createReorderSurface", () => {
     await wait(50);
 
     expect(onReorder.mock.calls).toEqual([
-      [{ payload: { name: "Alpha" }, group: "my-order", from: 0, to: 2 }],
+      [
+        {
+          payload: { name: "Alpha" },
+          group: "my-order",
+          from: 0,
+          to: 2,
+          keys: ["Alpha", "Bravo"],
+        },
+      ],
     ]);
   });
 
-  it("drops a held row against the group it finds at the drop", async () => {
+  it("reports the pickup's slots when a row leaves the group mid-drag", async () => {
     // A row leaves the group while another is held: a tick's regroup
-    // or a step. The pickup snapshot still counts it, so the drop reads
-    // the picked row's data index off the group as it stands now.
+    // or a step. The drop keeps the pickup's slots and keys, and the
+    // screen reads them against its own rows.
     const onReorder = vi.fn();
     const five = [
       { name: "Alpha", index: 0 },
@@ -254,7 +270,15 @@ describe("createReorderSurface", () => {
     await wait(50);
 
     expect(onReorder.mock.calls).toEqual([
-      [{ payload: { name: "Delta" }, group: "Today", from: 2, to: 0 }],
+      [
+        {
+          payload: { name: "Delta" },
+          group: "Today",
+          from: 3,
+          to: 0,
+          keys: ["Alpha", "Bravo", "Charlie", "Delta", "Echo"],
+        },
+      ],
     ]);
   });
 
@@ -280,13 +304,13 @@ describe("createReorderSurface", () => {
 
     await key("Echo", "ArrowUp");
     expect(onReorder.mock.calls).toEqual([
-      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3 }],
+      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3, keys: [] }],
     ]);
 
     await key("Delta", "ArrowDown");
     expect(onReorder.mock.calls).toEqual([
-      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3 }],
-      [{ payload: { name: "Delta" }, group: "Today", from: 3, to: 5 }],
+      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3, keys: [] }],
+      [{ payload: { name: "Delta" }, group: "Today", from: 3, to: 5, keys: [] }],
     ]);
 
     onReorder.mockClear();

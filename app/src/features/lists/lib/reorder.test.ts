@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TaskFrontmatter } from "@monkey-tasks/schemas";
 import type { TaskItem } from "@/types/task";
-import { reorderItems } from "./reorder";
+import { rebaseSpan, reorderItems } from "./reorder";
 
 function task(name: string, order?: number): TaskItem {
   const uri = `content://vault/Tasks/${name}.md`;
@@ -89,5 +89,56 @@ describe("reorderItems", () => {
       ["C", 2],
       ["B", 3],
     ]);
+  });
+});
+
+const keys = ["Alpha", "Bravo", "Charlie", "Delta"];
+const unchanged = { Alpha: 0, Bravo: 1, Charlie: 2, Delta: 3 };
+
+describe("rebaseSpan", () => {
+  it("keeps the pickup's own span when nothing changed", () => {
+    expect(rebaseSpan(1, 3, keys, unchanged)).toEqual({ from: 1, to: 3 });
+    expect(rebaseSpan(1, 0, keys, unchanged)).toEqual({ from: 1, to: 0 });
+    expect(rebaseSpan(2, 4, keys, unchanged)).toEqual({ from: 2, to: 4 });
+  });
+
+  it("reads the pickup keys against the group as it stands at the drop", () => {
+    // Bravo left the group while Delta was held. Delta now sits at 2,
+    // so the drop writes 2 -> 0 instead of the pickup's 3 -> 0.
+    expect(rebaseSpan(3, 0, keys, { Alpha: 0, Charlie: 1, Delta: 2 })).toEqual({
+      from: 2,
+      to: 0,
+    });
+  });
+
+  it("lands after the nearest row above a boundary that left", () => {
+    // The drop was before Charlie, and Charlie left: it lands after
+    // Bravo, which is where Charlie stood.
+    expect(rebaseSpan(0, 2, keys, { Alpha: 0, Bravo: 1, Delta: 2 })).toEqual({
+      from: 0,
+      to: 2,
+    });
+  });
+
+  it("reads a scrolled group by the rows it mounted", () => {
+    expect(rebaseSpan(1, 0, ["Delta", "Echo"], { Charlie: 2, Delta: 3, Echo: 4 })).toEqual({
+      from: 4,
+      to: 3,
+    });
+  });
+
+  it("cancels when the picked row left the group", () => {
+    expect(rebaseSpan(1, 3, keys, { Alpha: 0, Charlie: 2, Delta: 3 })).toBeNull();
+  });
+
+  it("cancels when the rows no longer stand in their pickup order", () => {
+    // A step under the drag moved Charlie above Bravo.
+    expect(rebaseSpan(3, 0, keys, { Alpha: 0, Charlie: 1, Bravo: 2, Delta: 3 })).toBeNull();
+  });
+
+  it("cancels with no picked row", () => {
+    expect(rebaseSpan(0, 0, [], {})).toBeNull();
+    expect(rebaseSpan(-1, 0, keys, unchanged)).toBeNull();
+    expect(rebaseSpan(4, 0, keys, unchanged)).toBeNull();
   });
 });
