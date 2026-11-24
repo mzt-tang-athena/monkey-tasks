@@ -17,7 +17,7 @@ import { bottomBar, spacing } from "@/theme/tokens";
 import type { TaskEdit } from "@/types/task";
 import { taskIsDone } from "@monkey-tasks/schemas";
 import { EditorSheet } from "./components/editor-sheet";
-import { useSheetClock } from "./hooks/use-sheet-clock";
+import { useSheetClock } from "@/hooks/use-sheet-clock";
 import { draftOf, findTask, isTaskNote } from "./lib/draft";
 import {
   EMPTY_EDITOR,

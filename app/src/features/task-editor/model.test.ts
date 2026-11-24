@@ -20,13 +20,15 @@ function draft(overrides: Partial<TaskEdit> = {}): TaskEdit {
 const alerts = PROPERTIES.find((property) => property.key === "alerts")!;
 const due = PROPERTIES.find((property) => property.key === "due")!;
 const note = PROPERTIES.find((property) => property.key === "note")!;
+const reference = PROPERTIES.find((property) => property.key === "reference")!;
 
 describe("the property registry", () => {
-  it("keeps the order Due, Repeat, Alerts, Note", () => {
+  it("keeps the order Due, Repeat, Alerts, Reference, Note", () => {
     expect(PROPERTIES.map((property) => property.key)).toEqual([
       "due",
       "repeat",
       "alerts",
+      "reference",
       "note",
     ]);
   });
@@ -76,6 +78,31 @@ describe("alerts", () => {
     expect(
       alerts.clear(draft({ reminders: ["2026-10-27T09:00"] })),
     ).toEqual({ reminders: [] });
+  });
+});
+
+describe("a reference", () => {
+  it("is set only while a link sits under the heading", () => {
+    expect(reference.isSet(draft())).toBe(false);
+    expect(
+      reference.isSet(draft({ body: "\n## Reference\n\n[[oatmeal]]\n" })),
+    ).toBe(true);
+    expect(reference.isSet(draft({ body: "\nAte [[oatmeal]].\n" }))).toBe(false);
+  });
+
+  it("reads its links as words and clears only from its own rows", () => {
+    const held = draft({
+      body: "\n## Reference\n\n[[oatmeal]]\n[[miso-soup]]\n",
+    });
+
+    expect(reference.words(held, today)).toBe("oatmeal, miso-soup");
+    expect(reference.clear(held)).toBeNull();
+  });
+
+  it("keeps the links out of the note's preview lines", () => {
+    expect(
+      noteLines("\nBuy oats\n\n## Reference\n\n[[oatmeal]]\n"),
+    ).toBe("Buy oats");
   });
 });
 

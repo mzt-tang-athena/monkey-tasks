@@ -85,6 +85,19 @@ export function parseReferences(body: string): string[] {
   return names;
 }
 
+/** The body as a note preview reads it: the reference section taken out. */
+export function bodyWithoutReferences(body: string): string {
+  const lines = body.split(/\r?\n/);
+  const section = sectionOf(lines);
+  if (section == null) {
+    return body;
+  }
+  return [
+    ...lines.slice(0, section.heading),
+    ...lines.slice(section.end),
+  ].join(newlineOf(body));
+}
+
 /** The line a new link joins: after the last link, or under the heading. */
 function insertLink(
   lines: string[],
@@ -143,8 +156,7 @@ export function attachReference(body: string, name: string): string {
   return `${body}${eol}${eol}${block}${eol}`;
 }
 
-/** One line with the links that point at `name` taken out. */
-function withoutLinks(line: string, name: string): string {
+/** One line with the links that point at `name` taken out. */function withoutLinks(line: string, name: string): string {
   return line.replace(LINK, (token, inner: string) =>
     linkTarget(`[[${inner}]]`) === name ? "" : token,
   );
@@ -162,8 +174,7 @@ function trimTrailingBlanks(lines: string[]): string[] {
  * Remove one link from the task body. The heading and its blank line go
  * when no link and no other text stay under it; every other line keeps
  * its place, and a body with no section reads as it is.
- */
-export function detachReference(body: string, name: string): string {
+ */export function detachReference(body: string, name: string): string {
   const lines = body.split(/\r?\n/);
   const section = sectionOf(lines);
   if (section == null) {

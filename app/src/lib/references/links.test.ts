@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   attachReference,
+  bodyWithoutReferences,
   detachReference,
   linkTarget,
   linkWords,
@@ -48,6 +49,18 @@ describe("parseReferences", () => {
     const body = ["## Reference", "[[References/oatmeal|Oats]]"].join("\n");
 
     expect(parseReferences(body)).toEqual(["oatmeal"]);
+  });
+});
+
+describe("bodyWithoutReferences", () => {
+  it("takes the heading and its links out and keeps the rest", () => {
+    const body = "Notes first.\n\n## Reference\n\n[[oatmeal]]\n";
+
+    expect(bodyWithoutReferences(body)).toBe("Notes first.\n");
+  });
+
+  it("keeps a body with no section as it is", () => {
+    expect(bodyWithoutReferences(NOTES)).toBe(NOTES);
   });
 });
 

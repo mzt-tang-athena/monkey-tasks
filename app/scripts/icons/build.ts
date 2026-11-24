@@ -36,6 +36,7 @@ const GLYPHS = {
   "chevron-down": { phosphor: "CaretDown", size: 12 },
   bell: { phosphor: "Bell", size: 16 },
   note: { phosphor: "Note", size: 16 },
+  link: { phosphor: "LinkSimple", size: 16 },
   close: { phosphor: "X", size: 15 },
   check: { phosphor: "Check", size: 12 },
   command: { phosphor: "Command", size: 24 },

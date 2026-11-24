@@ -1,9 +1,10 @@
 import type { IconName } from "@/components/ui/icon";
+import { bodyWithoutReferences, parseReferences } from "@/lib/references/links";
 import { ruleWords } from "@/lib/recurrence";
 import type { TaskEdit } from "@/types/task";
 import { clockOf, clockWords, dayOf, whenWords } from "./lib/when";
 
-export type PropertyKey = "due" | "repeat" | "alerts" | "note";
+export type PropertyKey = "due" | "repeat" | "alerts" | "reference" | "note";
 
 /**
  * One property the sheet shows as a tile when it has a value, and as a
@@ -51,9 +52,9 @@ export function alertWords(draft: TaskEdit, today: Date): string[] {
   return clockOf(draft.due) == null ? reminders : ["At due", ...reminders];
 }
 
-/** The first two lines of a note that hold text. */
+/** The first two lines of a note that hold text, with the links left out. */
 export function noteLines(body: string): string {
-  return body
+  return bodyWithoutReferences(body)
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line !== "")
@@ -119,6 +120,25 @@ export const PROPERTIES: readonly Property[] = [
     // A timed due rings by itself. Only the reminders clear.
     clear: (draft) => (draft.reminders.length > 0 ? { reminders: [] } : null),
     names: { open: "change alerts", clear: "clear reminders", add: "add reminder" },
+  },
+  {
+    key: "reference",
+    title: "Reference",
+    chip: "Reference",
+    icon: "link",
+    isSet: (draft) => parseReferences(draft.body).length > 0,
+    // A tap on a link opens it, so the tile keeps its own rows and the
+    // chip stays in the strip for the next link.
+    many: true,
+    wide: true,
+    words: (draft) => parseReferences(draft.body).join(", "),
+    // A link detaches from its own row, never from one stray tap.
+    clear: () => null,
+    names: {
+      open: "change reference",
+      clear: "",
+      add: "link a reference",
+    },
   },
   {
     key: "note",
