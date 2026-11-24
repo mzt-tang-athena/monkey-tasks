@@ -95,13 +95,13 @@ export function ReferencePicker({
           onPress={() => setBrowsing((current) => !current)}
           accessibilityRole="button"
           accessibilityLabel={
-            browsing ? "search the folder by name" : "browse the References folder"
+            browsing ? "search by name" : "browse the References folder"
           }
           aria-pressed={browsing}
         >
           <Icon name="list" size={18} color="accent" />
           <Text style={styles.browseText}>
-            {browsing ? "Search by name" : "Browse the folder"}
+            {browsing ? "Search by name" : "Browse the References folder"}
           </Text>
         </Pressable>
       ) : null}
