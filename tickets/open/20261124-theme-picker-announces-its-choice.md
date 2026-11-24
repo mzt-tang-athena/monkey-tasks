@@ -18,13 +18,21 @@ The picker already sets `role="radio"` and a checked state, and a unit
 test proves it on the web. The state does not reach Android's
 accessibility tree.
 
-- Find where it drops: React Native's mapping of `aria-checked`, or
-  the dump reading the wrong attribute.
+The dump left with the smoke lane's worktree, so reproduce it first.
+A likely cause: React Native maps `aria-checked` to Android's checked
+state in `View`, but `pressable.tsx` routes native presses through
+react-native-gesture-handler's `Pressable`. That one spreads
+`aria-checked` onto its host without the mapping.
+
+- Reproduce with a fresh dump, and keep it as evidence.
+- Find where it drops: the gesture handler's `Pressable`, or the dump
+  reading the wrong attribute.
 - Fix it at that layer, so every radio in the app gets it.
 - Check the week-start setting for the same gap.
 
 ## Acceptance
 
+- [ ] A dump on the base shows both radios unchecked.
 - [ ] The Android dump shows `checked="true"` on the active theme.
 - [ ] An e2e test fails if no option reports its checked state.
 

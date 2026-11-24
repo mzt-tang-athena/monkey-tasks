@@ -19,6 +19,10 @@ load:
 
 Each stop cost a full rerun of a heavy job.
 
+The script already hides error dialogs (`hide_error_dialogs 1`), but
+only after `adb root`, so the setting comes too late for the first
+stop. Move it rather than add a second one.
+
 - Wait for the device to accept `adb root`, with a bound, before the
   call.
 - Find a System UI ANR dialog on screen and choose Wait, then go on.
@@ -27,7 +31,8 @@ Each stop cost a full rerun of a heavy job.
 ## Acceptance
 
 - [ ] A run under load passes the `adb root` step every time.
-- [ ] A planted ANR dialog gets dismissed, and the launch goes on.
+- [ ] A planted ANR dialog gets dismissed.
+- [ ] The launch goes on after the dismissal.
 - [ ] Neither wait raises an existing timeout.
 
 ## Outcome
