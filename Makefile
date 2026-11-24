@@ -1,7 +1,7 @@
 include template.mk
 
 .PHONY: lint ci typecheck eslint vitest web-suite hooks check-docs \
-	check-changelog check-changelog-entry test-pre-commit test-release
+	check-changelog check-changelog-entry test-pre-commit test-release test-heavy
 
 # What scripts/gate.sh runs for a prose-only branch. Vale reads only the
 # markdown the branch changed, so the run stays quick.
@@ -9,7 +9,7 @@ lint: check-docs check-changelog check-changelog-entry
 
 # What scripts/gate.sh runs for code: the ci job's steps, then the web
 # suite. The suite takes the heavy lock itself.
-ci: typecheck eslint vitest lint test-pre-commit test-release web-suite
+ci: typecheck eslint vitest lint test-pre-commit test-release test-heavy web-suite
 
 typecheck:
 	cd app && npx tsc --noEmit
@@ -42,3 +42,8 @@ test-pre-commit:
 test-release:
 	@bash scripts/test-check-release-notes.sh
 	@bash scripts/test-release.sh
+
+# heavy.sh decides whether a caller already holds the heavy lock, so a
+# regression here hangs every heavy job instead of failing it.
+test-heavy:
+	@bash .claude/skills/verify-monkey-tasks/scripts/test-heavy.sh

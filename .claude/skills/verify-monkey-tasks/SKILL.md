@@ -141,6 +141,10 @@ instance runs per console port. The default is 5580. Set
 
 This host has 15 GB, so one heavy job runs at a time.
 
+Never wrap these scripts in your own `flock`. Each takes the lock in its
+own unit, so a wrapper makes the job wait on itself. A holder in the
+caller's process tree gets a printed line and the job runs in place.
+
 - `web-suite.sh <checkout> <tag> <port>`: the full web suite.
 - `android-build.sh <checkout>`: the full release build.
 - `android-release-smoke.sh <apk>`: the release smoke on the emulator.
