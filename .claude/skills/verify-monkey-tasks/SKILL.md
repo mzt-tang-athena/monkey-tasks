@@ -182,6 +182,10 @@ checks:
 - A pull on the bar's gap opens the command pane. The smoke pulls up
   first, then down, which still opens 1.2 and earlier APKs. The pass
   line names the one that worked.
+- Settings, reached from the bar's opener and its own row in the pane,
+  because #168 dropped the planner's gear. The theme switch then reads
+  the screen's mean colour twice, before and after. A tap that found
+  nothing fails the step.
 - The task editor clears three-button navigation.
 - The editor keyboard journey, one try per navigation mode.
 - The app log, for a crash.
@@ -420,6 +424,12 @@ made, under `app/build/verify/evidence/android-<stamp>/`.
   handle from a frame taken at the tap. A shot after that window reads
   `no handle`, and that matches the platform.
 
+- `scripts/android-color.mjs <shot.png> ...` prints each shot's mean
+  colour and its luma, one line per shot. Compare two shots to prove a
+  repaint, such as a palette switch: `luma` falls from the light paper
+  to Midnight's. It reads only, and exits nonzero on a file it cannot
+  unpack.
+
 Proof standards: drive the user path, capture the action and the
 result, and read the note back for every write. For motion, compare a
 `frames` grid with motion on against one with `motion off`. A claim
@@ -483,3 +493,5 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 - `android-ui.mjs <dump.xml> find|text|focused|list [handle]` reads a screen tree.
 - `android-frames.mjs <frames.raw> <out dir> [columns]` turns raw `screenrecord` frames into PNGs and a grid.
 - `android-handle.mjs <shot.png> ...` reads the insertion handle and the caret from a shot.
+- `android-color.mjs <shot.png> ...` reads each shot's mean colour and luma.
+- `png.mjs` unpacks a PNG for the two readers above.
