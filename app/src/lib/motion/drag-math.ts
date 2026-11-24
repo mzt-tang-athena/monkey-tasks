@@ -79,6 +79,65 @@ export function dropSpan(
   };
 }
 
+/** The data indexes a drop writes, read again from the group as it
+    stands at the drop. `keys` is the pickup snapshot's row keys in
+    mount order, and `live` maps each row of the group to its data
+    index now. `from` and `to` are the pickup's mount positions: the
+    picked row's, and the boundary it lands on.
+
+    The picked row and the row the boundary names keep their identity,
+    so a row that left the group since pickup (a tick's regroup) moves
+    nobody. Null when the drop has lost the row it moves, or a row that
+    stood between the others, because the span then names places the
+    user never saw. */
+export function rebaseSpan(
+  from: number,
+  to: number,
+  keys: readonly string[],
+  live: Readonly<Record<string, number>>,
+): { from: number; to: number } | null {
+  "worklet";
+  const mounted = keys.length;
+  if (from < 0 || from >= mounted) {
+    return null;
+  }
+  const picked = live[keys[from]];
+  if (picked === undefined) {
+    return null;
+  }
+  let previous = -1;
+  for (let i = 0; i < mounted; i += 1) {
+    const at = live[keys[i]];
+    if (at === undefined) {
+      continue;
+    }
+    if (at <= previous) {
+      return null;
+    }
+    previous = at;
+  }
+  // The row that stood below the boundary, or the first of those still
+  // here. With nothing below it, the drop lands after the last row.
+  let anchor = -1;
+  for (let i = to; i < mounted; i += 1) {
+    const at = live[keys[i]];
+    if (at !== undefined) {
+      anchor = at;
+      break;
+    }
+  }
+  if (anchor !== -1) {
+    return { from: picked, to: anchor };
+  }
+  for (let i = Math.min(to, mounted) - 1; i >= 0; i -= 1) {
+    const at = live[keys[i]];
+    if (at !== undefined) {
+      return { from: picked, to: at + 1 };
+    }
+  }
+  return null;
+}
+
 /** The data indexes a one-place move writes. `direction` is 1 for down
     the list and -1 for up. Null at the group's edge, where no move
     exists. */

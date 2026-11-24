@@ -16,7 +16,7 @@ import { taskRowFace } from "@/components/task-row-face";
 import { Overlay } from "@/components/ui/overlay-host";
 import {
   cardPosition,
-  dropSpan,
+  rebaseSpan,
   slotForY,
   slotIndexes,
   slotTops,
@@ -171,6 +171,25 @@ function snapshotOf(state: ReorderState, group: string) {
     indexes[i] = row.index;
   }
   return { snapshot, keys, rows, slots, indexes };
+}
+
+/** Each row of the group, by key, with its data index now. The Item's
+    own effect keeps it current, so a drop reads the group as the last
+    render left it. */
+function liveIndexes(
+  state: ReorderState,
+  group: string,
+): Record<string, number> {
+  "worklet";
+  const live: Record<string, number> = {};
+  const entries = state.items.value;
+  for (const key in entries) {
+    const entry = entries[key];
+    if (entry.group === group) {
+      live[key] = entry.index;
+    }
+  }
+  return live;
 }
 
 /**
@@ -602,7 +621,15 @@ export function createReorderSurface<P>() {
             canceled: event.canceled,
           });
           if (effect === "drop") {
-            const span = dropSpan(from.value, to.value, indexes.value);
+            // The group as it stands now: a tick or a step can land
+            // between pick-up and drop, and then the pickup's data
+            // indexes name other rows.
+            const span = rebaseSpan(
+              from.value,
+              to.value,
+              keys.value,
+              liveIndexes(state, group),
+            );
             if (span === null) {
               toJS(session.handlers.cancel, ui.generation.value);
             } else {

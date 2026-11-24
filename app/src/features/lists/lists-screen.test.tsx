@@ -502,6 +502,17 @@ describe("ListsScreen", () => {
     act(() => spy.listeners.forEach((listener) => listener()));
   }
 
+  /** Renders `names` as one My order group, and returns the grip of
+      `gripOf`. */
+  function manualBoard(names: string[], gripOf: string): HTMLElement {
+    vi.useRealTimers();
+    spy.sortMode = "manual";
+    spy.tasks = names.map((name) => task(name));
+    render(<ListsScreen dock={dock} />);
+    placeRows(names);
+    return screen.getByTestId(`reorder-grip:${gripOf}`);
+  }
+
   /** A tick from a second finger: its own press, then its click, so
       the drag's one-click guard lets the press through. */
   function tapTick(name: string) {
@@ -515,13 +526,8 @@ describe("ListsScreen", () => {
     // between pick-up and drop, so the group loses the ticked row while
     // the drop still counts it. The picked row's data index then names
     // the row below it, and that row takes the drop.
-    vi.useRealTimers();
-    spy.sortMode = "manual";
     const names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
-    spy.tasks = names.map((name) => task(name));
-    render(<ListsScreen dock={dock} />);
-    placeRows(names);
-    const grip = screen.getByTestId("reorder-grip:Delta");
+    const grip = manualBoard(names, "Delta");
 
     await holdOverTop(grip, 3);
     expect(screen.getByTestId("drag-ghost"), "the grip picked the row up").toBeTruthy();
@@ -549,17 +555,14 @@ describe("ListsScreen", () => {
   });
 
   it("drops a held row into the group its tick has not left yet", async () => {
-    vi.useRealTimers();
-    spy.sortMode = "manual";
     const names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
-    spy.tasks = names.map((name) => task(name));
-    render(<ListsScreen dock={dock} />);
-    placeRows(names);
-    const grip = screen.getByTestId("reorder-grip:Delta");
+    const grip = manualBoard(names, "Delta");
 
     await holdOverTop(grip, 3);
 
-    // The tick is in its hold, so the row still sits in the group.
+    // The tick is in its hold, so the row still sits in the group. The
+    // hold outlasts the drop, so a slow runner cannot end it first.
+    spy.tickSettleMs = 3000;
     tapTick("Bravo");
     await release(grip);
 
@@ -575,13 +578,8 @@ describe("ListsScreen", () => {
   });
 
   it("cancels a drop whose group a step reordered under it", async () => {
-    vi.useRealTimers();
-    spy.sortMode = "manual";
     const names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
-    spy.tasks = names.map((name) => task(name));
-    render(<ListsScreen dock={dock} />);
-    placeRows(names);
-    const grip = screen.getByTestId("reorder-grip:Delta");
+    const grip = manualBoard(names, "Delta");
 
     await holdOverTop(grip, 3);
 

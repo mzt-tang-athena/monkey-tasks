@@ -18,6 +18,10 @@ fails a bullet that wraps or runs past 64 characters.
 
 - The planner's dates follow a swipe, as the tabs do.
 
+### Fixes
+
+- A drag under a tick lands where you dropped the row.
+
 ## 1.2.0 - 2026-11-19
 
 ### Command pane
