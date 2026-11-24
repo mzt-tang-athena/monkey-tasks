@@ -41,11 +41,10 @@ A step under a held drag cancels. The old indexes may name a passable
 order there. The corners and shifts still come from the pickup layout.
 A rebase could then land where the user saw nothing move.
 
-The drop reads the item registry the last render wrote. A row can leave
-and the finger release within one commit of each other. The drop then
-reads the old indexes, and it lands as the old code did. A hand-off to
-the JS thread at the release would close that window. Nothing needs it
-yet.
+The drop reads the item registry on the JS side, where the rows change.
+The pickup still takes its snapshot in a worklet. On the emulator that
+copy lagged a regroup by a few frames, in one run in six. The drop reads
+the other copy now. A stalled frame can no longer stale it.
 
 The alternative was to cancel on any change to the group. That is the
 smaller change. It also throws away a drag the user can still see. The

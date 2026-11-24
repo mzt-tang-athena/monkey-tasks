@@ -69,5 +69,8 @@ The spec's third case cancels: a grip step or a TalkBack increment
 under a held drag. The old indexes can write a passable order there,
 but the drag's shifts still come from the pickup layout.
 
-Next: nothing. A JS hand-off at the release would close the one-commit
-window. No surface needs it yet.
+The drop reads the item registry on the JS side, where the rows change.
+The pickup still takes its snapshot in a worklet. Native runs read a
+stale worklet copy once in six. Those wrote the row below the held one
+first. The JS-side read did not, in 8 runs of the same race on the
+emulator.

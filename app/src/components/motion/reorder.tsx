@@ -72,12 +72,17 @@ export type ReorderEvent<P> = {
 };
 
 type ReorderHandlers = SessionHandlers & {
+  /** A drop: the picked row's slot and the slot it lands on, as mount
+      positions of `keys`. The surface reads the group's data indexes
+      here, on the JS side, because the group can change under a held
+      drag and this side is where it changes. */
   reorder: (
     generation: number,
     source: number,
     group: string,
     from: number,
     to: number,
+    keys: readonly string[],
   ) => void;
 };
 
@@ -174,13 +179,10 @@ function snapshotOf(state: ReorderState, group: string) {
 }
 
 /** Each row of the group, by key, with its data index now. The Item's
-    own effect keeps it current, so a drop reads the group as the last
-    render left it. */
-function liveIndexes(
-  state: ReorderState,
-  group: string,
-): Record<string, number> {
-  "worklet";
+    own effect writes it, so the JS side reads the rows the last render
+    drew. A drop reads it here, not in its worklet, because this is the
+    side the rows change on. */
+function liveIndexes(state: ReorderState, group: string): Record<string, number> {
   const live: Record<string, number> = {};
   const entries = state.items.value;
   for (const key in entries) {
@@ -191,7 +193,6 @@ function liveIndexes(
   }
   return live;
 }
-
 /**
  * A reorderable list. A screen makes one at module scope,
  * `const ListReorder = createReorderSurface<TaskItem>()`, and passes
@@ -266,15 +267,22 @@ export function createReorderSurface<P>() {
         setActive(null);
         scheduleOnUI(clearShifts, self.ui.generation, shifts, generation);
       },
-      reorder(generation, source, group, from, to) {
+      reorder(generation, source, group, from, to, keys) {
         if (!guard.settle(generation)) {
           return;
         }
-        recordBreadcrumb("drag-drop", `${group} ${from}->${to}`);
         const payload = self.payloads.get(source) as P | undefined;
         setActive(null);
-        if (payload !== undefined && from !== to) {
-          latest.current({ payload, group, from, to });
+        // A tick's regroup or a step can land between pick-up and drop,
+        // so the pickup's data indexes may name other rows by now.
+        const span = rebaseSpan(from, to, keys, liveIndexes(state, group));
+        if (payload === undefined || span === null) {
+          scheduleOnUI(clearShifts, self.ui.generation, shifts, generation);
+          return;
+        }
+        if (span.from !== span.to) {
+          recordBreadcrumb("drag-drop", `${group} ${span.from}->${span.to}`);
+          latest.current({ payload, group, from: span.from, to: span.to });
         }
         dropped.current = generation;
         setDrops((count) => count + 1);
@@ -621,27 +629,18 @@ export function createReorderSurface<P>() {
             canceled: event.canceled,
           });
           if (effect === "drop") {
-            // The group as it stands now: a tick or a step can land
-            // between pick-up and drop, and then the pickup's data
-            // indexes name other rows.
-            const span = rebaseSpan(
+            // The JS side reads the group: this side keeps its own copy
+            // of the item registry, and a slow frame can leave it behind
+            // the rows a tick or a step just moved.
+            toJS(
+              session.handlers.reorder,
+              ui.generation.value,
+              source,
+              group,
               from.value,
               to.value,
               keys.value,
-              liveIndexes(state, group),
             );
-            if (span === null) {
-              toJS(session.handlers.cancel, ui.generation.value);
-            } else {
-              toJS(
-                session.handlers.reorder,
-                ui.generation.value,
-                source,
-                group,
-                span.from,
-                span.to,
-              );
-            }
             settleSession(ui);
           } else if (effect === "cancel") {
             toJS(session.handlers.cancel, ui.generation.value);
