@@ -142,6 +142,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "once",
     why: "the hairline's opacity and color once it settles",
   },
+  "sort-default.spec.ts": {
+    runsIn: "both",
+    why: "the stored order, which must read the same under reduce",
+  },
   "tasks.spec.ts": {
     runsIn: "once",
     why: "row text, the sections it folds into, and the note a tick writes",

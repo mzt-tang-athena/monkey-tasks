@@ -20,6 +20,10 @@ fails a bullet that wraps or runs past 64 characters.
 
 - The tabs run Lists, Planner, Inbox, Journal.
 
+### Lists
+
+- My order is the default sort, first in its menu.
+
 ## 1.3.0 - unreleased
 
 ### Command pane

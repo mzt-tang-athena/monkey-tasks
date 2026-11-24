@@ -16,6 +16,7 @@ import {
   openCompleted,
   row,
   sectionHeader,
+  useDueOrder,
 } from "../locators";
 import { noteText } from "../vault";
 
@@ -33,6 +34,7 @@ const apples = "Groceries: milk, eggs, oats";
 async function openMain(page: Page) {
   await page.goto("/");
   await expect(row(page, undated.second)).toBeVisible();
+  await useDueOrder(page);
 }
 
 async function openMyOrder(page: Page) {

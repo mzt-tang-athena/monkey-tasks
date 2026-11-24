@@ -146,7 +146,9 @@ test("a link to a note that is not in the folder says so and detaches", async ({
     `${before}\n## Reference\n\n[[${references.missing}]]\n`,
   );
   await returnToTab(page);
-  await expect(row(page, references.task)).toBeVisible();
+  // The linked word on the row proves the re-read reached the task, so
+  // the sheet opens with the body this test just wrote.
+  await expect(row(page, references.task)).toContainText(references.missing);
   await openTask(page);
 
   await press(
