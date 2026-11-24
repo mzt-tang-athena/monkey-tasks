@@ -37,7 +37,7 @@ import { useTickHold } from "./hooks/use-tick-hold";
 import { emptyListLabel, foldCompleted, type ListsSection } from "./lib/list-sections";
 import { applyTickHold } from "./lib/tick-hold";
 import { ListReorder } from "./lib/list-reorder";
-import { reorderItems } from "./lib/reorder";
+import { rebaseSpan, reorderItems } from "./lib/reorder";
 import type { ReorderEvent } from "@/components/motion/reorder";
 
 /**
@@ -90,13 +90,30 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
     [held],
   );
 
+  // A tick's regroup or a step can land under a held drag, so a drop's
+  // pickup slots may name other rows by now. The pickup keys are read
+  // against the rows this screen writes, which no frame can stale.
   const moveTask = React.useCallback(
-    ({ payload, group, from, to }: ReorderEvent<TaskItem>) => {
+    ({ group, from, to, keys }: ReorderEvent<TaskItem>) => {
       const source = held.find((section) => section.key === group);
       if (source == null) {
         return;
       }
-      void reorderSection(reorderItems(source.data, from, to));
+      const span =
+        keys.length === 0
+          ? { from, to }
+          : rebaseSpan(
+              from,
+              to,
+              keys,
+              Object.fromEntries(
+                source.data.map((task, index) => [task.uri, index]),
+              ),
+            );
+      if (span === null) {
+        return;
+      }
+      void reorderSection(reorderItems(source.data, span.from, span.to));
     },
     [held, reorderSection],
   );
