@@ -5,9 +5,6 @@ import { startOfDay } from "@/utils/dates";
  * where a day is named: a link, a strip tap, a page landing. This store
  * remembers the last one, so a return to the tab with no `day` param
  * opens on that day instead of today.
- *
- * It lives in the module, so a reload starts at today again. Nothing
- * here is written to disk or to settings.
  */
 let picked: Date | null = null;
 

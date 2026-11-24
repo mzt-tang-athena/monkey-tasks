@@ -69,8 +69,6 @@ describe("usePlannerRoute", () => {
   });
 
   it("keeps the picked day when the route names none", async () => {
-    // The bar and the command pane open the tab with no params, which
-    // drops `?day=`. The tab then opens on the day the user picked.
     route.params = { day: "2026-10-28" };
     const first = mount();
     expect(first.result.current.day.getTime()).toBe(

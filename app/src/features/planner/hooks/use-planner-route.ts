@@ -10,7 +10,8 @@ import {
 } from "@/features/planner/model";
 import { pickedDay, rememberDay } from "@/features/planner/lib/picked-day";
 
-/** The planner route state: the mode and day the URL names. */
+/** The planner route state: the mode the URL names and the day the
+    screen opens on. */
 export type PlannerRoute = {
   mode: Mode;
   day: Date;
@@ -38,12 +39,7 @@ export function usePlannerRoute(): PlannerRoute {
   }>();
   const today = useToday();
   const mode = parseMode(params.mode);
-  // The day the URL names, if it names one. A link names it too, so it
-  // is the pick that outlives the route.
   const named = React.useMemo(() => parsePlannerDay(params.day), [params.day]);
-  // A setter writes the store with the param, so a pick is kept even if
-  // another route lands before this one re-renders. The effect below
-  // keeps the day a link names, which has no setter.
   const day = named ?? pickedDay() ?? today;
   React.useEffect(() => {
     if (named != null) {
@@ -59,16 +55,12 @@ export function usePlannerRoute(): PlannerRoute {
     [],
   );
   const setDay = React.useCallback(
-    (next: Date) => {
-      rememberDay(next);
-      router.setParams({ day: plannerDayParam(next) });
-    },
+    (next: Date) => router.setParams({ day: plannerDayParam(next) }),
     [],
   );
   const openDay = React.useCallback(
     (next: Date) => {
       recordBreadcrumb("tab", "planner:day");
-      rememberDay(next);
       router.setParams({ day: plannerDayParam(next), mode: "day" });
     },
     [],

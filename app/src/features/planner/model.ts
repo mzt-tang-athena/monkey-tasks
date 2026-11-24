@@ -299,8 +299,7 @@ export function parseMode(value: string | string[] | undefined): Mode {
 }
 
 /** The day a URL param names: local midnight, or null when it names no
-    real date (2026-02-30 rolls, so the caller falls back rather than
-    filing the screen under the wrong month). */
+    real date. */
 export function parsePlannerDay(
   value: string | string[] | undefined,
 ): Date | null {
