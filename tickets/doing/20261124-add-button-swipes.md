@@ -2,7 +2,7 @@
 title: One wide Add button that swipes to commands and tabs
 created: 2026-11-24
 priority: high
-assignee:
+assignee: poteto-mode
 pr:
 depends: []
 ---
