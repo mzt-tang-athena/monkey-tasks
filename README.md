@@ -566,7 +566,8 @@ The feature queue:
 
 - 0088 the journal tab, built with 0089 and 0090 in PR #143
 - 0091 reference notes on a task
-- 0092 optional quests and evergreen tasks, a discovery
+- 0092 optional quests and evergreen tasks, a discovery. The
+  findings and mockups wait on the operator's pick
 - 0093 the task editor rebuild, shipped in #155. The phone pass for
   keyboard insets and Android back remains
 - 0095 the Inbox Notes tab, shipped in #164. The phone pass for
