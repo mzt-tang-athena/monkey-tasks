@@ -17,6 +17,10 @@ export type MotionMark = {
 };
 
 export const marks: Readonly<Record<string, MotionMark>> = {
+  "add-button.spec.ts": {
+    runsIn: "both",
+    why: "reads the button's mid-swipe travel, and that reduce holds it still",
+  },
   "capture-clock.spec.ts": {
     runsIn: "both",
     why: "samples the sheet, scrim and bar every frame, then the reduce path",

@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
+import { swipeOpen } from "../commands";
 
 /**
  * The operator's 2026-11-24 feedback: the tabs run Lists, Planner,
@@ -53,10 +54,7 @@ test("a tab press lands on the tab that was pressed", async ({ page }) => {
 test("the command pane lists the Go to rows in tab order", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("bottom-bar")).toBeVisible();
-  await page
-    .getByRole("button", { name: "open commands" })
-    .filter({ visible: true })
-    .click();
+  await swipeOpen(page);
   await expect(page.getByRole("dialog", { name: "Commands" })).toBeVisible();
 
   // The rows read up from the search, so the first row in the order

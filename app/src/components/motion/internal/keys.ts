@@ -11,11 +11,46 @@ export function useArrowKeys(
   ref: React.RefObject<unknown>,
   onArrow: (direction: 1 | -1) => void,
 ): void {
+  useFocusKeys(ref, (key) => {
+    if (key === "ArrowUp" || key === "ArrowRight") {
+      onArrow(1);
+    } else if (key === "ArrowDown" || key === "ArrowLeft") {
+      onArrow(-1);
+    }
+  });
+}
+
+/**
+ * Arrow keys on a focused control, for the web, as the swipes a bar
+ * action takes: down for the commands, left and right for a tab. It
+ * keeps every job of the target a key away, on a phone with a keyboard
+ * as on the web.
+ */
+export function useSwipeKeys(
+  ref: React.RefObject<unknown>,
+  onStep: (step: "commands" | "next" | "previous") => void,
+): void {
+  useFocusKeys(ref, (key) => {
+    if (key === "ArrowDown") {
+      onStep("commands");
+    } else if (key === "ArrowRight") {
+      onStep("next");
+    } else if (key === "ArrowLeft") {
+      onStep("previous");
+    }
+  });
+}
+
+/** Runs `onKey` for an arrow key while `ref` holds the focus. */
+function useFocusKeys(
+  ref: React.RefObject<unknown>,
+  onKey: (key: string) => void,
+): void {
   // The listener attaches once. A step that changes with the value
   // would otherwise leave a frame with no listener while it resubscribes.
-  const latest = React.useRef(onArrow);
+  const latest = React.useRef(onKey);
   React.useLayoutEffect(() => {
-    latest.current = onArrow;
+    latest.current = onKey;
   });
   React.useEffect(() => {
     if (Platform.OS !== "web") {
@@ -27,13 +62,11 @@ export function useArrowKeys(
       if (document.activeElement !== ref.current) {
         return;
       }
-      if (event.key === "ArrowUp" || event.key === "ArrowRight") {
-        event.preventDefault();
-        latest.current(1);
-      } else if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
-        event.preventDefault();
-        latest.current(-1);
+      if (!event.key.startsWith("Arrow")) {
+        return;
       }
+      event.preventDefault();
+      latest.current(event.key);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);

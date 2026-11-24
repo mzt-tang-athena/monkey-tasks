@@ -2,41 +2,24 @@ import { AxeBuilder } from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
 import { expect, pauseClock, test } from "../fixtures";
 import { tabs, undated } from "../data";
+import { command, pane, search, swipeOpen } from "../commands";
 import { holdDrag, swipe, touchFlick } from "../gestures";
-import { expectAbove, listTab, row } from "../locators";
+import { addButton, expectAbove, listTab, row } from "../locators";
 import { putNote } from "../vault";
 
 /**
  * Ticket 0085 and its 2026-11-20 amendment: the command pane rises
  * from the bottom edge, as the thumb and the bar's opener are there.
  * The search sits at the bottom of the panel, the rows read up from it,
- * and a drag down puts it back. An upward swipe on the bottom bar's gap
- * opens it, and so does the bar's Command half. The search takes focus,
- * a command runs and closes the pane, and no tab, pill, list body or
- * header band starts the gesture. The bar's split Add pill opens the
- * tab's own sheet from its plus half.
+ * and a drag down puts it back. A swipe down on the bar's Add button
+ * opens it, or the button's own "Open commands" action from TalkBack and
+ * the keyboard. The search takes focus, a command runs and closes the
+ * pane, and no tab, the button's own tap, a list body or a header band
+ * starts the gesture.
  */
 
-function pane(page: Page): Locator {
-  return page.getByRole("dialog", { name: "Commands" });
-}
-
-function search(page: Page): Locator {
-  return page.getByPlaceholder("Search commands");
-}
-
-function openButton(page: Page): Locator {
-  return page
-    .getByRole("button", { name: "open commands" })
-    .filter({ visible: true });
-}
-
-function command(page: Page, id: string): Locator {
-  return page.getByTestId(`command:${id}`);
-}
-
 async function openPane(page: Page): Promise<void> {
-  await openButton(page).click();
+  await swipeOpen(page);
   await expect(pane(page)).toBeVisible();
   await settled(page);
 }
@@ -78,27 +61,6 @@ async function expectShut(page: Page): Promise<void> {
 }
 
 test.describe("opening", () => {
-  test("an upward swipe on the bar's gap opens it with the search focused", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-
-    await touchFlick(page, page.getByTestId("bar-gap"), -120);
-
-    await expect(pane(page)).toBeVisible();
-    await expect(search(page)).toBeFocused();
-  });
-
-  test("a mouse pull up on the bar's gap opens it too", async ({ page }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-
-    await pull(page, page.getByTestId("bar-gap"), -140);
-
-    await expect(pane(page)).toBeVisible();
-  });
-
   test("it rises from the bottom edge: it starts under the screen", async ({
     page,
     reducedMotion,
@@ -108,8 +70,11 @@ test.describe("opening", () => {
     await expect(row(page, undated.second)).toBeVisible();
     const height = page.viewportSize()?.height ?? 915;
 
+    // The button's own "Open commands" key, so the search no longer
+    // waits on a press to open the pane.
+    await addButton(page).focus();
     await pauseClock(page);
-    await openButton(page).click();
+    await page.keyboard.press("ArrowDown");
     // One frame in, the panel still climbs from under the edge.
     await page.clock.runFor(16);
     const climbing = await search(page).boundingBox();
@@ -144,15 +109,15 @@ test.describe("opening", () => {
     await expectAbove(command(page, "capture"), search(page));
   });
 
-  test("the bar's Command half opens it, and Escape puts focus back", async ({
+  test("the Add button opens it from the keyboard, and Escape puts focus back", async ({
     page,
   }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
-    const opener = openButton(page);
+    const opener = addButton(page);
     await opener.focus();
-    await opener.click();
+    await page.keyboard.press("ArrowDown");
     await expect(pane(page)).toBeVisible();
     await expect(search(page)).toBeFocused();
 
@@ -190,7 +155,7 @@ test.describe("opening", () => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
-    await openButton(page).click();
+    await swipeOpen(page);
     const panel = pane(page);
     await expect(panel).toBeVisible();
     const look = await panel.evaluate((element) => {
@@ -212,18 +177,14 @@ test.describe("the bar's own controls keep their gestures", () => {
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
   });
 
-  test("a swipe up on the Add half opens nothing and no sheet", async ({ page }) => {
+  test("a tap on the Add button opens the sheet, not the pane", async ({ page }) => {
     await page.goto("/");
     await expect(row(page, undated.second)).toBeVisible();
 
-    await touchFlick(
-      page,
-      page.getByRole("button", { name: "add task" }).filter({ visible: true }),
-      -120,
-    );
+    await addButton(page).click();
 
+    await expect(page.getByRole("dialog", { name: "Add a task" })).toBeVisible();
     await expectShut(page);
-    await expect(page.getByRole("dialog", { name: "Add a task" })).toHaveCount(0);
   });
 });
 
@@ -424,76 +385,6 @@ test.describe("every command", () => {
     await command(page, "diagnostics").click();
     await expect(page).toHaveURL("/dev");
     await expectShut(page);
-  });
-});
-
-test.describe("the bar's split Add pill", () => {
-  test("the Add half opens the tab's sheet and the Command half opens the pane", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-
-    await page.getByRole("button", { name: "add task" }).click();
-    await expect(page.getByRole("dialog", { name: "Add a task" })).toBeVisible();
-    await page.keyboard.press("Escape");
-
-    await openButton(page).click();
-    await expect(pane(page)).toBeVisible();
-  });
-
-  test("both halves are 44pt, and four tabs and the pill fit 360 wide", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 360, height: 640 });
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-
-    const targets = ["Lists", "Planner", "Inbox Notes", "Journal", "add task", "open commands"];
-    for (const name of targets) {
-      const box = await page
-        .getByRole(name === "add task" || name === "open commands" ? "button" : "tab", {
-          name,
-        })
-        .filter({ visible: true })
-        .boundingBox();
-      expect(box, name).not.toBeNull();
-      // Every target is 44pt and sits inside the 360pt bar.
-      expect(box?.width ?? 0).toBeGreaterThanOrEqual(43.5);
-      expect(box?.height ?? 0).toBeGreaterThanOrEqual(43.5);
-      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(360.5);
-    }
-
-    // The gap is the swipe target, so it keeps a real box too.
-    const gap = await page.getByTestId("bar-gap").boundingBox();
-    expect(gap?.width ?? 0).toBeGreaterThanOrEqual(23.5);
-    expect(gap?.height ?? 0).toBeGreaterThanOrEqual(43.5);
-
-    // Nothing spills sideways: the bar fits the phone.
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
-  });
-
-  test("the bar's glyphs draw at 24pt inside their 44pt targets", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 360, height: 640 });
-    await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
-
-    const glyphs = ["list", "calendar", "journal", "inbox", "plus", "command"];
-    for (const name of glyphs) {
-      const box = await page
-        .locator(`[data-testid="icon:${name}"], [data-testid="icon:${name}:fill"]`)
-        .filter({ visible: true })
-        .first()
-        .boundingBox();
-      expect(box, name).not.toBeNull();
-      expect(box?.width ?? 0, name).toBeCloseTo(24, 0);
-      expect(box?.height ?? 0, name).toBeCloseTo(24, 0);
-    }
   });
 });
 
