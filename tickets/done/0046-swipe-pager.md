@@ -4,7 +4,7 @@ title: Swipe pages show their neighbour
 created: 2026-10-25
 priority: normal
 assignee: omp
-pr: PRNUM
+pr: 209
 depends: [0030]
 ---
 

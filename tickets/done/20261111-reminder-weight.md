@@ -3,7 +3,7 @@ title: Reminder weight
 created: 2026-11-11
 priority: high
 assignee: omp
-pr: PRNUM
+pr: 209
 depends: ["0094-review-the-task-note-schema"]
 ---
 

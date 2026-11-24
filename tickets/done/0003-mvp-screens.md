@@ -4,7 +4,7 @@ title: MVP screens
 created: 2026-10-17
 priority: normal
 assignee: omp
-pr: PRNUM
+pr: 209
 depends: [0002]
 ---
 

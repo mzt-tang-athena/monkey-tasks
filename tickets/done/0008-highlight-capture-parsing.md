@@ -4,7 +4,7 @@ title: Highlight parsed capture text
 created: 2026-10-20
 priority: low
 assignee: omp
-pr: PRNUM
+pr: 209
 depends: [0010]
 ---
 

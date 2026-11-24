@@ -4,7 +4,7 @@ title: Bulletproof refactor and motion rebuild
 created: 2026-10-26
 priority: high
 assignee: claude-code
-pr: PRNUM
+pr: 209
 depends: []
 ---
 

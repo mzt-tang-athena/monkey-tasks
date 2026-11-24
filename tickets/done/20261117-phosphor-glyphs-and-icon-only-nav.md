@@ -3,7 +3,7 @@ title: Phosphor glyphs and an icon-only nav
 created: 2026-11-17
 priority: high
 assignee: omp
-pr: PRNUM
+pr: 209
 depends: []
 ---
 

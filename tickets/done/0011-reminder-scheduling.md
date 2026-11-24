@@ -4,7 +4,7 @@ title: Reminder scheduling service
 created: 2026-10-20
 priority: normal
 assignee: omp
-pr: PRNUM
+pr: 209
 depends: [0009]
 ---
 
