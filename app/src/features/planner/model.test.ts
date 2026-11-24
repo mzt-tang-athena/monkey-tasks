@@ -227,38 +227,28 @@ describe("parseMode", () => {
 
 describe("parsePlannerDay", () => {
   it("reads a date at local midnight", () => {
-    const day = parsePlannerDay("2026-10-24", DAY);
-    expect(day.getTime()).toBe(new Date(2026, 9, 24).getTime());
-    expect(day.getHours()).toBe(0);
+    const day = parsePlannerDay("2026-10-24");
+    expect(day?.getTime()).toBe(new Date(2026, 9, 24).getTime());
+    expect(day?.getHours()).toBe(0);
   });
 
-  it("falls back to the start of today for an impossible date", () => {
-    const now = new Date(2026, 9, 22, 15, 45);
-    expect(parsePlannerDay("2026-02-30", now).getTime()).toBe(
-      new Date(2026, 9, 22).getTime(),
-    );
+  it("names no day for an impossible date", () => {
+    expect(parsePlannerDay("2026-02-30")).toBeNull();
   });
 
-  it("falls back to the start of today when absent or malformed", () => {
-    const now = new Date(2026, 9, 22, 15, 45);
-    expect(parsePlannerDay(undefined, now).getTime()).toBe(
-      new Date(2026, 9, 22).getTime(),
-    );
-    expect(parsePlannerDay("tomorrow", now).getTime()).toBe(
-      new Date(2026, 9, 22).getTime(),
-    );
+  it("names no day when absent or malformed", () => {
+    expect(parsePlannerDay(undefined)).toBeNull();
+    expect(parsePlannerDay("tomorrow")).toBeNull();
     // A datetime is not a day param: only the plain date is accepted.
-    expect(parsePlannerDay("2026-10-22T09:00", now).getTime()).toBe(
-      new Date(2026, 9, 22).getTime(),
-    );
+    expect(parsePlannerDay("2026-10-22T09:00")).toBeNull();
   });
 
   it("reads the first value of a repeated param", () => {
-    expect(parsePlannerDay(["2026-10-24"], DAY).getTime()).toBe(
+    expect(parsePlannerDay(["2026-10-24"])?.getTime()).toBe(
       new Date(2026, 9, 24).getTime(),
     );
-    expect(parsePlannerDay(["2026-02-30"], DAY).getTime()).toBe(DAY.getTime());
-    expect(parsePlannerDay([], DAY).getTime()).toBe(DAY.getTime());
+    expect(parsePlannerDay(["2026-02-30"])).toBeNull();
+    expect(parsePlannerDay([])).toBeNull();
   });
 });
 

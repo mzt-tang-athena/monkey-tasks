@@ -141,6 +141,10 @@ instance runs per console port. The default is 5580. Set
 
 This host has 15 GB, so one heavy job runs at a time.
 
+Never wrap these scripts in your own `flock`. Each takes the lock in its
+own unit, so a wrapper makes the job wait on itself. A holder in the
+caller's process tree gets a printed line and the job runs in place.
+
 - `web-suite.sh <checkout> <tag> <port>`: the full web suite.
 - `android-build.sh <checkout>`: the full release build.
 - `android-release-smoke.sh <apk>`: the release smoke on the emulator.
@@ -178,6 +182,10 @@ checks:
 - A pull on the bar's gap opens the command pane. The smoke pulls up
   first, then down, which still opens 1.2 and earlier APKs. The pass
   line names the one that worked.
+- Settings, reached from the bar's opener and its own row in the pane,
+  because #168 dropped the planner's gear. The theme switch then reads
+  the screen's mean colour twice, before and after. A tap that found
+  nothing fails the step.
 - The task editor clears three-button navigation.
 - The editor keyboard journey, one try per navigation mode.
 - The app log, for a crash.
@@ -361,6 +369,17 @@ for the window to draw and for its frame to stop moving. It takes as
 long as the host needs. Give it a timeout in seconds as the second
 argument.
 
+`type` reads the focused field back, so a key it loses cannot pass
+quietly. A controlled field can drop keys: one `input text` sends a
+burst faster than the app writes its value back. The keys after that
+last write never land. Measured on the 1.2.0 APK under load, a burst
+lost the tail in 20 of 20 rounds. The step sends one key per
+`input text`, a tenth of a second apart, and reads the field after.
+When it still does not match, it empties the field and sends the whole
+text again. It tries three times at most, then fails with the text it
+wanted and the text it read. A field that already held text appends;
+both readings pass.
+
 A handle matches `content-desc` (the accessibility label), then
 `resource-id` (the `testID`), then text. A handle matches exactly, or as a
 substring with a leading `~`. `outer>>inner` finds inner within outer's bounds.
@@ -372,7 +391,7 @@ on the gesture. Handles in this app: the tab names, `add task`,
 `task-row:<name>`, `list-pager`, `repair-notice`, `reorder-grip:<name>`.
 
 Proven on the emulator so far: `tap`, `wait`, `scroll-to`, `swipe`,
-`frames`, `record`, `note` and `log`. `hold-drag`, `drag` and `type`
+`frames`, `record`, `note`, `type` and `log`. `hold-drag` and `drag`
 exist but have not yet run on an APK. Check them before you rely on them.
 
 Make a journey safe to run again: `journeys/android-list-swipe.sh` is
@@ -404,6 +423,12 @@ made, under `app/build/verify/evidence/android-<stamp>/`.
   (`DELAY_BEFORE_HANDLE_FADES_OUT` in `android.widget.Editor`). Read the
   handle from a frame taken at the tap. A shot after that window reads
   `no handle`, and that matches the platform.
+
+- `scripts/android-color.mjs <shot.png> ...` prints each shot's mean
+  colour and its luma, one line per shot. Compare two shots to prove a
+  repaint, such as a palette switch: `luma` falls from the light paper
+  to Midnight's. It reads only, and exits nonzero on a file it cannot
+  unpack.
 
 Proof standards: drive the user path, capture the action and the
 result, and read the note back for every write. For motion, compare a
@@ -465,6 +490,8 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 - `android-drive.sh <step>` drives and saves evidence.
 - `android-cleanup.sh [--delete-avd]` stops our emulator.
 - `android-seed.ts <out dir> <YYYY-MM-DD> [seeds]` writes the sample vault for a day. Run it from `app/` with `npx tsx`.
-- `android-ui.mjs <dump.xml> find|text|list [handle]` reads a screen tree.
+- `android-ui.mjs <dump.xml> find|text|focused|list [handle]` reads a screen tree.
 - `android-frames.mjs <frames.raw> <out dir> [columns]` turns raw `screenrecord` frames into PNGs and a grid.
 - `android-handle.mjs <shot.png> ...` reads the insertion handle and the caret from a shot.
+- `android-color.mjs <shot.png> ...` reads each shot's mean colour and luma.
+- `png.mjs` unpacks a PNG for the two readers above.

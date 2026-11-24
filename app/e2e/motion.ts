@@ -37,6 +37,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "both",
     why: "steps the settle frame by frame and checks the reduce track",
   },
+  "planner-day.spec.ts": {
+    runsIn: "both",
+    why: "the day a route keeps, which must not depend on the motion setting",
+  },
   "planner-drag.spec.ts": {
     runsIn: "both",
     why: "samples the ghost per frame, the lift shake and its absence",

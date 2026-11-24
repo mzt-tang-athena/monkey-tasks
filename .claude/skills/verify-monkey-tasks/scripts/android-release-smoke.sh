@@ -11,6 +11,7 @@ export PATH=$HOME/Android/Sdk/platform-tools:$PATH
 SERIAL=emulator-$ANDROID_VERIFY_PORT
 S=.claude/skills/verify-monkey-tasks/scripts
 D=$S/android-drive.sh
+COLOR=$S/android-color.mjs
 APK=${1:?apk}
 VAULT=/sdcard/Documents/obsidian-vault
 PKG=dev.monkey.monkeytasks
@@ -26,6 +27,15 @@ step() { echo "== $*"; }
 smoke_fails=0
 pass() { echo "PASS: $*"; }
 fail() { echo "FAIL: $*"; smoke_fails=$((smoke_fails + 1)); }
+# Typing reads the field back, so a lost key is a FAIL here, with the two
+# strings on the helper's own line, instead of a missing note later.
+typed() {
+  if $D type "$1" >/dev/null; then
+    pass "typed '$1'"
+  else
+    fail "typing '$1' did not read back, both strings are above"
+  fi
+}
 finish() {
   if [ "$smoke_fails" -eq 0 ]; then
     echo "smoke: pass"
@@ -92,13 +102,15 @@ step "journal entry and food entry"
 $D tap Journal >/dev/null && sleep 2
 day=$(adb -s $SERIAL shell date +%F | tr -d '\r')
 $D tap "add entry" >/dev/null && sleep 1
-$D type "Release smoke entry" && sleep 1
+typed "Release smoke entry"
+sleep 1
 $D tap "send entry" >/dev/null && sleep 2
 note "Journal/Daily/$day.md" | grep -q "^- Release smoke entry" && pass "journal entry written" || fail "journal entry missing"
 $D tap "add entry" >/dev/null 2>&1 || { $D tap Journal >/dev/null; sleep 1; $D tap "add entry" >/dev/null; }
 sleep 1
 $D tap "food entry: off" >/dev/null && sleep 1
-$D type "toast" && sleep 1
+typed "toast"
+sleep 1
 $D tap "send entry" >/dev/null && sleep 2
 note "Journal/Daily/$day.md" | grep -q "^- Ate: toast #food" && pass "food entry written" || fail "food entry missing"
 note "Journal/Daily/$day.md" | tail -2 | grep -q '!\[\[daily.base\]\]' && pass "embed stays last" || fail "embed moved"
@@ -115,7 +127,9 @@ if $D tap "Inbox Notes" >/dev/null 2>&1; then
   $D shot s07a-inbox >/dev/null
   n0=$(adb -s $SERIAL shell "ls $VAULT/Inbox/ | wc -l" | tr -d '\r')
   $D tap "add note" >/dev/null && sleep 1
-  $D tap "note text" >/dev/null 2>&1; $D type "Release smoke note" && sleep 1
+  $D tap "note text" >/dev/null 2>&1
+  typed "Release smoke note"
+  sleep 1
   $D shot s07b-composer >/dev/null
   $D tap "save note" >/dev/null && sleep 2
   n1=$(adb -s $SERIAL shell "ls $VAULT/Inbox/ | wc -l" | tr -d '\r')
@@ -141,12 +155,39 @@ $D shot s07-planner >/dev/null
 alive "split drag"
 
 step "theme switch"
-$D tap "open settings" >/dev/null && sleep 2
-$D scroll-to "Midnight" >/dev/null 2>&1
-$D tap "Midnight" >/dev/null && sleep 1
-$D shot s08-midnight >/dev/null
-$D tap back >/dev/null && sleep 1
-$D shot s09-planner-midnight >/dev/null
+# Settings sits in the command pane since #168, so the planner's gear tap
+# finds nothing. Open the pane from the bar's opener and take the pane's
+# own Settings row. Every tap looks its node up on the current screen, so
+# a handle the app has lost fails this step once instead of passing.
+if $D tap "open commands" >/dev/null && $D wait command-search 20 >/dev/null; then
+  pass "the bar's opener opens the command pane"
+  if $D tap Settings >/dev/null && $D wait settings-screen 20 >/dev/null; then
+    pass "the pane's Settings row opens Settings"
+    $D shot s08-settings >/dev/null
+    if $D scroll-to Midnight >/dev/null 2>&1 && $D tap Midnight >/dev/null; then
+      pass "the picker takes Midnight"
+      sleep 1
+      $D shot s08-midnight >/dev/null
+      $D dump s08-midnight >/dev/null
+      before=$(node "$COLOR" "$RUN/s08-settings.png" | awk '{print $NF}')
+      after=$(node "$COLOR" "$RUN/s08-midnight.png" | awk '{print $NF}')
+      echo "mean luma: settings $before, midnight $after"
+      if [ "$after" -lt $((before - 60)) ]; then
+        pass "the theme repainted the screen: luma $before to $after"
+      else
+        fail "the theme repainted nothing: luma $before to $after"
+      fi
+    else
+      fail "the picker lists no Midnight"
+    fi
+    $D tap back >/dev/null && sleep 1
+    $D shot s09-planner-midnight >/dev/null
+  else
+    fail "the pane's Settings row opens no Settings"
+  fi
+else
+  fail "the bar's opener opens no command pane"
+fi
 alive "theme switch"
 
 step "the bar's gap opens the command pane"
