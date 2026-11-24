@@ -41,6 +41,8 @@ export function usePlannerRoute(): PlannerRoute {
   // The day the URL names, if it names one. A link names it too, so it
   // is the pick that outlives the route.
   const named = React.useMemo(() => parsePlannerDay(params.day), [params.day]);
+  // Every write to the store lands with a new param, so a plain read
+  // here sees it.
   const day = named ?? pickedDay() ?? today;
   React.useEffect(() => {
     if (named != null) {

@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 
 /**
@@ -12,7 +13,7 @@ const todayHeading = "Monday 26";
 
 /** The screen's path with no query, so either way of naming the day
     passes this. */
-function pathname(page: import("@playwright/test").Page): string {
+function pathname(page: Page): string {
   return new URL(page.url()).pathname;
 }
 
