@@ -3,7 +3,7 @@ id: 0091
 title: Reference notes on a task
 created: 2026-11-11
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: [0083]
 ---
