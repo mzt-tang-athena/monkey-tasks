@@ -408,7 +408,11 @@ export function EditorSheet({
             ? null
             : (references.notes?.find((note) => note.name === preview) ?? null)
         }
-        loading={preview != null && references.notes == null}
+        loading={
+          preview != null &&
+          references.notes == null &&
+          references.error == null
+        }
         onClose={() => setPreview(null)}
         onDetach={() => {
           if (preview != null) {
