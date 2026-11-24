@@ -3,8 +3,8 @@ id: 0094
 title: Review the task note schema
 created: 2026-11-11
 priority: high
-assignee:
-pr:
+assignee: omp
+pr: 211
 depends: []
 ---
 
@@ -112,9 +112,26 @@ exists.
 - [x] The parser still reads every old shape, with a fixture for each.
       A child ticket adds a fixture for every new shape.
 - [x] Each accepted change is a child ticket with its own migration.
-- [ ] Decide the three discussion tickets, or drop them.
+- [x] Decide the three discussion tickets, or drop them.
 - [x] No bulk rewrite of the vault.
 
 ## Outcome
 
-(filled in before moving to done/)
+The review has ended. ADR `20261111-task-note-schema` records it, with
+amendments for each later decision.
+
+The three child tickets shipped: `20261111-completed-takes-a-time`,
+`20261111-kind-accepts-both-shapes` and `20261111-a-timed-due-rings`.
+
+The operator decided all three discussion tickets:
+
+| Ticket | Decided | Record |
+|---|---|---|
+| `20261111-reminder-weight` | 2026-11-11 | ADR `20261111-reminder-weight` |
+| `20261111-list-membership-and-order` | 2026-11-14 | ADR `20261111-one-list-and-tab-order` |
+| `20261111-deeds-into-tasks` | 2026-11-24 | contracts ADR `20261124-deeds-are-tasks-with-a-status` |
+
+The reminder weight ticket stays open for its phone check. Its
+decision is final, so it does not hold this review.
+
+The deeds pick keeps the rule above: no bulk rewrite of the vault.

@@ -3,8 +3,8 @@ id: 0011
 title: Reminder scheduling service
 created: 2026-10-20
 priority: normal
-assignee:
-pr:
+assignee: omp
+pr: 209
 depends: [0009]
 ---
 
@@ -35,3 +35,7 @@ touched task's alarms, and every vault read runs a full `syncReminders`.
 That rebuild cancels the schedule set and rebuilds it on boot.
 
 Still open: the user has not reported an alarm firing on the phone.
+
+## Outcome
+
+Done before this close. Every Acceptance box carries a tick, and `syncReminders` lives in `reminder-sync.ts`. The alarm on the phone moved to `20261111-alert-weight-device-check`. Closed in the 2026-11-24 ticket sort.
