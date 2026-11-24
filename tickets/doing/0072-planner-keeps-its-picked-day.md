@@ -3,7 +3,7 @@ id: 0072
 title: Keep the planner's picked day across a tab round trip
 created: 2026-11-07
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
