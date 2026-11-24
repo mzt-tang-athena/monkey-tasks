@@ -2,6 +2,7 @@
 //
 //   node android-ui.mjs <dump.xml> find <handle>   -> "x y left top right bottom"
 //   node android-ui.mjs <dump.xml> text <handle>   -> the node's text, or its label
+//   node android-ui.mjs <dump.xml> focused         -> the focused field's text
 //   node android-ui.mjs <dump.xml> list            -> one line per labelled node
 //
 // A handle matches a node's content-desc (React Native's
@@ -12,6 +13,11 @@
 // document order. `outer>>inner` finds inner within the bounds of
 // outer, for example `task-row:Call Mum>>mark done`. Exit code 1 means
 // no match.
+//
+// `focused` prints what the focused text field holds, and prints an
+// empty line for a field with nothing in it. An empty field shows its
+// placeholder there instead, as the platform reports the hint as text.
+// Exit code 1 means no text field has focus.
 import { readFileSync } from "node:fs";
 
 const [file, command, handle] = process.argv.slice(2);
@@ -39,6 +45,8 @@ for (const match of xml.matchAll(/<node\b([^>]*?)\/?>/g)) {
     desc: attrs["content-desc"] ?? "",
     id: (attrs["resource-id"] ?? "").replace(/^.*:id\//, ""),
     text: attrs.text ?? "",
+    field: (attrs.class ?? "").endsWith("EditText"),
+    focused: attrs.focused === "true",
     left,
     top,
     right,
@@ -47,6 +55,14 @@ for (const match of xml.matchAll(/<node\b([^>]*?)\/?>/g)) {
 }
 
 const visible = (node) => node.right > node.left && node.bottom > node.top;
+
+if (command === "focused") {
+  const focused = nodes.filter((node) => visible(node) && node.focused);
+  const field = focused.find((node) => node.field) ?? focused[0];
+  if (field == null) process.exit(1);
+  console.log(field.text);
+  process.exit(0);
+}
 
 if (command === "list") {
   for (const node of nodes.filter(visible)) {
@@ -63,7 +79,7 @@ if (command === "list") {
 }
 
 if (!["find", "text"].includes(command) || handle == null) {
-  console.error("usage: android-ui.mjs <dump.xml> find|text <handle> | list");
+  console.error("usage: android-ui.mjs <dump.xml> find|text <handle> | focused | list");
   process.exit(2);
 }
 
