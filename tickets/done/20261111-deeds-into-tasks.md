@@ -2,8 +2,8 @@
 title: Fold deeds into tasks
 created: 2026-11-11
 priority: normal
-assignee:
-pr:
+assignee: omp
+pr: 211
 depends: ["0094-review-the-task-note-schema"]
 ---
 
@@ -214,9 +214,38 @@ A pays a 72-note rewrite to merge two things that are not the same.
 - [x] The report lists the shared fields and the conflicting ones.
 - [x] It offers two or three models, with the migration cost of each.
 - [x] It recommends one model and names the breakage.
-- [ ] The operator picks a direction, otherwise the idea gets dropped.
-- [ ] Child tickets get filed once the operator accepts a model.
+- [x] The operator picks a direction, otherwise the idea gets dropped.
+- [x] Child tickets get filed once the operator accepts a model.
 
 ## Outcome
 
-(filled in before moving to done/)
+The operator read this report and picked A-lite on 2026-11-24. That is
+model A without its costly parts. The decision is contracts ADR
+`20261124-deeds-are-tasks-with-a-status`, in
+[contracts#22](https://github.com/mzt-tang-athena/contracts/pull/22).
+
+- A deed is a task with an optional `status`.
+- Done is always a `completed` date, for deeds too.
+- Any task can carry `blocked by`. Order is the drag `order`.
+- No `parent`. `parent deed` stays in the files, unread.
+- No bulk rewrite. The reader reads the deed kind as a task.
+- Main shows only tasks without a status.
+- Checkboxes stay in deed bodies. No cap on active deeds.
+
+The pick differs from this report's B. B first would make A a rewrite
+later. A first keeps B an add-on: an optional `deed:` link on a task.
+The ADR records that reason and the trade-off. Tasks gain `status`,
+which goes against ADR `20261111-task-note-schema` once. That ADR has
+a 2026-11-24 amendment.
+
+Child tickets:
+
+| # | Ticket | Repo |
+|---|---|---|
+| 1 | `20261124-task-status-and-blocked-by` | contracts |
+| 2 | `20261124-app-reads-deeds-as-tasks` | monkey-tasks |
+| 3 | `20261124-deed-board` | monkey-tasks |
+| 4 | `20261124-deed-vault-tidy` | monkey-tasks |
+| 5 | `20261124-deed-progress-over-time` | monkey-tasks |
+
+Ticket 4 folds in 0005, which closes in this PR.

@@ -555,12 +555,17 @@ It added runtime themes, a settings screen, a crash log and a command
 pane. It also moved reorder to the grip only. Ticket 0082 shipped both
 halves of its pick, the icon glyphs and the week drop ring.
 
-The operator decided the schema review, 0094. Its remaining work is
-three child tickets:
+The schema review, 0094, has ended. Its three child tickets shipped,
+and the operator decided its three open questions.
 
-- `20261111-a-timed-due-rings`, in review
-- `20261111-completed-takes-a-time`
-- `20261111-kind-accepts-both-shapes`
+Deeds are tasks with a status (contracts ADR
+`20261124-deeds-are-tasks-with-a-status`). The work, in order:
+
+- contracts `20261124-task-status-and-blocked-by`
+- `20261124-app-reads-deeds-as-tasks`
+- `20261124-deed-board`
+- `20261124-deed-vault-tidy`, which takes over 0005
+- `20261124-deed-progress-over-time`, later
 
 The feature queue:
 
@@ -578,14 +583,13 @@ The feature queue:
   - Main holds the unfiled tasks
   - order the whole tab
   - pick one list in the editor, shipped in #155
-- 20261111 fold deeds into tasks, a spike
 - 20261117 Phosphor glyphs and an icon-only nav, in review
 
 Open feature tickets:
 
 - 0039 home screen widgets
 - 0065 the list menu actions
-- 0003, 0005 and 0008 carry the larger ideas.
+- 0003 and 0008 carry the larger ideas.
 
 The app has four tabs today, Lists, Planner, Journal and Inbox Notes. The bar
 carries no labels; each tab's name lives in its accessibility label
@@ -643,8 +647,8 @@ Phases:
    harsh alert rings on the alarm stream and escalates at 1, 5 and 15
    minutes. A quiet one rings once in silence. A tap or a tick clears
    the group (ADR 20261111-reminder-weight).
-7. Later: deed vocabulary cleanup (0005), the quick-task and deed merge
-   decision, and capture text highlighting (0008). Location triggers,
+7. Later: deeds on a board, as tasks with a status, in the tickets
+   above. Capture text highlighting (0008). Location triggers,
    MCP capture on athena, ntfy fallback, and the athena operational
    dashboard as a possible app surface (idea only). Email and calendar
    integrations, and pull-only Google Calendar read.
