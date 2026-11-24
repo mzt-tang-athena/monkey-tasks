@@ -12,7 +12,9 @@ depends: []
 The operator's feedback on 2026-11-24: try a new control in the bottom
 right corner.
 
-- The split pill (plus and ⌘) becomes one wider Add button.
+- The split pill (plus and ⌘) changes back to one wider Add button.
+  That drops the ⌘ half, a tap target of its own today. The swipe down
+  and a TalkBack action take over its job.
 - A tap adds, as today.
 - A swipe down on the button opens the command pane.
 - A swipe left or right on the button switches tabs.

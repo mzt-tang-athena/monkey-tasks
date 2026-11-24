@@ -11,8 +11,8 @@ depends: []
 
 The operator's feedback on 2026-11-24. Opening the app after a while
 shows the default Expo loading screen for a long time. 1.3.0 replaces
-that screen with the monkey on the banana tile (#216). This ticket is
-about the time.
+that screen with the monkey on the banana tile (#216), once it ships.
+This ticket is about the time.
 
 - Measure a cold start on the release APK first. Time from tap to the
   first frame, to the first rows, and to an idle main thread. Use
@@ -24,8 +24,9 @@ about the time.
 - Fix the largest cost. One option shows the last session's rows from
   a cache while the vault reads. Another reads the open tab's folder
   first. A third moves work off the first frame. Weigh each in the PR.
-- Hold the splash until the first rows are ready. The rest of the vault
-  can load after.
+- Weigh when the splash should lift. Holding it until the first rows
+  are ready avoids an empty frame. It only helps once those rows come
+  fast.
 
 ## Acceptance
 
