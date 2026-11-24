@@ -23,7 +23,8 @@ the patch versions Expo SDK 58 expects. The icon lane saw it on
 
 - [ ] `npx expo-doctor` passes on the branch.
 - [ ] The PR lists each package that moved, old and new version.
-- [ ] The full gate and the release smoke pass on the branch.
+- [ ] The full gate passes on the branch.
+- [ ] The release smoke passes on a fresh APK.
 
 ## Outcome
 
