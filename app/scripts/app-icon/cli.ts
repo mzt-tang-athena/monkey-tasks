@@ -1,14 +1,15 @@
 /**
- * `npm run app-icon:build`. Rasterizes the committed SVG sources in
- * `source/` into `assets/`, then writes the mask preview the ADR and
- * the PR show. Run it from `app`, because it uses Playwright's bundled
- * Chromium. Add `--no-preview` to skip the preview.
+ * `npm run app-icon:build`. Rasterizes the drawings in `monkey.ts` into
+ * `assets/`, then writes the mask preview the ADR and the PR show. Run
+ * it from `app`, because it uses Playwright's bundled Chromium. Add
+ * `--no-preview` to skip the preview.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, type Page } from "playwright";
-import { ASSETS, atSize, readSource } from "./build.js";
+import { ASSETS, atSize } from "./build.js";
+import { DRAWINGS } from "./monkey.js";
 
 const app = join(import.meta.dirname, "..", "..");
 const assets = join(app, "assets");
@@ -134,7 +135,7 @@ async function main(): Promise<void> {
     const pngs = new Map<string, Buffer>();
 
     for (const asset of ASSETS) {
-      const png = await rasterize(page, readSource(asset.source), asset.size);
+      const png = await rasterize(page, DRAWINGS[asset.source], asset.size);
       writeFileSync(join(assets, asset.file), png);
       pngs.set(asset.file, png);
       console.log(`${asset.file} ${asset.size} <- ${asset.source}`);
