@@ -3,7 +3,7 @@ title: My order is the default sort, first in the menu
 created: 2026-11-24
 priority: normal
 assignee: poteto-mode
-pr:
+pr: 226
 depends: []
 ---
 
@@ -22,11 +22,18 @@ defaults to `due` (`SortMode` in `lib/settings.ts`).
 
 ## Acceptance
 
-- [ ] A fresh install opens Lists in My order.
-- [ ] A saved "Due date" choice survives the update.
-- [ ] My order is the first item in the sort menu.
-- [ ] The sort button shows no changed mark in My order.
+- [x] A fresh install opens Lists in My order.
+- [x] A saved "Due date" choice survives the update.
+- [x] My order is the first item in the sort menu.
+- [x] The sort button shows no changed mark in My order.
 
 ## Outcome
 
-(filled in before moving to done/)
+`Settings.sortMode` defaults to `manual`, and `loadSettings` reads a
+stored value before the default applies, so a saved `due` survives.
+`src/lib/settings.test.ts` covers both paths, native file included. The
+sort menu lists My order first, and the glyph fills only in Due date or
+while its menu opens.
+
+The specs that read a date section ask for Due date first through the
+`useDueOrder` helper. PR #226.
