@@ -154,13 +154,13 @@ test.describe("states", () => {
 
     const group = page.getByRole("radiogroup", { name: "Sort list" });
     await expect(
-      group.getByRole("radio", { name: "Due date Soonest first", exact: true }),
-    ).toHaveAttribute("aria-checked", "true");
-    await expect(
       group.getByRole("radio", {
         name: "My order Drag rows to sort",
         exact: true,
       }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(
+      group.getByRole("radio", { name: "Due date Soonest first", exact: true }),
     ).toHaveAttribute("aria-checked", "false");
   });
 

@@ -13,12 +13,14 @@ import {
   press,
   row,
   sectionHeader,
+  useDueOrder,
 } from "../locators";
 import { noteText } from "../vault";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(row(page, undated.second)).toBeVisible();
+  await useDueOrder(page);
 });
 
 test("a note with a bare kind reads as a task and keeps that kind", async ({ page }) => {
