@@ -8,6 +8,7 @@ import {
   plannerDayParam,
   type Mode,
 } from "@/features/planner/model";
+import { pickedDay, rememberDay } from "@/features/planner/lib/picked-day";
 
 /** The planner route state: the mode and day the URL names. */
 export type PlannerRoute = {
@@ -21,23 +22,31 @@ export type PlannerRoute = {
 };
 
 /**
- * The planner's URL params as state. The route is the source of
- * truth: a link, or a day tapped on another screen, only changes the
- * query string, and the screen reads it back from here.
+ * The planner's URL params as state. A link, or a day tapped on another
+ * screen, only changes the query string, and the screen reads it back
+ * from here.
+ *
+ * A route that names no day opens on the last day the planner named,
+ * so leaving for another tab and coming back keeps the day. That holds
+ * while the app runs. With no day named yet, it opens on today, which
+ * moves on at midnight.
  */
 export function usePlannerRoute(): PlannerRoute {
   const params = useLocalSearchParams<{
     mode?: string | string[];
     day?: string | string[];
   }>();
-  // A missing day param reads as today. The date keeps its identity
-  // until midnight, and it is the same date the strip tints.
   const today = useToday();
   const mode = parseMode(params.mode);
-  const day = React.useMemo(
-    () => parsePlannerDay(params.day, today),
-    [params.day, today],
-  );
+  // The day the URL names, if it names one. A link names it too, so it
+  // is the pick that outlives the route.
+  const named = React.useMemo(() => parsePlannerDay(params.day), [params.day]);
+  const day = named ?? pickedDay() ?? today;
+  React.useEffect(() => {
+    if (named != null) {
+      rememberDay(named);
+    }
+  }, [named]);
   // The writes keep their identity, so a screen can pass them down.
   const setMode = React.useCallback(
     (next: Mode) => {
@@ -47,12 +56,16 @@ export function usePlannerRoute(): PlannerRoute {
     [],
   );
   const setDay = React.useCallback(
-    (next: Date) => router.setParams({ day: plannerDayParam(next) }),
+    (next: Date) => {
+      rememberDay(next);
+      router.setParams({ day: plannerDayParam(next) });
+    },
     [],
   );
   const openDay = React.useCallback(
     (next: Date) => {
       recordBreadcrumb("tab", "planner:day");
+      rememberDay(next);
       router.setParams({ day: plannerDayParam(next), mode: "day" });
     },
     [],

@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { startOfDay } from "@/utils/dates";
+import { pickedDay, rememberDay } from "@/features/planner/lib/picked-day";
 import { usePlannerRoute } from "./use-planner-route";
 
 // The route is the planner's state: the URL names the mode and the
@@ -30,6 +31,8 @@ function mount() {
 beforeEach(() => {
   route.params = {};
   route.calls = [];
+  // The picked day outlives the hook, so each test starts with none.
+  rememberDay(null);
 });
 
 describe("usePlannerRoute", () => {
@@ -65,6 +68,35 @@ describe("usePlannerRoute", () => {
     expect(remounted.current.day.getTime()).toBe(new Date(2026, 9, 25).getTime());
   });
 
+  it("keeps the picked day when the route names none", async () => {
+    // The bar and the command pane open the tab with no params, which
+    // drops `?day=`. The tab then opens on the day the user picked.
+    route.params = { day: "2026-10-28" };
+    const first = mount();
+    expect(first.result.current.day.getTime()).toBe(
+      new Date(2026, 9, 28).getTime(),
+    );
+    first.unmount();
+
+    route.params = {};
+    const back = mount().result;
+    expect(back.current.day.getTime()).toBe(new Date(2026, 9, 28).getTime());
+  });
+
+  it("opens a link's day, and keeps it for a route that names none", async () => {
+    route.params = { mode: "month", day: "2026-10-01" };
+    const linked = mount();
+    expect(linked.result.current.day.getTime()).toBe(
+      new Date(2026, 9, 1).getTime(),
+    );
+
+    route.params = {};
+    linked.rerender();
+    expect(linked.result.current.day.getTime()).toBe(
+      new Date(2026, 9, 1).getTime(),
+    );
+  });
+
   it("writes the day and day mode together on openDay", async () => {
     route.params = { mode: "month", day: "2026-10-01" };
     const { result, rerender } = mount();
@@ -84,6 +116,8 @@ describe("usePlannerRoute", () => {
     const { result } = mount();
 
     expect(result.current.day.getTime()).toBe(startOfDay(new Date()).getTime());
+    // A bad param is not a pick, so it leaves the remembered day alone.
+    expect(pickedDay()).toBeNull();
   });
 
   it("moves its default day on at midnight, as the strip's today does", async () => {
