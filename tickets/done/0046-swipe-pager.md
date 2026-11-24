@@ -4,7 +4,7 @@ title: Swipe pages show their neighbour
 created: 2026-10-25
 priority: normal
 assignee: omp
-pr: 209
+pr: 66
 depends: [0030]
 ---
 
@@ -87,4 +87,7 @@ list's vertical shift on landing and the day and month flicker at the
 commit move with it. Both come from the pager's commit, which ADR 0036
 and ticket 0059 rebuild. Nothing else remains open here.
 
-Done before this close. The phone pass moved to 0059, which closed. Closed in the 2026-11-24 ticket sort.
+## Closed, 2026-11-24
+
+The phone pass moved to 0059, which closed. The 2026-11-24 ticket sort
+moved this ticket to done/ in PR #209.
