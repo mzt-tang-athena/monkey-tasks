@@ -74,3 +74,21 @@ old `lists` and takes its first link.
 
 `order` ranks the whole tab in My order. Due order keeps its date
 sections, and `order` does not apply there.
+
+## Amendment, 2026-11-24: deeds are tasks with a status
+
+Contracts ADR `20261124-deeds-are-tasks-with-a-status` settles the
+deed question. A deed is a task with a status.
+
+This reverses one line above. We kept the task field set, and now a
+task gains an optional `status`: backlog, active, done, dropped or
+someday. A task with a status is a deed, and Main leaves it out.
+
+The rest holds. Done still means `completed`, for deeds too. Tasks
+still get no `parent`. We rewrite none of the 72 deed notes. The
+reader reads the deed kind as a task.
+
+Tasks also gain `blocked by`, a list of links. Deeds already had it.
+
+None of the three open questions stays open. Reminder weight settled
+on 2026-11-11, one list on 2026-11-14, and deeds on 2026-11-24.

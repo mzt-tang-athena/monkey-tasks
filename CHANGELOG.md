@@ -17,6 +17,12 @@ fails a bullet that wraps or runs past 64 characters.
 ### Planner
 
 - The planner's dates follow a swipe, as the tabs do.
+- The planner keeps the day you picked.
+
+### Look and feel
+
+- A new app icon: the monkey, on a banana tile.
+- The splash shows the monkey on the same tile.
 
 ## 1.2.0 - 2026-11-19
 
