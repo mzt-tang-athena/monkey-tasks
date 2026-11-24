@@ -17,6 +17,7 @@ fails a bullet that wraps or runs past 64 characters.
 ### Planner
 
 - The planner's dates follow a swipe, as the tabs do.
+- The planner keeps the day you picked.
 
 ### Look and feel
 
