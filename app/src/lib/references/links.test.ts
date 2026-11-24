@@ -52,6 +52,117 @@ describe("parseReferences", () => {
   });
 });
 
+describe("a fenced code block", () => {
+  const FENCED = [
+    "Note before the code.",
+    "",
+    "```md",
+    "## Reference",
+    "[[inside-code]]",
+    "```",
+    "",
+  ].join("\n");
+
+  const FENCED_TILDE = ["~~~", "## Reference", "[[inside-code]]", "~~~", ""].join(
+    "\n",
+  );
+
+  it("is not a reference section, with a backtick or a tilde fence", () => {
+    expect(parseReferences(FENCED)).toEqual([]);
+    expect(parseReferences(FENCED_TILDE)).toEqual([]);
+  });
+
+  it("leaves the fence byte for byte and appends the real section", () => {
+    const attached = attachReference(FENCED, "oatmeal");
+
+    expect(attached.startsWith(FENCED)).toBe(true);
+    expect(attached).toBe(`${FENCED}\n## Reference\n\n[[oatmeal]]\n`);
+    expect(detachReference(attached, "oatmeal")).toBe(FENCED);
+  });
+
+  it("edits a real section above the fence, and the fence stays", () => {
+    const body = [
+      "## Reference",
+      "",
+      "[[oatmeal]]",
+      "",
+      "## Code",
+      "",
+      "```md",
+      "## Reference",
+      "[[inside-code]]",
+      "```",
+      "",
+    ].join("\n");
+
+    const attached = attachReference(body, "miso-soup");
+    expect(attached).toContain("[[oatmeal]]\n[[miso-soup]]");
+    expect(attached.slice(attached.indexOf("## Code"))).toBe(
+      body.slice(body.indexOf("## Code")),
+    );
+
+    const detached = detachReference(attached, "oatmeal");
+    expect(detached).not.toContain("[[oatmeal]]");
+    expect(detached).toContain("[[inside-code]]");
+    expect(detached.slice(detached.indexOf("## Code"))).toBe(
+      body.slice(body.indexOf("## Code")),
+    );
+  });
+
+  it("edits a real section below the fence, and the fence stays", () => {
+    const body = [
+      "```md",
+      "## Reference",
+      "[[inside-code]]",
+      "```",
+      "",
+      "## Reference",
+      "",
+      "[[oatmeal]]",
+      "",
+    ].join("\n");
+
+    const attached = attachReference(body, "miso-soup");
+    expect(attached.startsWith("```md\n## Reference\n[[inside-code]]\n```\n")).toBe(
+      true,
+    );
+    expect(attached).toContain("[[oatmeal]]\n[[miso-soup]]");
+    expect(detachReference(attached, "miso-soup")).toBe(body);
+  });
+
+  it("ignores a link inside a fence in the real section", () => {
+    const body = [
+      "## Reference",
+      "",
+      "[[oatmeal]]",
+      "",
+      "```",
+      "[[inside-code]]",
+      "```",
+      "",
+    ].join("\n");
+
+    expect(parseReferences(body)).toEqual(["oatmeal"]);
+    const detached = detachReference(body, "oatmeal");
+    expect(detached).not.toContain("[[oatmeal]]");
+    expect(detached).toContain("```\n[[inside-code]]\n```");
+  });
+
+  it("keeps a shorter run from closing a longer fence", () => {
+    const body = [
+      "````",
+      "## Reference",
+      "[[inside-code]]",
+      "```",
+      "[[still-code]]",
+      "````",
+      "",
+    ].join("\n");
+
+    expect(parseReferences(body)).toEqual([]);
+  });
+});
+
 describe("bodyWithoutReferences", () => {
   it("takes the heading and its links out and keeps the rest", () => {
     const body = "Notes first.\n\n## Reference\n\n[[oatmeal]]\n";

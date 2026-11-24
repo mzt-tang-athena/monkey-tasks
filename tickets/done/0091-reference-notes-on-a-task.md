@@ -58,17 +58,17 @@ policy. A missing note says so and offers to detach.
 
 ## Acceptance
 
-- [ ] A fuzzy search finds a note by name and by ingredient, and the
+- [x] A fuzzy search finds a note by name and by ingredient, and the
       result names the note it will attach.
-- [ ] Attach writes `## Reference` and the link. Detach removes them.
+- [x] Attach writes `## Reference` and the link. Detach removes them.
       The rest of the note stays unchanged.
 - [ ] The link renders in Obsidian as a working wikilink.
-- [ ] The row and the editor show the link after a re-read.
-- [ ] The preview sheet opens, returns focus and closes on back. The
+- [x] The row and the editor show the link after a re-read.
+- [x] The preview sheet opens, returns focus and closes on back. The
       screen handles a missing note.
-- [ ] 44pt targets, named controls, TalkBack, axe clean. e2e covers
+- [x] 44pt targets, named controls, TalkBack, axe clean. e2e covers
       search, attach, detach and preview.
-- [ ] No change to `contracts/` and no schema release.
+- [x] No change to `contracts/` and no schema release.
 
 ## Outcome
 
@@ -107,6 +107,9 @@ Proof:
   The run read the note on the device each time. Evidence:
   `~/code/monkey-tasks/worktrees/evidence-references/android-20261124-111528`
 
-Open limits. A note added in Obsidian while the app stays open shows
-on the next foreground. The Android run used a swapped APK, so it
-proves JavaScript, not a native build.
+Open limits. We infer Obsidian rendering from the plain `[[name]]`.
+This run opens no Obsidian note. This run does not drive TalkBack by
+hand. Every control carries a name in the device dump, and axe is
+clean. A note added in Obsidian while the app stays open shows on the
+next foreground. The Android run used a swapped APK, so it proves
+JavaScript, not a native build.
