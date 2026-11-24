@@ -110,11 +110,19 @@ describe("createReorderSurface", () => {
     await wait(50);
 
     expect(onReorder.mock.calls).toEqual([
-      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3 }],
+      [
+        {
+          payload: { name: "Echo" },
+          group: "Today",
+          from: 1,
+          to: 0,
+          keys: ["Delta", "Echo"],
+        },
+      ],
     ]);
     expect(readBreadcrumbs().map((crumb) => [crumb.kind, crumb.detail])).toEqual([
       ["drag-start", undefined],
-      ["drag-drop", "Today 4->3"],
+      ["drag-drop", "Today 1->0"],
     ]);
   });
 
@@ -191,7 +199,86 @@ describe("createReorderSurface", () => {
     await wait(50);
 
     expect(onReorder.mock.calls).toEqual([
-      [{ payload: { name: "Alpha" }, group: "my-order", from: 0, to: 2 }],
+      [
+        {
+          payload: { name: "Alpha" },
+          group: "my-order",
+          from: 0,
+          to: 2,
+          keys: ["Alpha", "Bravo"],
+        },
+      ],
+    ]);
+  });
+
+  it("reports the pickup's slots when a row leaves the group mid-drag", async () => {
+    // A row leaves the group while another is held: a tick's regroup
+    // or a step. The drop keeps the pickup's slots and keys, and the
+    // screen reads them against its own rows.
+    const onReorder = vi.fn();
+    const five = [
+      { name: "Alpha", index: 0 },
+      { name: "Bravo", index: 1 },
+      { name: "Charlie", index: 2 },
+      { name: "Delta", index: 3 },
+      { name: "Echo", index: 4 },
+    ];
+    const place = (rows: Shown[]) =>
+      rows.forEach(({ name }, at) => {
+        placeBox(screen.getByTestId(`reorder-item:${name}`), {
+          x: 0,
+          y: at * 48,
+          width: 390,
+          height: 48,
+        });
+        placeBox(screen.getByTestId(`reorder-grip:${name}`), {
+          x: 360,
+          y: at * 48,
+          width: 44,
+          height: 44,
+        });
+      });
+    const { rerender } = render(<Screen rows={five} count={5} onReorder={onReorder} />);
+    place(five);
+    const grip = screen.getByTestId("reorder-grip:Delta");
+
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerdown", 370, 156));
+    });
+    await wait(50);
+    expect(screen.getByTestId("drag-ghost"), "the grip picked the row up").toBeTruthy();
+    for (let step = 0; step < 2; step += 1) {
+      await act(async () => {
+        grip.dispatchEvent(pointer("pointermove", 370, 6));
+      });
+      await wait(16);
+    }
+
+    // Bravo left the group, and the rows below it moved up one.
+    const four = [
+      { name: "Alpha", index: 0 },
+      { name: "Charlie", index: 1 },
+      { name: "Delta", index: 2 },
+      { name: "Echo", index: 3 },
+    ];
+    rerender(<Screen rows={four} count={4} onReorder={onReorder} />);
+    place(four);
+
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerup", 370, 6));
+    });
+    await wait(50);
+
+    expect(onReorder.mock.calls).toEqual([
+      [
+        {
+          payload: { name: "Delta" },
+          group: "Today",
+          from: 3,
+          to: 0,
+          keys: ["Alpha", "Bravo", "Charlie", "Delta", "Echo"],
+        },
+      ],
     ]);
   });
 
@@ -217,13 +304,13 @@ describe("createReorderSurface", () => {
 
     await key("Echo", "ArrowUp");
     expect(onReorder.mock.calls).toEqual([
-      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3 }],
+      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3, keys: [] }],
     ]);
 
     await key("Delta", "ArrowDown");
     expect(onReorder.mock.calls).toEqual([
-      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3 }],
-      [{ payload: { name: "Delta" }, group: "Today", from: 3, to: 5 }],
+      [{ payload: { name: "Echo" }, group: "Today", from: 4, to: 3, keys: [] }],
+      [{ payload: { name: "Delta" }, group: "Today", from: 3, to: 5, keys: [] }],
     ]);
 
     onReorder.mockClear();

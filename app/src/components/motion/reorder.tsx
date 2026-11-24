@@ -16,7 +16,6 @@ import { taskRowFace } from "@/components/task-row-face";
 import { Overlay } from "@/components/ui/overlay-host";
 import {
   cardPosition,
-  dropSpan,
   slotForY,
   slotIndexes,
   slotTops,
@@ -67,8 +66,15 @@ type ReorderState = {
 export type ReorderEvent<P> = {
   payload: P;
   group: string;
+  /** A drop: the slot the row was picked from, and the slot it lands
+      on, as positions in `keys`. A step has no keys, and sends the
+      group's data indexes instead. */
   from: number;
   to: number;
+  /** A drop's pick-up, top down: the ids the group mounted. The handler
+      reads the move again from them, because a tick's regroup or a step
+      can change the group under a held drag. A step carries none. */
+  keys: readonly string[];
 };
 
 type ReorderHandlers = SessionHandlers & {
@@ -78,6 +84,7 @@ type ReorderHandlers = SessionHandlers & {
     group: string,
     from: number,
     to: number,
+    keys: readonly string[],
   ) => void;
 };
 
@@ -98,6 +105,7 @@ type ItemValue = {
 const StateContext = React.createContext<ReorderState | null>(null);
 const ItemContext = React.createContext<ItemValue | null>(null);
 const none: RowSpan[] = [];
+const noKeys: readonly string[] = [];
 
 function useStateContext(name: string): ReorderState {
   const state = React.useContext(StateContext);
@@ -204,7 +212,7 @@ export function createReorderSurface<P>() {
     // the same event a drop writes, with no pickup to settle.
     const move = React.useCallback<Move>(
       (payload, group, from, to) => {
-        latest.current({ payload, group, from, to });
+        latest.current({ payload, group, from, to, keys: noKeys });
       },
       [],
     );
@@ -247,18 +255,19 @@ export function createReorderSurface<P>() {
         setActive(null);
         scheduleOnUI(clearShifts, self.ui.generation, shifts, generation);
       },
-      reorder(generation, source, group, from, to) {
+      reorder(generation, source, group, from, to, keys) {
         if (!guard.settle(generation)) {
           return;
         }
-        recordBreadcrumb("drag-drop", `${group} ${from}->${to}`);
         const payload = self.payloads.get(source) as P | undefined;
         setActive(null);
-        if (payload !== undefined && from !== to) {
-          latest.current({ payload, group, from, to });
-        }
         dropped.current = generation;
         setDrops((count) => count + 1);
+        if (payload === undefined) {
+          return;
+        }
+        recordBreadcrumb("drag-drop", `${group} ${from}->${to}`);
+        latest.current({ payload, group, from, to, keys });
       },
     }), pressCancel);
     React.useEffect(() => () => void guard.close(), [guard]);
@@ -602,19 +611,15 @@ export function createReorderSurface<P>() {
             canceled: event.canceled,
           });
           if (effect === "drop") {
-            const span = dropSpan(from.value, to.value, indexes.value);
-            if (span === null) {
-              toJS(session.handlers.cancel, ui.generation.value);
-            } else {
-              toJS(
-                session.handlers.reorder,
-                ui.generation.value,
-                source,
-                group,
-                span.from,
-                span.to,
-              );
-            }
+            toJS(
+              session.handlers.reorder,
+              ui.generation.value,
+              source,
+              group,
+              from.value,
+              to.value,
+              keys.value,
+            );
             settleSession(ui);
           } else if (effect === "cancel") {
             toJS(session.handlers.cancel, ui.generation.value);

@@ -320,6 +320,55 @@ test.describe("the drop", () => {
       .toBe(12);
   });
 
+  test("a tick that lands mid-drag leaves the drop where the row was shown", async ({
+    page,
+  }) => {
+    // Ticket 20261111-reorder-during-a-tick-hold: the ticked row leaves
+    // the group between pick-up and drop. The drop then reads the
+    // pickup's data indexes off a group that no longer has it, so the
+    // row below the held one takes the top slot.
+    await openMyOrder(page);
+    await row(page, tomorrow.task).scrollIntoViewIfNeeded();
+    const height = (await row(page, undated.first).boundingBox())?.height ?? 0;
+    const point = await pointOn(page, row(page, undated.first), "upper");
+
+    const pointer = await press(
+      page,
+      "mouse",
+      page.getByTestId(`reorder-grip:${tomorrow.task}`),
+      { holdMs: 0 },
+    );
+    await pointer.moveTo(point);
+    await expect(page.getByTestId("drag-ghost")).toBeVisible();
+    await expect
+      .poll(() => offsetOf(page, tomorrow.task))
+      .toBeLessThan(-Math.max(1, height / 2));
+
+    // A second finger ticks the row above the held one. Its press is
+    // its own pointer down, so it also disarms the drag's click guard.
+    // The tick's hold ends here, and its row leaves the group.
+    await page.evaluate((name) => {
+      const button = document.querySelector(
+        `[data-testid="task-row:${name}"] [role="checkbox"]`,
+      );
+      if (button == null) {
+        throw new Error("no tick button");
+      }
+      button.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      (button as HTMLElement).click();
+    }, undated.second);
+    await expect(
+      row(page, undated.second),
+      "the ticked row left the group under the drag",
+    ).toHaveCount(0);
+
+    await pointer.up();
+
+    await expectAbove(row(page, tomorrow.task), row(page, undated.first));
+    await expect.poll(() => writtenOrder(page, tomorrow.task)).toBe(1);
+    await expect.poll(() => writtenOrder(page, undated.first)).toBe(2);
+  });
+
   test("a row moves from the top of the tab to the bottom and back", async ({
     page,
   }) => {

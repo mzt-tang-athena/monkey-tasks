@@ -34,6 +34,10 @@ fails a bullet that wraps or runs past 64 characters.
 - A new app icon: the monkey, on a banana tile.
 - The splash shows the monkey on the same tile.
 
+### Fixes
+
+- A drag under a tick lands where you dropped the row.
+
 ## 1.2.0 - 2026-11-19
 
 ### Command pane
