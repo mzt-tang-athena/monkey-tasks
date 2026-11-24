@@ -16,8 +16,6 @@ fails a bullet that wraps or runs past 64 characters.
 - Tap a link on the task to read the note.
 - Remove a link from its own row.
 
-## 1.4.0 - unreleased
-
 ### Lists
 
 - My order is the default sort, first in its menu.
