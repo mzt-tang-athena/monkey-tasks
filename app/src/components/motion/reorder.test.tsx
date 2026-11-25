@@ -385,7 +385,8 @@ describe("createReorderSurface", () => {
     ]);
   });
 
-  it("steps a row one place from the keyboard through the drop's event", async () => {    const onReorder = vi.fn();
+  it("steps a row one place from the keyboard through the drop's event", async () => {
+    const onReorder = vi.fn();
     render(
       <Screen
         rows={[

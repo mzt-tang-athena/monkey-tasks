@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { board } from "../data";
-import { holdDrag } from "../gestures";
+import { holdDrag, holdDragTo } from "../gestures";
 import {
   expectAbove,
   expectBefore,
@@ -134,6 +134,45 @@ test("a drag inside a group writes order, and it survives a reload", async ({
   );
 });
 
+test("a drag released outside the groups writes nothing", async ({ page }) => {
+  await openBoard(page);
+
+  const before = {
+    water: await noteText(page, board.notes.water),
+    ship: await noteText(page, board.notes.ship),
+  };
+  expect(before.water).toContain("order: 1");
+  expect(before.ship).toContain("order: 2");
+
+  // The page's own top padding sits above the Active header and its
+  // rows, so the release lands on no group.
+  const box = await header(page, "active").boundingBox();
+  expect(box).not.toBeNull();
+  const outside = {
+    x: (box?.x ?? 0) + (box?.width ?? 0) / 2,
+    y: (box?.y ?? 0) - 4,
+  };
+
+  await holdDragTo(page, grip(page, board.active.first), outside, {
+    holdMs: 0,
+  });
+  await page.mouse.up();
+  await expect(page.getByTestId("drag-ghost")).toHaveCount(0);
+
+  // A fresh vault read settles any write. The rows and both notes stay
+  // exactly as they were.
+  await returnToTab(page);
+  await expect(row(page, board.active.first)).toBeVisible();
+  await expectAbove(
+    row(page, board.active.first),
+    row(page, board.active.second),
+  );
+  expect(await noteText(page, board.notes.water)).toBe(before.water);
+  expect(await noteText(page, board.notes.ship)).toBe(before.ship);
+  expect(await noteText(page, board.notes.water)).toContain("order: 1");
+  expect(await noteText(page, board.notes.ship)).toContain("order: 2");
+});
+
 test("a drop on another group's header moves the status in one write", async ({
   page,
 }) => {
@@ -216,7 +255,8 @@ test("the editor's Status field moves a deed", async ({ page }) => {
     .toContain('status: "[[someday]]"');
 });
 
-test("a capture on Board writes a backlog deed", async ({ page }) => {  await openBoard(page);
+test("a capture on Board writes a backlog deed", async ({ page }) => {
+  await openBoard(page);
 
   await press(page, page.getByRole("button", { name: "add task" }));
   await expect(

@@ -175,7 +175,8 @@ export const board = {
   },
 } as const;
 
-/** The References folder and the notes a task can point at (ticket 0091). */export const references = {
+/** The References folder and the notes a task can point at (ticket 0091). */
+export const references = {
   /** A task the reference tests open, and its note. */
   task: undated.first,
   path: `Tasks/${undated.first}.md`,
