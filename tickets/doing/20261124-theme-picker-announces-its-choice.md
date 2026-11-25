@@ -2,7 +2,7 @@
 title: The theme picker tells TalkBack which theme is on
 created: 2026-11-24
 priority: normal
-assignee:
+assignee: lane-theme-checked-a11y
 pr:
 depends: []
 ---
