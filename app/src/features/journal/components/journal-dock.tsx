@@ -3,9 +3,9 @@ import { useIsFocused } from "expo-router";
 import { useBar } from "@/components/bottom-bar/bottom-bar";
 import type { JournalSlot } from "@/components/bottom-bar/dock-slot";
 import {
-  SplitAddPill,
-  type SplitAddPillRef,
-} from "@/components/bottom-bar/split-add-pill";
+  AddButton,
+  type AddButtonRef,
+} from "@/components/bottom-bar/add-button";
 import { Sheet } from "@/components/ui/sheet";
 import { Toast } from "@/components/ui/toast";
 import { spacing } from "@/theme/tokens";
@@ -13,8 +13,8 @@ import { useJournalSheet } from "../hooks/use-journal-sheet";
 import { EntryForm } from "./entry-form";
 
 /**
- * The journal dock: the bar's split Add pill, the sheet its Add half
- * opens, and the toast for a failed write. The sheet and the toast draw
+ * The journal dock: the bar's Add button, the sheet it opens, and the
+ * toast for a failed write. The sheet and the toast draw
  * in the overlay host, above every screen.
  *
  * It answers no capture request. The command pane's "Add task" means a
@@ -31,9 +31,9 @@ export function JournalDock({ day, onSend }: JournalSlot) {
     onSend: () => onSend?.(),
   });
 
-  const addRef = React.useRef<SplitAddPillRef | null>(null);
+  const addRef = React.useRef<AddButtonRef | null>(null);
   // The overlay outlives `open` by the exit, and the page stays inert
-  // until it goes. The Add half takes focus back only once the sheet
+  // until it goes. The button takes focus back only once the sheet
   // has left the tree.
   const wasMounted = React.useRef(false);
   React.useEffect(() => {
@@ -49,7 +49,7 @@ export function JournalDock({ day, onSend }: JournalSlot) {
 
   return (
     <>
-      <SplitAddPill ref={addRef} label="add entry" onPress={sheet.toggle} />
+      <AddButton ref={addRef} label="add entry" onPress={sheet.toggle} />
 
       {sheet.mounted ? (
         <Sheet

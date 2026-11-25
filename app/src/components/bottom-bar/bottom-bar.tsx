@@ -3,9 +3,8 @@ import { StyleSheet, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
-import { PullSurface } from "@/components/motion/pull";
-import { useCommandPane } from "@/hooks/use-command-pane";
 import type { Progress } from "@/lib/motion/progress";
+import type { IconName } from "@/components/ui/icon";
 import { bottomBar, measure, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { NavTab } from "./nav-tab";
@@ -20,12 +19,18 @@ export type BarState = {
    * and the bar slides on that value in an animated style.
    */
   setHide: (progress: Progress) => void;
+  /** The tab on screen, counted from the first. */
+  tab: number;
+  /** How many tabs the bar carries. */
+  tabs: number;
+  /** Moves one tab, and stays at either end. */
+  stepTab: (step: 1 | -1) => void;
 };
 
 const BarContext = React.createContext<BarState | null>(null);
 
-/** The bar's height and its hide clock, for the component in the
-    `action` slot. */
+/** The bar's height, its tabs and its hide clock, for the component in
+    the `action` slot. */
 export function useBar(): BarState {
   const bar = React.useContext(BarContext);
   if (bar == null) {
@@ -35,19 +40,29 @@ export function useBar(): BarState {
 }
 
 /**
+ * The bar's tabs, left to right. The nav draws them and the action
+ * slot's swipes and keys step through the same list, so one order holds
+ * for every way a user reaches a tab.
+ */
+const TABS: readonly { path: string; label: string; icon: IconName }[] = [
+  { path: "/", label: "Lists", icon: "list" },
+  { path: "/planner", label: "Planner", icon: "calendar" },
+  { path: "/inbox", label: "Inbox Notes", icon: "inbox" },
+  { path: "/journal", label: "Journal", icon: "journal" },
+];
+
+/**
  * The bottom bar every tab shares. Left: the four nav items. Right: the
- * `action` slot, which the screen's route fills (the split Add pill).
- * The bar knows no feature. The gap between them takes an upward pull
- * and opens the command pane, which rises the same way. The slot reads
- * the bar's height and hands it the sheet's clock, and the bar slides
- * away on that clock.
+ * `action` slot, which the screen's route fills (the Add button). The
+ * bar knows no feature. The slot reads the bar's height, its tab and
+ * its tab step, and hands it the sheet's clock, and the bar slides away
+ * on that clock.
  *
  * The bar's surface spans the window. Its row holds to the reading
  * measure, so the nav and the action sit in the content column.
  */
 export function BottomBar({ action }: { action: React.ReactNode }) {
   const { styles } = useThemedStyles(makeStyles);
-  const { show } = useCommandPane();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   // The sheet's clock, or null while no slot drives the bar.
@@ -58,7 +73,25 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
   const space = useBarSpace();
   const [localHeight, setLocalHeight] = React.useState(0);
   const height = space?.height ?? localHeight;
-  const state = React.useMemo(() => ({ height, setHide }), [height, setHide]);
+  const tab = TABS.findIndex((entry) => entry.path === pathname);
+
+  // A swipe or a key moves one tab. The ends hold: a page that moved
+  // past the last tab would carry the selection against the finger.
+  const stepTab = React.useCallback(
+    (step: 1 | -1) => {
+      const next = tab + step;
+      if (tab < 0 || next < 0 || next >= TABS.length) {
+        return;
+      }
+      router.navigate(TABS[next].path);
+    },
+    [tab],
+  );
+
+  const state = React.useMemo(
+    () => ({ height, setHide, tab, tabs: TABS.length, stepTab }),
+    [height, tab, stepTab],
+  );
 
   // The box stays, so no frame runs a layout pass. A full height of
   // travel puts the bar out of the window.
@@ -97,39 +130,19 @@ export function BottomBar({ action }: { action: React.ReactNode }) {
         ) : null}
         <View style={styles.row}>
           <View style={styles.nav} role="tablist" aria-label="screens">
-            <NavTab
-              label="Lists"
-              icon="list"
-              active={pathname === "/"}
-              onPress={() => router.navigate("/")}
-            />
-            <NavTab
-              label="Planner"
-              icon="calendar"
-              active={pathname === "/planner"}
-              onPress={() => router.navigate("/planner")}
-            />
-            <NavTab
-              label="Inbox Notes"
-              icon="inbox"
-              active={pathname === "/inbox"}
-              onPress={() => router.navigate("/inbox")}
-            />
-            <NavTab
-              label="Journal"
-              icon="journal"
-              active={pathname === "/journal"}
-              onPress={() => router.navigate("/journal")}
-            />
+            {TABS.map((entry) => (
+              <NavTab
+                key={entry.path}
+                label={entry.label}
+                icon={entry.icon}
+                active={pathname === entry.path}
+                onPress={() => router.navigate(entry.path)}
+              />
+            ))}
           </View>
-          {/* The air between the nav and the action. An upward pull
-              here opens the pane, as the pane itself rises; the tabs
-              and the pill keep theirs. */}
-          <PullSurface
-            onPull={show}
-            testID="bar-gap"
-            style={styles.spacer}
-          />
+          {/* The air between the nav and the action. It carries no
+              gesture: the Add button holds the bar's swipes. */}
+          <View style={styles.spacer} />
           {action}
         </View>
       </Animated.View>
@@ -169,9 +182,6 @@ const makeStyles = (colors: Palette) => ({
     spacer: {
       flex: 1,
       minWidth: spacing.xl,
-      // The row centers its children, so an empty view would have no
-      // height to swipe. The gap takes the row's full height instead.
-      alignSelf: "stretch",
     },
   }),
 });

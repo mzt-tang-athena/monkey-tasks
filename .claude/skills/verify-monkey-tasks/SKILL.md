@@ -179,13 +179,14 @@ checks:
 - Lists: the tabs, a tick, Completed and delete all done.
 - The task sheet's drag, the journal, food and Inbox Notes.
 - The planner split and the theme switch.
-- A pull on the bar's gap opens the command pane. The smoke pulls up
-  first, then down, which still opens 1.2 and earlier APKs. The pass
-  line names the one that worked.
-- Settings, reached from the bar's opener and its own row in the pane,
-  because #168 dropped the planner's gear. The theme switch then reads
-  the screen's mean colour twice, before and after. A tap that found
-  nothing fails the step.
+- A swipe down on the bar's Add button opens the command pane. The
+  button sits at the window's edge. The finger has about 30 dp of room
+  there, so the smoke's swipe is short. The pane lists its commands, and
+  Close shuts it.
+- Settings, reached from the bar's Add button and its own row in the
+  pane, because #168 dropped the planner's gear. The theme switch then
+  reads the screen's mean colour twice, before and after. A tap that
+  found nothing fails the step.
 - The task editor clears three-button navigation.
 - The editor keyboard journey, one try per navigation mode.
 - The app log, for a crash.
@@ -195,7 +196,7 @@ keyboard. That journey is the proof; run it with more tries when the
 keyboard itself is the change.
 
 Every step looks its row up on the current screen before it taps. The
-gap, editor and keyboard steps take whatever row the screen shows. A
+button, editor and keyboard steps take whatever row the screen shows. A
 row below the fold cannot fail the pass and cost a second launch. The
 three-button step reads the editor's bottom and the navigation bar's top
 out of the same dump.
