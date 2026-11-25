@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { THEMES } from "@/theme/palettes";
 import { Button } from "./button";
 import { IconButton } from "./icon-button";
-import { Pressable } from "./pressable";
+import { nativeState, Pressable } from "./pressable";
 
 /**
  * The focus mark follows the browser's `:focus-visible` verdict. jsdom
@@ -45,6 +45,35 @@ function renderTarget() {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("the native accessibility state", () => {
+  it("carries the aria aliases into the state the native host reads", () => {
+    expect(nativeState({ "aria-checked": true })).toEqual({
+      checked: true,
+      selected: undefined,
+    });
+    expect(nativeState({ "aria-selected": true })).toEqual({
+      checked: undefined,
+      selected: true,
+    });
+  });
+
+  it("lets an alias win over an explicit state, as View does", () => {
+    expect(
+      nativeState({
+        "aria-checked": true,
+        "aria-selected": false,
+        accessibilityState: { checked: false, selected: true },
+      }),
+    ).toEqual({ checked: true, selected: false });
+  });
+
+  it("keeps an explicit state that has no alias", () => {
+    const state = { checked: "mixed" as const };
+    expect(nativeState({ accessibilityState: state })).toBe(state);
+    expect(nativeState({})).toBeUndefined();
+  });
 });
 
 describe("the focus mark", () => {

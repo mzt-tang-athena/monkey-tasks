@@ -165,8 +165,57 @@ const WebPress = React.forwardRef<
 });
 
 /**
+ * The state the native host reads. The gesture handler's press hands
+ * its props to a native button view, and that view takes
+ * `accessibilityState` alone. React Native's `View` translates
+ * `aria-checked` and `aria-selected` into it in JavaScript, and this
+ * press did not, so Android's tree called every radio unchecked and
+ * every tab unselected. An alias wins over an explicit state, as `View`
+ * decides it.
+ */
+export function nativeState({
+  accessibilityState,
+  "aria-checked": ariaChecked,
+  "aria-selected": ariaSelected,
+}: Pick<PressProps, "accessibilityState" | "aria-checked" | "aria-selected">) {
+  if (ariaChecked === undefined && ariaSelected === undefined) {
+    return accessibilityState;
+  }
+  return {
+    ...accessibilityState,
+    checked: ariaChecked ?? accessibilityState?.checked,
+    selected: ariaSelected ?? accessibilityState?.selected,
+  };
+}
+
+const NativePress = React.forwardRef<
+  React.ComponentRef<typeof PanPressable>,
+  PressProps
+>(function NativePress(props, ref) {
+  const {
+    accessibilityState,
+    "aria-checked": ariaChecked,
+    "aria-selected": ariaSelected,
+    ...rest
+  } = props;
+  return (
+    <PanPressable
+      // The two presses take different event objects, and the app
+      // passes the props both read.
+      {...(rest as React.ComponentProps<typeof PanPressable>)}
+      ref={ref}
+      accessibilityState={nativeState({
+        accessibilityState,
+        "aria-checked": ariaChecked,
+        "aria-selected": ariaSelected,
+      })}
+    />
+  );
+});
+
+/**
  * Every press target, with or without a pan above it. On the web a
  * keyboard focus draws the shared mark, and native keeps its touch
  * behaviour with no ring.
  */
-export const Pressable = (Platform.OS === "web" ? WebPress : PanPressable) as typeof PanPressable;
+export const Pressable = (Platform.OS === "web" ? WebPress : NativePress) as typeof PanPressable;
