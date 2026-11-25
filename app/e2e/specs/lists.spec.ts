@@ -2,6 +2,7 @@ import { expect, test } from "../fixtures";
 import { sections, supplements, tabs, undated, warnedWeight } from "../data";
 import { holdDrag, swipe, touchSwipe } from "../gestures";
 import {
+  completedToggle,
   expectAbove,
   listTab,
   openCompleted,
@@ -354,6 +355,9 @@ test.describe("a note that needs repair", () => {
     // Bug 7: the notice sat fixed above the list, 168 points tall, and
     // cards slid under its edge. It is the list's header now.
     await page.setViewportSize({ width: 412, height: 560 });
+    // The re-read fills the rows in stages, and a wheel into a page that
+    // is still short scrolls nothing. Wait for the whole list.
+    await expect(completedToggle(page)).toBeVisible();
     const notice = page.getByTestId("pager-live").getByText("Needs repair");
     const before = (await notice.boundingBox())?.y ?? Number.NaN;
 
