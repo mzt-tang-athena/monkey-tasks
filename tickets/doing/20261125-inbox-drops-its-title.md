@@ -2,7 +2,7 @@
 title: The Inbox tab drops its title
 created: 2026-11-25
 priority: normal
-assignee:
+assignee: lane-inbox-title
 pr:
 depends: []
 ---
