@@ -91,20 +91,16 @@ export function groupByDue(items: TaskItem[], now: Date): DateGroups {
     }
   }
   const title = (a: TaskItem, b: TaskItem) => a.name.localeCompare(b.name);
-  // Decorate-time parse: sorting re-parses nothing per comparison.
-  const stamp = (a: TaskItem): number =>
-    a.data?.due ? (parseStoredDate(a.data.due)?.date.getTime() ?? 0) : 0;
-  const sortable = [...groups.overdue, ...groups.today, ...groups.undated];
-  const stamps = new Map(sortable.map((item) => [item.uri, stamp(item)]));
-  const byTime = (a: TaskItem, b: TaskItem) =>
-    (stamps.get(a.uri) ?? 0) - (stamps.get(b.uri) ?? 0) || title(a, b);
-  groups.overdue.sort(byTime);
-  groups.today.sort(byTime);
+  groups.overdue = sortByDueTime(groups.overdue);
+  groups.today = sortByDueTime(groups.today);
   groups.undated.sort(title);
   groups.completed.sort(title);
   groups.upcoming = [...byDay.values()]
     .sort((a, b) => a.date.getTime() - b.date.getTime())
-    .map((bucket) => ({ date: bucket.date, items: bucket.items.sort(byTime) }));
+    .map((bucket) => ({
+      date: bucket.date,
+      items: sortByDueTime(bucket.items),
+    }));
   return groups;
 }
 

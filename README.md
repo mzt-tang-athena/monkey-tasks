@@ -357,15 +357,17 @@ keeps its styles in a `makeStyles(palette)` factory. It reads them
 through `useThemedStyles`. A theme switch then repaints it in place.
 The root layout draws the status bar in the palette's icon colour.
 `lib/settings-store.ts` holds the live sort order, task form, week
-view and week start for the mounted Lists and Planner screens.
+view, week start and Today switch. The mounted Lists and Planner
+screens read them.
 `features/settings` is the one screen that writes the palette and
 those settings (ADR 20261111-settings-screen). A week runs Monday to
 Sunday by default, and Settings lets you pick Sunday (ADR
-`20261118-week-start-setting`). Lists opens it from the list menu, and
-the command pane opens it from every tab. Its Diagnostics section
-reads the crash log from app storage and offers Copy and Share (ticket
-0081). It opens the diagnostics screen, which holds the one link to the
-gallery.
+`20261118-week-start-setting`). Built-in lists switches the optional
+tabs, and Today is the first one there (ADR `20261125-today-list`).
+Lists opens it from the list menu, and the command pane opens it from
+every tab. Its Diagnostics section reads the crash log from app
+storage and offers Copy and Share (ticket 0081). It opens the
+diagnostics screen, which holds the one link to the gallery.
 
 `features/gallery` draws every primitive in every state, in the active
 palette (ADR 20261112-component-gallery). Its route is `/gallery`. A
@@ -612,12 +614,15 @@ Its plus half runs the tab's Add. Its Command half opens the pane
 (ADR 20261111-command-pane). A downward swipe on the empty gap between
 the tabs and the pill opens the pane too. Both halves are 44pt, so
 four tabs and the pill fit a 360pt screen. The Lists tab
-shows Main and the list notes. Main holds the unfiled tasks: no list
-and no status. Any other tab shows the tasks whose `list` carries that
-name. My order makes
-each tab one flat list (ADR 0015 and its 2026-11-11 amendment,
-`20261111-one-list-and-tab-order`). The Journal tab shows today's note
-and appends to it.
+shows Today, then Main, then the list notes. Main holds the unfiled
+tasks: no list and no status. Today holds the tasks due today, with the
+past ones above them. A tick leaves it, and a capture taken there is
+due today. Settings switches it off, and Main leads again (ADR
+`20261125-today-list`). Any other tab shows the tasks whose `list`
+carries that name. My order makes each tab one flat list (ADR 0015 and
+its 2026-11-11 amendment, `20261111-one-list-and-tab-order`). Today is
+a date view, so it keeps its two groups in every sort order. The
+Journal tab shows today's note and appends to it.
 
 Each list tab folds its Completed group by default. The header keeps
 the count and opens or closes on a tap. It turns on the app's shared
