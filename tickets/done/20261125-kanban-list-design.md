@@ -3,7 +3,7 @@ title: Design a Kanban list
 created: 2026-11-25
 priority: normal
 assignee: opencode
-pr:
+pr: 232
 depends: []
 ---
 
