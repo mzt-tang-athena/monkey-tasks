@@ -46,6 +46,10 @@ fails a bullet that wraps or runs past 64 characters.
 - The app lists a failed press, and can retry it.
 - This build adds a native module: install a new APK.
 
+### Fixes
+
+- TalkBack hears which theme is on.
+
 ## 1.3.0 - 2026-11-25
 
 ### Command pane
