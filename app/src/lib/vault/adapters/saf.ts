@@ -147,9 +147,7 @@ export const safAdapter: VaultAdapter = {
   },
 
   read(uri) {
-    return FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.UTF8,
-    });
+    return new File(uri).text();
   },
 
   write,

@@ -30,12 +30,29 @@ This ticket is about the time.
 
 ## Acceptance
 
-- [ ] Cold start times before and after, on the same emulator, three
+- [x] Cold start times before and after, on the same emulator, three
       runs each.
-- [ ] The report names what took the time before the fix.
-- [ ] The first rows show sooner after the fix, by a stated amount.
-- [ ] A vault change made while the app sat closed still shows.
+- [x] The report names what took the time before the fix.
+- [x] The first rows show sooner after the fix, by a stated amount.
+- [x] A vault change made while the app sat closed still shows.
 
 ## Outcome
 
-(filled in before moving to done/)
+The vault read took more than half of a cold start. Its notes read
+in turn, because Expo runs every async file call on one queue
+(ADR `20261125-notes-read-on-the-io-pool`). Notes now read through the
+new file API, on the IO pool. Nothing a user sees changed.
+
+Measured on the release APK, on the emulator, medians of five runs
+with 40 notes, interleaved before and after:
+
+- Vault read: 2.6 s to 0.7 s.
+- JS start to first rows: 3.0 s to 2.1 s.
+- Tap to first rows: 4.9 s to 4.3 s.
+- That last one sits near the noise. Host load moves it 0.4 s.
+- With 190 notes, three runs: tap to rows 9.1 s to 6.0 s.
+
+The rest of the wait is the native start before the JS runs (1.8 s,
+38%). With few notes the draw of the first frame also counts. A cached
+first frame is the next step. It changes what a user sees, so it needs a
+design review first. Nothing needed a new vault property.

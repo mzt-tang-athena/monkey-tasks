@@ -2,7 +2,6 @@ import { taskFrontmatter, taskWarnings, validateNote } from "@monkey-tasks/schem
 import type { VaultAdapter } from "@/lib/vault/adapter";
 import { formatIssues } from "@/utils/schema-errors";
 import type { TaskItem } from "@/types/task";
-import { timed, timedAsync } from "@/lib/startup-marks";
 
 /** The base fields of a row, before its file text is read. */
 export type TaskBase = {
@@ -53,7 +52,7 @@ export async function loadTasks(
   if (dirUri == null) {
     return [];
   }
-  const entries = await timedAsync("list", () => adapter.list(dirUri));
+  const entries = await adapter.list(dirUri);
   const files = entries.filter(
     (entry) => !entry.isFolder && entry.name.endsWith(".md"),
   );
@@ -61,8 +60,8 @@ export async function loadTasks(
   // must not blank the whole list, so failures are dropped per file.
   const settled = await Promise.allSettled(
     files.map(async (file): Promise<TaskItem> => {
-      const text = await timedAsync("read", () => adapter.read(file.uri));
-      return timed("parse", () => taskFromText(
+      const text = await adapter.read(file.uri);
+      return taskFromText(
         {
           id: file.uri,
           uri: file.uri,
@@ -73,7 +72,7 @@ export async function loadTasks(
           ...(folder == null ? {} : { folder }),
         },
         text,
-      ));
+      );
     }),
   );
   return settled.flatMap((outcome) =>

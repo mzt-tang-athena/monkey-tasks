@@ -1,4 +1,3 @@
-import { mark, startProfile } from "./startup-marks";
+import { mark } from "./startup-marks";
 
-startProfile();
 mark("js-start");

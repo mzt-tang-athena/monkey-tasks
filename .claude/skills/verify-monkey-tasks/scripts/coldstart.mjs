@@ -200,10 +200,6 @@ function runOf(dir) {
       appThreads: appThreads.map((r) => [r.n, Number(r.ms)]),
     };
   }
-  const totals = {};
-  for (const match of log.matchAll(/startup-mark total:(\w+) n=(\d+) sum=([\d.]+) max=([\d.]+)/g)) {
-    totals[match[1]] = { n: Number(match[2]), sum: Number(match[3]), max: Number(match[4]) };
-  }
 
   const stage = [
     ["js start", marks["js-start"]],
@@ -232,7 +228,8 @@ function runOf(dir) {
 
   const windows = [
     ["launch to js start", t0, marks["js-start"]],
-    ["js start to rows ready", marks["js-start"], rowsAt],
+    ["js start to load done", marks["js-start"], marks["load-done"]],
+    ["load done to rows ready", marks["load-done"], rowsAt],
     ["rows ready to +3 s", rowsAt, rowsAt == null ? null : rowsAt + 3e9],
   ];
   const cpuMs = {};
@@ -242,7 +239,8 @@ function runOf(dir) {
       cpuMs[`js cpu, ${name}`] = cpu(js, from, to);
     }
   }
-  return { times, detail, cpuMs, vault, totals };
+  const load = Number(readFileSync(join(dir, "host-load.txt"), "utf8"));
+  return { times, detail, cpuMs, vault, host: { "host load, 1 min average": load } };
 }
 
 const dirs = readdirSync(folder)
@@ -259,7 +257,7 @@ const median = (xs) => {
   const m = s.length >> 1;
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
-const fmt = (x) => (x == null ? "-" : String(Math.round(x))).padStart(7);
+const fmt = (x) => (x == null ? "-" : String(Math.round(x * 10) / 10)).padStart(7);
 function table(title, key) {
   console.log(`\n${title}`.padEnd(30) + dirs.map((_, i) => `run ${i + 1}`.padStart(7)).join("") + "   median    range");
   for (const name of Object.keys(results[0][key])) {
@@ -272,13 +270,12 @@ function table(title, key) {
 console.log(`cold start, ms since launch (${folder})`);
 table("stage", "times");
 table("native", "detail");
+table("host", "host");
 table("cpu ms", "cpuMs");
 results.forEach((r, i) => {
   if (r.vault != null) {
     const top = (rows) => rows.map(([n, ms]) => `${n} ${Math.round(ms)}`).join(", ");
     console.log(`\nrun ${i + 1} vault read, ${Math.round(r.vault.windowMs)} ms of wall time, cpu ms by process: ${top(r.vault.byProcess)}`);
     console.log(`  app threads: ${top(r.vault.appThreads)}`);
-    const t = Object.entries(r.totals).map(([n, v]) => `${n} n=${v.n} sum=${Math.round(v.sum)} max=${Math.round(v.max)}`);
-    console.log(`  js timers (ms, calls overlap): ${t.join("; ")}`);
   }
 });

@@ -189,6 +189,9 @@ export function createFakeSaf() {
     FileMode: { WriteOnly: "w", Truncate: "wt" },
     File: class {
       constructor(private readonly uri: string) {}
+      async text(): Promise<string> {
+        return module.readAsStringAsync(this.uri);
+      }
       open(mode: string) {
         const uri = this.uri;
         return {

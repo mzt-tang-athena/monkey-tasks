@@ -339,6 +339,43 @@ the last dump and prints the next tap, `press`, `expand` or `none`.
 `journeys/android-reminder-actions.sh` is the model. It writes tasks that
 fall due in a few minutes, kills the app, then presses a button on each.
 
+### Time a cold start
+
+`scripts/android-coldstart.sh <label> [runs]` times a cold start of the
+installed APK. Each run force-stops the app, records a Perfetto trace
+and runs `am start -W`. It waits for the first rows, then stops the
+trace. `scripts/coldstart.mjs` reads each trace and prints one table.
+The table holds the platform's first frame, the app's own stages, the
+first rows and the main thread going idle. It adds the CPU time of the
+main and JS threads between the stages. It also lists the CPU by
+process during the vault read. Run it through `heavy-emulator.sh`:
+
+```sh
+S=.claude/skills/verify-monkey-tasks/scripts
+EXPO_PUBLIC_STARTUP_MARKS=1 $S/android-apk.sh .
+$S/heavy-emulator.sh $S/android-coldstart.sh before 5
+```
+
+The app's stages come from marks in the log. A build made with
+`EXPO_PUBLIC_STARTUP_MARKS=1` logs them. A release APK has none, so the
+marks cost nothing there. Compare two builds that both carry the marks.
+The trace needs `trace_processor_shell`: set `TRACE_PROCESSOR`, or
+fetch it once with
+`python3 -I get.perfetto.dev/trace_processor --version`.
+
+The runs on one emulator moved by up to a factor of two with the host's
+load. Take five runs, read the median and state the range. The table
+shows the host's load for each run. The CPU time columns move less than
+the wall time. The emulator draws in software, so "rows drawn" holds a
+long render thread frame that a phone does not have.
+
+A release Hermes has no sampling profiler. `HermesInternal` lists no
+profiler call, and the APK has no `libjsijniprofiler`. The JS thread's
+CPU time between the stages stands in for a profile.
+
+`journeys/android-cold-start-vault-change.sh` proves that a vault
+change made while the app sat closed shows after a cold start.
+
 ### Doctor
 
 ```sh

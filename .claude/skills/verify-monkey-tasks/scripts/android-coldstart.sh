@@ -8,7 +8,7 @@
 #
 # The rows-ready mark needs an APK built with EXPO_PUBLIC_STARTUP_MARKS=1.
 # Without it the script still reports am start -W, the trace and the
-# main thread, and gives up on the rows after 60 s.
+# main thread, and gives up on the rows after COLDSTART_WAIT seconds (60).
 #
 # Run it through heavy-emulator.sh so the host is as quiet as the lock
 # can make it. Evidence lands in <run folder>/coldstart-<label>/.
@@ -43,11 +43,12 @@ for i in $(seq 1 "$runs"); do
   done
   sleep 1
   tp0=$SECONDS
+  cut -d' ' -f1 /proc/loadavg >"$d/host-load.txt"
   adb shell am start -W -n "$PKG/.MainActivity" >"$d/am-start.txt"
   seen=0
   for _ in $(seq 1 240); do
     if adb logcat -d | grep -q "startup-mark rows-ready"; then seen=1; break; fi
-    (( SECONDS - tp0 >= 60 )) && break
+    (( SECONDS - tp0 >= ${COLDSTART_WAIT:-60} )) && break
     sleep 0.5
   done
   sleep 5

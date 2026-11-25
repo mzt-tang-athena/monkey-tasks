@@ -32,13 +32,13 @@ vi.mock("expo-file-system/legacy", () => ({
     state.events.push("delete");
   },
   EncodingType: { UTF8: "utf8" },
-  readAsStringAsync: async () => state.fileText,
 }));
 
 vi.mock("expo-file-system", () => ({
   FileMode: { Truncate: "wt" },
   File: class {
     constructor(private readonly uri: string) {}
+    text = async () => state.fileText;
     open() {
       const uri = this.uri;
       return {

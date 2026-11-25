@@ -35,6 +35,11 @@ fails a bullet that wraps or runs past 64 characters.
 - A deed blocked by an open note shows a red rail.
 - Capture on Board makes a backlog deed.
 
+### Speed
+
+- A cold start reads your notes side by side, not in turn.
+- The first rows show sooner, most with a big vault.
+
 ### Reminders
 
 - A reminder has three buttons: Done, Later, Tomorrow.

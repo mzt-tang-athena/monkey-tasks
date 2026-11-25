@@ -2,7 +2,7 @@ import type { VaultAdapter } from "@/lib/vault/adapter";
 import { loadLists } from "./list-notes";
 import type { BrokenList, ListItem, TaskItem } from "@/types/task";
 import { isReferenceNote, loadTasks } from "./task-notes";
-import { markOnce, timedAsync } from "@/lib/startup-marks";
+import { markOnce } from "@/lib/startup-marks";
 
 /** The folder under the granted root that holds the task notes. */
 export const TASKS_FOLDER = "Tasks";
@@ -40,8 +40,8 @@ export async function loadVault(
 }> {
   markOnce("load-start");
   const [tasksDir, deedsDir] = await Promise.all([
-    timedAsync("findFolder", () => adapter.findFolder(root, TASKS_FOLDER)),
-    timedAsync("findFolder", () => adapter.findFolder(root, DEEDS_FOLDER)),
+    adapter.findFolder(root, TASKS_FOLDER),
+    adapter.findFolder(root, DEEDS_FOLDER),
   ]);
   markOnce("folders-found");
   const [tasks, { lists, broken }, deeds] = await Promise.all([
