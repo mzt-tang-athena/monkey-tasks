@@ -213,10 +213,18 @@ in a second. A new native module or permission still needs a rebuild.
 
 ## Check the vault
 
-The app reads `Tasks/`, `Tasks/Lists/` and `Deeds/`. One command checks
-the notes against the schemas and checks every note for a bare
-`[[wikilink]]`. It also compares the app's frontmatter parse with
-`js-yaml`:
+The app reads `Tasks/`, `Tasks/Lists/` and `Deeds/`. A deed is a task
+with a status (contracts ADR
+`20261124-deeds-are-tasks-with-a-status`). `Deeds/` reads with the
+task schema: one query, one task type, one done rule. Main and the list
+tabs show only the tasks with no status, so a deed never shows there. A
+dated deed shows on its day in the planner and rings like any task. A
+note in `Deeds/` with no status is a reference note and shows nowhere
+for now (ticket `20261124-deed-vault-tidy`).
+
+One command checks the notes against the schemas and checks every note
+for a bare `[[wikilink]]`. It also compares the app's frontmatter parse
+with `js-yaml`:
 
 ```bash
 npm run vault:check -- /path/to/vault
@@ -251,9 +259,10 @@ then. That keeps every group on the list full.
 | `default` | 16 tasks, 9 list notes, one journal day and one reference. `vault:check` finds nothing. |
 | `repair` | `Broken note.md` and `Lists/Garden.md`, for the repair block. |
 | `inbox` | Seven `Inbox/` notes with the name shapes the cards must read. |
+| `deeds` | A plain task, a deed with a status and a deed without one, for the deed journey. |
 
 With no `?vault=` in the page address, the preview loads `default`,
-then `repair`, then `inbox`.
+then `repair`, then `inbox`. `?vault=deeds` loads the deed seed alone.
 
 Metro cannot import a `.md` file, so the notes reach the app through
 the generated `sample/index.ts`. After a change to a sample note, run
@@ -603,8 +612,9 @@ Its plus half runs the tab's Add. Its Command half opens the pane
 (ADR 20261111-command-pane). A downward swipe on the empty gap between
 the tabs and the pill opens the pane too. Both halves are 44pt, so
 four tabs and the pill fit a 360pt screen. The Lists tab
-shows Main and the list notes. Main holds the tasks with no list. Any
-other tab shows the tasks whose `list` carries that name. My order makes
+shows Main and the list notes. Main holds the unfiled tasks: no list
+and no status. Any other tab shows the tasks whose `list` carries that
+name. My order makes
 each tab one flat list (ADR 0015 and its 2026-11-11 amendment,
 `20261111-one-list-and-tab-order`). The Journal tab shows today's note
 and appends to it.

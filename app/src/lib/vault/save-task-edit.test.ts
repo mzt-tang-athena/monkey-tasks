@@ -501,3 +501,80 @@ describe("saveTaskEdit", () => {
     expect(item.text).toContain("Old body.");
   });
 });
+
+describe("saveTaskEdit on a deed", () => {
+  const DEED_TEXT = [
+    "---",
+    'kind: "[[deeds]]"',
+    'status: "[[active]]"',
+    "due: 2026-10-28",
+    'parent deed: "[[Garden]]"',
+    "categories:",
+    '  - "[[digital]]"',
+    "types:",
+    '  - "[[project]]"',
+    'after: "[[Order things]]"',
+    "---",
+    "",
+    "Water the beds.",
+    "",
+  ].join("\n");
+
+  function deed(): TaskItem {
+    return {
+      id: OLD_URI,
+      uri: OLD_URI,
+      fileName: "Water the beds.md",
+      name: "Water the beds",
+      folder: "deeds",
+      text: DEED_TEXT,
+      data: {
+        kind: "[[tasks]]",
+        status: "[[active]]",
+        "alert weight": "harsh",
+        due: "2026-10-28",
+      },
+      body: "\nWater the beds.\n",
+    };
+  }
+
+  it("writes the task kind, adds a created date and keeps the rest", async () => {
+    state.fileText = DEED_TEXT;
+    const result = await saveTaskEdit(
+      safAdapter,
+      deed(),
+      edit({ name: "Water the beds", due: "2026-10-28", list: null, reminders: [] }),
+    );
+
+    const written = state.writes[0].text;
+    expect(written).toContain('kind: "[[tasks]]"');
+    expect(written).toMatch(/^created: \d{4}-\d{2}-\d{2}T/m);
+    expect(written).toContain('status: "[[active]]"');
+    expect(written).toContain('parent deed: "[[Garden]]"');
+    expect(written).toContain('categories:\n  - "[[digital]]"');
+    expect(written).toContain('types:\n  - "[[project]]"');
+    expect(written).toContain('after: "[[Order things]]"');
+    expect(written).not.toContain("[[deeds]]");
+    expect(result.folder).toBe("deeds");
+    expect(result.data?.created).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("keeps a created date the deed already has", async () => {
+    state.fileText = DEED_TEXT.replace("---\n", "---\ncreated: 2026-09-12\n");
+    const item: TaskItem = {
+      ...deed(),
+      text: DEED_TEXT.replace("---\n", "---\ncreated: 2026-09-12\n"),
+      data: { ...deed().data!, created: "2026-09-12" },
+    };
+
+    await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ name: "Water the beds", due: "2026-10-28", list: null, reminders: [] }),
+    );
+
+    const written = state.writes[0].text;
+    expect(written).toContain("created: 2026-09-12");
+    expect(written.match(/^created:/gm)).toHaveLength(1);
+  });
+});

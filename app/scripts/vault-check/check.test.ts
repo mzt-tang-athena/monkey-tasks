@@ -44,7 +44,7 @@ describe("checkVault", () => {
   it("reports a note that fails validation", () => {
     const dir = vault({
       "Tasks/Bad.md":
-        '---\nkind: "[[deeds]]"\ncreated: 2026-10-25\n---\n\nBody.\n',
+        '---\nkind: "[[lists]]"\ncreated: 2026-10-25\n---\n\nBody.\n',
     });
 
     const { findings } = checkVault(dir);
@@ -251,5 +251,82 @@ describe("the one list field", () => {
     });
 
     expect(checkVault(dir)).toEqual({ notes: 2, findings: [] });
+  });
+});
+
+describe("deed notes", () => {
+  it("reads a deed with the task schema, created date or not", () => {
+    const dir = vault({
+      "Deeds/Garden.md":
+        '---\nkind: deeds\nstatus: "[[active]]"\nparent deed: "[[Home]]"\nafter: "[[Order]]"\n---\n\n# Garden\n',
+      "Deeds/Ideas.md":
+        '---\nkind: "[[deeds]]"\nparent deed: "[[Home]]"\n---\n\nSomeday.\n',
+    });
+
+    expect(checkVault(dir)).toEqual({ notes: 2, findings: [] });
+  });
+
+  it("warns on status done with no completed, at the status line", () => {
+    const dir = vault({
+      "Deeds/Garden.md": '---\nkind: "[[deeds]]"\nstatus: "[[done]]"\n---\n',
+    });
+
+    const { findings } = checkVault(dir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      file: "Deeds/Garden.md",
+      line: 3,
+      kind: "warning",
+      reason: "status [[done]] has no completed date",
+    });
+  });
+
+  it("warns on a completed date that is not done, at its own line", () => {
+    const dir = vault({
+      "Deeds/Garden.md":
+        '---\nkind: "[[deeds]]"\nstatus: "[[active]]"\ncompleted: 2026-10-25\n---\n',
+    });
+
+    const { findings } = checkVault(dir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      file: "Deeds/Garden.md",
+      line: 4,
+      kind: "warning",
+    });
+    expect(findings[0].reason).toBe(
+      "completed date with status [[active]] is not done",
+    );
+  });
+
+  it("reports a status outside the five values as invalid", () => {
+    const dir = vault({
+      "Deeds/Garden.md": '---\nkind: "[[deeds]]"\nstatus: "[[growing]]"\n---\n',
+    });
+
+    const { findings } = checkVault(dir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      file: "Deeds/Garden.md",
+      line: 3,
+      kind: "invalid",
+    });
+    expect(findings[0].reason).toContain("status:");
+  });
+
+  it("warns on an unreadable alert weight at its own line", () => {
+    const dir = vault({
+      "Deeds/Garden.md":
+        '---\nkind: "[[deeds]]"\nstatus: "[[backlog]]"\nalert weight: loud\n---\n',
+    });
+
+    const { findings } = checkVault(dir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      file: "Deeds/Garden.md",
+      line: 4,
+      kind: "warning",
+    });
+    expect(findings[0].reason).toContain("alert weight");
   });
 });

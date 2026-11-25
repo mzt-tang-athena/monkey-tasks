@@ -25,8 +25,14 @@ export type Repair = {
  */
 export function useListSections(tab: string, sortMode: SortMode) {
   const { status, brokenLists } = useStoreMeta();
-  const allTasks = useTaskList();
+  const rows = useTaskList();
   const shown = useTabTasks(tab);
+  // Needs repair reports what a list tab can show. A deed shows on its
+  // day and, later, on the board, and `vault:check` names its warnings.
+  const allTasks = React.useMemo(
+    () => rows.filter((task) => task.data?.status == null),
+    [rows],
+  );
 
   const brokenListRepairs = React.useMemo<Repair[]>(
     () =>

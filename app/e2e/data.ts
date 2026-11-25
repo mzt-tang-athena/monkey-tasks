@@ -126,6 +126,23 @@ export const rename = {
   to: "Call Mum about Sunday",
 } as const;
 
+/** The deed seed (`?vault=deeds`): one plain task and two deed notes.
+    A deed is a task with a status, and one without a status is a
+    reference note that shows nowhere. */
+export const deeds = {
+  seed: "deeds",
+  plain: "Plain task",
+  active: "Water the beds",
+  reference: "Brainstorm",
+  /** The day the active deed is due, two days after TODAY. */
+  day: "2026-10-28",
+  /** TODAY in the page's zone, which is the day the seed is written
+      against: the sample's dates do not move. */
+  seedDay: "2026-10-26",
+  note: "Deeds/Water the beds.md",
+  referenceNote: "Deeds/Brainstorm.md",
+} as const;
+
 /** The References folder and the notes a task can point at (ticket 0091). */
 export const references = {
   /** A task the reference tests open, and its note. */

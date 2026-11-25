@@ -9,6 +9,7 @@ import {
 import { monthEndRule } from "@/lib/recurrence";
 import { renameNote } from "@/lib/vault/rename";
 import { safeFileName } from "@/lib/vault/file-name";
+import { takeTaskShape } from "@/lib/vault/task-kind";
 import type { TaskEdit, TaskItem } from "@/types/task";
 
 /** The day part of a stored due, or null with no due. */
@@ -42,6 +43,10 @@ export async function saveTaskEdit(
   // The draft was built from `expected`, so the property edits apply to
   // that text, not to whatever the store last read.
   let text = expected;
+  // A note from Deeds/ takes the task shape on this edit.
+  if (item.folder === "deeds") {
+    text = takeTaskShape(text, item.data?.created != null).text;
+  }
   text = updateProperty(text, "due", edit.due);
   text = updateProperty(text, "recurrence", recurrenceToWrite(item, edit));
   // An unknown value reads as harsh, so an unchanged weight keeps its
@@ -111,6 +116,7 @@ export async function saveTaskEdit(
     text: written,
     data: note.data,
     body: note.note.body,
+    ...(item.folder == null ? {} : { folder: item.folder }),
     ...(warnings.length > 0 ? { warnings } : {}),
   };
 }
