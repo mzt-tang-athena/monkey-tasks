@@ -2,7 +2,7 @@
 title: A deed board grouped by status
 created: 2026-11-24
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: ["20261124-app-reads-deeds-as-tasks", "20261125-today-list"]
 ---
