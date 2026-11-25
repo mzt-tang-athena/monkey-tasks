@@ -144,18 +144,34 @@ test("a drag released outside the groups writes nothing", async ({ page }) => {
   expect(before.water).toContain("order: 1");
   expect(before.ship).toContain("order: 2");
 
-  // The page's own top padding sits above the Active header and its
-  // rows, so the release lands on no group.
-  const box = await header(page, "active").boundingBox();
-  expect(box).not.toBeNull();
-  const outside = {
-    x: (box?.x ?? 0) + (box?.width ?? 0) / 2,
-    y: (box?.y ?? 0) - 4,
-  };
+  // Scroll the picked card into view first, then read where the page
+  // put the first group. The release point is the page's own top
+  // padding, above every header and card.
+  const picked = grip(page, board.active.first);
+  await picked.scrollIntoViewIfNeeded();
+  const group = await header(page, "active").boundingBox();
+  const pager = await page.getByTestId("list-pager").boundingBox();
+  if (group == null || pager == null) {
+    throw new Error("the board is not laid out");
+  }
+  const outside = { x: group.x + group.width / 2, y: group.y - 4 };
+  expect(outside.y).toBeGreaterThan(pager.y);
+  expect(outside.y).toBeLessThan(group.y);
 
-  await holdDragTo(page, grip(page, board.active.first), outside, {
-    holdMs: 0,
-  });
+  // The rendered page holds no group or card at that point, so the drop
+  // takes the outside path rather than a same-status drop.
+  const onGroup = await page.evaluate(({ x, y }) => {
+    const groups =
+      '[data-testid^="board-header:"], [data-testid^="board-card:"]';
+    return document
+      .elementsFromPoint(x, y)
+      .some((element) => element.closest(groups) != null);
+  }, outside);
+  expect(onGroup).toBe(false);
+
+  await holdDragTo(page, picked, outside, { holdMs: 0 });
+  // Pin the pickup, so a release that never lifted cannot pass.
+  await expect(page.getByTestId("drag-ghost")).toBeVisible();
   await page.mouse.up();
   await expect(page.getByTestId("drag-ghost")).toHaveCount(0);
 
