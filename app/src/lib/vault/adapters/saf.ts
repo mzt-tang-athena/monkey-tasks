@@ -146,7 +146,7 @@ export const safAdapter: VaultAdapter = {
     return StorageAccessFramework.makeDirectoryAsync(parentUri, name);
   },
 
-  read(uri) {
+  async read(uri) {
     return new File(uri).text();
   },
 
