@@ -4,7 +4,13 @@ import { ruleWords } from "@/lib/recurrence";
 import type { TaskEdit } from "@/types/task";
 import { clockOf, clockWords, dayOf, whenWords } from "./lib/when";
 
-export type PropertyKey = "due" | "repeat" | "alerts" | "reference" | "note";
+export type PropertyKey =
+  | "status"
+  | "due"
+  | "repeat"
+  | "alerts"
+  | "reference"
+  | "note";
 
 /**
  * One property the sheet shows as a tile when it has a value, and as a
@@ -30,9 +36,17 @@ export type Property = {
   aside?: (draft: TaskEdit) => string | null;
   /** The change the tile's clear button makes, or null for no button. */
   clear: (draft: TaskEdit) => Partial<TaskEdit> | null;
+  /** A property only a note that already has it can show: no add chip. */
+  onlyWhenSet?: boolean;
   /** Accessible names: the tile, its clear button, the chip. */
   names: { open: string; clear: string; add: string };
 };
+
+/** A status in the words a person reads: "[[backlog]]" -> "Backlog". */
+export function statusWords(status: string): string {
+  const bare = status.replace(/^\[\[|\]\]$/g, "");
+  return bare.charAt(0).toUpperCase() + bare.slice(1);
+}
 
 /**
  * The alerts in words: "at due" for a timed due, then each reminder. A
@@ -74,6 +88,22 @@ export function bodyOf(text: string): string {
 }
 
 export const PROPERTIES: readonly Property[] = [
+  {
+    key: "status",
+    title: "Status",
+    chip: "Status",
+    icon: "rows",
+    // Only a deed has a status. A plain task keeps no way to become
+    // one by accident.
+    isSet: (draft) => draft.status != null,
+    many: false,
+    wide: false,
+    onlyWhenSet: true,
+    words: (draft) => (draft.status == null ? "" : statusWords(draft.status)),
+    // A status is what makes a deed a deed, so the tile has no clear.
+    clear: () => null,
+    names: { open: "change status", clear: "", add: "add status" },
+  },
   {
     key: "due",
     title: "Due",

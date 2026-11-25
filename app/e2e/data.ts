@@ -143,6 +143,38 @@ export const deeds = {
   referenceNote: "Deeds/Brainstorm.md",
 } as const;
 
+/** The board seed (`?vault=board`): deeds across all five statuses, one
+    blocked by an open note, one plain task, and one deed in Tasks/. */
+export const board = {
+  seed: "board",
+  seedDay: "2026-10-26",
+  tab: "Board",
+  groups: {
+    active: "Active",
+    backlog: "Backlog",
+    someday: "Someday",
+    done: "Done",
+    dropped: "Dropped",
+  },
+  active: { first: "Water the beds", second: "Ship the board design" },
+  backlog: {
+    blocker: "Draft the game tutorial",
+    second: "Plan the spring planting",
+  },
+  someday: "Learn the lathe",
+  done: "Finish the bench",
+  dropped: "Build a snowman",
+  plain: "Plain task",
+  /** The deed in Tasks/ that still reads on the board. */
+  filed: "Move the budget",
+  capture: "Trim the hedge",
+  notes: {
+    water: "Deeds/Water the beds.md",
+    ship: "Deeds/Ship the board design.md",
+    lathe: "Deeds/Learn the lathe.md",
+  },
+} as const;
+
 /** The References folder and the notes a task can point at (ticket 0091). */
 export const references = {
   /** A task the reference tests open, and its note. */

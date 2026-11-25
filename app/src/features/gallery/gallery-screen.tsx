@@ -20,6 +20,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { SegmentedControl, type Segment } from "@/components/ui/segmented-control";
 import { TabStrip } from "@/components/ui/tab-strip";
 import { TextField } from "@/components/ui/text-field";
+import { Switch } from "@/components/ui/switch";
 import {
   THEME_NAMES,
   measure,
@@ -160,6 +161,25 @@ export default function GalleryScreen() {
     "icons:close": <GlyphPair name="close" />,
     "icons:check": <GlyphPair name="check" />,
     "icons:command": <GlyphPair name="command" />,
+
+    "switch:on": (
+      <Switch
+        checked
+        label="gallery switch, on"
+        onCheckedChange={noop}
+        testID="gallery-switch-on"
+        trackTestID="gallery-switch-on-track"
+      />
+    ),
+    "switch:off": (
+      <Switch
+        checked={false}
+        label="gallery switch, off"
+        onCheckedChange={noop}
+        testID="gallery-switch-off"
+        trackTestID="gallery-switch-off-track"
+      />
+    ),
 
     "segmented-control:selected": (
       <View style={styles.wide}>

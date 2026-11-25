@@ -21,6 +21,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "both",
     why: "reads the button's mid-swipe travel, and that reduce holds it still",
   },
+  "board.spec.ts": {
+    runsIn: "both",
+    why: "the header drop and the group drag, which must land under reduce too",
+  },
   "capture-clock.spec.ts": {
     runsIn: "both",
     why: "samples the sheet, scrim and bar every frame, then the reduce path",

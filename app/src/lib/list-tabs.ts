@@ -9,7 +9,8 @@ import type { Toggle } from "@/lib/settings";
  * Main, then Main, then the ones that sit after it, then every list
  * note by name. Main is fixed, so a list note named Focus or Main
  * cannot make a second tab. Today leads while it is on, and Main leads
- * when it is off (ADR 20261125-today-list).
+ * when it is off (ADR 20261125-today-list). The Board follows Main
+ * while its switch is on (ADR 20261125-deed-board-is-the-kanban-list).
  */
 
 /** Main holds the unfiled tasks: those with no list. */
@@ -18,8 +19,11 @@ export const MAIN_LIST = "Main";
 /** The built-in Today list's tab name. It has no list note behind it. */
 export const TODAY_LIST = "Today";
 
+/** The built-in Board's tab name. It shows the deeds, by status. */
+export const BOARD_LIST = "Board";
+
 /** The switches the built-in tabs read: one setting each. */
-export type BuiltinTabs = { todayList: Toggle };
+export type BuiltinTabs = { todayList: Toggle; boardList: Toggle };
 
 /**
  * Every optional built-in tab, with its setting and its side of Main.
@@ -30,7 +34,10 @@ const BUILTIN_TABS: {
   setting: keyof BuiltinTabs;
   name: string;
   beforeMain: boolean;
-}[] = [{ setting: "todayList", name: TODAY_LIST, beforeMain: true }];
+}[] = [
+  { setting: "todayList", name: TODAY_LIST, beforeMain: true },
+  { setting: "boardList", name: BOARD_LIST, beforeMain: false },
+];
 
 export function listTabs(
   lists: readonly string[],

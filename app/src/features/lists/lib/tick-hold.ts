@@ -29,11 +29,11 @@ export type TickHold = {
  * `held` is the rows with their new, completed data. With no hold, or
  * a row that is not done, the groups come back as they are.
  */
-export function applyTickHold(
-  sections: ListsSection[],
+export function applyTickHold<S extends ListsSection>(
+  sections: S[],
   holds: readonly TickHold[],
   tasks: TaskItem[],
-): ListsSection[] {
+): S[] {
   if (holds.length === 0) {
     return sections;
   }
@@ -78,7 +78,7 @@ export function applyTickHold(
         title: hold.title,
         tone: hold.tone,
         data: [task],
-      });
+      } as S);
       next = copy;
       continue;
     }

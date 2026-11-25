@@ -2,8 +2,8 @@
 title: A deed board grouped by status
 created: 2026-11-24
 priority: normal
-assignee:
-pr:
+assignee: opencode
+pr: 236
 depends: ["20261124-app-reads-deeds-as-tasks", "20261125-today-list"]
 ---
 
@@ -55,16 +55,32 @@ on the Android emulator.
 
 ## Acceptance
 
-- [ ] The board shows active, backlog and someday groups in order.
-- [ ] Done and Dropped fold at the end.
-- [ ] A status change shows at once and lands in the note.
-- [ ] Setting done writes `completed`. Leaving done removes it.
-- [ ] A drag keeps its place after a reload.
-- [ ] A deed blocked by an open note shows as not ready.
-- [ ] Capture on Board writes status backlog.
-- [ ] Settings removes and restores the Board tab, and it persists.
-- [ ] The board passes the gallery's touch target and axe checks.
+- [x] The board shows active, backlog and someday groups in order.
+- [x] Done and Dropped fold at the end.
+- [x] A status change shows at once and lands in the note.
+- [x] Setting done writes `completed`. Leaving done removes it.
+- [x] A drag keeps its place after a reload.
+- [x] A deed blocked by an open note shows as not ready.
+- [x] Capture on Board writes status backlog.
+- [x] Settings removes and restores the Board tab, and it persists.
+- [x] The board passes the gallery's touch target and axe checks.
 
 ## Outcome
 
-(filled in before moving to done/)
+The Board ships as a built-in Lists tab, after Main, off until Settings
+turns it on. Design A: Active, Backlog and Someday stack down one page,
+and Done and Dropped fold at the end.
+
+A grip drag reorders a group. A drop on another group's header writes
+`status` and `order` in one note write. A drop on Done goes
+through `completeTask`, so `completed` and a repeat's next note land
+together, and leaving Done clears `completed`. A blocked deed shows a
+danger rail and the blocker's name, and keeps its drag. A link that
+reaches no note does not block; `vault:check` names it.
+
+The task editor gains a Status field for deeds, and Done there takes
+the tick's own path. Capture on Board makes a backlog deed. Settings
+gains a palette switch that both built-in lists share.
+
+Proof: `board.spec.ts` in both motion modes, the gallery switch states,
+and the board axe and 44pt scans. An emulator pass also restarted the app.

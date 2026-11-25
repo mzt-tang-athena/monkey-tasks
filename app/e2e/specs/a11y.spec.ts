@@ -1,7 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
-import { months, supplements, tabs, tomorrow, undated } from "../data";
+import { board, months, supplements, tabs, tomorrow, undated } from "../data";
 import { expectAbove, press, row, openMain } from "../locators";
 import { smallTargets } from "../targets";
 import { rgb, setTheme } from "../theme";
@@ -44,6 +44,19 @@ async function openPlanner(page: Page, mode: "day" | "week" | "month") {
 
 async function expectTargets(page: Page) {
   expect(await smallTargets(page)).toEqual([]);
+}
+
+/** The board seed, with the Board switched on through Settings. */
+async function openBoard(page: Page) {
+  await page.goto(`/?vault=${board.seed}`);
+  await expect(page.getByTestId("lists-toolbar")).toBeVisible();
+  await press(page, page.getByRole("button", { name: "list menu" }));
+  await press(page, page.getByRole("menuitem", { name: "Settings" }));
+  await press(page, page.getByRole("switch", { name: "Board" }));
+  await page.goBack();
+  await press(page, page.getByRole("tab", { name: board.tab, exact: true }));
+  await expect(page.getByTestId("board-header:active")).toBeVisible();
+  await expect(row(page, board.active.first)).toBeVisible();
 }
 
 /** The Journal tab at 360, on today's note. */
@@ -297,6 +310,11 @@ test.describe("touch targets", () => {
     await expectTargets(page);
   });
 
+  test("the Board", async ({ page }) => {
+    await openBoard(page);
+    await expectTargets(page);
+  });
+
   test("the month cell reaches 44 by 44 at 360pt", async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 640 });
     await openPlanner(page, "month");
@@ -517,6 +535,11 @@ test.describe("axe", () => {
   test("Lists", async ({ page }) => {
     await openLists(page);
     await scan(page, "lists");
+  });
+
+  test("the Board", async ({ page }) => {
+    await openBoard(page);
+    await scan(page, "board");
   });
 
   test("Planner in day mode", async ({ page }) => {

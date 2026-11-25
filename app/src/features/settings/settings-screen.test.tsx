@@ -220,7 +220,7 @@ describe("SettingsScreen", () => {
 
   it("switches the Today list off and on, and keeps the choice", () => {
     const first = mount();
-    const today = () => screen.getByRole("switch", { name: "Today" });
+    const today = () => screen.getByRole("switch", { name: "Today list" });
     expect(today().getAttribute("aria-checked")).toBe("true");
     expect(
       screen.getByText("Due today, with past tasks above them."),
@@ -240,5 +240,27 @@ describe("SettingsScreen", () => {
 
     expect(today().getAttribute("aria-checked")).toBe("true");
     expect(loadSettings().todayList).toBe("on");
+  });
+
+  it("switches the Board on and off, and keeps the choice", () => {
+    const first = mount();
+    const board = () => screen.getByRole("switch", { name: "Board" });
+    expect(board().getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByText("Deeds by status, after Main.")).toBeTruthy();
+
+    fireEvent.click(board());
+
+    expect(board().getAttribute("aria-checked")).toBe("true");
+    expect(loadSettings().boardList).toBe("on");
+    expect(globalThis.localStorage.getItem("monkey-tasks.board-list")).toBe("on");
+    first.unmount();
+
+    mount();
+    expect(board().getAttribute("aria-checked")).toBe("true");
+
+    fireEvent.click(board());
+
+    expect(board().getAttribute("aria-checked")).toBe("false");
+    expect(loadSettings().boardList).toBe("off");
   });
 });

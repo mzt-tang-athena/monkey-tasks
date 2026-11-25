@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
 import { SegmentedControl, type Segment } from "@/components/ui/segmented-control";
 import { SectionHeader } from "@/components/ui/section-header";
+import { Switch } from "@/components/ui/switch";
 import { ScrollEdge } from "@/components/motion/scroll-edge";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { useVault } from "@/lib/vault/vault-provider";
@@ -74,21 +75,29 @@ export default function SettingsScreen() {
   const [weekView, setWeekView] = useSetting("weekView");
   const [weekStart, setWeekStart] = useSetting("weekStart");
   const [todayList, setTodayList] = useSetting("todayList");
+  const [boardList, setBoardList] = useSetting("boardList");
   const vault = useVault();
 
   const version = appVersion();
   const channel = buildChannel();
   const root = vault.root ?? "Not granted";
 
-  // One row per optional built-in list. The Board joins this table when
-  // its ticket lands, with its own setting and the same switch shape.
+  // One row per optional built-in list. Off is the default, so a fresh
+  // install sees Main and the list notes alone until a switch turns on.
   const builtinRows = [
     {
       key: "today",
-      label: "Today",
+      label: "Today list",
       hint: "Due today, with past tasks above them.",
       on: todayList === "on",
-      toggle: () => setTodayList(todayList === "on" ? "off" : "on"),
+      change: (next: boolean) => setTodayList(next ? "on" : "off"),
+    },
+    {
+      key: "board",
+      label: "Board",
+      hint: "Deeds by status, after Main.",
+      on: boardList === "on",
+      change: (next: boolean) => setBoardList(next ? "on" : "off"),
     },
   ];
 
@@ -178,25 +187,18 @@ export default function SettingsScreen() {
             {builtinRows.map((row, at) => (
               <React.Fragment key={row.key}>
                 {at > 0 ? <Divider /> : null}
-                <Pressable
-                  role="switch"
-                  aria-checked={row.on}
-                  accessibilityLabel={row.label}
-                  accessibilityState={{ checked: row.on }}
-                  onPress={row.toggle}
-                  style={({ pressed }) => [
-                    styles.action,
-                    pressed && styles.pressed,
-                  ]}
-                >
+                <View style={styles.action}>
                   <View style={styles.rowText}>
                     <Text style={styles.actionLabel}>{row.label}</Text>
                     <Text style={styles.fieldHint}>{row.hint}</Text>
                   </View>
-                  {row.on ? (
-                    <Icon name="check" weight="fill" color="accent" />
-                  ) : null}
-                </Pressable>
+                  <Switch
+                    checked={row.on}
+                    label={row.label}
+                    onCheckedChange={row.change}
+                    testID={`builtin-switch:${row.key}`}
+                  />
+                </View>
               </React.Fragment>
             ))}
           </Section>

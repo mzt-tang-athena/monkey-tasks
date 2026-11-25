@@ -1,5 +1,5 @@
 import * as React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import Animated, {
   ReduceMotion,
@@ -16,6 +16,7 @@ import { taskRowFace } from "@/components/task-row-face";
 import { Overlay } from "@/components/ui/overlay-host";
 import {
   cardPosition,
+  hitZone,
   slotForY,
   slotIndexes,
   slotTops,
@@ -24,10 +25,11 @@ import {
 } from "@/lib/motion/drag-math";
 import { holds, motion } from "@/lib/motion/tokens";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
-import { radius, shadows, spacing, touchTarget, type Palette } from "@/theme/tokens";
+import { radius, shadows, spacing, touchTarget, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { createBridgeGuard, toJS } from "./internal/bridge";
 import { useArrowKeys } from "./internal/keys";
+import { markSurfaceDragging, nextSurfaceId } from "./drag-activity";
 import {
   DraggingContext,
   SessionContext,
@@ -35,10 +37,13 @@ import {
 } from "./internal/contexts";
 import { usePressCancel } from "./internal/press-cancel";
 import {
+  measureZones,
   send,
+  useRegistry,
   useSession,
   type Session,
   type SessionHandlers,
+  type ZoneEntry,
 } from "./internal/session";
 import { abandonSource, settleSession } from "./internal/source";
 import { withTouchAction } from "./internal/gesture";
@@ -75,6 +80,9 @@ export type ReorderEvent<P> = {
       reads the move again from them, because a tick's regroup or a step
       can change the group under a held drag. A step carries none. */
   keys: readonly string[];
+  /** The drop zone the finger let go over, when it was over one. The
+      Board reads it as a status move instead of a reorder. */
+  zone?: string;
 };
 
 type ReorderHandlers = SessionHandlers & {
@@ -85,6 +93,7 @@ type ReorderHandlers = SessionHandlers & {
     from: number,
     to: number,
     keys: readonly string[],
+    zone: number | null,
   ) => void;
 };
 
@@ -208,6 +217,13 @@ export function createReorderSurface<P>() {
     React.useLayoutEffect(() => {
       latest.current = onReorder;
     });
+    // The page under a lifted row keeps its place. The board and the
+    // lists each own a surface, so the mark names this one.
+    const [surface] = React.useState(nextSurfaceId);
+    React.useEffect(() => {
+      markSurfaceDragging(surface, active !== null);
+      return () => markSurfaceDragging(surface, false);
+    }, [active, surface]);
     // A step from the grip's screen reader actions or arrow keys takes
     // the same event a drop writes, with no pickup to settle.
     const move = React.useCallback<Move>(
@@ -255,7 +271,7 @@ export function createReorderSurface<P>() {
         setActive(null);
         scheduleOnUI(clearShifts, self.ui.generation, shifts, generation);
       },
-      reorder(generation, source, group, from, to, keys) {
+      reorder(generation, source, group, from, to, keys, zone) {
         if (!guard.settle(generation)) {
           return;
         }
@@ -267,7 +283,15 @@ export function createReorderSurface<P>() {
           return;
         }
         recordBreadcrumb("drag-drop", `${group} ${from}->${to}`);
-        latest.current({ payload, group, from, to, keys });
+        const target = zone == null ? undefined : (self.targets.get(zone) as string | undefined);
+        latest.current({
+          payload,
+          group,
+          from,
+          to,
+          keys,
+          ...(target == null ? {} : { zone: target }),
+        });
       },
     }), pressCancel);
     React.useEffect(() => () => void guard.close(), [guard]);
@@ -418,6 +442,58 @@ export function createReorderSurface<P>() {
     );
   }
 
+  /**
+   * A drop zone: the finger lets go over it instead of between rows.
+   * The Board puts one on each status header, so a card dropped there
+   * moves status rather than place. The mark names the destination
+   * while the finger is over it.
+   */
+  function Zone({
+    target,
+    label,
+    style,
+    testID,
+    children,
+  }: {
+    target: string;
+    label: string;
+    style?: StyleProp<ViewStyle>;
+    testID?: string;
+    children: React.ReactNode;
+  }) {
+    const { styles } = useThemedStyles(makeStyles);
+    const session = useSessionContext<ReorderHandlers>("ListReorder.Zone");
+    const [id] = React.useState(session.nextId);
+    const ref = useAnimatedRef<View>();
+    React.useLayoutEffect(() => {
+      session.targets.set(id, target);
+    });
+    React.useEffect(() => () => void session.targets.delete(id), [session, id]);
+    const entry = React.useMemo<ZoneEntry>(
+      () => ({ ref, clip: -1, grid: null }),
+      [ref],
+    );
+    useRegistry(session.ui.zones, id, entry);
+    const shown = useAnimatedStyle(() => ({
+      opacity: withTiming(session.ui.hover.value?.id === id ? 1 : 0, {
+        duration: motion.ms.tap,
+        reduceMotion: ReduceMotion.System,
+      }),
+    }));
+    return (
+      <Animated.View ref={ref} collapsable={false} testID={testID} style={style}>
+        {children}
+        <Animated.View
+          pointerEvents="none"
+          testID={testID == null ? undefined : `${testID}-target`}
+          style={[styles.zoneMark, shown]}
+        >
+          <Text style={styles.zoneLabel}>{label}</Text>
+        </Animated.View>
+      </Animated.View>
+    );
+  }
+
   function Grip({ testID, label }: { testID?: string; label: string }) {
     const { styles } = useThemedStyles(makeStyles);
     const item = useItemContext("ListReorder.Grip");
@@ -502,6 +578,8 @@ export function createReorderSurface<P>() {
     const keys = useSharedValue<string[]>([]);
     const rows = useSharedValue<RowSpan[]>(none);
     const indexes = useSharedValue<number[]>([]);
+    // The finger is over a drop zone, so no slot preview runs.
+    const inZone = useSharedValue(false);
     const { touchAction } = holds.grip;
 
     const gesture = usePanGesture(
@@ -551,6 +629,9 @@ export function createReorderSurface<P>() {
           indexes.set(taken.indexes);
           from.set(at);
           to.set(at);
+          inZone.set(false);
+          ui.hover.set(null);
+          measureZones(ui, generation);
           ui.x.set(event.absoluteX);
           ui.y.set(event.absoluteY);
           ui.lift.set(
@@ -566,6 +647,40 @@ export function createReorderSurface<P>() {
           }
           ui.x.set(event.absoluteX);
           ui.y.set(event.absoluteY);
+          const rects = ui.rects.value;
+          const hit = hitZone(
+            event.absoluteX,
+            event.absoluteY,
+            rects.zones,
+            rects.grids,
+            rects.clips,
+          );
+          if (hit !== null) {
+            // Over a zone: no row moves, and the zone's mark shows.
+            if (!inZone.value) {
+              inZone.set(true);
+              state.shifts.set({});
+              state.slots.set({});
+            }
+            const shown = ui.hover.value;
+            if (
+              shown == null ||
+              shown.id !== hit.id ||
+              shown.cell !== hit.cell
+            ) {
+              ui.hover.set(hit);
+            }
+            return;
+          }
+          if (inZone.value) {
+            // Off the zone: the next slot math must run even when it
+            // lands where the pickup started.
+            inZone.set(false);
+            to.set(-1);
+          }
+          if (ui.hover.value !== null) {
+            ui.hover.set(null);
+          }
           const list = rows.value;
           if (list.length === 0) {
             return;
@@ -611,6 +726,16 @@ export function createReorderSurface<P>() {
             canceled: event.canceled,
           });
           if (effect === "drop") {
+            const rects = ui.rects.value;
+            const hit = hitZone(
+              ui.x.value,
+              ui.y.value,
+              rects.zones,
+              rects.grids,
+              rects.clips,
+            );
+            ui.hover.set(null);
+            inZone.set(false);
             toJS(
               session.handlers.reorder,
               ui.generation.value,
@@ -619,9 +744,12 @@ export function createReorderSurface<P>() {
               from.value,
               to.value,
               keys.value,
+              hit == null ? null : hit.id,
             );
             settleSession(ui);
           } else if (effect === "cancel") {
+            ui.hover.set(null);
+            inZone.set(false);
             toJS(session.handlers.cancel, ui.generation.value);
             settleSession(ui);
           }
@@ -629,6 +757,8 @@ export function createReorderSurface<P>() {
         onFinalize: () => {
           "worklet";
           if (send(ui, { type: "finalize", source }) === "cancel") {
+            ui.hover.set(null);
+            inZone.set(false);
             toJS(session.handlers.cancel, ui.generation.value);
             settleSession(ui);
           }
@@ -652,7 +782,7 @@ export function createReorderSurface<P>() {
     return React.useContext(DraggingContext);
   }
 
-  return { Root, Item, Grip, useDragging };
+  return { Root, Item, Zone, Grip, useDragging };
 }
 
 /** The ghost under the finger. It renders in the overlay, outside the
@@ -708,6 +838,25 @@ const makeStyles = (colors: Palette) => ({
       height: touchTarget,
       alignItems: "center",
       justifyContent: "center",
+    },
+    zoneMark: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: radius,
+      borderWidth: 1.5,
+      borderStyle: "dashed",
+      borderColor: colors.accent,
+      backgroundColor: colors.accentSoft,
+    },
+    zoneLabel: {
+      ...type.control,
+      fontWeight: "600",
+      color: colors.accent,
     },
     gripDots: {
       gap: 3,

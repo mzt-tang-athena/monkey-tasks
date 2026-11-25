@@ -19,8 +19,13 @@ export function captureContent(
   listName?: string,
   created = nowStamp(),
   references: string[] = [],
+  /** A deed's status. Capture on Board writes backlog. */
+  status?: string,
 ): string {
   const lines = ["---", 'kind: "[[tasks]]"', `created: ${created}`];
+  if (status) {
+    lines.push(`status: ${serializeValue(status)}`);
+  }
   if (parsed.due) {
     lines.push(`due: ${parsed.due}`);
   }
@@ -61,6 +66,10 @@ export function captureDraft(
 } {
   const due = preselectedDue && !parsed.due ? preselectedDue : parsed.due;
   const listName = target.kind === "list" ? target.name : undefined;
+  // Board capture makes a backlog deed, so the note lands in Backlog.
+  // Without a status Main would show it instead (ADR
+  // 20261125-deed-board-is-the-kanban-list).
+  const status = target.kind === "board" ? "[[backlog]]" : undefined;
   const created = nowStamp();
   const recurrence = ruleFor({ ...parsed, due });
   const fileName = `${safeFileName(parsed.name)}.md`;
@@ -69,6 +78,7 @@ export function captureDraft(
     listName,
     created,
     references,
+    status,
   );
   return {
     name: parsed.name,
@@ -79,6 +89,7 @@ export function captureDraft(
       kind: "[[tasks]]",
       created,
       "alert weight": "harsh",
+      ...(status ? { status } : {}),
       ...(due ? { due } : {}),
       ...(listName ? { list: `[[${listName}]]` } : {}),
       ...(parsed.reminders?.length ? { reminders: parsed.reminders } : {}),

@@ -14,6 +14,9 @@ export function targetLabel(target: CaptureTarget): string {
   if (target.kind === "today") {
     return "Today";
   }
+  if (target.kind === "board") {
+    return "Board";
+  }
   return target.name;
 }
 

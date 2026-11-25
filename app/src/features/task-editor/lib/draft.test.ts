@@ -91,6 +91,7 @@ describe("draftOf", () => {
 
     expect(draftOf(task)).toEqual({
       name: "Call Mum: Sunday",
+      status: null,
       due: "2026-10-26",
       recurrence: "FREQ=WEEKLY",
       list: "Focus",
@@ -100,9 +101,23 @@ describe("draftOf", () => {
     });
   });
 
+  it("seeds a deed's status", () => {
+    const task = item({
+      data: {
+        kind: "[[tasks]]",
+        status: "[[backlog]]",
+        created: "2026-10-20",
+        "alert weight": "harsh",
+      },
+    });
+
+    expect(draftOf(task).status).toBe("[[backlog]]");
+  });
+
   it("falls back to the file name and empty fields", () => {
     expect(draftOf(item())).toEqual({
       name: "Call",
+      status: null,
       due: null,
       recurrence: null,
       list: null,

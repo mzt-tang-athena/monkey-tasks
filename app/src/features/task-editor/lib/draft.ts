@@ -5,6 +5,7 @@ import type { TaskEdit, TaskItem } from "@/types/task";
 export function draftOf(task: TaskItem): TaskEdit {
   return {
     name: task.data?.title ?? task.name,
+    status: task.data?.status ?? null,
     due: task.data?.due ?? null,
     recurrence: task.data?.recurrence ?? null,
     list: task.data?.list == null ? null : listName(task.data.list),

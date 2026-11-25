@@ -52,6 +52,7 @@ import { ListPicker } from "./list-picker";
 import { NoteEditor } from "./note-editor";
 import { ReferenceTile } from "./reference-tile";
 import { RepeatPicker } from "./repeat-picker";
+import { StatusPicker } from "./status-picker";
 
 // A browser textarea holds two rows by default. The title follows its
 // text instead, as a native multiline input does.
@@ -61,7 +62,14 @@ const autoSizedTitle = Platform.select({
 });
 
 /** The sheet's open pickers: one at a time, over the editor. */
-export type Picker = "due" | "repeat" | "list" | "alerts" | "reference" | null;
+export type Picker =
+  | "status"
+  | "due"
+  | "repeat"
+  | "list"
+  | "alerts"
+  | "reference"
+  | null;
 
 /**
  * The task editor's sheet: the list, the menu, the title, then the
@@ -162,7 +170,9 @@ export function EditorSheet({
 
   const showing = PROPERTIES.filter((property) => property.isSet(draft));
   const missing = PROPERTIES.filter(
-    (property) => property.many || !property.isSet(draft),
+    (property) =>
+      !property.onlyWhenSet &&
+      (property.many || !property.isSet(draft)),
   );
 
   return (
@@ -324,6 +334,29 @@ export function EditorSheet({
           },
         ]}
       />
+
+      <PickerSheet
+        open={picker === "status"}
+        onClose={() => setPicker(null)}
+        title="Status"
+      >
+        <StatusPicker
+          current={draft.status ?? null}
+          onPick={(status) => {
+            // Done is the tick's path, so `completed` and a repeat's
+            // next note stay in one write.
+            if (status === "[[done]]") {
+              if (!done) {
+                celebrate();
+                onToggle();
+              }
+              return;
+            }
+            onChange({ status });
+          }}
+          onClose={() => setPicker(null)}
+        />
+      </PickerSheet>
 
       <PickerSheet
         open={picker === "due"}

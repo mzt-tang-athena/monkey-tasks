@@ -136,4 +136,14 @@ describe("month-end rules (ticket 0066)", () => {
 
     expect(draft.body).toBe("\n## Reference\n\n[[oatmeal]]\n");
   });
+
+  it("writes a backlog deed when the capture is on Board", () => {
+    const draft = captureDraft({ name: "ship the board" }, { kind: "board" });
+
+    expect(draft.data.status).toBe("[[backlog]]");
+    expect(draft.content).toContain('status: "[[backlog]]"');
+    // Board stores no list and no date of its own.
+    expect(draft.content).not.toContain("list:");
+    expect(draft.content).not.toContain("due:");
+  });
 });

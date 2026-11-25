@@ -35,6 +35,7 @@ function TaskRowBase({
   /** "under" puts the time below the name; "right" adds a planner gutter. */
   timeAlign = "under",
   copy = false,
+  blockedBy,
 }: {
   task: TaskItem;
   onToggle?: (task: TaskItem) => void;
@@ -48,6 +49,8 @@ function TaskRowBase({
   /** A still copy of a live row: a swipe preview or a drag ghost. A
       copy carries no test id, so the id finds the live row only. */
   copy?: boolean;
+  /** The deed's first open blocker, named under the row. */
+  blockedBy?: string | null;
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const { faceStyles } = useTaskRowFace();
@@ -128,7 +131,9 @@ function TaskRowBase({
         disabled={onToggle == null}
         onHoverIn={() => setHot(true)}
         onHoverOut={() => setHot(false)}
-        accessibilityLabel={task.name}
+        accessibilityLabel={
+          blockedBy == null ? task.name : `${task.name}, blocked by ${blockedBy}`
+        }
         accessibilityRole="checkbox"
         aria-checked={done}
       >
@@ -168,7 +173,7 @@ function TaskRowBase({
             ]}
             onPress={() => onOpen(task)}
             accessibilityRole="button"
-            accessibilityLabel={taskRowLabel(task, done)}
+            accessibilityLabel={taskRowLabel(task, done, blockedBy)}
           >
             {content}
           </Pressable>
@@ -190,6 +195,7 @@ function TaskRowBase({
           timeAlign={timeAlign}
           toggle={toggle}
           renderText={renderText}
+          blockedBy={blockedBy}
         />
       </View>
       {grip}

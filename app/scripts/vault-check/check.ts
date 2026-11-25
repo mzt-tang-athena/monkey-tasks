@@ -17,6 +17,7 @@ import {
   taskFrontmatter,
   taskWarnings,
   validateNote,
+  type TaskFrontmatter,
 } from "@monkey-tasks/schemas";
 
 export type FindingKind =
@@ -141,7 +142,11 @@ function sameValue(
   );
 }
 
-function checkNote(file: string, text: string): Finding[] {
+function checkNote(
+  file: string,
+  text: string,
+  names: ReadonlySet<string>,
+): Finding[] {
   const findings: Finding[] = [];
   const block = frontmatterBlock(text);
   if (block == null) return findings;
@@ -185,6 +190,21 @@ function checkNote(file: string, text: string): Finding[] {
         kind: "warning",
         reason: warning,
       });
+    }
+    // A `blocked by` link that reaches no note does not block, and the
+    // board would read the deed as ready. The checker names the link,
+    // so a typo does not hide a wait.
+    const deed = checked.data as TaskFrontmatter;
+    for (const link of deed["blocked by"] ?? []) {
+      const name = linkTarget(link);
+      if (!names.has(name.toLowerCase())) {
+        findings.push({
+          file,
+          line: lineOfWarning(block, "blocked by "),
+          kind: "warning",
+          reason: `blocked by ${link} reaches no note`,
+        });
+      }
     }
   }
 
@@ -255,12 +275,35 @@ function previousKey(block: string, index: number): string | null {
   return null;
 }
 
+/** The note name a wikilink points at: no brackets, alias or heading,
+    and the last path segment. */
+function linkTarget(link: string): string {
+  const bare = link
+    .trim()
+    .replace(/^\[\[/, "")
+    .replace(/\]\]$/, "")
+    .split("|")[0]
+    .split("#")[0]
+    .trim();
+  return bare.split("/").pop() ?? bare;
+}
+
+/** A note's file name without its extension, lowercased: what a
+    wikilink may point at. */
+function noteName(path: string): string {
+  const base = path.split("/").pop() ?? path;
+  return base.replace(/\.md$/, "").toLowerCase();
+}
+
 /** Walk `vaultDir` and report every finding. */
 export function checkVault(vaultDir: string): VaultCheck {
   const files = walk(vaultDir);
+  const names = new Set(files.map(noteName));
   const findings: Finding[] = [];
   for (const file of files) {
-    findings.push(...checkNote(file, readFileSync(join(vaultDir, file), "utf8")));
+    findings.push(
+      ...checkNote(file, readFileSync(join(vaultDir, file), "utf8"), names),
+    );
   }
   return { notes: files.length, findings };
 }
