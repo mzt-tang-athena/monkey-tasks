@@ -18,6 +18,7 @@ import { VaultPrompt } from "@/components/ui/vault-prompt";
 import { useStableCallback } from "@/hooks/use-stable-callback";
 import { useTaskEditor } from "@/hooks/use-task-editor";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
+import { markOnce, rowsReady } from "@/lib/startup-marks";
 import { toggleCompleted, useCompletedOpen } from "@/lib/folded-completed";
 import { BOARD_LIST, TODAY_LIST } from "@/lib/list-tabs";
 import { useStoreMeta } from "@/stores/tasks/task-state";
@@ -55,6 +56,12 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const { styles } = useThemedStyles(makeStyles);
   const editor = useTaskEditor();
   const { rootUri, status, readError } = useStoreMeta();
+  markOnce("lists-render");
+  React.useEffect(() => {
+    if (status === "ready") {
+      rowsReady();
+    }
+  }, [status]);
   const toggleTask = useToggleTask();
   const clearCompleted = useClearCompleted();
   const reorderSection = useReorderSection();

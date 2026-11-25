@@ -2,6 +2,7 @@ import { listFrontmatter, validateNote } from "@monkey-tasks/schemas";
 import type { VaultAdapter } from "@/lib/vault/adapter";
 import { formatIssues } from "@/utils/schema-errors";
 import type { BrokenList, ListItem } from "@/types/task";
+import { timedAsync } from "@/lib/startup-marks";
 
 /** What the Lists folder holds: the usable tabs and the notes to fix. */
 export type ListRead = {
@@ -41,17 +42,19 @@ export async function loadLists(
   adapter: VaultAdapter,
   tasksDirUri: string,
 ): Promise<ListRead> {
-  const folder = await adapter.findFolder(tasksDirUri, "Lists");
+  const folder = await timedAsync("findFolder", () =>
+    adapter.findFolder(tasksDirUri, "Lists"),
+  );
   if (!folder) {
     return { lists: [], broken: [] };
   }
-  const entries = await adapter.list(folder);
+  const entries = await timedAsync("list", () => adapter.list(folder));
   const files = entries.filter(
     (entry) => !entry.isFolder && entry.name.endsWith(".md"),
   );
   const settled = await Promise.allSettled(
     files.map(async (file): Promise<ListItem | BrokenList> => {
-      const text = await adapter.read(file.uri);
+      const text = await timedAsync("read", () => adapter.read(file.uri));
       const { name, errors } = parseListNote(file.name, text);
       const title = file.name.replace(/\.md$/, "");
       return name == null
