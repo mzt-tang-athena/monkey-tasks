@@ -171,7 +171,12 @@ done
 "$drive" note "Tasks/$gone.md" gone-after-retry >/dev/null
 [[ $(in_tray "$gone") -eq 0 ]] || fail "$gone stayed in the tray after the retry"
 
-"$drive" restart >/dev/null
+# The failure banner and the repair banner can push every row below the
+# fold, and the restart waits for a visible one. The app is up either
+# way, so the journey scrolls to a row it knows.
+adb shell cmd statusbar collapse
+"$drive" restart >/dev/null || true
+"$drive" scroll-to "task-row:$later" down >/dev/null || true
 "$drive" shot app-failure-list >/dev/null
 "$drive" log >/dev/null
 echo "pass: Done, Done on a repeating task${reschedule:+, $reschedule}, and a failed press, each with the app killed"
