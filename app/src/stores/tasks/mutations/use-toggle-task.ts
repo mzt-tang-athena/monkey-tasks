@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { taskIsDone } from "@monkey-tasks/schemas";
+import { clearDoneFailure } from "../alert-actions";
 import { useVault } from "@/lib/vault/vault-provider";
 import { nowStamp } from "@/utils/dates";
 import type { TaskItem } from "@/types/task";
@@ -284,9 +285,16 @@ export function useToggleTask(): (task: TaskItem) => Promise<void> {
         current.data != null && taskIsDone(current.data) ? "open" : "done";
       const successorId =
         to === "done" && nextDue(current) != null ? pendingId() : undefined;
-      await mutateAsync({ id: current.id, to, successorId }).catch(
-        () => undefined,
-      );
+      const applied = await mutateAsync({
+        id: current.id,
+        to,
+        successorId,
+      }).catch(() => undefined);
+      // A Done press that failed, then a tick in the list: the failure
+      // it reported is now done, so its record and notice go.
+      if (applied != null && to === "done") {
+        clearDoneFailure(current.uri);
+      }
     },
     [client, root, mutateAsync],
   );

@@ -83,10 +83,18 @@ vi.mock("@/lib/notifications", () => ({
 
 import { MEMORY_ROOT, createMemoryVault } from "@/lib/vault/adapters/memory";
 import { alertRingId } from "@/lib/alerts/rings";
-import { loadActionFailures } from "@/lib/alerts/action-failures";
+import {
+  loadActionFailures,
+  recordActionFailure,
+} from "@/lib/alerts/action-failures";
 import { sharedFakeAppFiles } from "@/testing/fake-app-files";
 import { parseStoredDate } from "@/utils/dates";
-import { performAlertPress, pressOf, type AlertPress } from "./alert-actions";
+import {
+  clearDoneFailure,
+  performAlertPress,
+  pressOf,
+  type AlertPress,
+} from "./alert-actions";
 import { syncReminders } from "./reminder-sync";
 import { taskFromText } from "./task-notes";
 
@@ -372,16 +380,70 @@ describe("a failed write", () => {
     expect(world.os.size).toBe(0);
   });
 
-  it("does not run the same failed press again until it is retried", async () => {
+  it("drops the claim, so a second press on the same reminder acts", async () => {
     const vault = createMemoryVault({ "Tasks/Call Mum.md": plain });
     vault.hooks.failNext("write", "Call Mum.md");
     const same = press("Call Mum", { kind: "done" }, "ring-1|done");
 
     await performAlertPress(vault, same);
+    expect(vault.hooks.read("Tasks/Call Mum.md")).toBe(plain);
+
     await performAlertPress(vault, same);
 
-    expect(vault.hooks.read("Tasks/Call Mum.md")).toBe(plain);
+    expect(
+      frontmatter(vault.hooks.read("Tasks/Call Mum.md") ?? "").completed,
+    ).toBe("2026-11-25T10:00:00");
     expect(world.posted).toHaveLength(1);
+    expect(loadActionFailures()).toEqual([]);
+  });
+
+  it("still acts once when a delivered press arrives twice and lands", async () => {
+    const vault = createMemoryVault({ "Tasks/Stretch.md": daily });
+    const same = press("Stretch", { kind: "done" }, "ring-1|done");
+
+    await performAlertPress(vault, same);
+    await performAlertPress(vault, same);
+
+    expect(Object.keys(vault.hooks.files())).toHaveLength(2);
+  });
+});
+
+describe("clearDoneFailure", () => {
+  const uri = `${TASKS}/Call Mum.md`;
+
+  beforeEach(() => {
+    recordActionFailure({
+      id: `${uri}|done`,
+      uri,
+      name: "Call Mum",
+      action: { kind: "done" },
+      message: "disk full",
+      at: 1,
+    });
+    recordActionFailure({
+      id: `${uri}|reschedule`,
+      uri,
+      name: "Call Mum",
+      action: { kind: "reschedule", target: "2026-11-26T09:00" },
+      message: "disk full",
+      at: 1,
+    });
+  });
+
+  it("drops the Done record and its notice, and keeps a Reschedule one", () => {
+    clearDoneFailure(uri);
+
+    expect(loadActionFailures().map((entry) => entry.id)).toEqual([
+      `${uri}|reschedule`,
+    ]);
+    expect(world.cleared).toEqual([`${uri}|done`]);
+  });
+
+  it("does nothing for another task", () => {
+    clearDoneFailure(`${TASKS}/Stretch.md`);
+
+    expect(loadActionFailures()).toHaveLength(2);
+    expect(world.cleared).toEqual([]);
   });
 });
 

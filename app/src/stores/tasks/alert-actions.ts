@@ -3,10 +3,11 @@ import type { AlertAction } from "@/lib/alerts/actions";
 import { actionLabel, buttonAction } from "@/lib/alerts/actions";
 import {
   clearActionFailure,
+  clearActionFailuresFor,
   failureId,
   recordActionFailure,
 } from "@/lib/alerts/action-failures";
-import { claimPress } from "@/lib/alerts/handled";
+import { claimPress, releasePress } from "@/lib/alerts/handled";
 import {
   clearActionFailureNotice,
   postActionFailure,
@@ -61,6 +62,17 @@ export function pressOf(
         name: response.name,
         key: response.key,
       };
+}
+
+/**
+ * The app ticked the task itself, so a Done press that failed is spent.
+ * Its record and its notice go, or the app would report a failure that
+ * no longer exists.
+ */
+export function clearDoneFailure(uri: string): void {
+  for (const id of clearActionFailuresFor(uri, "done")) {
+    void clearActionFailureNotice(id).catch(() => undefined);
+  }
 }
 
 /** What a press changed. Absent when the note already held the state. */
@@ -185,7 +197,8 @@ export function performAlertPress(
   options: { retry?: boolean } = {},
 ): Promise<Applied | null> {
   return inTurn(async () => {
-    if (!options.retry && !claimPress(press.key)) {
+    const claimed = !options.retry && claimPress(press.key);
+    if (!options.retry && !claimed) {
       return null;
     }
     const id = failureId(press.uri, press.action);
@@ -196,6 +209,11 @@ export function performAlertPress(
       await moveAlarms(applied, press);
       return applied;
     } catch (error) {
+      // The press did not land, so its claim goes: a second press on
+      // the same reminder must act, not fall through as a repeat.
+      if (claimed) {
+        releasePress(press.key);
+      }
       await reportFailure(press, error);
       return null;
     }

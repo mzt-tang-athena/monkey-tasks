@@ -1,4 +1,4 @@
-# 20261125. A reminder offers Done, Later and Tomorrow
+# A reminder offers Done, Later and Tomorrow
 
 - **Status:** accepted
 - **Date:** 2026-11-25

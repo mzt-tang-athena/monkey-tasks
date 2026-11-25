@@ -63,10 +63,43 @@ export function loadActionFailures(): ActionFailure[] {
 
 /** One failure per task and action: a later one replaces it. */
 export function recordActionFailure(failure: ActionFailure): boolean {
-  const others = loadActionFailures().filter((entry) => entry.id !== failure.id);
+  const others = loadActionFailures().filter(
+    (entry) =>
+      entry.id !== failure.id &&
+      !(
+        entry.uri === failure.uri &&
+        entry.action.kind === failure.action.kind
+      ),
+  );
   const kept = writeJson(FILE_NAME, WEB_KEY, [...others, failure]);
   changed();
   return kept;
+}
+
+/**
+ * Drop one task's records for one action, and name them. The app
+ * itself may have done what a press could not, and a stale line would
+ * then say otherwise.
+ */
+export function clearActionFailuresFor(
+  uri: string,
+  kind: AlertAction["kind"],
+): string[] {
+  const all = loadActionFailures();
+  const gone = all.filter(
+    (entry) => entry.uri === uri && entry.action.kind === kind,
+  );
+  if (gone.length === 0) {
+    return [];
+  }
+  const kept = new Set(gone);
+  writeJson(
+    FILE_NAME,
+    WEB_KEY,
+    all.filter((entry) => !kept.has(entry)),
+  );
+  changed();
+  return gone.map((entry) => entry.id);
 }
 
 export function clearActionFailure(id: string): void {

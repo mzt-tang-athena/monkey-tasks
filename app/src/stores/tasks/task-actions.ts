@@ -106,7 +106,9 @@ export type CompleteOptions = {
 };
 
 /**
- * Complete a task as the list's tick does. The next occurrence comes
+ * Complete a task as the list's tick does. The write checks the file
+ * still holds the text it was read from, because a button and a tick
+ * can reach the same note from two queues. The next occurrence comes
  * first: a failed create leaves the series as it was. A failed
  * completion takes the new note back, so the worst case is two open
  * occurrences, never a lost series (ADR 0027).
@@ -121,12 +123,14 @@ export async function completeTask(
     status: statusFor(before, "done"),
   });
   const due = options.spawn ? nextDue(before) : null;
+  const writeCompletion = () =>
+    writeNoteIfUnchanged(adapter, before.uri, before.text, after.text);
   if (due == null) {
-    await adapter.write(before.uri, after.text);
+    await writeCompletion();
     return { before, after };
   }
   if (options.kept != null) {
-    await adapter.write(before.uri, after.text);
+    await writeCompletion();
     return { before, after, successor: options.kept };
   }
   const input = spawnInput(before, due);
@@ -147,7 +151,7 @@ export async function completeTask(
     created.text,
   );
   try {
-    await adapter.write(before.uri, after.text);
+    await writeCompletion();
   } catch (error) {
     try {
       await adapter.remove(created.uri);

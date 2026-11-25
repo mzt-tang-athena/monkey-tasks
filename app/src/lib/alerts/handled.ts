@@ -35,3 +35,16 @@ export function claimPress(key: string, now: number = Date.now()): boolean {
   writeJson(FILE_NAME, WEB_KEY, handled);
   return true;
 }
+
+/**
+ * Give a claim back, after the press it named did not land. A press
+ * that failed is not done, so the same button must still act.
+ */
+export function releasePress(key: string, now: number = Date.now()): void {
+  const handled = load(now);
+  if (handled[key] == null) {
+    return;
+  }
+  delete handled[key];
+  writeJson(FILE_NAME, WEB_KEY, handled);
+}

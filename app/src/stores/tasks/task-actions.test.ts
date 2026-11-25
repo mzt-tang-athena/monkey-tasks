@@ -145,6 +145,33 @@ describe("completeTask", () => {
     expect(vault.hooks.read("Tasks/Call Mum.md")).toBe(plain);
   });
 
+  it("keeps a write another app made after the read", async () => {
+    const vault = createMemoryVault({ "Tasks/Call Mum.md": plain });
+    const before = read(vault, "Call Mum.md");
+    const elsewhere = `${plain}Edited elsewhere.\n`;
+    vault.hooks.write("Tasks/Call Mum.md", elsewhere);
+
+    await expect(
+      completeTask(vault, before, { spawn: true, taken: new Set() }),
+    ).rejects.toBeInstanceOf(NoteChangedError);
+
+    expect(vault.hooks.read("Tasks/Call Mum.md")).toBe(elsewhere);
+  });
+
+  it("keeps a write another app made while the next note was made", async () => {
+    const vault = createMemoryVault({ "Tasks/Stretch.md": daily });
+    const before = read(vault, "Stretch.md");
+    const elsewhere = `${daily}Edited elsewhere.\n`;
+    vault.hooks.write("Tasks/Stretch.md", elsewhere);
+
+    await expect(
+      completeTask(vault, before, { spawn: true, taken: new Set() }),
+    ).rejects.toBeInstanceOf(NoteChangedError);
+
+    expect(vault.hooks.read("Tasks/Stretch.md")).toBe(elsewhere);
+    expect(Object.keys(vault.hooks.files())).toEqual(["Tasks/Stretch.md"]);
+  });
+
   it("takes the next note back when the completion fails", async () => {
     const vault = createMemoryVault({ "Tasks/Stretch.md": daily });
     vault.hooks.failNext("write", "Stretch.md");

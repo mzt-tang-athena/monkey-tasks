@@ -1,4 +1,4 @@
-# 20261125. A reminder's buttons run in a background task
+# A reminder's buttons run in a background task
 
 - **Status:** accepted
 - **Date:** 2026-11-25
@@ -31,6 +31,10 @@ is open.
 - A press acts once. A file records each press.
 - Android can hand one press to the task and to the open app. It can
   also replay a press later.
+- A press whose write fails gives its record back. A mark that stayed
+  would make the same button do nothing the second time, and a button
+  must act. Two copies of one failed press then try again, and both
+  fail the same way.
 - A press that fails leaves the note and the reminder as they were.
   It posts a notification and keeps a record.
 - The app lists the record when it opens, with a Retry.
