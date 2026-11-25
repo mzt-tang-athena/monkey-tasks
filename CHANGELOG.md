@@ -22,6 +22,17 @@ fails a bullet that wraps or runs past 64 characters.
 - Capture on Today dates the task today.
 - The Inbox tab drops its title and keeps the note count.
 
+### Reminders
+
+- A reminder has three buttons: Done, Later, Tomorrow.
+- They work with the app closed or killed.
+- Done ticks the task, and a repeat makes its next note.
+- Later moves it an hour on. Tomorrow moves it to 09:00.
+- Each one moves the due date and the reminder with it.
+- A press that cannot save says so in a notification.
+- The app lists a failed press, and can retry it.
+- This build adds a native module: install a new APK.
+
 ## 1.3.0 - 2026-11-25
 
 ### Command pane

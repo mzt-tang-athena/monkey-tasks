@@ -6,6 +6,8 @@ import {
 } from "expo-notifications";
 import type { AlertWeight } from "@monkey-tasks/schemas";
 import type { AlertRing } from "@/lib/alerts/rings";
+import { DONE_BUTTON } from "@/lib/alerts/actions";
+import { RESCHEDULE_CHOICES, type ButtonSet } from "@/lib/alerts/choices";
 
 /**
  * The phone's alarms. The web build takes `notifications.web.ts`
@@ -18,16 +20,34 @@ export type RingData = {
   base: number;
   step: number;
   weight: AlertWeight;
+  /** Which buttons the ring carries. */
+  buttons: ButtonSet;
 };
 
 export type RingNotification = { id: string; data: RingData | null };
 
-export type AlertResponse = { uri: string; base?: number };
+/**
+ * A tap on a reminder. `button` is the identifier of a Done or
+ * Reschedule button, absent for a tap on the notification itself. `key`
+ * names the press, so one press acts once.
+ */
+export type AlertResponse = {
+  uri: string;
+  base?: number;
+  button?: string;
+  /** The notification's title: the task's name. */
+  name: string;
+  key: string;
+};
 
 export type AlertResponseSubscription = { remove(): void };
 
 const HARSH_CHANNEL = "reminders-harsh";
 const QUIET_CHANNEL = "reminders-quiet";
+// A category identifier holds no ":" and no "-".
+const REMINDER_CATEGORY = "reminder";
+const DONE_CATEGORY = "reminderdone";
+const FAILURE_PREFIX = "action-failed:";
 // Android freezes a channel's settings at creation, so the old one is
 // deleted and never reused.
 const OLD_CHANNEL = "reminders";
@@ -67,7 +87,25 @@ export function ensureChannels(): Promise<void> {
   return channels;
 }
 
+async function createCategory(): Promise<void> {
+  // The buttons stay in the background: a press from a killed app runs
+  // the background task and never opens the app. A tap on the
+  // notification itself still opens it.
+  const options = { opensAppToForeground: false };
+  const done = { identifier: DONE_BUTTON, buttonTitle: "Done", options };
+  await Notifications.setNotificationCategoryAsync(REMINDER_CATEGORY, [
+    done,
+    ...RESCHEDULE_CHOICES.map((choice) => ({
+      identifier: choice.id,
+      buttonTitle: choice.title,
+      options,
+    })),
+  ]);
+  await Notifications.setNotificationCategoryAsync(DONE_CATEGORY, [done]);
+}
+
 async function createChannels(): Promise<void> {
+  await createCategory();
   await Notifications.deleteNotificationChannelAsync(OLD_CHANNEL);
   await Notifications.setNotificationChannelAsync(HARSH_CHANNEL, {
     name: "Harsh reminders",
@@ -113,7 +151,10 @@ export async function scheduleRing(ring: AlertRing): Promise<string> {
         weight: ring.weight,
         base: ring.base,
         step: ring.step,
+        buttons: ring.buttons,
       },
+      categoryIdentifier:
+        ring.buttons === "full" ? REMINDER_CATEGORY : DONE_CATEGORY,
       sticky: harsh,
     },
     trigger: {
@@ -129,12 +170,12 @@ export async function scheduleRing(ring: AlertRing): Promise<string> {
 function ringData(content: {
   data?: Record<string, unknown>;
 }): RingData | null {
-  const { uri, base, step, weight } = content.data ?? {};
+  const { uri, base, step, weight, buttons } = content.data ?? {};
   return typeof uri === "string" &&
     typeof base === "number" &&
     typeof step === "number" &&
     (weight === "harsh" || weight === "quiet")
-    ? { uri, base, step, weight }
+    ? { uri, base, step, weight, buttons: buttons === "full" ? "full" : "done" }
     : null;
 }
 
@@ -186,19 +227,103 @@ export async function exactAlarmState(): Promise<boolean> {
   return exact.granted;
 }
 
+/**
+ * The notification's data. A response from the background task carries
+ * it as JSON text in `dataString`, because only the listener path turns
+ * that text into an object.
+ */
+function contentData(content: {
+  data?: unknown;
+  dataString?: unknown;
+}): Record<string, unknown> | undefined {
+  if (content.data != null && typeof content.data === "object") {
+    return content.data as Record<string, unknown>;
+  }
+  if (typeof content.dataString !== "string") {
+    return undefined;
+  }
+  try {
+    const parsed: unknown = JSON.parse(content.dataString);
+    return parsed != null && typeof parsed === "object"
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function readResponse(
   response: Notifications.NotificationResponse | null,
 ): AlertResponse | null {
   if (response == null) {
     return null;
   }
-  const data = response.notification.request.content.data;
+  const { request } = response.notification;
+  const data = contentData(request.content);
   if (typeof data?.uri !== "string") {
     return null;
   }
-  return typeof data.base === "number"
-    ? { uri: data.uri, base: data.base }
-    : { uri: data.uri };
+  const alert: AlertResponse = {
+    uri: data.uri,
+    name: request.content.title ?? "",
+    key: `${request.identifier}|${response.actionIdentifier}`,
+  };
+  if (typeof data.base === "number") {
+    alert.base = data.base;
+  }
+  if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) {
+    alert.button = response.actionIdentifier;
+  }
+  return alert;
+}
+
+/** Whether a payload is a tap on one of the buttons. */
+export function isButtonPayload(payload: unknown): boolean {
+  return (
+    payload != null &&
+    typeof payload === "object" &&
+    "actionIdentifier" in payload &&
+    payload.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER
+  );
+}
+
+/** The press a background task was handed, read from its payload. */
+export function readTaskResponse(payload: unknown): AlertResponse | null {
+  if (
+    payload == null ||
+    typeof payload !== "object" ||
+    !("actionIdentifier" in payload) ||
+    !("notification" in payload)
+  ) {
+    return null;
+  }
+  return readResponse(payload as Notifications.NotificationResponse);
+}
+
+/**
+ * Tell the user a button press did not reach the vault. The note is
+ * still the way it was, and the reminder stays in the tray.
+ */
+export async function postActionFailure(input: {
+  id: string;
+  title: string;
+  body: string;
+  uri?: string;
+}): Promise<void> {
+  await ensureChannels();
+  await Notifications.scheduleNotificationAsync({
+    identifier: `${FAILURE_PREFIX}${input.id}`,
+    content: {
+      title: input.title,
+      body: input.body,
+      data: input.uri == null ? {} : { uri: input.uri },
+    },
+    trigger: { channelId: QUIET_CHANNEL },
+  });
+}
+
+export async function clearActionFailureNotice(id: string): Promise<void> {
+  await Notifications.dismissNotificationAsync(`${FAILURE_PREFIX}${id}`);
 }
 
 /**

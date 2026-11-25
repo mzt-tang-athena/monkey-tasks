@@ -10,7 +10,13 @@ type Stored = {
   title: string;
   body: string;
   weight: "harsh" | "quiet";
-  data: { uri: string; base: number; step: number; weight: "harsh" | "quiet" };
+  data: {
+    uri: string;
+    base: number;
+    step: number;
+    weight: "harsh" | "quiet";
+    buttons: "full" | "done";
+  };
 };
 
 const world = vi.hoisted(() => ({
@@ -35,6 +41,7 @@ vi.mock("@/lib/notifications", () => ({
     step: number;
     weight: "harsh" | "quiet";
     when: number;
+    buttons: "full" | "done";
     title: string;
     body: string;
   }) => {
@@ -53,6 +60,7 @@ vi.mock("@/lib/notifications", () => ({
         base: ring.base,
         step: ring.step,
         weight: ring.weight,
+        buttons: ring.buttons,
       },
     });
     return ring.id;
@@ -184,6 +192,46 @@ describe("ring plan", () => {
       "Due",
       "Due",
     ]);
+  });
+
+  it("gives an all-day task Done alone, and its reminder still rings", async () => {
+    const base = NOW + 10 * MINUTE;
+    const note = task("Pay rent", [stamp(base)], { due: "2026-11-25" });
+
+    await syncReminders([note]);
+
+    const entries = [...world.os.values()];
+    expect(entries).toHaveLength(4);
+    expect(entries.every((entry) => entry.data.buttons === "done")).toBe(true);
+  });
+
+  it("gives a timed task Done and Reschedule", async () => {
+    const note = task("Call Mum", [stamp(NOW + 10 * MINUTE)], {
+      due: stamp(NOW + 10 * MINUTE),
+    });
+
+    await syncReminders([note]);
+
+    expect(
+      [...world.os.values()].every((entry) => entry.data.buttons === "full"),
+    ).toBe(true);
+  });
+
+  it("replaces a scheduled ring that has no buttons", async () => {
+    const base = NOW + 10 * MINUTE;
+    const note = task("Call Mum", [stamp(base)]);
+    await syncReminders([note]);
+    for (const entry of world.os.values()) {
+      entry.data.buttons = "done";
+    }
+
+    await syncReminders([note]);
+
+    expect(stepsOf(note.uri, base)).toEqual([0, 1, 5, 15]);
+    expect(world.cancelled).toHaveLength(4);
+    expect([...world.os.values()].every((entry) => entry.data.buttons === "full")).toBe(
+      true,
+    );
   });
 
   it("makes four harsh rings at 0, 1, 5 and 15 minutes", async () => {

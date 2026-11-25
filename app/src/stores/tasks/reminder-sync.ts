@@ -9,6 +9,7 @@ import {
   alertRing,
   type AlertRing,
 } from "@/lib/alerts/rings";
+import type { ButtonSet } from "@/lib/alerts/choices";
 import {
   isAcked,
   loadAcked,
@@ -47,7 +48,7 @@ const LOOKBACK_MS =
  */
 let chain: Promise<unknown> = Promise.resolve();
 
-function inTurn<T>(work: () => Promise<T>): Promise<T> {
+export function inTurn<T>(work: () => Promise<T>): Promise<T> {
   const next = chain.then(work, work);
   chain = next.catch(() => undefined);
   return next;
@@ -98,12 +99,27 @@ function taskWeight(task: TaskItem): AlertWeight {
   return task.data?.["alert weight"] ?? "harsh";
 }
 
+/**
+ * The buttons a task's rings carry. A due date with no time of day is
+ * an all-day task, and rescheduling it would add a clock time it never
+ * had, so it offers Done alone.
+ */
+function taskButtons(task: TaskItem): ButtonSet {
+  const due = task.data?.due;
+  if (due == null) {
+    return "full";
+  }
+  const parsed = parseStoredDate(due);
+  return parsed != null && !parsed.hasTime ? "done" : "full";
+}
+
 /** Every ring the task makes that is still ahead of `now`. */
 function ringsFor(task: TaskItem | null, now: number): AlertRing[] {
   if (task == null) {
     return [];
   }
   const weight = taskWeight(task);
+  const buttons = taskButtons(task);
   const rings: AlertRing[] = [];
   // The window reaches back the whole escalation, so a started group
   // still yields the follow-ups that are ahead.
@@ -115,6 +131,7 @@ function ringsFor(task: TaskItem | null, now: number): AlertRing[] {
           base: alarm.when,
           step,
           weight,
+          buttons,
           title: task.name,
           body: alarmBody(alarm),
         }),
@@ -129,7 +146,9 @@ function sameRings(before: AlertRing[], after: AlertRing[]): boolean {
     before.length === after.length &&
     before.every(
       (ring, index) =>
-        ring.id === after[index].id && ring.weight === after[index].weight,
+        ring.id === after[index].id &&
+        ring.weight === after[index].weight &&
+        ring.buttons === after[index].buttons,
     )
   );
 }
@@ -155,9 +174,11 @@ export function planRings(
   const byUri = new Map(tasks.map((task) => [task.uri, task]));
   const wanted = new Map<string, AlertRing>();
   const weights = new Map<string, AlertWeight>();
+  const buttons = new Map<string, ButtonSet>();
   const bases = new Map<string, Set<number>>();
   for (const task of tasks) {
     weights.set(task.uri, taskWeight(task));
+    buttons.set(task.uri, taskButtons(task));
     bases.set(
       task.uri,
       new Set(
@@ -188,8 +209,11 @@ export function planRings(
       continue;
     }
     const weight = weights.get(data.uri);
+    // A ring scheduled before the buttons existed has none, which reads
+    // as "done". Its id stays, so the new one replaces it.
     if (
       data.weight !== weight ||
+      data.buttons !== buttons.get(data.uri) ||
       !bases.get(data.uri)?.has(data.base)
     ) {
       cancel.push(entry.id);
@@ -297,24 +321,31 @@ async function acknowledgeTaskNow(
   await dismissDelivered(delivered.map((entry) => entry.id));
 }
 
+/** Clear one alarm group. Throws when the OS refuses; callers decide. */
+export async function acknowledgeRingNow(
+  ring: Pick<AlertRing, "uri" | "base">,
+): Promise<void> {
+  if (Platform.OS === "web") {
+    return;
+  }
+  const now = Date.now();
+  const group = (entry: RingNotification) =>
+    entry.data?.uri === ring.uri && entry.data.base === ring.base;
+  const scheduled = (await listScheduledDetailed()).filter(group);
+  const delivered = (await listDeliveredDetailed()).filter(group);
+  recordAcks([{ uri: ring.uri, base: ring.base }], now);
+  for (const entry of scheduled) {
+    await cancelScheduled(entry.id);
+  }
+  await dismissDelivered(delivered.map((entry) => entry.id));
+}
+
 export function acknowledgeRing(
   ring: Pick<AlertRing, "uri" | "base">,
 ): Promise<void> {
   return inTurn(async () => {
-    if (Platform.OS === "web") {
-      return;
-    }
     try {
-      const now = Date.now();
-      const group = (entry: RingNotification) =>
-        entry.data?.uri === ring.uri && entry.data.base === ring.base;
-      const scheduled = (await listScheduledDetailed()).filter(group);
-      const delivered = (await listDeliveredDetailed()).filter(group);
-      recordAcks([{ uri: ring.uri, base: ring.base }], now);
-      for (const entry of scheduled) {
-        await cancelScheduled(entry.id);
-      }
-      await dismissDelivered(delivered.map((entry) => entry.id));
+      await acknowledgeRingNow(ring);
     } catch {
       // The alert stays; the next rebuild or tap tries again.
     }
@@ -349,7 +380,8 @@ export function syncTaskReminders(
   return inTurn(() => reconcileTask(before, after));
 }
 
-async function reconcileTask(
+/** `syncTaskReminders` for a caller that already holds the turn. */
+export async function reconcileTask(
   before: TaskItem | null,
   after: TaskItem | null,
 ): Promise<void> {
