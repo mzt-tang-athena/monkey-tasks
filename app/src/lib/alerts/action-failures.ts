@@ -40,6 +40,22 @@ function isFailure(value: unknown): value is ActionFailure {
   );
 }
 
+const listeners = new Set<() => void>();
+
+/** Called after a failure is kept or cleared in this process. */
+export function onActionFailures(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function changed(): void {
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
 export function loadActionFailures(): ActionFailure[] {
   const raw = readJson(FILE_NAME, WEB_KEY);
   return Array.isArray(raw) ? raw.filter(isFailure) : [];
@@ -48,7 +64,9 @@ export function loadActionFailures(): ActionFailure[] {
 /** One failure per task and action: a later one replaces it. */
 export function recordActionFailure(failure: ActionFailure): boolean {
   const others = loadActionFailures().filter((entry) => entry.id !== failure.id);
-  return writeJson(FILE_NAME, WEB_KEY, [...others, failure]);
+  const kept = writeJson(FILE_NAME, WEB_KEY, [...others, failure]);
+  changed();
+  return kept;
 }
 
 export function clearActionFailure(id: string): void {
@@ -56,5 +74,6 @@ export function clearActionFailure(id: string): void {
   const rest = all.filter((entry) => entry.id !== id);
   if (rest.length !== all.length) {
     writeJson(FILE_NAME, WEB_KEY, rest);
+    changed();
   }
 }

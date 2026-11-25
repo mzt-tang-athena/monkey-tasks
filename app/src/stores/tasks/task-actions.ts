@@ -173,11 +173,13 @@ export async function rescheduleTask(
   target: string,
 ): Promise<Rescheduled> {
   let text = updateProperty(before.text, "due", target);
-  if (before.data.recurrence != null) {
+  const { recurrence, due } = before.data;
+  if (recurrence != null) {
+    const moved = due?.slice(0, 10) !== target.slice(0, 10);
     text = updateProperty(
       text,
       "recurrence",
-      monthEndRule(before.data.recurrence, target, true),
+      monthEndRule(recurrence, target, moved),
     );
   }
   text = setBlockList(text, "reminders", [target]);

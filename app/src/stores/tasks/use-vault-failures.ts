@@ -8,10 +8,11 @@ import {
 } from "@tanstack/react-query";
 import { VAULT_SCOPE } from "@/lib/vault/read-gate";
 import { messageOf, type VaultMeta } from "./mutations/use-vault-mutation";
+import { useActionFailures } from "./use-action-failures";
 
 type Entry = {
   /** Stable for the entry's life, for a React key. */
-  key: number;
+  key: number | string;
   kind: "failure" | "notice";
   /** The write's label, for example "tick". */
   label: string;
@@ -59,7 +60,7 @@ function entryOf(mutation: Mutation<unknown, Error, unknown, unknown>): Entry | 
     : { key: mutation.mutationId, kind: "notice", label: meta.label, message: notice };
 }
 
-function find(client: QueryClient, key: number) {
+function find(client: QueryClient, key: number | string) {
   return client
     .getMutationCache()
     .getAll()
@@ -78,7 +79,8 @@ export function useVaultFailures(): VaultFailure[] {
     filters: { mutationKey: [VAULT_SCOPE] },
     select: entryOf,
   });
-  return React.useMemo(
+  const pressed = useActionFailures();
+  const listed = React.useMemo(
     () =>
       entries.flatMap((entry): VaultFailure[] => {
         if (entry == null) {
@@ -108,4 +110,5 @@ export function useVaultFailures(): VaultFailure[] {
       }),
     [client, entries],
   );
+  return React.useMemo(() => [...listed, ...pressed], [listed, pressed]);
 }

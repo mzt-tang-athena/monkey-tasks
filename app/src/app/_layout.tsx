@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -24,6 +24,9 @@ import {
   type AlertResponse,
 } from "@/lib/notifications";
 import { acknowledgeRing } from "@/stores/tasks/reminder-sync";
+import { performAlertPress, pressOf } from "@/stores/tasks/alert-actions";
+import { TASKS_KEY } from "@/stores/tasks/query";
+import { defaultAdapter } from "@/lib/vault/default-adapter";
 
 // Before anything renders: a release build closes on the first
 // uncaught error, and a closed app cannot report what broke.
@@ -33,11 +36,22 @@ installCrashTestHooks();
 /**
  * A tap on an alert clears the group it rang for and opens its task.
  * The listener covers a tap while the app runs; the stored response
- * covers the tap that started the app.
+ * covers the tap that started the app. A button never opens the task:
+ * the app runs it here, and the background task runs it when no screen
+ * is up. Either way one press acts once.
  */
-function useAlertResponses(): void {
+function useAlertResponses(queryClient: QueryClient): void {
   useEffect(() => {
     const handle = (alert: AlertResponse) => {
+      if (alert.button != null) {
+        const press = pressOf(alert);
+        if (press != null) {
+          void performAlertPress(defaultAdapter(), press).then(() =>
+            queryClient.invalidateQueries({ queryKey: [TASKS_KEY] }),
+          );
+        }
+        return;
+      }
       if (alert.base != null) {
         void acknowledgeRing({ uri: alert.uri, base: alert.base });
       }
@@ -49,14 +63,14 @@ function useAlertResponses(): void {
     }
     const subscription = addAlertResponseListener(handle);
     return () => subscription.remove();
-  }, []);
+  }, [queryClient]);
 }
 
 export default function RootLayout() {
   // One client per app instance. Building it during render would throw the
   // cache away on every render, and every mounted query would refetch.
   const [queryClient] = useState(() => makeQueryClient());
-  useAlertResponses();
+  useAlertResponses(queryClient);
 
   return (
     // Gestures only fire on native when the tree sits under this root.
