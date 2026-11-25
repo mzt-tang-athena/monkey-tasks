@@ -108,6 +108,23 @@ function nextDue(task: TaskItem): string | null {
 }
 
 /**
+ * The status a toggle writes beside `completed`. A deed is a task with
+ * a status, and the contract keeps the two in step: a tick makes the
+ * deed done, and a reopen puts it back in the queue, because the note
+ * does not record which status it held before. A task with no status
+ * writes none.
+ */
+function statusFor(
+  task: TaskItem,
+  to: ToggleVariables["to"],
+): "[[done]]" | "[[backlog]]" | undefined {
+  if (task.data?.status == null) {
+    return undefined;
+  }
+  return to === "done" ? "[[done]]" : "[[backlog]]";
+}
+
+/**
  * Whether the task is already in the state a toggle asks for. A retry
  * runs the variables of an old tap, and a later tap can have landed
  * that state since.
@@ -150,6 +167,7 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
     }
     const updated = applyPatch(previous, {
       completed: to === "done" ? nowStamp() : null,
+      status: statusFor(previous, to),
     });
     let next = patchRow(rows, id, () => updated);
     const due = nextDue(previous);
@@ -187,7 +205,10 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
     if (to === "open") {
       return reopen(before, io);
     }
-    const after = applyPatch(before, { completed: nowStamp() });
+    const after = applyPatch(before, {
+      completed: nowStamp(),
+      status: statusFor(before, "done"),
+    });
     const due = successorId == null ? null : nextDue(before);
     if (successorId == null || due == null) {
       await io.adapter.write(before.uri, after.text);
@@ -307,7 +328,10 @@ async function reopen(
   before: TaskItem,
   io: VaultIo,
 ): Promise<Toggled> {
-  const after = applyPatch(before, { completed: null });
+  const after = applyPatch(before, {
+    completed: null,
+    status: statusFor(before, "open"),
+  });
   await io.adapter.write(before.uri, after.text);
   const due = nextDue(before);
   if (due == null) {

@@ -96,7 +96,7 @@ describe("sampleSeed", () => {
 
   it("names the seeds it has when asked for one it does not", () => {
     expect(() => sampleSeed(["nope"], SAMPLE_DAY)).toThrow(
-      'no sample vault "nope": pick from default, inbox, repair',
+      'no sample vault "nope": pick from deeds, default, inbox, repair',
     );
   });
 });

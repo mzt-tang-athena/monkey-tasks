@@ -132,6 +132,11 @@ export function pillsForSource(
 }
 
 export function inSourceList(task: TaskItem, list: string): boolean {
+  // A named source is a plain task list, so a deed stays off it. The
+  // planner still shows a dated deed on its day.
+  if (task.data?.status != null) {
+    return false;
+  }
   if (list === "Main") {
     return task.data == null || task.data.list == null;
   }

@@ -1257,3 +1257,109 @@ describe("recurring completion", () => {
     );
   });
 });
+
+describe("deeds", () => {
+  const DEED_TEXT = [
+    "---",
+    'kind: "[[deeds]]"',
+    'status: "[[active]]"',
+    "created: 2026-09-12",
+    "due: 2026-10-28",
+    'parent deed: "[[Garden]]"',
+    "categories:",
+    '  - "[[digital]]"',
+    "types:",
+    '  - "[[project]]"',
+    'after: "[[Order things]]"',
+    "---",
+    "",
+    "Water the beds.",
+    "",
+  ].join("\n");
+
+  /** A deed note with no status: a reference note until the vault tidy. */
+  const REFERENCE_TEXT = [
+    "---",
+    'kind: "[[deeds]]"',
+    'parent deed: "[[Garden]]"',
+    "---",
+    "",
+    "Ideas that wait.",
+    "",
+  ].join("\n");
+
+  const DEED = "Deeds/Water the beds.md";
+
+  async function mountDeeds(): Promise<void> {
+    await mount({
+      "Tasks/Call.md": CALL_TEXT,
+      "Deeds/Water the beds.md": DEED_TEXT,
+      "Deeds/Brainstorm.md": REFERENCE_TEXT,
+    });
+  }
+
+  it("keeps a deed with no status out of the rows", async () => {
+    await mountDeeds();
+
+    expect(store().tasks.map((task) => task.name)).toEqual([
+      "Call",
+      "Water the beds",
+    ]);
+    expect(byName("Water the beds").folder).toBe("deeds");
+    expect(byName("Water the beds").data?.status).toBe("[[active]]");
+  });
+
+  it("ticks a deed done, then reopens it as backlog", async () => {
+    await mountDeeds();
+    const deed = byName("Water the beds");
+
+    await act(async () => {
+      await store().toggle(deed);
+    });
+    await flush();
+
+    const done = vault.hooks.read(DEED) as string;
+    expect(done).toContain('status: "[[done]]"');
+    expect(done).toMatch(/^completed: /m);
+    expect(byName("Water the beds").data?.status).toBe("[[done]]");
+
+    await act(async () => {
+      await store().toggle(byName("Water the beds"));
+    });
+    await flush();
+
+    const reopened = vault.hooks.read(DEED) as string;
+    expect(reopened).toContain('status: "[[backlog]]"');
+    expect(reopened).not.toContain("completed:");
+  });
+
+  it("writes the task kind on a deed edit and keeps every other property", async () => {
+    await mountDeeds();
+    const deed = byName("Water the beds");
+
+    await act(async () => {
+      await store().edit(deed, {
+        name: "Water the beds",
+        due: "2026-10-28",
+        recurrence: null,
+        list: null,
+        reminders: [],
+        alertWeight: "harsh",
+        body: "Watered.\n",
+      });
+    });
+    await flush();
+
+    const written = vault.hooks.read(DEED) as string;
+    expect(failures()).toEqual([]);
+    expect(written).toContain('kind: "[[tasks]]"');
+    expect(written).toContain('parent deed: "[[Garden]]"');
+    expect(written).toContain('categories:\n  - "[[digital]]"');
+    expect(written).toContain('types:\n  - "[[project]]"');
+    expect(written).toContain('after: "[[Order things]]"');
+    expect(written).toContain("Watered.");
+    // The note keeps its place and its status.
+    expect(vault.hooks.read(DEED)).not.toBeNull();
+    expect(byName("Water the beds").data?.status).toBe("[[active]]");
+  });
+});

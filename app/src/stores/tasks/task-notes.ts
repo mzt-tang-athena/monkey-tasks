@@ -3,15 +3,31 @@ import type { VaultAdapter } from "@/lib/vault/adapter";
 import { formatIssues } from "@/utils/schema-errors";
 import type { TaskItem } from "@/types/task";
 
+/** The base fields of a row, before its file text is read. */
+export type TaskBase = {
+  id: string;
+  uri: string;
+  fileName: string;
+  name: string;
+  /** Set for a note in `Deeds/`; absent means `Tasks/`. */
+  folder?: TaskItem["folder"];
+};
+
+/**
+ * A note in `Deeds/` with no status is a reference note, not a deed.
+ * It shows nowhere for now, until the vault tidy moves it to `Notes/`
+ * (ticket `20261124-deed-vault-tidy`).
+ */
+export function isReferenceNote(row: TaskItem): boolean {
+  return row.folder === "deeds" && row.data?.status == null;
+}
+
 /**
  * One task note as the store carries it, from its file text. The
  * vault read and the retry after a write conflict both build rows
  * here, so a re-read row is shaped like a loaded one.
  */
-export function taskFromText(
-  base: { id: string; uri: string; fileName: string; name: string },
-  text: string,
-): TaskItem {
+export function taskFromText(base: TaskBase, text: string): TaskItem {
   const result = validateNote(base.fileName, text, taskFrontmatter);
   const row: TaskItem = {
     ...base,
@@ -30,9 +46,13 @@ export function taskFromText(
 
 export async function loadTasks(
   adapter: VaultAdapter,
-  tasksDirUri: string,
+  dirUri: string | null,
+  folder?: TaskItem["folder"],
 ): Promise<TaskItem[]> {
-  const entries = await adapter.list(tasksDirUri);
+  if (dirUri == null) {
+    return [];
+  }
+  const entries = await adapter.list(dirUri);
   const files = entries.filter(
     (entry) => !entry.isFolder && entry.name.endsWith(".md"),
   );
@@ -49,6 +69,7 @@ export async function loadTasks(
           // A spawned occurrence carries a date-suffixed file name, so
           // the display name comes from its title.
           name: file.name.replace(/\.md$/, ""),
+          ...(folder == null ? {} : { folder }),
         },
         text,
       );

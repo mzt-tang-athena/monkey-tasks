@@ -8,6 +8,13 @@ fails a bullet that wraps or runs past 64 characters.
 
 ## 1.4.0 - unreleased
 
+### Deeds
+
+- The app reads your deeds, as tasks with a status.
+- A dated deed shows on its day in the planner.
+- Main and the lists show plain tasks only.
+- A deed with no status waits in the vault, unseen.
+
 ### Tabs and lists
 
 - The Inbox tab drops its title and keeps the note count.
