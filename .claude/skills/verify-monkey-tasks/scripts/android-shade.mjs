@@ -45,9 +45,15 @@ const centre = (n) =>
   `${Math.round((n.left + n.right) / 2)} ${Math.round((n.top + n.bottom) / 2)}`;
 
 const rows = nodes.filter((n) => n.id === "expandableNotificationRow");
-const titles = nodes.filter((n) => n.id === "title" && n.text === title);
+// A folded notification can put its time on the same line as the title.
+const titles = nodes.filter(
+  (n) =>
+    n.id === "title" &&
+    (n.text === title || n.text.startsWith(`${title} `)),
+);
 
 if (titles.length > 0) {
+  // The newest one sits first.
   const target = titles[0];
   const row = rows
     .filter((r) => r.top <= target.top && r.bottom >= target.bottom)
@@ -55,7 +61,12 @@ if (titles.length > 0) {
   if (row != null) {
     const inRow = nodes.filter(within(row));
     const action = nodes.find(
-      (n) => n.text === button && n.top >= row.top && n.top <= row.bottom + 400 && n.left >= row.left && n.right <= row.right,
+      (n) =>
+        (n.text === button || n.desc === button) &&
+        n.top >= row.top &&
+        n.top <= row.bottom + 400 &&
+        n.left >= row.left &&
+        n.right <= row.right,
     );
     if (action != null) {
       console.log(`press ${centre(action)}`);

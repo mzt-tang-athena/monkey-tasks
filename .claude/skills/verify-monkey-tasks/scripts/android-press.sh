@@ -13,7 +13,17 @@ drive="$(dirname "$0")/android-drive.sh"
 title=${1:?title} button=${2:?button} name=${3:?name}
 run=$("$drive" run)
 
-adb shell cmd statusbar expand-notifications
+# The shade takes a moment to draw on a loaded host, and a dump taken
+# too early shows the app instead. Open it again and wait for its panel.
+for try in 1 2 3 4 5; do
+  adb shell cmd statusbar expand-notifications
+  sleep 3
+  dump_ui=$(adb shell uiautomator dump /data/local/tmp/verify-ui.xml >/dev/null 2>&1 && adb exec-out cat /data/local/tmp/verify-ui.xml)
+  if grep -q "notification_stack_scroller" <<<"$dump_ui"; then
+    break
+  fi
+done
+
 for step in 1 2 3 4 5 6; do
   sleep 2
   adb exec-out screencap -p >"$run/$name-shade-$step.png"

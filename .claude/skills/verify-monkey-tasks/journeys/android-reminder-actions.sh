@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 # Native check on the emulator: the buttons on a reminder work with the
-# app killed. It writes four tasks that fall due in two minutes, kills
+# app killed. It writes four tasks that fall due in three minutes, kills
 # the app, waits for the reminders, then presses a button on each from
 # the notification shade, with the app killed before every press:
 #
-#   Probe Plain   Done writes completed
-#   Probe Daily   Done writes completed and makes the next note
-#   Probe Later   the Reschedule button moves the due and the reminder
-#   Probe Gone    the note is deleted first, so Done fails and says so
+#   <tag> Plain   Done writes completed
+#   <tag> Daily   Done writes completed and makes the next note
+#   <tag> Later   the Reschedule button moves the due and the reminder
+#   <tag> Gone    the note is deleted first, so Done fails and says so
 #
-# Needs an instance from android-launch.sh. RESCHEDULE_BUTTON names the
-# Reschedule button to press. With none set, that task is not written.
+# Each task's name carries the clock minute of the run, so a second run
+# never confuses its reminders with an old one's. Needs an instance from
+# android-launch.sh. RESCHEDULE_BUTTON names the Reschedule button to
+# press. With none set, that task is not written.
 #
-#   RESCHEDULE_BUTTON=Tomorrow journeys/android-reminder-actions.sh
+#   RESCHEDULE_BUTTON=Later journeys/android-reminder-actions.sh
 #
 # Evidence lands in a new run folder: the shade with the buttons, the
 # notes before and after each press, and the app log.
@@ -25,6 +27,11 @@ source "$here/android-env.sh"
 reschedule=${RESCHEDULE_BUTTON:-}
 tasks="$VAULT_DIR/Tasks"
 run=$("$drive" new-run)
+tag=$(adb shell date +%H%M | tr -d '\r')
+plain="Probe Plain $tag"
+daily="Probe Daily $tag"
+later="Probe Later $tag"
+gone="Probe Gone $tag"
 
 device_date() { adb shell date -d "@$1" +%Y-%m-%dT%H:%M | tr -d '\r'; }
 note_text() { adb shell "cat '$tasks/$1.md'" | tr -d '\r'; }
@@ -32,16 +39,31 @@ note_exists() { adb shell "test -f '$tasks/$1.md' && echo yes || echo no" | tr -
 in_tray() { adb shell dumpsys notification --noredact | grep -c "${1// /%2520}.md:" || true; }
 fail() { echo "FAIL: $*" >&2; echo "evidence: $run" >&2; exit 1; }
 
+# am kill takes a cached process only, so the app must be off screen
+# first. HOME can land before the app draws, so this waits for the
+# launcher and tries again.
 kill_app() {
-  adb shell input keyevent HOME
-  sleep 1
-  adb shell am kill "$PKG"
-  sleep 2
-  [[ -z "$(adb shell pidof "$PKG" | tr -d '\r')" ]] || fail "the app survived am kill"
+  local try
+  for try in 1 2 3 4 5; do
+    adb shell cmd statusbar collapse
+    adb shell input keyevent HOME
+    sleep 2
+    adb shell dumpsys activity activities | grep -q "topResumedActivity.*nexuslauncher" || continue
+    adb shell am kill "$PKG"
+    sleep 2
+    [[ -z "$(adb shell pidof "$PKG" | tr -d '\r')" ]] && return 0
+  done
+  fail "the app survived am kill"
 }
 
+# A shade left open by an earlier run covers the app, and then no task
+# row can show.
+adb shell cmd statusbar collapse
 now=$(adb shell date +%s | tr -d '\r')
-due=$(device_date $((now + 150)))
+due=$(device_date $((now + 180)))
+next_day=$(date -d "${due:0:10} +1 day" +%Y-%m-%d)
+next_note="$daily $next_day"
+
 write_note() {
   local name=$1 rule=$2 file="$run/seed-$1.md"
   {
@@ -52,21 +74,27 @@ write_note() {
   adb push "$file" "$tasks/$name.md" >/dev/null
 }
 
-write_note "Probe Plain" ""
-write_note "Probe Daily" "FREQ=DAILY"
-write_note "Probe Gone" ""
-[[ -n $reschedule ]] && write_note "Probe Later" ""
+# An earlier run leaves its own probes behind, and a second set of
+# reminders would make this run's tray ambiguous.
+adb shell "rm -f $tasks/Probe*"
+
+write_note "$plain" ""
+write_note "$daily" "FREQ=DAILY"
+write_note "$gone" ""
+[[ -n $reschedule ]] && write_note "$later" ""
 
 "$drive" restart >/dev/null
-"$drive" wait "task-row:Probe Plain" 30 >/dev/null
+# The row can sit below the repair banner, and uiautomator reports only
+# what is on screen, so the journey scrolls to it.
+"$drive" scroll-to "task-row:$plain" >/dev/null || fail "the app shows no $plain row"
 sleep 8
 "$drive" shot app-before >/dev/null
 kill_app
-adb shell "rm '$tasks/Probe Gone.md'"
+adb shell "rm '$tasks/$gone.md'"
 echo "waiting for the reminders, due $due"
 
-titles=("Probe Plain" "Probe Daily" "Probe Gone")
-[[ -n $reschedule ]] && titles+=("Probe Later")
+titles=("$plain" "$daily" "$gone")
+[[ -n $reschedule ]] && titles+=("$later")
 deadline=$((SECONDS + 420))
 for title in "${titles[@]}"; do
   until [[ $(in_tray "$title") -gt 0 ]]; do
@@ -76,10 +104,13 @@ for title in "${titles[@]}"; do
 done
 
 for title in "${titles[@]}"; do
-  [[ $title == "Probe Gone" ]] || "$drive" note "Tasks/$title.md" "$title-before" >/dev/null
+  [[ $title == "$gone" ]] || "$drive" note "Tasks/$title.md" "$title-before" >/dev/null
 done
 adb shell dumpsys notification --noredact >"$run/tray-before.txt"
-grep -c 'actions=2' "$run/tray-before.txt" >/dev/null || fail "no reminder carries buttons"
+grep -q 'actions=[2-9]' "$run/tray-before.txt" || fail "no reminder carries buttons"
+for label in Done Later Tomorrow; do
+  grep -q "\] \"$label\"" "$run/tray-before.txt" || fail "no reminder shows $label"
+done
 
 press_button() {
   local title=$1 button=$2 name=$3
@@ -87,42 +118,42 @@ press_button() {
   "$press" "$title" "$button" "$name" >/dev/null || fail "could not press $button on $title"
 }
 
-press_button "Probe Plain" Done plain
-until [[ "$(note_text "Probe Plain")" == *completed:* ]]; do
-  ((SECONDS < deadline + 60)) || fail "Probe Plain never gained completed:"
+press_button "$plain" Done plain
+until [[ "$(note_text "$plain")" == *completed:* ]]; do
+  ((SECONDS < deadline + 60)) || fail "$plain never gained completed:"
   sleep 2
 done
-"$drive" note "Tasks/Probe Plain.md" plain-after >/dev/null
-[[ $(in_tray "Probe Plain") -eq 0 ]] || fail "Probe Plain stayed in the tray"
+"$drive" note "Tasks/$plain.md" plain-after >/dev/null
+[[ $(in_tray "$plain") -eq 0 ]] || fail "$plain stayed in the tray"
 
-press_button "Probe Daily" Done daily
-until [[ "$(note_exists "Probe Daily 2026-11-26")" == yes ]]; do
-  ((SECONDS < deadline + 120)) || fail "Probe Daily made no next note"
+press_button "$daily" Done daily
+until [[ "$(note_exists "$next_note")" == yes ]]; do
+  ((SECONDS < deadline + 120)) || fail "$daily made no next note"
   sleep 2
 done
-"$drive" note "Tasks/Probe Daily.md" daily-after >/dev/null
-"$drive" note "Tasks/Probe Daily 2026-11-26.md" daily-next >/dev/null
-grep -q '^completed:' "$run/note-daily-after.md" || fail "Probe Daily did not gain completed:"
-grep -q '^due: 2026-11-26T' "$run/note-daily-next.md" || fail "the next note is not due tomorrow"
-[[ $(in_tray "Probe Daily") -eq 0 ]] || fail "Probe Daily stayed in the tray"
+"$drive" note "Tasks/$daily.md" daily-after >/dev/null
+"$drive" note "Tasks/$next_note.md" daily-next >/dev/null
+grep -q '^completed:' "$run/note-daily-after.md" || fail "$daily did not gain completed:"
+grep -q "^due: $next_day" "$run/note-daily-next.md" || fail "the next note is not due tomorrow"
+[[ $(in_tray "$daily") -eq 0 ]] || fail "$daily stayed in the tray"
 
 if [[ -n $reschedule ]]; then
-  press_button "Probe Later" "$reschedule" later
-  until ! [[ "$(note_text "Probe Later")" == *"due: $due"* ]]; do
-    ((SECONDS < deadline + 180)) || fail "Probe Later's due never moved"
+  press_button "$later" "$reschedule" later
+  until ! [[ "$(note_text "$later")" == *"due: $due"* ]]; do
+    ((SECONDS < deadline + 180)) || fail "$later's due never moved"
     sleep 2
   done
-  "$drive" note "Tasks/Probe Later.md" later-after >/dev/null
-  [[ $(in_tray "Probe Later") -eq 0 ]] || fail "Probe Later stayed in the tray"
+  "$drive" note "Tasks/$later.md" later-after >/dev/null
+  [[ $(in_tray "$later") -eq 0 ]] || fail "$later stayed in the tray"
 fi
 
-press_button "Probe Gone" Done gone
+press_button "$gone" Done gone
 until adb shell dumpsys notification --noredact | grep -q "Done did not save"; do
   ((SECONDS < deadline + 240)) || fail "a failed press left no notification"
   sleep 2
 done
 adb shell dumpsys notification --noredact >"$run/tray-failure.txt"
-[[ $(in_tray "Probe Gone") -gt 0 ]] || fail "a failed press cleared the reminder"
+[[ $(in_tray "$gone") -gt 0 ]] || fail "a failed press cleared the reminder"
 adb shell cmd statusbar expand-notifications
 sleep 2
 adb exec-out screencap -p >"$run/failure-notice.png"
