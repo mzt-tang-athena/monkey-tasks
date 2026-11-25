@@ -329,8 +329,13 @@ test.describe("errors announce", () => {
     );
     await returnToTab(page);
 
+    // The neighbouring page's peek draws the same alert, so read the
+    // live one.
     await expect(
-      page.getByRole("alert").filter({ hasText: "Needs repair" }),
+      page
+        .getByTestId("pager-live")
+        .getByRole("alert")
+        .filter({ hasText: "Needs repair" }),
     ).toBeVisible();
   });
 

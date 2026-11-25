@@ -45,7 +45,8 @@ A list note named Today never gets a tab. Main behaves the same way
 today.
 
 Today is a date view. Its rows keep the Past and Today groups in every
-sort setting, and a drag never reorders them.
+sort setting, and a drag never reorders them. The sort control stays
+off Today, because the day decides the order.
 
 The e2e suite now lands on Today. A spec about Main asks for Main
 first. That edit is part of this ticket, because the default tab is a
