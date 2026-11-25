@@ -2,7 +2,7 @@
 title: A cold start shows the app sooner
 created: 2026-11-24
 priority: normal
-assignee:
+assignee: cold-start-lane
 pr:
 depends: []
 ---
