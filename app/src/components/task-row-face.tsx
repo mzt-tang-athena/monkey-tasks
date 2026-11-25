@@ -133,18 +133,20 @@ export function TaskRowFace({
           </Text>
         </View>
       ) : null}
-      {/* A deed that waits on another note names it here, in the danger
-          ink, beside the board's own rail. */}
-      {blocked ? (
-        <View testID="blocker-line" style={styles.referenceRow} aria-hidden>
-          <Icon name="link" size={12} color="danger" />
-          <Text style={styles.blocker} numberOfLines={1}>
-            {blockedBy}
-          </Text>
-        </View>
-      ) : null}
     </>
   );
+
+  // A deed that waits on another note names it here, in the danger ink,
+  // beside the board's own rail. It sits outside the text press target,
+  // so it never joins the button's visible text.
+  const blockedLine = blocked ? (
+    <View testID="blocker-line" style={styles.blockerRow} aria-hidden>
+      <Icon name="link" size={12} color="danger" />
+      <Text style={styles.blocker} numberOfLines={1}>
+        {`Blocked by ${blockedBy}`}
+      </Text>
+    </View>
+  ) : null;
 
   // A live row's text target owns the vertical padding, so its press box
   // reaches 44 without growing the row. The circle's slot takes the same
@@ -171,9 +173,15 @@ export function TaskRowFace({
         )}
       </View>
       {renderText == null ? (
-        <View style={faceStyles.text}>{content}</View>
+        <View style={faceStyles.text}>
+          {content}
+          {blockedLine}
+        </View>
       ) : (
-        renderText(content)
+        <View style={faceStyles.text}>
+          {renderText(content)}
+          {blockedLine}
+        </View>
       )}
     </View>
   );
@@ -316,6 +324,13 @@ const makeStyles = (colors: Palette) => ({
       lineHeight: 18,
       fontFamily: fonts.body,
       color: colors.accent,
+    },
+    blockerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      height: 18,
+      paddingBottom: 0,
     },
     blocker: {
       flexShrink: 1,

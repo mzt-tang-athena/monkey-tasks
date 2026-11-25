@@ -22,6 +22,19 @@ fails a bullet that wraps or runs past 64 characters.
 - Capture on Today dates the task today.
 - The Inbox tab drops its title and keeps the note count.
 
+### Board
+
+- A Board tab groups your deeds by status.
+- Settings can add or remove the Board. It starts off.
+- Active, Backlog and Someday stack down the page.
+- Done and Dropped fold at the end.
+- Drag a deed onto a group to move its status.
+- Drag inside a group to set its order.
+- A due-date sort turns the board's drag off.
+- Done writes the completion date. Leaving Done clears it.
+- A deed blocked by an open note shows a red rail.
+- Capture on Board makes a backlog deed.
+
 ### Reminders
 
 - A reminder has three buttons: Done, Later, Tomorrow.

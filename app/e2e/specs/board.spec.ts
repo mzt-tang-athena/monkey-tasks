@@ -11,7 +11,7 @@ import {
   sectionHeader,
   useDueOrder,
 } from "../locators";
-import { noteText } from "../vault";
+import { noteText, returnToTab } from "../vault";
 
 /**
  * Ticket 20261124-deed-board: the Board is a Lists tab that groups
@@ -126,7 +126,7 @@ test("a drag inside a group writes order, and it survives a reload", async ({
     row(page, board.active.first),
   );
 
-  await page.reload();
+  await returnToTab(page);
   await expect(row(page, board.active.second)).toBeVisible();
   await expectAbove(
     row(page, board.active.second),
@@ -197,8 +197,26 @@ test("a due date sort turns the drag off", async ({ page }) => {
   await expect(page.getByTestId(/^board-grip:/)).toHaveCount(0);
 });
 
-test("a capture on Board writes a backlog deed", async ({ page }) => {
+test("the editor's Status field moves a deed", async ({ page }) => {
   await openBoard(page);
+
+  await press(
+    page,
+    row(page, board.active.first).getByRole("button", {
+      name: board.active.first,
+    }),
+  );
+  const editor = page.getByRole("dialog", { name: "Task" });
+  await expect(editor).toBeVisible();
+  await press(page, editor.getByRole("button", { name: "change status" }));
+  await press(page, page.getByRole("button", { name: "Someday", exact: true }));
+
+  await expect
+    .poll(async () => noteText(page, board.notes.water))
+    .toContain('status: "[[someday]]"');
+});
+
+test("a capture on Board writes a backlog deed", async ({ page }) => {  await openBoard(page);
 
   await press(page, page.getByRole("button", { name: "add task" }));
   await expect(

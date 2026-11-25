@@ -131,7 +131,9 @@ function TaskRowBase({
         disabled={onToggle == null}
         onHoverIn={() => setHot(true)}
         onHoverOut={() => setHot(false)}
-        accessibilityLabel={task.name}
+        accessibilityLabel={
+          blockedBy == null ? task.name : `${task.name}, blocked by ${blockedBy}`
+        }
         accessibilityRole="checkbox"
         aria-checked={done}
       >

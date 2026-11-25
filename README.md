@@ -217,7 +217,9 @@ The app reads `Tasks/`, `Tasks/Lists/` and `Deeds/`. A deed is a task
 with a status (contracts ADR
 `20261124-deeds-are-tasks-with-a-status`). `Deeds/` reads with the
 task schema: one query, one task type, one done rule. Main and the list
-tabs show only the tasks with no status, so a deed never shows there. A
+tabs show only the tasks with no status, so a deed never shows there.
+The Board groups the deeds by status (ADR
+`20261125-deed-board-is-the-kanban-list`). A
 dated deed shows on its day in the planner and rings like any task. A
 note in `Deeds/` with no status is a reference note and shows nowhere
 for now (ticket `20261124-deed-vault-tidy`).
@@ -363,8 +365,10 @@ screens read them.
 those settings (ADR 20261111-settings-screen). A week runs Monday to
 Sunday by default, and Settings lets you pick Sunday (ADR
 `20261118-week-start-setting`). Built-in lists switches the optional
-tabs, and Today is the first one there (ADR `20261125-today-list`).
-Lists opens it from the list menu, and the command pane opens it from
+tabs. Today sits before Main and the Board after it (ADR
+`20261125-today-list`, ADR
+`20261125-deed-board-is-the-kanban-list`). Lists opens the screen from
+the list menu, and the command pane opens it from
 every tab. Its Diagnostics section reads the crash log from app
 storage and offers Copy and Share (ticket 0081). It opens the
 diagnostics screen, which holds the one link to the gallery.
