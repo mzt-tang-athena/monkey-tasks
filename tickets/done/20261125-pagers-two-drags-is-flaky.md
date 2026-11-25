@@ -31,16 +31,19 @@ Keep the timeout and the retry count as they are.
 
 ## Outcome
 
-The 100 ms gap raced the pager's 220 ms settle. How far the settle had
-gone when the second drag started followed host load. The test now
-waits for the first drag's page (`Errands` selected) to land before the
-second drag. No fixed delay remains. No timeout or retry changed.
+The gap raced the pager's 220 ms settle, so where the second drag
+started followed the host's frame rate. The test now pauses the page
+clock. It flicks, then steps one frame so the track stands between the
+pages. The second flick starts with the landing still pending. The test
+runs the settle out and resumes.
 
-Found while tracing: a drag's release carries the translation of the
-last pointer move the gesture stack processed. That move sits one
-30 px step behind the last move sent. A 120 px flick reads as 90 px
-against the 80 px commit. Both drags clear it, with one step of margin.
+The second drag's begin lands the pending page, so the drags move Main
+to Errands to Finance. No timeout or retry changed.
 
-Proof: 40 then 80 executions of the test at two workers with no
-retries, all pass. With the pager changed to commit only the first
-flick, all four variants fail on the Finance assertion.
+Proof: 10 repeats at two workers, no retries, 40 pass. With the pager's
+begin stopping the pending commit, both motion variants fail. With the
+pager committing only the first flick, all four variants fail.
+
+Found while tracing: a drag's release carries the last pointer move the
+gesture stack processed, not the final position. That is why the flick
+steps one frame with the button down before it releases.
