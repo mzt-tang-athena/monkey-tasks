@@ -15,18 +15,33 @@ fails a bullet that wraps or runs past 64 characters.
 - Main and the lists show plain tasks only.
 - A deed with no status waits in the vault, unseen.
 
-## 1.3.0 - unreleased
+## 1.3.0 - 2026-11-25
 
 ### Command pane
 
 - It rises from the bottom edge, as the thumb is.
-- Swipe up on the bar's gap to open it.
+- Add is one wide button again, with a plus and its word.
+- Swipe down on Add to open the commands.
+- Swipe left or right on Add to change tab.
 - Drag the title down to close it.
 
 ### Planner
 
 - The planner's dates follow a swipe, as the tabs do.
 - The planner keeps the day you picked.
+
+### Tabs and lists
+
+- The tabs run Lists, Planner, Inbox, Journal.
+- My order is the default sort, first in its menu.
+
+### References
+
+- A task can link a note from References.
+- Search the folder by note name or ingredient.
+- Browse the folder, then tap a note to link it.
+- Tap a link on the task to read the note.
+- Remove a link from its own row.
 
 ### Look and feel
 

@@ -2,8 +2,10 @@ import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { TaskItem } from "@/types/task";
 import { formatTime, parseStoredDate, startOfToday } from "@/utils/dates";
+import { parseReferences } from "@/lib/references/links";
 import { fonts, radii, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
+import { Icon } from "./ui/icon";
 
 /** The toggle circle's size. */
 const circle = 24;
@@ -32,7 +34,8 @@ export const taskRowFace = {
 /**
  * The row body's name: the task and its meta, for example
  * "Buy milk, 3:00 PM, overdue". The meta line is hidden from assistive
- * tech, so this name is the one a reader hears.
+ * tech, so this name is the one a reader hears. A linked reference
+ * reads after the meta, so a reader hears the note the task points at.
  */
 export function taskRowLabel(task: TaskItem, done: boolean): string {
   const meta = taskMeta(task, done);
@@ -42,6 +45,7 @@ export function taskRowLabel(task: TaskItem, done: boolean): string {
     meta.badDate ? "bad date" : null,
     meta.recurring ? "repeats" : null,
     meta.overdue ? "overdue" : null,
+    parseReferences(task.body).join(", "),
   ]
     .filter((part): part is string => part != null && part !== "")
     .join(", ");
@@ -89,6 +93,7 @@ export function TaskRowFace({
   // The meta line shows only when it holds something. An empty one
   // would add its gap under every single-line row (ADR 0012).
   const hasMeta = timeUnder || badDate || recurring || overdue;
+  const references = parseReferences(task.body);
 
   // A non-breaking space joins the meta words in the button's name. The
   // flex gap draws the space on screen but leaves no text for the name.
@@ -107,6 +112,16 @@ export function TaskRowFace({
           {badDate ? <Text style={styles.badDate}>{"\u00a0bad date"}</Text> : null}
           {recurring ? <Text style={styles.recur}>{"\u00a0repeats"}</Text> : null}
           {overdue ? <Text style={styles.overdueText}>{"\u00a0overdue"}</Text> : null}
+        </View>
+      ) : null}
+      {/* The link line reads under the meta. Its words are in the row's
+          name, so a reader hears them once. */}
+      {references.length > 0 ? (
+        <View style={styles.referenceRow} aria-hidden>
+          <Icon name="link" size={12} color="accent" />
+          <Text style={styles.reference} numberOfLines={1}>
+            {references.join(", ")}
+          </Text>
         </View>
       ) : null}
     </>
@@ -161,10 +176,12 @@ export function taskFaceHeight(
   const timeUnder = timeAlign === "under" && !done && due?.hasTime === true;
   const badDate = due == null && Boolean(task.data?.due);
   const meta = timeUnder || badDate || recurring || overdue;
+  const links = parseReferences(task.body).length > 0;
   return (
     taskRowFace.padY * 2 +
     24 * Math.min(Math.max(lines, 1), 2) +
-    (meta ? 20 : 0)
+    (meta ? 20 : 0) +
+    (links ? 18 : 0)
   );
 }
 
@@ -263,6 +280,19 @@ const makeStyles = (colors: Palette) => ({
       paddingTop: taskRowFace.padY + 3,
     },
     recur: {
+      fontSize: 12,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.accent,
+    },
+    referenceRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      height: 18,
+    },
+    reference: {
+      flexShrink: 1,
       fontSize: 12,
       lineHeight: 18,
       fontFamily: fonts.body,

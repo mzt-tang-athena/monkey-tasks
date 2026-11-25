@@ -2,9 +2,9 @@ import * as React from "react";
 import { useIsFocused } from "expo-router";
 import { useBar } from "@/components/bottom-bar/bottom-bar";
 import {
-  SplitAddPill,
-  type SplitAddPillRef,
-} from "@/components/bottom-bar/split-add-pill";
+  AddButton,
+  type AddButtonRef,
+} from "@/components/bottom-bar/add-button";
 import { Sheet } from "@/components/ui/sheet";
 import { Toast } from "@/components/ui/toast";
 import { spacing } from "@/theme/tokens";
@@ -12,8 +12,8 @@ import { useNoteSheet } from "../hooks/use-note-sheet";
 import { NoteForm } from "./note-form";
 
 /**
- * The Inbox dock: the bar's split Add pill, the sheet its Add half
- * opens, and the toast for a failed write. The sheet and the toast draw
+ * The Inbox dock: the bar's Add button, the sheet it opens, and the
+ * toast for a failed write. The sheet and the toast draw
  * in the overlay host, above every screen.
  */
 export function NoteDock() {
@@ -21,9 +21,9 @@ export function NoteDock() {
   const focused = useIsFocused();
   const sheet = useNoteSheet({ bar, focused });
 
-  const addRef = React.useRef<SplitAddPillRef | null>(null);
+  const addRef = React.useRef<AddButtonRef | null>(null);
   // The overlay outlives `open` by the exit, and the page stays inert
-  // until it goes. The Add half takes focus back only once the sheet
+  // until it goes. The button takes focus back only once the sheet
   // has left the tree.
   const wasMounted = React.useRef(false);
   React.useEffect(() => {
@@ -39,7 +39,7 @@ export function NoteDock() {
 
   return (
     <>
-      <SplitAddPill ref={addRef} label="add note" onPress={sheet.toggle} />
+      <AddButton ref={addRef} label="add note" onPress={sheet.toggle} />
 
       {sheet.mounted ? (
         <Sheet

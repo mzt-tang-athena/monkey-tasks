@@ -1,7 +1,7 @@
 import { expect, pauseClock, test } from "../fixtures";
 import { sections, tabs, undated } from "../data";
 import { swipe } from "../gestures";
-import { listTab, row, sectionHeader } from "../locators";
+import { listTab, row, sectionHeader, useDueOrder } from "../locators";
 
 /** The slide is 220 ms (`motion.ms.settle` in `src/lib/motion/tokens.ts`). */
 const slideBudgetMs = 500;
@@ -9,6 +9,7 @@ const slideBudgetMs = 500;
 test("a list swipe follows the motion setting", async ({ page, reducedMotion }) => {
   await page.goto("/");
   await expect(row(page, undated.second)).toBeVisible();
+  await useDueOrder(page);
   const main = listTab(page, tabs.main);
   const next = listTab(page, tabs.next);
 

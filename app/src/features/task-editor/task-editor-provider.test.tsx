@@ -41,6 +41,23 @@ vi.mock("@/stores/tasks/task-state", () => ({
   useStoreMeta: () => ({ lists: store.lists, status: "ready" }),
 }));
 
+vi.mock("@/stores/references/use-references", () => ({
+  useReferenceNotes: () => ({
+    notes: [
+      {
+        name: "oatmeal",
+        uri: "memory://vault/References/oatmeal.md",
+        text: "---\ningredients:\n  - oats\n---\n\nRolled oats.\n",
+        body: "\nRolled oats.\n",
+        ingredients: ["oats"],
+        categories: ["physical"],
+        types: ["recipes"],
+      },
+    ],
+    error: null,
+  }),
+}));
+
 vi.mock("@/stores/tasks/mutations/use-edit-task", () => ({
   useEditTask: () => store.edit,
 }));
@@ -138,7 +155,13 @@ describe("the task editor sheet", () => {
       "value",
       "Call Mum",
     );
-    for (const name of ["add due date", "add repeat", "add reminder", "edit note"]) {
+    for (const name of [
+      "add due date",
+      "add repeat",
+      "add reminder",
+      "link a reference",
+      "edit note",
+    ]) {
       expect(screen.getByRole("button", { name })).toBeTruthy();
     }
     // No Save: every change is already written.
@@ -387,5 +410,44 @@ describe("the task editor sheet", () => {
 
     expect(store.edit).not.toHaveBeenCalled();
     expect(field).toHaveProperty("value", "Call Mum");
+  });
+
+  it("attaches a reference, previews it, then detaches it from its row", async () => {
+    mount();
+    openTask();
+
+    fireEvent.click(screen.getByRole("button", { name: "link a reference" }));
+    expect(screen.getByRole("dialog", { name: "Reference" })).toBeTruthy();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Find a reference" }), {
+      target: { value: "oats" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "oatmeal, physical, recipes" }),
+    );
+
+    await waitFor(() => expect(store.edit).toHaveBeenCalledTimes(1));
+    expect(written().body).toBe(
+      "\nOld body.\n\n## Reference\n\n[[oatmeal]]\n",
+    );
+
+    // The link is on the tile now, and a press on it reads the note.
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "open reference oatmeal" }),
+    );
+    expect(screen.getByRole("dialog", { name: "Reference" })).toBeTruthy();
+    expect(screen.getByText("Rolled oats.")).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: "done with the reference" }),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "remove reference oatmeal" }),
+    );
+
+    await waitFor(() => expect(store.edit).toHaveBeenCalledTimes(2));
+    expect(written(1).body).toBe("\nOld body.\n");
+    expect(screen.queryByRole("button", { name: "open reference oatmeal" })).toBeNull();
   });
 });

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { radius, spacing, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
-import { useSheetClock } from "../hooks/use-sheet-clock";
+import { useSheetClock } from "@/hooks/use-sheet-clock";
 
 /**
  * The note editor: a full height surface over the editor sheet, with a

@@ -22,6 +22,29 @@ export function listTab(page: Page, name: string): Locator {
   return page.getByRole("tab", { name, exact: true });
 }
 
+/** The bar's Add button, whatever the tab calls it. A tab that left
+    stays mounted under an `aria-hidden` screen, so a role query finds
+    the live one. */
+export function addButton(page: Page): Locator {
+  return page.getByRole("button", { name: /^add (task|entry|note)$/ });
+}
+
+/**
+ * Put the list in Due date. A fresh install opens in My order now, so a
+ * spec that reads a date section or a due order asks for it first, as
+ * an existing phone already has it saved.
+ */
+export async function useDueOrder(page: Page): Promise<void> {
+  await expect(page.getByTestId("lists-toolbar")).toBeVisible();
+  await press(page, page.getByRole("button", { name: "sort list" }));
+  const menu = page.getByRole("radiogroup", { name: "Sort list" });
+  await press(
+    page,
+    menu.getByRole("radio", { name: "Due date Soonest first", exact: true }),
+  );
+  await expect(menu).toHaveCount(0);
+}
+
 /** The Completed group's disclosure, by the name its count gives it. */
 export function completedToggle(page: Page): Locator {
   return page.getByRole("button", { name: /^Completed \d+ tasks?$/ });

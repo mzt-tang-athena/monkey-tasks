@@ -142,3 +142,20 @@ export const deeds = {
   note: "Deeds/Water the beds.md",
   referenceNote: "Deeds/Brainstorm.md",
 } as const;
+
+/** The References folder and the notes a task can point at (ticket 0091). */
+export const references = {
+  /** A task the reference tests open, and its note. */
+  task: undated.first,
+  path: `Tasks/${undated.first}.md`,
+  /** A note found by its file name. */
+  eggs: "chinese-steamed-eggs",
+  /** A note found by an ingredient alone. */
+  oatmeal: "oatmeal",
+  /** The ingredient query that finds `oatmeal`. */
+  ingredient: "oats",
+  /** The words a picker row shows under its name. */
+  words: "physical · recipes",
+  /** A link whose note is not in the folder. */
+  missing: "gone-note",
+} as const;

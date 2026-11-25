@@ -244,3 +244,79 @@ Android proof, this branch's release APK on the Pixel 7 emulator:
 - With the animation scales off the pane stands at rest in one frame.
 - Frames and shots:
   `app/build/verify/evidence/android-20261120-095625/`.
+
+## Amendment, 2026-11-24: the Add button opens the pane
+
+The operator used 1.2 on the phone. They asked for one wide Add button
+in place of the split pill on 2026-11-24. This replaces the gap swipe of
+the 2026-11-18 amendment, and the Command half of the same design. The
+bar's empty middle loses its swipe, so every tab has one opener.
+
+- A tap on the button runs the tab's own Add.
+- A swipe down opens the pane.
+- A swipe left or right moves one tab.
+- The bar's empty middle carries nothing.
+
+The pane opens on release. It rises on its own spring while the finger
+travels down. A live rise would move the panel against the finger. The
+2026-11-20 amendment turned down a finger-tracked pane. It needs a pane
+mounted while shut. The button carries the gesture instead. It moves up to 12pt with the finger, so a swipe reads
+as a swipe.
+
+The pane still rises from the bottom edge. A downward swipe on a pane
+that rises upward is the direction the 2026-11-20 amendment rejected.
+The operator chose it on 2026-11-24. The button's own travel answers it.
+
+The button is one target about 95pt wide and 48pt tall. It draws the
+plus and the word "Add". The Add action looked like that before ADR
+`20261117-icon-only-bottom-bar` split it. It carries the tab action's
+name: "add task", "add note" or "add entry".
+
+A swipe left goes to the tab on the right, as a pager does. The ends
+hold. A swipe past the last tab does nothing, and the button barely
+moves. A pager stops at its ends. The bar's glyphs also read left to
+right, so a wrap would move the selection against the finger.
+
+The commit is the button's own 24pt. The pager's 80 is too far for a
+44pt target at the window's edge. A finger there has about 30pt of room
+below it. A travel under the commit runs the tap, so a hand that moved
+still adds. The flick is the pager's 500px/s, so a quick throw commits
+under the distance.
+
+The gesture measures the finger from where it touched down. A pan's own
+translation starts again at its activation point on the web. That would
+read a shorter swipe than the phone does for the same hand.
+
+The three jobs sit on the button for a screen reader and a keyboard.
+The custom actions are "Open commands", "Next tab" and "Previous tab".
+On the web, the arrow keys work while the button holds focus. A phone's
+hardware keyboard sends no key event to React Native. The split pill's
+Command half was a keyboard user's only way in, and a swipe reaches
+neither.
+
+Alternatives we rejected:
+
+- Keep the header and toolbar openers: two openers for one action.
+- Keep the Command half: the operator asked for one button.
+- Wrap at the ends: it moves the selection against the finger.
+- Drive the rise with the finger: the panel would rise against it.
+
+Proof, both motion projects in the web suite:
+
+- `add-button.spec.ts` taps the button and swipes down, left and right.
+  It reads the tab each swipe lands on.
+- It moves a tap 12px, and the sheet still opens.
+- It reads the button's mid-swipe travel, and reduce's still button.
+- `swipe-press.test.tsx` reads the three custom actions and the keys.
+
+Android, this branch's release APK on the Pixel 7 emulator. The frames
+are 270 by 600, a quarter of the screen:
+
+- A tap opens the sheet, and the button moves no pixel.
+- A swipe down moves the button 8px down, and the pane rises.
+- A swipe left moves it 8px left and lands Planner.
+- A swipe right moves it 8px right and lands Lists.
+- A swipe on the bar's empty middle opens nothing.
+- The release smoke passes, the new step included.
+- Frames:
+  `~/code/monkey-tasks/worktrees/evidence-add-button-swipes/runs/`.

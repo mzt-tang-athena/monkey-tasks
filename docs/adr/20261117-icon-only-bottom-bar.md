@@ -39,3 +39,21 @@ the glyph. A fifth destination would not fit this row.
 
 The Add action keeps its text label. Capture is the primary action, and
 a bare plus is ambiguous with "new".
+
+## Amendment, 2026-11-24: one Add button fits the bar again
+
+The split Add pill arrived on 2026-11-19, when the pane's opener moved
+into the bar (ADR `20261111-command-pane`). The operator asked for one
+wide Add button in its place on 2026-11-24. The pane opens from a swipe
+down on that button now.
+
+The button keeps the height it had and takes the pill's width, about
+95pt. It draws the plus and the word "Add", as this record asked.
+
+At 360pt the bar holds four 44pt tabs (188), the button (95) and two
+row gaps (16). The bar's padding takes 24 more. The air between the nav
+and the button still has about 30pt. The bar needs about 330 of its 360,
+so no target drops under 44pt.
+
+The air between the nav and the button carries no gesture. It stays as
+space, and the bar's swipes live on the button alone.

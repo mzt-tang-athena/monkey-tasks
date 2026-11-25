@@ -12,6 +12,7 @@ let defaultTargetIndex = 0;
 let onSend: (
   parsed: ParsedCapture,
   target: CaptureTarget,
+  references: string[],
 ) => void | Promise<void> = () => undefined;
 
 function mount() {
@@ -28,9 +29,13 @@ beforeEach(() => {
 
 describe("useCaptureDraft", () => {
   it("clears the draft after a successful send", async () => {
-    const sent: { parsed: ParsedCapture; target: CaptureTarget }[] = [];
-    onSend = (parsed, target) => {
-      sent.push({ parsed, target });
+    const sent: {
+      parsed: ParsedCapture;
+      target: CaptureTarget;
+      references: string[];
+    }[] = [];
+    onSend = (parsed, target, references) => {
+      sent.push({ parsed, target, references });
     };
     const { result } = mount();
 
@@ -45,6 +50,7 @@ describe("useCaptureDraft", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].parsed.name).toBe("Buy milk");
     expect(sent[0].target).toEqual({ kind: "main" });
+    expect(sent[0].references).toEqual([]);
     expect(result.current.text).toBe("");
     expect(result.current.error).toBeNull();
     expect(result.current.sending).toBe(false);
@@ -140,5 +146,43 @@ describe("useCaptureDraft", () => {
       await Promise.resolve();
     });
     expect(result.current.sending).toBe(false);
+  });
+});
+
+describe("a capture's references", () => {
+  it("carries the attached names to the send and once each", async () => {
+    const sent: string[][] = [];
+    onSend = (_parsed, _target, references) => {
+      sent.push(references);
+    };
+    const { result } = mount();
+
+    await act(async () => {
+      result.current.setText("Buy oats");
+      result.current.addReference("oatmeal");
+      result.current.addReference("oatmeal");
+      result.current.addReference("miso-soup");
+    });
+    expect(result.current.references).toEqual(["oatmeal", "miso-soup"]);
+
+    await act(async () => {
+      result.current.send();
+      await Promise.resolve();
+    });
+
+    expect(sent).toEqual([["oatmeal", "miso-soup"]]);
+    expect(result.current.references).toEqual([]);
+  });
+
+  it("takes a name off again", async () => {
+    const { result } = mount();
+
+    await act(async () => {
+      result.current.addReference("oatmeal");
+      result.current.addReference("miso-soup");
+      result.current.removeReference("oatmeal");
+    });
+
+    expect(result.current.references).toEqual(["miso-soup"]);
   });
 });

@@ -35,7 +35,7 @@ export type Settings = {
 
 const DEFAULTS: Settings = {
   taskForm: "rows",
-  sortMode: "due",
+  sortMode: "manual",
   theme: "budget",
   weekView: "spread",
   weekStart: "monday",

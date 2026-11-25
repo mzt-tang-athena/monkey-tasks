@@ -68,16 +68,16 @@ export function buildCommands(sources: CommandSources): Command[] {
       run: sources.goPlanner,
     },
     {
-      id: "journal",
-      label: "Go to Journal",
-      keywords: ["daily", "diary", "food"],
-      run: sources.goJournal,
-    },
-    {
       id: "inbox",
       label: "Go to Inbox Notes",
       keywords: ["notes", "scratch"],
       run: sources.goInbox,
+    },
+    {
+      id: "journal",
+      label: "Go to Journal",
+      keywords: ["daily", "diary", "food"],
+      run: sources.goJournal,
     },
     ...switches,
     {

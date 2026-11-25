@@ -13,8 +13,8 @@ import type { TaskItem } from "@/types/task";
 import { ClearCompletedSheet } from "./clear-completed-sheet";
 
 const sortOptions: { key: SortMode; label: string; hint: string }[] = [
-  { key: "due", label: "Due date", hint: "Soonest first" },
   { key: "manual", label: "My order", hint: "Drag rows to sort" },
+  { key: "due", label: "Due date", hint: "Soonest first" },
 ];
 
 /**
@@ -57,8 +57,9 @@ export function ListsToolbar({
   const sortAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
   const moreAnchor = React.useRef<React.ComponentRef<typeof View>>(null);
   const close = React.useCallback(() => setOpen(null), []);
-  // One filled mark covers both an open menu and a sort other than due.
-  const sortSelected = open === "sort" || sortMode !== "due";
+  // One filled mark covers both an open menu and a sort other than the
+  // default, My order.
+  const sortSelected = open === "sort" || sortMode !== "manual";
   const moreSelected = open === "more";
 
   const sortItems: MenuItem[] = sortOptions.map((option) => ({

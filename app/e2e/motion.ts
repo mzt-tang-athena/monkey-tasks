@@ -17,6 +17,10 @@ export type MotionMark = {
 };
 
 export const marks: Readonly<Record<string, MotionMark>> = {
+  "add-button.spec.ts": {
+    runsIn: "both",
+    why: "reads the button's mid-swipe travel, and that reduce holds it still",
+  },
   "capture-clock.spec.ts": {
     runsIn: "both",
     why: "samples the sheet, scrim and bar every frame, then the reduce path",
@@ -72,6 +76,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
   "sheet-drag.spec.ts": {
     runsIn: "both",
     why: "checks the spring back from a short drag",
+  },
+  "tab-order.spec.ts": {
+    runsIn: "both",
+    why: "the bar and the pane's order, which do not depend on the motion setting",
   },
   "vault.spec.ts": {
     runsIn: "both",
@@ -130,6 +138,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "once",
     why: "a swipe's landed day, week or month, and what it holds",
   },
+  "references.spec.ts": {
+    runsIn: "once",
+    why: "the picker's matches, the note on disk and the sheet at rest",
+  },
   "settings.spec.ts": {
     runsIn: "once",
     why: "the picker's stored choice and the screens it repaints",
@@ -137,6 +149,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
   "scroll-edge.spec.ts": {
     runsIn: "once",
     why: "the hairline's opacity and color once it settles",
+  },
+  "sort-default.spec.ts": {
+    runsIn: "both",
+    why: "the stored order, which must read the same under reduce",
   },
   "tasks.spec.ts": {
     runsIn: "once",
