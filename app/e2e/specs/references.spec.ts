@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { references } from "../data";
-import { press, row } from "../locators";
+import { press, row, openMain } from "../locators";
 import { noteText, putNote, returnToTab } from "../vault";
 
 // A task can point at a note in the References folder (ticket 0091).
@@ -10,6 +10,7 @@ import { noteText, putNote, returnToTab } from "../vault";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, references.task)).toBeVisible();
 });
 

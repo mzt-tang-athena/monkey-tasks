@@ -1,6 +1,6 @@
 import { expect, test } from "../fixtures";
 import { tabs, undated } from "../data";
-import { listTab, row, tabTo } from "../locators";
+import { listTab, row, tabTo, openMain } from "../locators";
 import { rgb, setTheme } from "../theme";
 import { THEMES, type ThemeName } from "../../src/theme/palettes";
 
@@ -19,6 +19,13 @@ test.describe("the focus ring", () => {
     }) => {
       await page.setViewportSize({ width: 412, height: 915 });
       await page.goto("/");
+      await openMain(page);
+      // The press left focus on Main, and the browser's next Tab starts
+      // after it. Focusing the body puts the walk back at the top.
+      await page.evaluate(() => {
+        document.body.tabIndex = -1;
+        document.body.focus();
+      });
       await setTheme(page, palette);
       await expect(row(page, undated.second)).toBeVisible();
 

@@ -23,7 +23,7 @@ import {
   touchSwipe,
   swipe,
 } from "../gestures";
-import { listTab, press, row, sectionHeader, useDueOrder } from "../locators";
+import { listTab, press, row, sectionHeader, useDueOrder, openMain } from "../locators";
 import { putNote, returnToTab } from "../vault";
 
 /**
@@ -39,6 +39,7 @@ test.use({ viewport: { width: 400, height: 900 } });
 // an existing phone has it saved.
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
+  await openMain(page);
   await useDueOrder(page);
 });
 
@@ -254,6 +255,7 @@ async function expectSamePicture(
 /** A note on another tab, so its preview has content to compare. */
 async function seedErrand(page: Page) {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   await putNote(
     page,
@@ -266,6 +268,7 @@ async function seedErrand(page: Page) {
 /** A note on Finance, the page after the one a single flick lands on. */
 async function seedFinance(page: Page) {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   await putNote(
     page,
@@ -308,6 +311,7 @@ function commonScenarios(input: "mouse" | "touch") {
 
   test("a swipe turns the list page", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await turn(page, sectionHeader(page, sections.today));
@@ -318,6 +322,7 @@ function commonScenarios(input: "mouse" | "touch") {
 
   test("the tab rule follows a half swipe", async ({ page }, testInfo) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     const width = (await pagerBox(page, "list-pager")).width;
     const rest = await underline(page);
@@ -365,6 +370,7 @@ function commonScenarios(input: "mouse" | "touch") {
 
   test("a tab tap three pages away slides the rule across", async ({ page }, testInfo) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await pauseClock(page);
@@ -399,6 +405,7 @@ function commonScenarios(input: "mouse" | "touch") {
 
   test("a swipe that starts on a row opens no editor", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await turn(page, row(page, supplements));
@@ -413,28 +420,31 @@ function commonScenarios(input: "mouse" | "touch") {
   test("a short drag keeps its preview until the track rests", async ({ page }, testInfo) => {
     test.skip(!isMotion(testInfo), "reduce motion never mounts a preview");
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await pauseClock(page);
     if (input === "touch") {
       await touchHold(page, sectionHeader(page, sections.today), -dragPx.short, async () => {
         await frame(page);
-        await expect(page.getByTestId("preview:1")).toBeVisible();
+        // Pages count from the first tab, and Today leads it.
+        await expect(page.getByTestId("preview:2")).toBeVisible();
       });
     } else {
       await mouseHold(page, sectionHeader(page, sections.today), -dragPx.short, async () => {
         await frame(page);
-        await expect(page.getByTestId("preview:1")).toBeVisible();
+        await expect(page.getByTestId("preview:2")).toBeVisible();
       });
     }
     await frame(page, 500);
-    await expect(page.getByTestId("preview:1")).toHaveCount(0);
+    await expect(page.getByTestId("preview:2")).toHaveCount(0);
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
     await page.clock.resume();
   });
 
   test("two fast drags move two tabs", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await drag(page, -dragPx.flick, 4);
@@ -452,25 +462,26 @@ function commonScenarios(input: "mouse" | "touch") {
     if (input === "touch") {
       await touchHold(page, sectionHeader(page, sections.today), -dragPx.turn, async () => {
         await frame(page);
-        await expect(page.getByTestId("preview:1")).toBeVisible();
-        await expect(page.getByTestId("preview:2")).toHaveCount(0);
+        await expect(page.getByTestId("preview:2")).toBeVisible();
+        await expect(page.getByTestId("preview:3")).toHaveCount(0);
       });
     } else {
       await mouseHold(page, sectionHeader(page, sections.today), -dragPx.turn, async () => {
         await frame(page);
-        await expect(page.getByTestId("preview:1")).toBeVisible();
-        await expect(page.getByTestId("preview:2")).toHaveCount(0);
+        await expect(page.getByTestId("preview:2")).toBeVisible();
+        await expect(page.getByTestId("preview:3")).toHaveCount(0);
       });
     }
     await frame(page, 600);
-    await expect(page.getByTestId("preview:2")).toHaveCount(0);
+    await expect(page.getByTestId("preview:3")).toHaveCount(0);
     await expect(page.getByText("Finance page two")).toHaveCount(0);
     await page.clock.resume();
   });
 
   test("a drag right at the first list stops at the rubber band", async ({ page }, testInfo) => {
+    // Today leads the strip, so it is the first list now.
     await page.goto("/");
-    await expect(row(page, undated.second)).toBeVisible();
+    await expect(row(page, supplements)).toBeVisible();
 
     await pauseClock(page);
     if (input === "touch") {
@@ -490,17 +501,19 @@ function commonScenarios(input: "mouse" | "touch") {
     }
     await frame(page, 500);
     await expect.poll(() => trackX(page)).toBe(0);
-    await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
+    await expect(listTab(page, "Today")).toHaveAttribute("aria-selected", "true");
     await page.clock.resume();
   });
 
   test("a tab tap one page away slides", async ({ page }, testInfo) => {
     test.skip(!isMotion(testInfo), "reduce motion jumps to the page");
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     const width = (await pagerBox(page, "list-pager")).width;
 
     await pauseClock(page);
+    const from = await trackX(page);
     if (input === "touch") {
       await listTab(page, tabs.next).tap();
     } else {
@@ -509,8 +522,8 @@ function commonScenarios(input: "mouse" | "touch") {
     await frame(page, 60);
 
     const x = await trackX(page);
-    expect(x, "the track is between the pages").toBeLessThan(-1);
-    expect(x).toBeGreaterThan(-width + 1);
+    expect(x, "the track is between the pages").toBeLessThan(from - 1);
+    expect(x).toBeGreaterThan(from - width + 1);
     await page.clock.runFor(500);
     // The track rests in page space; the live page sits at the host's
     // origin, where its preview drew it.
@@ -521,6 +534,7 @@ function commonScenarios(input: "mouse" | "touch") {
 
   test("a tab tap three pages away cuts", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await pauseClock(page);
@@ -532,8 +546,7 @@ function commonScenarios(input: "mouse" | "touch") {
     await frame(page);
 
     await expect.poll(async () => (await liveOffset(page, "list-pager")).x).toBe(0);
-    await expect(page.getByTestId("preview:1")).toHaveCount(0);
-    await expect(page.getByTestId("preview:2")).toHaveCount(0);
+    await expect(page.getByTestId(/^preview:/)).toHaveCount(0);
     await expect(listTab(page, focus)).toHaveAttribute("aria-selected", "true");
     await page.clock.resume();
   });
@@ -691,6 +704,7 @@ async function dayScreenshots(page: Page, testInfo: TestInfo, hold: Hold) {
 test.describe("with the mouse", () => {
   test("the four pager hosts take a vertical pan", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await expectTouchAction(page.getByTestId("list-pager"), "pan-y");
 
@@ -711,6 +725,7 @@ test.describe("with the mouse", () => {
 
   test("a swipe released over the bottom bar rests, and the next tap opens", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     const bar = await page.getByRole("tab", { name: "Lists" }).boundingBox();
     if (bar == null) {
@@ -727,9 +742,10 @@ test.describe("with the mouse", () => {
     await page.mouse.move(at.x, bar.y + bar.height / 2, { steps: 5 });
     await page.mouse.up();
 
-    // The track must return, and the press guard must not stay armed.
+    // The track must return to its page, and the press guard must not
+    // stay armed.
     await page.waitForTimeout(500);
-    await expect.poll(() => trackX(page)).toBe(0);
+    await expect.poll(async () => (await liveOffset(page, "list-pager")).x).toBe(0);
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
     await press(page, row(page, undated.second).getByRole("button", { name: undated.second }));
     await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
@@ -758,7 +774,7 @@ test.describe("with the mouse", () => {
       -Math.round(pager.width * holdShare),
       async () => {
         await frame(page);
-        const cell = page.getByTestId("preview:1");
+        const cell = page.getByTestId("preview:2");
         await expect(cell).toBeVisible();
         const box = await cell.boundingBox();
         if (box == null) {
@@ -829,12 +845,14 @@ test.describe("with the mouse", () => {
   test("reduce motion keeps the track still and commits on release", async ({ page }, testInfo) => {
     test.skip(isMotion(testInfo), "the motion project follows the finger");
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await pauseClock(page);
+    const rest = await trackX(page);
     await mouseHold(page, sectionHeader(page, sections.today), -dragPx.flick, async () => {
       await frame(page);
-      expect(await trackX(page)).toBe(0);
+      expect(await trackX(page)).toBe(rest);
     });
     await frame(page, 32);
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
@@ -845,6 +863,7 @@ test.describe("with the mouse", () => {
   test("reduce motion changes the page at once on a tab tap", async ({ page }, testInfo) => {
     test.skip(isMotion(testInfo), "the motion project slides");
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await pauseClock(page);
@@ -857,6 +876,7 @@ test.describe("with the mouse", () => {
   test("the tab strip does not slide with reduce motion", async ({ page }, testInfo) => {
     test.skip(isMotion(testInfo), "the motion project slides the strip");
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     const read = await page.evaluate(async () => {
@@ -894,6 +914,7 @@ test.describe("with a touch screen", () => {
 
   test("the four pager hosts take a vertical pan", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await expectTouchAction(page.getByTestId("list-pager"), "pan-y");
 
@@ -914,6 +935,7 @@ test.describe("with a touch screen", () => {
 
   test("a touch drag that ends in touchCancel keeps the tab", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await touchCancel(page, sectionHeader(page, sections.today), "left");
@@ -925,6 +947,7 @@ test.describe("with a touch screen", () => {
 
   test("a vertical touch drag with sideways drift scrolls and never pages", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await touchDrift(
@@ -936,7 +959,7 @@ test.describe("with a touch screen", () => {
 
     await expect.poll(() => scrollTop(page)).toBeGreaterThan(0);
     await expect(listTab(page, tabs.main)).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByTestId("preview:1")).toHaveCount(0);
+    await expect(page.getByTestId(/^preview:/)).toHaveCount(0);
   });
 
   test("the list preview matches the landed page on touch", async ({ page }, testInfo) => {
@@ -961,7 +984,7 @@ test.describe("with a touch screen", () => {
       -Math.round(pager.width * holdShare),
       async () => {
         await frame(page);
-        const cell = page.getByTestId("preview:1");
+        const cell = page.getByTestId("preview:2");
         await expect(cell).toBeVisible();
         const box = await cell.boundingBox();
         if (box == null) {
@@ -999,12 +1022,14 @@ test.describe("with a touch screen", () => {
   test("reduce motion keeps the touch track still and commits on release", async ({ page }, testInfo) => {
     test.skip(isMotion(testInfo), "the motion project follows the finger");
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await pauseClock(page);
+    const rest = await trackX(page);
     await touchHold(page, sectionHeader(page, sections.today), -dragPx.flick, async () => {
       await frame(page);
-      expect(await trackX(page)).toBe(0);
+      expect(await trackX(page)).toBe(rest);
     });
     await frame(page, 32);
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
@@ -1138,6 +1163,7 @@ test("a page lays out at the pager's origin, so Android can read it", async ({ p
   // draws the page at 0. It also skips a whole subtree when a parent's
   // box lands off screen, so the track must stay over the host at rest.
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   const standing = async () => {
     const host = await pagerBox(page, "list-pager");

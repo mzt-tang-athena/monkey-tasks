@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { swipeOpen } from "../commands";
 import { supplements, tabs, tomorrow, undated } from "../data";
-import { listTab, press, row } from "../locators";
+import { listTab, press, row, openMain } from "../locators";
 import { rgb } from "../theme";
 import {
   THEMES,
@@ -67,6 +67,7 @@ async function scan(page: Page, where: string) {
 test.describe("entry points", () => {
   test("opens from Lists in one tap and names every palette", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await openFromLists(page);
@@ -97,6 +98,7 @@ test.describe("entry points", () => {
 test.describe("the settings persist", () => {
   test("a theme pick repaints in place and survives a reload", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await expectColor(page, "lists-screen", THEMES.budget.paper, "before");
 
@@ -130,6 +132,7 @@ test.describe("the settings persist", () => {
     page,
   }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     const before = await page.evaluate(() => globalThis.__vault?.files() ?? {});
 
@@ -163,6 +166,7 @@ test.describe("the settings persist", () => {
     await expect(page.getByTestId("day-heading")).toBeVisible();
     await expect(page.getByTestId(`pill:${supplements}`)).toBeVisible();
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await press(page, page.getByRole("button", { name: "sort list" }));
     await expect(
@@ -207,6 +211,7 @@ test.describe("the week view", () => {
 test.describe("back", () => {
   test("returns to the same Lists tab and screen", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await press(page, listTab(page, tabs.next));
     await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
@@ -245,6 +250,7 @@ test.describe("accessibility", () => {
       page,
     }) => {
       await page.goto("/");
+      await openMain(page);
       await expect(row(page, undated.second)).toBeVisible();
       await openFromLists(page);
       await expect(page.getByRole("radiogroup", { name: "Theme" })).toBeVisible();

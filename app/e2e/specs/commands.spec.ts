@@ -4,7 +4,7 @@ import { expect, pauseClock, test } from "../fixtures";
 import { tabs, undated } from "../data";
 import { command, pane, search, swipeOpen } from "../commands";
 import { holdDrag, swipe, touchFlick } from "../gestures";
-import { addButton, expectAbove, listTab, row } from "../locators";
+import { addButton, expectAbove, listTab, row, openMain } from "../locators";
 import { putNote } from "../vault";
 
 /**
@@ -67,6 +67,7 @@ test.describe("opening", () => {
   }) => {
     test.skip(reducedMotion === "reduce", "the reduced project has no rise to catch");
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     const height = page.viewportSize()?.height ?? 915;
 
@@ -100,6 +101,7 @@ test.describe("opening", () => {
     page,
   }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
 
@@ -113,6 +115,7 @@ test.describe("opening", () => {
     page,
   }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     const opener = addButton(page);
@@ -128,6 +131,7 @@ test.describe("opening", () => {
 
   test("a drag down on the title row closes it", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
 
@@ -138,6 +142,7 @@ test.describe("opening", () => {
 
   test("a short drag down springs back", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
 
@@ -153,6 +158,7 @@ test.describe("opening", () => {
   }) => {
     test.skip(reducedMotion !== "reduce", "the motion project plays the rise");
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await swipeOpen(page);
@@ -169,6 +175,7 @@ test.describe("opening", () => {
 test.describe("the bar's own controls keep their gestures", () => {
   test("a swipe up on a tab opens nothing and keeps its tab", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await touchFlick(page, listTab(page, tabs.main), -120);
@@ -179,6 +186,7 @@ test.describe("the bar's own controls keep their gestures", () => {
 
   test("a tap on the Add button opens the sheet, not the pane", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await addButton(page).click();
@@ -191,6 +199,7 @@ test.describe("the bar's own controls keep their gestures", () => {
 test.describe("no page starts the pane", () => {
   test("a pull on a list body opens no pane and keeps the row", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await touchFlick(page, page.getByTestId("lists-screen"), 160);
@@ -216,6 +225,7 @@ test.describe("no page starts the pane", () => {
     await expectShut(page);
 
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await page.getByRole("button", { name: "sort list" }).click();
     await page.getByRole("radio", { name: "My order Drag rows to sort" }).click();
@@ -249,6 +259,7 @@ test.describe("the headers", () => {
     page,
   }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     const band = page.getByTestId("lists-toolbar");
 
@@ -261,6 +272,7 @@ test.describe("the headers", () => {
 test.describe("searching and choosing", () => {
   test("filters the rows and runs the chosen command", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
 
@@ -275,6 +287,7 @@ test.describe("searching and choosing", () => {
 
   test("the recent command moves to the front, nearest the search", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
     await command(page, "planner").click();
@@ -294,6 +307,7 @@ test.describe("searching and choosing", () => {
 test.describe("every command", () => {
   test("Add task opens the capture sheet", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
 
@@ -314,6 +328,7 @@ test.describe("every command", () => {
 
   test("Reload vault rereads the folder", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     // Another app writes a note while the screen holds its read.
@@ -333,6 +348,7 @@ test.describe("every command", () => {
 
   test("the four Go to commands change the screen", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     const stops = [
@@ -353,6 +369,7 @@ test.describe("every command", () => {
 
   test("Switch list goes to Lists on the next list", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
 
@@ -369,6 +386,7 @@ test.describe("every command", () => {
   test("Sort mode, Theme and Settings open the Settings screen", async ({ page }) => {
     for (const id of ["sort", "theme", "settings"]) {
       await page.goto("/");
+      await openMain(page);
       await expect(row(page, undated.second)).toBeVisible();
       await openPane(page);
       await command(page, id).click();
@@ -380,6 +398,7 @@ test.describe("every command", () => {
 
   test("Diagnostics opens the dev screen", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
     await command(page, "diagnostics").click();
@@ -391,6 +410,7 @@ test.describe("every command", () => {
 test.describe("access", () => {
   test("every row is a 44pt target the keyboard reaches", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await openPane(page);
 

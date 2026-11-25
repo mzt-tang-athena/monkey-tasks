@@ -1,7 +1,7 @@
 import { expect, test } from "../fixtures";
 import { undated } from "../data";
 import { pullDown, sheetPx, type Input } from "../gestures";
-import { press, row } from "../locators";
+import { press, row, openMain } from "../locators";
 import type { Locator, Page } from "@playwright/test";
 
 const editor = (page: Page) => page.getByRole("dialog", { name: "Task" });
@@ -14,6 +14,7 @@ async function opened(dialog: Locator) {
 
 async function openEditor(page: Page) {
   await page.goto("/");
+  await openMain(page);
   await press(page, row(page, undated.second).getByRole("button", { name: undated.second }));
   await opened(editor(page));
 }
@@ -80,6 +81,7 @@ for (const input of ["touch", "mouse"] as const satisfies readonly Input[]) {
 
     test("closes the capture sheet from its handle", async ({ page }) => {
       await page.goto("/");
+      await openMain(page);
       await page.getByRole("button", { name: "add task" }).click();
       const capture = page.getByRole("dialog", { name: "Add a task" });
       await opened(capture);

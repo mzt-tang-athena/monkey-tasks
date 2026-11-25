@@ -166,6 +166,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "once",
     why: "palette colors and axe, each polled to its final value",
   },
+  "today-list.spec.ts": {
+    runsIn: "both",
+    why: "the landing tab, its groups and the switch, which must hold under reduce",
+  },
 };
 
 /** The specs and journeys that run once, in the `motion` project only. */

@@ -22,6 +22,16 @@ export function listTab(page: Page, name: string): Locator {
   return page.getByRole("tab", { name, exact: true });
 }
 
+/**
+ * Open the Lists screen on Main. A fresh start lands on Today now, so a
+ * spec about Main's rows asks for Main first (ADR 20261125-today-list).
+ */
+export async function openMain(page: Page): Promise<void> {
+  await expect(page.getByTestId("lists-toolbar")).toBeVisible();
+  await press(page, listTab(page, "Main"));
+  await expect(listTab(page, "Main")).toHaveAttribute("aria-selected", "true");
+}
+
 /** The bar's Add button, whatever the tab calls it. A tab that left
     stays mounted under an `aria-hidden` screen, so a role query finds
     the live one. */

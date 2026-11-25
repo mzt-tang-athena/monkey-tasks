@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { months, supplements, tabs, tomorrow, undated } from "../data";
-import { expectAbove, press, row } from "../locators";
+import { expectAbove, press, row, openMain } from "../locators";
 import { smallTargets } from "../targets";
 import { rgb, setTheme } from "../theme";
 import { THEMES } from "../../src/theme/palettes";
@@ -21,6 +21,7 @@ import {
 
 async function openLists(page: Page) {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
 }
 

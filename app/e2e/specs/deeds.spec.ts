@@ -1,6 +1,6 @@
 import { expect, test } from "../fixtures";
 import { deeds } from "../data";
-import { press, row } from "../locators";
+import { press, row, openMain } from "../locators";
 import { noteText } from "../vault";
 import { sampleSeed } from "../../src/lib/vault/sample/seed";
 
@@ -21,6 +21,7 @@ const query = `vault=${deeds.seed}`;
 test.describe("deeds", () => {
   test("Main shows the plain task and no deed", async ({ page }) => {
     await page.goto(`/?${query}`);
+    await openMain(page);
     await expect(row(page, deeds.plain)).toBeVisible();
 
     await expect(row(page, deeds.active)).toHaveCount(0);

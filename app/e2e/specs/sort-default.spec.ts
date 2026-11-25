@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { sections, supplements, undated } from "../data";
-import { row, sectionHeader } from "../locators";
+import { row, sectionHeader, openMain } from "../locators";
 
 /**
  * The operator's 2026-11-24 feedback: Lists opens in My order, and the
@@ -22,6 +22,7 @@ async function openSort(page: Page): Promise<void> {
 
 test("a fresh install opens Lists in My order", async ({ page }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
 
   // One headerless group: no dated section stands, and the markup rows
@@ -36,6 +37,7 @@ test("a fresh install opens Lists in My order", async ({ page }) => {
 
 test("the sort button shows no changed mark in My order", async ({ page }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
 
   await expect(page.getByTestId("icon:sort")).toBeVisible();
@@ -44,6 +46,7 @@ test("the sort button shows no changed mark in My order", async ({ page }) => {
 
 test("the sort menu lists My order first and marks it checked", async ({ page }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   await openSort(page);
 
@@ -63,6 +66,7 @@ test("the sort menu lists My order first and marks it checked", async ({ page })
 
 test("a saved Due date survives the update", async ({ page }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
 
   // The phone saved Due date before the default moved.
@@ -70,6 +74,7 @@ test("a saved Due date survives the update", async ({ page }) => {
     globalThis.localStorage.setItem("monkey-tasks.sort-mode", "due");
   });
   await page.reload();
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
 
   await expect(sectionHeader(page, sections.today)).toBeVisible();
