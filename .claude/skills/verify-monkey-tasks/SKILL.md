@@ -329,6 +329,16 @@ lock for its whole life, so every later `flock` waits forever. `-o`
 closes that copy before the command starts. The script also closes every
 inherited file handle above 2 itself.
 
+### Press a notification's button
+
+`scripts/android-press.sh <title> <button> <name>` opens the shade, the app's
+group and the notification, and taps a button. Android folds both, so it
+walks in until the button shows, and keeps the screen before the tap as
+`<name>-buttons.png`. `scripts/android-shade.mjs` does the reading: it takes
+the last dump and prints the next tap, `press`, `expand` or `none`.
+`journeys/android-reminder-actions.sh` is the model. It writes tasks that
+fall due in a few minutes, kills the app, then presses a button on each.
+
 ### Doctor
 
 ```sh
