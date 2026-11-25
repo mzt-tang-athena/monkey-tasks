@@ -3,14 +3,22 @@ import { StyleSheet, Text, View } from "react-native";
 import { pageGutter, spacing, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 
-/** The screen's name and the number of notes the cards show. */
+/**
+ * The number of notes the cards show. The screen draws no title, so
+ * this line is also its heading: a screen reader says "Inbox Notes"
+ * first, then the count.
+ */
 export function InboxHeader({ count }: { count: number }) {
   const { styles } = useThemedStyles(makeStyles);
+  const label = count === 1 ? "1 note" : `${count} notes`;
   return (
     <View testID="inbox-header" style={styles.header}>
-      <Text style={styles.title}>Inbox Notes</Text>
-      <Text style={styles.count}>
-        {count === 1 ? "1 note" : `${count} notes`}
+      <Text
+        accessibilityRole="header"
+        accessibilityLabel={`Inbox Notes, ${label}`}
+        style={styles.count}
+      >
+        {label}
       </Text>
     </View>
   );
@@ -19,17 +27,9 @@ export function InboxHeader({ count }: { count: number }) {
 const makeStyles = (colors: Palette) => ({
   styles: StyleSheet.create({
     header: {
-      flexDirection: "row",
-      alignItems: "baseline",
-      gap: spacing.s,
       paddingHorizontal: pageGutter,
       paddingTop: spacing.m,
       paddingBottom: spacing.s,
-    },
-    title: {
-      ...type.title,
-      fontWeight: "600",
-      color: colors.ink,
     },
     count: {
       ...type.meta,

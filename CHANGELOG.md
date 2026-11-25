@@ -15,6 +15,10 @@ fails a bullet that wraps or runs past 64 characters.
 - Main and the lists show plain tasks only.
 - A deed with no status waits in the vault, unseen.
 
+### Tabs and lists
+
+- The Inbox tab drops its title and keeps the note count.
+
 ## 1.3.0 - 2026-11-25
 
 ### Command pane

@@ -118,6 +118,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "once",
     why: "colors, sizes and axe on every primitive at rest",
   },
+  "inbox-title.spec.ts": {
+    runsIn: "both",
+    why: "the title is absent once the tab settles, with and without reduce",
+  },
   "inbox-notes.spec.ts": {
     runsIn: "once",
     why: "note text, frontmatter and axe around the composer",
