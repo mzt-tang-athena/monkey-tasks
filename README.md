@@ -137,6 +137,10 @@ package. The smoke must pass before we publish
 4. Pull main, run `scripts/gate.sh full` and wait for the receipt.
 5. Run `scripts/release.sh <version>`.
 
+The script ships the tip of main. From the bump PR in step 1 to the tag,
+merge nothing meant for the next version. On 2026-11-24 a 1.4 feature
+merged early, and 1.3 had to take it.
+
 It refuses unless main is clean, checked out and level with
 `origin/main`. The app version must match. The changelog section needs a
 date for the release. A full gate receipt must also pass for HEAD. It
@@ -592,7 +596,7 @@ Open feature tickets:
 - 0065 the list menu actions
 - 0003 and 0008 carry the larger ideas.
 
-The app has four tabs today, Lists, Planner, Journal and Inbox Notes. The bar
+The app has four tabs today, Lists, Planner, Inbox Notes and Journal. The bar
 carries no labels; each tab's name lives in its accessibility label
 (ADR 20261117-phosphor-glyphs). The bar's action is a split Add pill.
 Its plus half runs the tab's Add. Its Command half opens the pane

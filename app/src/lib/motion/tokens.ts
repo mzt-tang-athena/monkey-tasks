@@ -37,6 +37,17 @@ export const motion = {
     rubber: 0.28,
     rubberMax: 48,
   },
+  /** The bar's Add button under a finger. It sits 44pt tall at the
+      window's edge, so its commit fits the room below and beside it,
+      and its own travel is a hint of motion rather than a drag. */
+  addButton: {
+    /** The travel a swipe needs to act, in points. */
+    commit: 24,
+    /** The furthest the button travels under a finger, in points. */
+    nudge: 12,
+    /** The share of the finger's travel it takes. */
+    share: 0.28,
+  },
   hold: {
     row: 300,
     pill: 120,

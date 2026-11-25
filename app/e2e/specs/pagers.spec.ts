@@ -23,7 +23,7 @@ import {
   touchSwipe,
   swipe,
 } from "../gestures";
-import { listTab, press, row, sectionHeader } from "../locators";
+import { listTab, press, row, sectionHeader, useDueOrder } from "../locators";
 import { putNote, returnToTab } from "../vault";
 
 /**
@@ -34,6 +34,13 @@ import { putNote, returnToTab } from "../vault";
  */
 
 test.use({ viewport: { width: 400, height: 900 } });
+
+// The page turns on a section header, so the list reads in Due date as
+// an existing phone has it saved.
+test.beforeEach(async ({ page }) => {
+  await page.goto("/");
+  await useDueOrder(page);
+});
 
 /** The tab two places after Main, behind Errands. */
 const finance = "Finance";

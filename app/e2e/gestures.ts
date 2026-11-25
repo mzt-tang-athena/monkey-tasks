@@ -497,7 +497,9 @@ export async function mouseHold(
 
 /**
  * A CDP touch drag held at its end, so `during` can read or capture
- * the mid-gesture frame. It releases after the callback returns.
+ * the mid-gesture frame. It releases after the callback returns, or
+ * cancels when `end` names a cancel, which runs no action the release
+ * would.
  */
 export async function touchHold(
   page: Page,
@@ -508,12 +510,18 @@ export async function touchHold(
     dy = 0,
     side = "center",
     steps = swipeSteps,
-  }: { dy?: number; side?: "left" | "center" | "right"; steps?: number } = {},
+    end = "touchEnd",
+  }: {
+    dy?: number;
+    side?: "left" | "center" | "right";
+    steps?: number;
+    end?: "touchEnd" | "touchCancel";
+  } = {},
 ) {
   const start = await dragStart(target, side);
   const cdp = await page.context().newCDPSession(page);
   const send = (
-    type: "touchStart" | "touchMove" | "touchEnd",
+    type: "touchStart" | "touchMove" | "touchEnd" | "touchCancel",
     at?: { x: number; y: number },
   ) =>
     cdp.send("Input.dispatchTouchEvent", {
@@ -529,7 +537,7 @@ export async function touchHold(
     await page.waitForTimeout(16);
   }
   await during();
-  await send("touchEnd");
+  await send(end);
   await cdp.detach();
 }
 

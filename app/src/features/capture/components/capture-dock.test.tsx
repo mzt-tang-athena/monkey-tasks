@@ -34,8 +34,26 @@ vi.mock("react-native-keyboard-controller", async () => {
       height: useSharedValue(0),
       progress: useSharedValue(0),
     }),
+    useKeyboardState: () => 0,
   };
 });
+
+vi.mock("@/stores/references/use-references", () => ({
+  useReferenceNotes: () => ({
+    notes: [
+      {
+        name: "oatmeal",
+        uri: "memory://vault/References/oatmeal.md",
+        text: "---\ningredients:\n  - oats\n---\n\nRolled oats.\n",
+        body: "\nRolled oats.\n",
+        ingredients: ["oats"],
+        categories: ["physical"],
+        types: ["recipes"],
+      },
+    ],
+    error: null,
+  }),
+}));
 
 vi.mock("@/stores/tasks/mutations/use-capture-task", () => ({
   useCaptureTask: () => state.capture,
@@ -239,8 +257,50 @@ describe("CaptureDock", () => {
     });
   });
 
-  it("sends the draft to the target and the due day, then closes", async () => {
+  it("links a reference for a list target and sends it as one more line", async () => {
     render(<Screen />);
+    openSheet();
+
+    // The link is offered for a list target, and not for Main.
+    expect(
+      screen.getByRole("button", { name: "link a reference" }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "target list: Work" }));
+    expect(
+      screen.queryByRole("button", { name: "link a reference" }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "target list: Main" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "link a reference" }));
+    expect(screen.getByRole("dialog", { name: "Reference" })).toBeTruthy();
+    fireEvent.change(screen.getByRole("textbox", { name: "Find a reference" }), {
+      target: { value: "oats" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "oatmeal, physical, recipes" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(
+      screen.getByRole("button", { name: "remove reference oatmeal" }),
+    ).toBeTruthy();
+
+    type("Buy oats");
+    fireEvent.click(screen.getByRole("button", { name: "send task" }));
+    await flush();
+    await finishMotion();
+
+    expect(state.capture).toHaveBeenCalledTimes(1);
+    const [, , , references] = state.capture.mock.calls[0] as [
+      ParsedCapture,
+      CaptureTarget,
+      string,
+      string[],
+    ];
+    expect(references).toEqual(["oatmeal"]);
+  });
+
+  it("sends the draft to the target and the due day, then closes", async () => {    render(<Screen />);
     openSheet();
     type("Buy milk");
 

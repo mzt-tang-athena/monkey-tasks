@@ -1,6 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
+import { swipeOpen } from "../commands";
 import { supplements, tabs, tomorrow, undated } from "../data";
 import { listTab, press, row } from "../locators";
 import { rgb } from "../theme";
@@ -39,11 +40,8 @@ async function openFromLists(page: Page) {
 
 async function openFromPlanner(page: Page) {
   // The Planner header has no gear now. Settings opens from the pane,
-  // which every tab's bar carries.
-  await press(
-    page,
-    page.getByRole("button", { name: "open commands" }).filter({ visible: true }),
-  );
+  // which every tab's Add button carries on its swipe down.
+  await swipeOpen(page);
   await press(page, page.getByTestId("command:settings"));
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 }

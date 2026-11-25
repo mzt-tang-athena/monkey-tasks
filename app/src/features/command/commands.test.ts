@@ -57,8 +57,8 @@ describe("buildCommands", () => {
   it("offers one Go to row per tab, in tab order", () => {
     const ids = buildCommands(sources()).map((command) => command.id);
     expect(ids.indexOf("lists")).toBeLessThan(ids.indexOf("planner"));
-    expect(ids.indexOf("planner")).toBeLessThan(ids.indexOf("journal"));
-    expect(ids.indexOf("journal")).toBeLessThan(ids.indexOf("inbox"));
+    expect(ids.indexOf("planner")).toBeLessThan(ids.indexOf("inbox"));
+    expect(ids.indexOf("inbox")).toBeLessThan(ids.indexOf("journal"));
     expect(byId("journal").label).toBe("Go to Journal");
     expect(byId("inbox").label).toBe("Go to Inbox Notes");
   });

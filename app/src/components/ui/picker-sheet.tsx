@@ -13,13 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { spacing, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
-import { useClampedHeight } from "../hooks/use-clamped-height";
-import { useSheetClock } from "../hooks/use-sheet-clock";
+import { useClampedHeight } from "@/hooks/use-clamped-height";
+import { useSheetClock } from "@/hooks/use-sheet-clock";
 
 /**
- * A picker over the editor: one more sheet, stacked above it. The
- * header names the property and holds the optional Done control. The
- * scrim, Escape and Android back close it with no change.
+ * A picker over a sheet: one more sheet, stacked above it. The header
+ * names the property and holds the optional Done control. The scrim,
+ * Escape and Android back close it with no change.
  */
 export function PickerSheet({
   open,

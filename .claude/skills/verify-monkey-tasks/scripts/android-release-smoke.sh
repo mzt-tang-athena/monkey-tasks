@@ -156,11 +156,12 @@ alive "split drag"
 
 step "theme switch"
 # Settings sits in the command pane since #168, so the planner's gear tap
-# finds nothing. Open the pane from the bar's opener and take the pane's
-# own Settings row. Every tap looks its node up on the current screen, so
-# a handle the app has lost fails this step once instead of passing.
-if $D tap "open commands" >/dev/null && $D wait command-search 20 >/dev/null; then
-  pass "the bar's opener opens the command pane"
+# finds nothing. Open the pane from the bar's Add button, which the
+# operator's 2026-11-24 design gives every tab, and take its own Settings
+# row. Every tap looks its node up on the current screen, so a handle the
+# app has lost fails this step once instead of passing.
+if $D swipe "add task" 0 200 300 >/dev/null && $D wait command-search 20 >/dev/null; then
+  pass "the Add button's swipe down opens the command pane"
   if $D tap Settings >/dev/null && $D wait settings-screen 20 >/dev/null; then
     pass "the pane's Settings row opens Settings"
     $D shot s08-settings >/dev/null
@@ -186,23 +187,23 @@ if $D tap "open commands" >/dev/null && $D wait command-search 20 >/dev/null; th
     fail "the pane's Settings row opens no Settings"
   fi
 else
-  fail "the bar's opener opens no command pane"
+  fail "the Add button's swipe opens no command pane"
 fi
 alive "theme switch"
 
-step "the bar's gap opens the command pane"
+step "the Add button's swipe down opens the command pane"
 $D tap Lists >/dev/null && sleep 1
 $D wait "~task-row:" 60 >/dev/null
-# The pane rises from the bottom edge, so an upward pull on the gap
-# opens it. 1.2 and earlier dropped it from the top on a downward pull,
-# and a release smoke may run against either, so the other way is tried
-# next. The pass line says which one worked.
-opened=
-for way in up down; do
-  if [ "$way" = up ]; then $D swipe "bar-gap" 0 -350 250 >/dev/null; else $D swipe "bar-gap" 0 350 250 >/dev/null; fi
-  if $D wait command-search 10 >/dev/null 2>&1; then opened=$way; break; fi
-done
-[ -n "$opened" ] && pass "a pull $opened on the bar's gap opens the pane" || fail "the gap pull did not open the pane"
+# 1.3 moves the opener to the bar's Add button: a swipe down on it opens
+# the pane, and the bar's empty middle carries nothing. The finger stops
+# at the window's edge, so the swipe is short and the button's own commit
+# (24pt) is what it must clear.
+$D swipe "add task" 0 200 300 >/dev/null
+if $D wait command-search 10 >/dev/null 2>&1; then
+  pass "a swipe down on the Add button opens the pane"
+else
+  fail "the Add button's swipe down opened no pane"
+fi
 $D shot s10-pane >/dev/null
 $D dump s10-pane >/dev/null
 commands=$(grep -c 'id="command:' "$RUN/s10-pane.txt")

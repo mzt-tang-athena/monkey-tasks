@@ -3,9 +3,9 @@ import { useIsFocused } from "expo-router";
 import { useBar } from "@/components/bottom-bar/bottom-bar";
 import type { CaptureSlot } from "@/components/bottom-bar/dock-slot";
 import {
-  SplitAddPill,
-  type SplitAddPillRef,
-} from "@/components/bottom-bar/split-add-pill";
+  AddButton,
+  type AddButtonRef,
+} from "@/components/bottom-bar/add-button";
 import { Sheet } from "@/components/ui/sheet";
 import { Toast } from "@/components/ui/toast";
 import { useCaptureRequest } from "@/lib/capture-request";
@@ -15,8 +15,8 @@ import { spacing } from "@/theme/tokens";
 import { CaptureForm } from "./capture-form";
 
 /**
- * The capture dock: the bar's split Add pill, the sheet its Add half
- * opens, and the toast for a failed write. The sheet and the toast draw
+ * The capture dock: the bar's Add button, the sheet it opens, and the
+ * toast for a failed write. The sheet and the toast draw
  * in the overlay host, above every screen. The screen tells the dock its
  * targets, its default target and its default due day, and the dock
  * sends through the capture mutation.
@@ -34,9 +34,9 @@ export function CaptureDock(slot: CaptureSlot) {
       sheet.show();
     }
   });
-  const addRef = React.useRef<SplitAddPillRef | null>(null);
+  const addRef = React.useRef<AddButtonRef | null>(null);
   // The sheet's overlay outlives its `open` prop by the exit, and the
-  // page stays inert until it goes. The Add half takes focus back only
+  // page stays inert until it goes. The button takes focus back only
   // once the sheet has left the tree.
   const wasMounted = React.useRef(false);
   React.useEffect(() => {
@@ -52,7 +52,7 @@ export function CaptureDock(slot: CaptureSlot) {
 
   return (
     <>
-      <SplitAddPill ref={addRef} label="add task" onPress={sheet.toggle} />
+      <AddButton ref={addRef} label="add task" onPress={sheet.toggle} />
 
       {sheet.mounted ? (
         <Sheet
@@ -61,10 +61,17 @@ export function CaptureDock(slot: CaptureSlot) {
           onDismiss={sheet.close}
           rideKeyboard
           scrim
+          covered={sheet.referenceOpen}
           label="Add a task"
           closeLabel="close capture"
         >
-          <CaptureForm draft={sheet.draft} onClose={sheet.close} />
+          <CaptureForm
+            draft={sheet.draft}
+            onClose={sheet.close}
+            referenceOpen={sheet.referenceOpen}
+            onOpenReferences={sheet.openReferences}
+            onCloseReferences={sheet.closeReferences}
+          />
         </Sheet>
       ) : null}
 

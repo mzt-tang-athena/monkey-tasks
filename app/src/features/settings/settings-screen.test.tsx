@@ -112,24 +112,24 @@ describe("SettingsScreen", () => {
     expect(getComputedStyle(page).backgroundColor).toBe(rgb(THEMES.midnight.paper));
   });
 
-  it("saves the sort order and the task form, and reads them back", () => {
+  it("opens on My order, then saves the sort order and the task form", () => {
     const first = mount();
     expect(
-      screen.getByRole("tab", { name: "Due date" }).getAttribute("aria-selected"),
+      screen.getByRole("tab", { name: "My order" }).getAttribute("aria-selected"),
     ).toBe("true");
 
-    fireEvent.click(screen.getByRole("tab", { name: "My order" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Due date" }));
     fireEvent.click(screen.getByRole("tab", { name: "Chips" }));
 
-    expect(loadSettings().sortMode).toBe("manual");
+    expect(loadSettings().sortMode).toBe("due");
     expect(loadSettings().taskForm).toBe("pills");
-    expect(globalThis.localStorage.getItem("monkey-tasks.sort-mode")).toBe("manual");
+    expect(globalThis.localStorage.getItem("monkey-tasks.sort-mode")).toBe("due");
     expect(globalThis.localStorage.getItem("monkey-tasks.task-form")).toBe("pills");
     first.unmount();
 
     mount();
     expect(
-      screen.getByRole("tab", { name: "My order" }).getAttribute("aria-selected"),
+      screen.getByRole("tab", { name: "Due date" }).getAttribute("aria-selected"),
     ).toBe("true");
     expect(
       screen.getByRole("tab", { name: "Chips" }).getAttribute("aria-selected"),
@@ -165,11 +165,11 @@ describe("SettingsScreen", () => {
         <Reader />
       </ThemeProvider>,
     );
-    expect(screen.getByTestId("reader").textContent).toBe("due");
-
-    fireEvent.click(screen.getByRole("tab", { name: "My order" }));
-
     expect(screen.getByTestId("reader").textContent).toBe("manual");
+
+    fireEvent.click(screen.getByRole("tab", { name: "Due date" }));
+
+    expect(screen.getByTestId("reader").textContent).toBe("due");
   });
 
   it("opens diagnostics and the repository from their rows", () => {

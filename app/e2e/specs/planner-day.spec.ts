@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
+import { swipeOpen } from "../commands";
 
 /**
  * Ticket 0072: the planner keeps the day the user picked for as long
@@ -29,8 +30,8 @@ test("the planner keeps its picked day across a round trip through every tab", a
 
   const tabs = [
     ["Lists", "/"],
-    ["Journal", "/journal"],
     ["Inbox Notes", "/inbox"],
+    ["Journal", "/journal"],
   ] as const;
   for (const [tab, path] of tabs) {
     await page.getByRole("tab", { name: tab, exact: true }).click();
@@ -53,10 +54,7 @@ test("the command pane's Planner command opens on the picked day", async ({
   await page.getByRole("tab", { name: "Lists", exact: true }).click();
   await expect.poll(() => pathname(page)).toBe("/");
 
-  await page
-    .getByRole("button", { name: "open commands" })
-    .filter({ visible: true })
-    .click();
+  await swipeOpen(page);
   await page.getByTestId("command:planner").click();
 
   await expect.poll(() => pathname(page)).toBe("/planner");
