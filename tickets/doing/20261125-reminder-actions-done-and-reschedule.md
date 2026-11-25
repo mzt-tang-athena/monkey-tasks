@@ -2,7 +2,7 @@
 title: A reminder offers Done and Reschedule
 created: 2026-11-25
 priority: high
-assignee:
+assignee: lane-reminder-actions
 pr:
 depends: []
 ---
