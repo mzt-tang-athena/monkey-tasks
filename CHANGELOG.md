@@ -6,25 +6,7 @@ comes first. The same text goes into the GitHub release notes.
 Each bullet fits one line on a phone. `scripts/check-changelog.sh`
 fails a bullet that wraps or runs past 64 characters.
 
-## 1.4.0 - unreleased
-
-### References
-
-- A task can link a note from References.
-- Search the folder by note name or ingredient.
-- Browse the folder, then tap a note to link it.
-- Tap a link on the task to read the note.
-- Remove a link from its own row.
-
-### Tabs
-
-- The tabs run Lists, Planner, Inbox, Journal.
-
-### Lists
-
-- My order is the default sort, first in its menu.
-
-## 1.3.0 - unreleased
+## 1.3.0 - 2026-11-25
 
 ### Command pane
 
@@ -38,6 +20,19 @@ fails a bullet that wraps or runs past 64 characters.
 
 - The planner's dates follow a swipe, as the tabs do.
 - The planner keeps the day you picked.
+
+### Tabs and lists
+
+- The tabs run Lists, Planner, Inbox, Journal.
+- My order is the default sort, first in its menu.
+
+### References
+
+- A task can link a note from References.
+- Search the folder by note name or ingredient.
+- Browse the folder, then tap a note to link it.
+- Tap a link on the task to read the note.
+- Remove a link from its own row.
 
 ### Look and feel
 

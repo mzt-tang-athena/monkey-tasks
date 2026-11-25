@@ -137,6 +137,10 @@ package. The smoke must pass before we publish
 4. Pull main, run `scripts/gate.sh full` and wait for the receipt.
 5. Run `scripts/release.sh <version>`.
 
+The script ships the tip of main. From the bump PR in step 1 to the tag,
+merge nothing meant for the next version. On 2026-11-24 a 1.4 feature
+merged early, and 1.3 had to take it.
+
 It refuses unless main is clean, checked out and level with
 `origin/main`. The app version must match. The changelog section needs a
 date for the release. A full gate receipt must also pass for HEAD. It
