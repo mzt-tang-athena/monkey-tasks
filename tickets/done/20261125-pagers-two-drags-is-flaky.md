@@ -3,7 +3,7 @@ title: The two fast drags test is flaky
 created: 2026-11-25
 priority: normal
 assignee: poteto-mode
-pr:
+pr: 238
 depends: []
 ---
 
