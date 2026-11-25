@@ -165,36 +165,50 @@ const WebPress = React.forwardRef<
 });
 
 /**
- * The checked state the native host reads. The gesture handler's press
- * hands its props to a native button view, and that view takes
+ * The state the native host reads. The gesture handler's press hands
+ * its props to a native button view, and that view takes
  * `accessibilityState` alone. React Native's `View` translates
- * `aria-checked` into it in JavaScript, and this press did not, so
- * Android's tree called every radio unchecked. The alias wins over an
- * explicit state, as `View` decides it.
+ * `aria-checked` and `aria-selected` into it in JavaScript, and this
+ * press did not, so Android's tree called every radio unchecked and
+ * every tab unselected. An alias wins over an explicit state, as `View`
+ * decides it.
  */
-export function checkedState({
+export function nativeState({
   accessibilityState,
   "aria-checked": ariaChecked,
-}: Pick<PressProps, "accessibilityState" | "aria-checked">) {
-  const checked = ariaChecked ?? accessibilityState?.checked;
-  if (checked === undefined) {
+  "aria-selected": ariaSelected,
+}: Pick<PressProps, "accessibilityState" | "aria-checked" | "aria-selected">) {
+  if (ariaChecked === undefined && ariaSelected === undefined) {
     return accessibilityState;
   }
-  return { ...accessibilityState, checked };
+  return {
+    ...accessibilityState,
+    checked: ariaChecked ?? accessibilityState?.checked,
+    selected: ariaSelected ?? accessibilityState?.selected,
+  };
 }
 
 const NativePress = React.forwardRef<
   React.ComponentRef<typeof PanPressable>,
   PressProps
 >(function NativePress(props, ref) {
-  const { accessibilityState, "aria-checked": ariaChecked, ...rest } = props;
+  const {
+    accessibilityState,
+    "aria-checked": ariaChecked,
+    "aria-selected": ariaSelected,
+    ...rest
+  } = props;
   return (
     <PanPressable
       // The two presses take different event objects, and the app
       // passes the props both read.
       {...(rest as React.ComponentProps<typeof PanPressable>)}
       ref={ref}
-      accessibilityState={checkedState({ accessibilityState, "aria-checked": ariaChecked })}
+      accessibilityState={nativeState({
+        accessibilityState,
+        "aria-checked": ariaChecked,
+        "aria-selected": ariaSelected,
+      })}
     />
   );
 });

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { THEMES } from "@/theme/palettes";
 import { Button } from "./button";
 import { IconButton } from "./icon-button";
-import { checkedState, Pressable } from "./pressable";
+import { nativeState, Pressable } from "./pressable";
 
 /**
  * The focus mark follows the browser's `:focus-visible` verdict. jsdom
@@ -47,26 +47,32 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("the native checked state", () => {
-  it("carries the aria alias into the state the native host reads", () => {
-    expect(checkedState({ "aria-checked": true })).toEqual({ checked: true });
-    expect(checkedState({ "aria-checked": false })).toEqual({ checked: false });
+describe("the native accessibility state", () => {
+  it("carries the aria aliases into the state the native host reads", () => {
+    expect(nativeState({ "aria-checked": true })).toEqual({
+      checked: true,
+      selected: undefined,
+    });
+    expect(nativeState({ "aria-selected": true })).toEqual({
+      checked: undefined,
+      selected: true,
+    });
   });
 
-  it("lets the alias win over an explicit state, as View does", () => {
+  it("lets an alias win over an explicit state, as View does", () => {
     expect(
-      checkedState({
+      nativeState({
         "aria-checked": true,
+        "aria-selected": false,
         accessibilityState: { checked: false, selected: true },
       }),
-    ).toEqual({ checked: true, selected: true });
+    ).toEqual({ checked: true, selected: false });
   });
 
   it("keeps an explicit state that has no alias", () => {
-    expect(checkedState({ accessibilityState: { checked: "mixed" } })).toEqual({
-      checked: "mixed",
-    });
-    expect(checkedState({})).toBeUndefined();
+    const state = { checked: "mixed" as const };
+    expect(nativeState({ accessibilityState: state })).toBe(state);
+    expect(nativeState({})).toBeUndefined();
   });
 });
 

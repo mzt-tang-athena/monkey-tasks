@@ -48,7 +48,7 @@ fails a bullet that wraps or runs past 64 characters.
 
 ### Fixes
 
-- TalkBack hears which theme is on.
+- TalkBack hears the theme and week start you picked.
 
 ## 1.3.0 - 2026-11-25
 
