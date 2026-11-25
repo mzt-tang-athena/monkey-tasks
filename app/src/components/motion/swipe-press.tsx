@@ -34,7 +34,7 @@ function isAction(name: string): name is Action {
 
 /**
  * A press target that also reads three swipes: down asks for the
- * commands, and left or right for the tab on that side. The target
+ * commands, and right or left for the tab that way. The target
  * moves a little with the finger, so a swipe reads as a swipe where a
  * still button would feel like a missed tap. A release under the
  * commit runs the press, so a tap that moved a little still acts.

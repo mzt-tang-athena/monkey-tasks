@@ -165,7 +165,10 @@ export function Pager({
         if (reduced || width.value === 0) {
           return;
         }
-        pos.set(anchor.value - follow(e.translationX, edges.value, landed.value) / width.value);
+        pos.set(
+          anchor.value -
+            follow(e.translationX, edges.value, landed.value, "left") / width.value,
+        );
       },
       onDeactivate: (e) => {
         "worklet";
