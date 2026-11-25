@@ -159,6 +159,18 @@ sleep 2
 adb exec-out screencap -p >"$run/failure-notice.png"
 adb shell cmd statusbar collapse
 
+# A failed press gives its claim back, so the same button acts again.
+# The note comes back, and the press that just failed must now land.
+"$drive" note "Tasks/$gone.md" gone-missing >/dev/null || true
+write_note "$gone" ""
+press_button "$gone" Done gone-retry
+until [[ "$(note_text "$gone")" == *completed:* ]]; do
+  ((SECONDS < deadline + 300)) || fail "a second press on the failed reminder did nothing"
+  sleep 2
+done
+"$drive" note "Tasks/$gone.md" gone-after-retry >/dev/null
+[[ $(in_tray "$gone") -eq 0 ]] || fail "$gone stayed in the tray after the retry"
+
 "$drive" restart >/dev/null
 "$drive" shot app-failure-list >/dev/null
 "$drive" log >/dev/null
