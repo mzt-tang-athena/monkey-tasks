@@ -35,8 +35,8 @@ status groups down one page, as a tab on the Lists pager.
   Done removes it.
 - A card carries no status pill. The group is the status. The other
   paths are the drag and the task editor's Status field.
-- Capture on Board writes `status: "[[backlog]]"`. Main hides a status,
-  so a capture with no status would vanish from every list.
+- Capture on Board writes `status: "[[backlog]]"`. Without a status the
+  note is a plain task, and Main would show it instead of the board.
 
 ### Why one surface
 

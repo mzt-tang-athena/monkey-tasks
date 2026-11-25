@@ -51,8 +51,9 @@ Two smaller calls, both confirmed:
 
 - No status pill on a card. A deed's status changes by the drag or in
   the task editor's Status field. The group is the status.
-- Capture on Board writes `status: "[[backlog]]"`. Main hides a
-  status, so a capture with no status would vanish from every list.
+- Capture on Board writes `status: "[[backlog]]"`. Without a status
+  the note is a plain task, so it would land in Main instead of on
+  the board.
 
 The frames come from a throwaway branch, `design/kanban-list` at
 `ee36cde`, drawn over the real Lists chrome at 360 by 800. No app code
