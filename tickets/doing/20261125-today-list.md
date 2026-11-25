@@ -2,7 +2,7 @@
 title: A Today list, switched on or off in Settings
 created: 2026-11-25
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
