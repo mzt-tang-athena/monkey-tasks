@@ -14,11 +14,11 @@ Settings can add or remove it. A Kanban list follows in its own ticket.
 
 - Today shows the tasks due today. Propose whether overdue tasks join
   it, the way TickTick's Today does. The operator confirms.
-- Today is a built-in list, like Main and Focus. It writes no `lists`
+- Today is a built-in list, like Main. It writes no `lists`
   value into a note, so the vault needs no schema change.
 - Settings gains a place for optional built-in lists. Today is the
-  first one there. Its order among the list tabs follows the existing
-  tab order rule (ADR `20261111-one-list-and-tab-order`).
+  first one there. Place its tab beside Main, in the sequence
+  `features/lists/hooks/use-list-tabs.ts` builds, and say where.
 - Capture from the Today list sets today's date on the new task.
 
 ## Acceptance
@@ -27,7 +27,7 @@ Settings can add or remove it. A Kanban list follows in its own ticket.
 - [ ] Settings switches Today on and off, and the choice persists.
 - [ ] Today lists exactly the tasks the rule names.
 - [ ] Capture on Today dates the task today.
-- [ ] Web e2e in both motion projects, plus emulator frames.
+- [ ] Web e2e in both motion modes, plus emulator frames.
 
 ## Outcome
 
