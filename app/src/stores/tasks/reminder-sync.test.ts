@@ -10,7 +10,13 @@ type Stored = {
   title: string;
   body: string;
   weight: "harsh" | "quiet";
-  data: { uri: string; base: number; step: number; weight: "harsh" | "quiet" };
+  data: {
+    uri: string;
+    base: number;
+    step: number;
+    weight: "harsh" | "quiet";
+    buttons: boolean;
+  };
 };
 
 const world = vi.hoisted(() => ({
@@ -53,6 +59,7 @@ vi.mock("@/lib/notifications", () => ({
         base: ring.base,
         step: ring.step,
         weight: ring.weight,
+        buttons: true,
       },
     });
     return ring.id;
@@ -184,6 +191,23 @@ describe("ring plan", () => {
       "Due",
       "Due",
     ]);
+  });
+
+  it("replaces a scheduled ring that has no buttons", async () => {
+    const base = NOW + 10 * MINUTE;
+    const note = task("Call Mum", [stamp(base)]);
+    await syncReminders([note]);
+    for (const entry of world.os.values()) {
+      entry.data.buttons = false;
+    }
+
+    await syncReminders([note]);
+
+    expect(stepsOf(note.uri, base)).toEqual([0, 1, 5, 15]);
+    expect(world.cancelled).toHaveLength(4);
+    expect([...world.os.values()].every((entry) => entry.data.buttons)).toBe(
+      true,
+    );
   });
 
   it("makes four harsh rings at 0, 1, 5 and 15 minutes", async () => {

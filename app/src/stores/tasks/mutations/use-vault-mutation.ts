@@ -186,7 +186,4 @@ export async function readRow(
   return { ...fresh, data: fresh.data };
 }
 
-/** The text of a failure, without the "Error: " prefix. */
-export function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+export { messageOf } from "../task-actions";

@@ -45,3 +45,11 @@ export const takeAlertResponse: typeof Native.takeAlertResponse = () => null;
 
 export const addAlertResponseListener: typeof Native.addAlertResponseListener =
   () => ({ remove() {} });
+
+export const readTaskResponse: typeof Native.readTaskResponse = () => null;
+
+export const postActionFailure: typeof Native.postActionFailure =
+  async () => undefined;
+
+export const clearActionFailureNotice: typeof Native.clearActionFailureNotice =
+  async () => undefined;
