@@ -37,7 +37,13 @@ vi.mock("@/hooks/use-task-editor", () => ({
 }));
 
 vi.mock("@/lib/settings", () => ({
-  loadSettings: () => ({ taskForm: "rows", sortMode: spy.sortMode }),
+  // Today is off here, so this screen's tabs stay Main first and the
+  // drag tests read the order they always read.
+  loadSettings: () => ({
+    taskForm: "rows",
+    sortMode: spy.sortMode,
+    todayList: "off",
+  }),
   saveSetting: () => undefined,
 }));
 

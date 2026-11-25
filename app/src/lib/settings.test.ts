@@ -85,3 +85,42 @@ describe("the lists order a phone starts with", () => {
     expect(loadSettings().sortMode).toBe("due");
   });
 });
+
+describe("the built-in lists", () => {
+  const TODAY_KEY = "monkey-tasks.today-list";
+
+  it("shows Today on a fresh install", () => {
+    expect(loadSettings().todayList).toBe("on");
+  });
+
+  it("keeps Today off once the switch turns it off", () => {
+    saveSetting("todayList", "off");
+
+    expect(loadSettings().todayList).toBe("off");
+    expect(storage.getItem(TODAY_KEY)).toBe("off");
+  });
+
+  it("turns Today back on", () => {
+    saveSetting("todayList", "off");
+    saveSetting("todayList", "on");
+
+    expect(loadSettings().todayList).toBe("on");
+    expect(storage.getItem(TODAY_KEY)).toBe("on");
+  });
+
+  it("falls back to on for a value it cannot read", () => {
+    storage.setItem(TODAY_KEY, "maybe");
+
+    expect(loadSettings().todayList).toBe("on");
+  });
+
+  it("reads the saved switch from the native file too", () => {
+    platform.os = "android";
+    sharedFakeAppFiles.files.set(
+      "file:///documents/monkey-tasks-settings.json",
+      JSON.stringify({ todayList: "off" }),
+    );
+
+    expect(loadSettings().todayList).toBe("off");
+  });
+});

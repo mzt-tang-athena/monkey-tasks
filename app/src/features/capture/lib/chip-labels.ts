@@ -8,7 +8,13 @@ import type { CaptureTarget } from "@/types/task";
  */
 
 export function targetLabel(target: CaptureTarget): string {
-  return target.kind === "main" ? "Main" : target.name;
+  if (target.kind === "main") {
+    return "Main";
+  }
+  if (target.kind === "today") {
+    return "Today";
+  }
+  return target.name;
 }
 
 const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

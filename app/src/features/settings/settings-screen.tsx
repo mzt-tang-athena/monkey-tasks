@@ -59,11 +59,12 @@ const weekStartOptions: Segment<WeekStart>[] = [
 ];
 
 /**
- * The settings screen. It owns the palette picker and the two settings
- * the Lists and Planner screens share. Every value reads and writes
- * `lib/settings.ts`; the theme goes through its provider, and the two
- * screen settings go through the live store so a mounted screen
- * agrees with what the picker shows. It reads no vault note.
+ * The settings screen. It owns the palette picker, the settings the
+ * Lists and Planner screens share, and the optional built-in lists.
+ * Every value reads and writes `lib/settings.ts`; the theme goes
+ * through its provider, and the screen settings go through the live
+ * store so a mounted screen agrees with what the picker shows. It
+ * reads no vault note.
  */
 export default function SettingsScreen() {
   const { styles } = useThemedStyles(makeStyles);
@@ -72,11 +73,24 @@ export default function SettingsScreen() {
   const [taskForm, setTaskForm] = useSetting("taskForm");
   const [weekView, setWeekView] = useSetting("weekView");
   const [weekStart, setWeekStart] = useSetting("weekStart");
+  const [todayList, setTodayList] = useSetting("todayList");
   const vault = useVault();
 
   const version = appVersion();
   const channel = buildChannel();
   const root = vault.root ?? "Not granted";
+
+  // One row per optional built-in list. The Board joins this table when
+  // its ticket lands, with its own setting and the same switch shape.
+  const builtinRows = [
+    {
+      key: "today",
+      label: "Today",
+      hint: "Due today, with past tasks above them.",
+      on: todayList === "on",
+      toggle: () => setTodayList(todayList === "on" ? "off" : "on"),
+    },
+  ];
 
   return (
     <View
@@ -158,6 +172,33 @@ export default function SettingsScreen() {
                 The week grid, the month grid and the week strip follow it.
               </Text>
             </View>
+          </Section>
+
+          <Section label="Built-in lists">
+            {builtinRows.map((row, at) => (
+              <React.Fragment key={row.key}>
+                {at > 0 ? <Divider /> : null}
+                <Pressable
+                  role="switch"
+                  aria-checked={row.on}
+                  accessibilityLabel={row.label}
+                  accessibilityState={{ checked: row.on }}
+                  onPress={row.toggle}
+                  style={({ pressed }) => [
+                    styles.action,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View style={styles.rowText}>
+                    <Text style={styles.actionLabel}>{row.label}</Text>
+                    <Text style={styles.fieldHint}>{row.hint}</Text>
+                  </View>
+                  {row.on ? (
+                    <Icon name="check" weight="fill" color="accent" />
+                  ) : null}
+                </Pressable>
+              </React.Fragment>
+            ))}
           </Section>
 
           {Platform.OS === "android" ? (
@@ -330,6 +371,10 @@ const makeStyles = (colors: Palette) => ({
       ...type.body,
       flex: 1,
       color: colors.ink,
+    },
+    rowText: {
+      flex: 1,
+      gap: 2,
     },
     infoRow: {
       minHeight: touchTarget,
