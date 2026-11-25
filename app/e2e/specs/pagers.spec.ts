@@ -448,7 +448,11 @@ function commonScenarios(input: "mouse" | "touch") {
     await expect(row(page, undated.second)).toBeVisible();
 
     await drag(page, -dragPx.flick, 4);
-    await page.waitForTimeout(100);
+    // The first drag's page lands before the next drag starts, so the
+    // second drag turns from a resting page. A fixed gap raced the
+    // 220 ms settle, and the progress it reached moved with host load,
+    // so a stalled host could start the second drag mid-settle.
+    await expect(listTab(page, tabs.next)).toHaveAttribute("aria-selected", "true");
     await drag(page, -dragPx.flick, 4);
 
     await expect(listTab(page, finance)).toHaveAttribute("aria-selected", "true");
