@@ -7,7 +7,7 @@ import {
 import type { AlertWeight } from "@monkey-tasks/schemas";
 import type { AlertRing } from "@/lib/alerts/rings";
 import { DONE_BUTTON } from "@/lib/alerts/actions";
-import { RESCHEDULE_CHOICES } from "@/lib/alerts/choices";
+import { RESCHEDULE_CHOICES, type ButtonSet } from "@/lib/alerts/choices";
 
 /**
  * The phone's alarms. The web build takes `notifications.web.ts`
@@ -20,8 +20,8 @@ export type RingData = {
   base: number;
   step: number;
   weight: AlertWeight;
-  /** True when the ring carries the Done and Reschedule buttons. */
-  buttons: boolean;
+  /** Which buttons the ring carries. */
+  buttons: ButtonSet;
 };
 
 export type RingNotification = { id: string; data: RingData | null };
@@ -44,7 +44,9 @@ export type AlertResponseSubscription = { remove(): void };
 
 const HARSH_CHANNEL = "reminders-harsh";
 const QUIET_CHANNEL = "reminders-quiet";
+// A category identifier holds no ":" and no "-".
 const REMINDER_CATEGORY = "reminder";
+const DONE_CATEGORY = "reminderdone";
 const FAILURE_PREFIX = "action-failed:";
 // Android freezes a channel's settings at creation, so the old one is
 // deleted and never reused.
@@ -87,16 +89,19 @@ export function ensureChannels(): Promise<void> {
 
 async function createCategory(): Promise<void> {
   // The buttons stay in the background: a press from a killed app runs
-  // the background task and never opens the app.
+  // the background task and never opens the app. A tap on the
+  // notification itself still opens it.
   const options = { opensAppToForeground: false };
+  const done = { identifier: DONE_BUTTON, buttonTitle: "Done", options };
   await Notifications.setNotificationCategoryAsync(REMINDER_CATEGORY, [
-    { identifier: DONE_BUTTON, buttonTitle: "Done", options },
+    done,
     ...RESCHEDULE_CHOICES.map((choice) => ({
       identifier: choice.id,
       buttonTitle: choice.title,
       options,
     })),
   ]);
+  await Notifications.setNotificationCategoryAsync(DONE_CATEGORY, [done]);
 }
 
 async function createChannels(): Promise<void> {
@@ -146,9 +151,10 @@ export async function scheduleRing(ring: AlertRing): Promise<string> {
         weight: ring.weight,
         base: ring.base,
         step: ring.step,
-        buttons: true,
+        buttons: ring.buttons,
       },
-      categoryIdentifier: REMINDER_CATEGORY,
+      categoryIdentifier:
+        ring.buttons === "full" ? REMINDER_CATEGORY : DONE_CATEGORY,
       sticky: harsh,
     },
     trigger: {
@@ -169,7 +175,7 @@ function ringData(content: {
     typeof base === "number" &&
     typeof step === "number" &&
     (weight === "harsh" || weight === "quiet")
-    ? { uri, base, step, weight, buttons: buttons === true }
+    ? { uri, base, step, weight, buttons: buttons === "full" ? "full" : "done" }
     : null;
 }
 

@@ -9,6 +9,7 @@ import {
   alertRing,
   type AlertRing,
 } from "@/lib/alerts/rings";
+import type { ButtonSet } from "@/lib/alerts/choices";
 import {
   isAcked,
   loadAcked,
@@ -98,12 +99,27 @@ function taskWeight(task: TaskItem): AlertWeight {
   return task.data?.["alert weight"] ?? "harsh";
 }
 
+/**
+ * The buttons a task's rings carry. A due date with no time of day is
+ * an all-day task, and rescheduling it would add a clock time it never
+ * had, so it offers Done alone.
+ */
+function taskButtons(task: TaskItem): ButtonSet {
+  const due = task.data?.due;
+  if (due == null) {
+    return "full";
+  }
+  const parsed = parseStoredDate(due);
+  return parsed != null && !parsed.hasTime ? "done" : "full";
+}
+
 /** Every ring the task makes that is still ahead of `now`. */
 function ringsFor(task: TaskItem | null, now: number): AlertRing[] {
   if (task == null) {
     return [];
   }
   const weight = taskWeight(task);
+  const buttons = taskButtons(task);
   const rings: AlertRing[] = [];
   // The window reaches back the whole escalation, so a started group
   // still yields the follow-ups that are ahead.
@@ -115,6 +131,7 @@ function ringsFor(task: TaskItem | null, now: number): AlertRing[] {
           base: alarm.when,
           step,
           weight,
+          buttons,
           title: task.name,
           body: alarmBody(alarm),
         }),
@@ -129,7 +146,9 @@ function sameRings(before: AlertRing[], after: AlertRing[]): boolean {
     before.length === after.length &&
     before.every(
       (ring, index) =>
-        ring.id === after[index].id && ring.weight === after[index].weight,
+        ring.id === after[index].id &&
+        ring.weight === after[index].weight &&
+        ring.buttons === after[index].buttons,
     )
   );
 }
@@ -155,9 +174,11 @@ export function planRings(
   const byUri = new Map(tasks.map((task) => [task.uri, task]));
   const wanted = new Map<string, AlertRing>();
   const weights = new Map<string, AlertWeight>();
+  const buttons = new Map<string, ButtonSet>();
   const bases = new Map<string, Set<number>>();
   for (const task of tasks) {
     weights.set(task.uri, taskWeight(task));
+    buttons.set(task.uri, taskButtons(task));
     bases.set(
       task.uri,
       new Set(
@@ -188,11 +209,11 @@ export function planRings(
       continue;
     }
     const weight = weights.get(data.uri);
-    // A ring scheduled before the buttons existed has none. Its id
-    // stays, so the new one replaces it.
+    // A ring scheduled before the buttons existed has none, which reads
+    // as "done". Its id stays, so the new one replaces it.
     if (
-      !data.buttons ||
       data.weight !== weight ||
+      data.buttons !== buttons.get(data.uri) ||
       !bases.get(data.uri)?.has(data.base)
     ) {
       cancel.push(entry.id);
