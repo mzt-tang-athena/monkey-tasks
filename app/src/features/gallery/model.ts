@@ -71,6 +71,14 @@ export const GALLERY_SECTIONS = [
     ],
   },
   {
+    id: "switch",
+    title: "Switch",
+    states: [
+      { id: "switch:on", label: "on" },
+      { id: "switch:off", label: "off" },
+    ],
+  },
+  {
     id: "segmented-control",
     title: "SegmentedControl",
     states: [{ id: "segmented-control:selected", label: "selected" }],

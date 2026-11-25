@@ -40,6 +40,7 @@ export type SessionEvent =
 export function sameEdit(a: TaskEdit, b: TaskEdit): boolean {
   return (
     a.name === b.name &&
+    (a.status ?? null) === (b.status ?? null) &&
     a.due === b.due &&
     a.recurrence === b.recurrence &&
     a.list === b.list &&

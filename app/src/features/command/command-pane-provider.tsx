@@ -30,13 +30,14 @@ export function CommandPaneProvider({ children }: { children: React.ReactNode })
   const { lists } = useStoreMeta();
   const currentList = useSelectedList();
   const [todayList] = useSetting("todayList");
+  const [boardList] = useSetting("boardList");
   const [sortMode] = useSetting("sortMode");
   const { name: theme } = useTheme();
 
   // The tab order: the built-in lists that are on, then Main, then the
   // list notes. A press moves one tab along and wraps, so every tab is
   // reachable. It is the same order the Lists strip draws.
-  const tabs = listTabs(lists, { todayList });
+  const tabs = listTabs(lists, { todayList, boardList });
   const at = currentList == null ? -1 : tabs.indexOf(currentList);
   const nextList = tabs.length > 1 ? tabs[(at + 1) % tabs.length] : null;
 

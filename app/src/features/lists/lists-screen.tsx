@@ -5,6 +5,7 @@ import type { TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
 import type { DockSlot } from "@/components/bottom-bar/dock-slot";
 import { Pager } from "@/components/motion/pager";
+import { useSurfaceDragging } from "@/components/motion/drag-activity";
 import { usePageFollow } from "@/components/motion/page-follow";
 import { PreviewRow } from "@/components/preview-row";
 import { renderMotionScroll } from "@/components/motion/scroll-view";
@@ -18,7 +19,7 @@ import { useStableCallback } from "@/hooks/use-stable-callback";
 import { useTaskEditor } from "@/hooks/use-task-editor";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { toggleCompleted, useCompletedOpen } from "@/lib/folded-completed";
-import { TODAY_LIST } from "@/lib/list-tabs";
+import { BOARD_LIST, TODAY_LIST } from "@/lib/list-tabs";
 import { useStoreMeta } from "@/stores/tasks/task-state";
 import { useClearCompleted } from "@/stores/tasks/mutations/use-clear-completed";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
@@ -32,6 +33,7 @@ import { ListSectionHeader } from "./components/list-section-header";
 import { FailureBanner, RepairNotice } from "./components/list-notices";
 import { ListsToolbar } from "./components/lists-toolbar";
 import { TaskCardRow } from "./components/task-card-row";
+import { BoardPage } from "./components/board-page";
 import { useListSections } from "./hooks/use-list-sections";
 import { useListTabState } from "./hooks/use-list-tabs";
 import { useSortMode } from "./hooks/use-sort-mode";
@@ -248,40 +250,45 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
               <View style={styles.page}>
                 {/* A tab is a different list, so its page starts at the
                     top, as its preview draws it. The pager's page
-                    itself stays mounted (ticket 0087). */}
-                <SectionList<TaskItem, ListsSection>
-                  key={tab}
-                  contentContainerStyle={styles.content}
-                  onRefresh={reload}
-                  refreshing={refreshing}
-                  sections={folded}
-                  keyExtractor={keyExtractor}
-                  renderItem={renderItem}
-                  renderSectionHeader={renderSectionHeader}
-                  renderScrollComponent={renderMotionScroll}
-                  ListHeaderComponent={
-                    <>
-                      <RepairNotice repairs={repairs} />
-                      {status === "ready" && onlyCompleted ? (
+                    itself stays mounted (ticket 0087). The Board is its
+                    own list of deeds, so it takes the page whole. */}
+                {tab === BOARD_LIST ? (
+                  <BoardPage sortMode={sortMode} onOpen={onOpen} />
+                ) : (
+                  <SectionList<TaskItem, ListsSection>
+                    key={tab}
+                    contentContainerStyle={styles.content}
+                    onRefresh={reload}
+                    refreshing={refreshing}
+                    sections={folded}
+                    keyExtractor={keyExtractor}
+                    renderItem={renderItem}
+                    renderSectionHeader={renderSectionHeader}
+                    renderScrollComponent={renderMotionScroll}
+                    ListHeaderComponent={
+                      <>
+                        <RepairNotice repairs={repairs} />
+                        {status === "ready" && onlyCompleted ? (
+                          <EmptyState label={emptyListLabel(tab)} />
+                        ) : null}
+                      </>
+                    }
+                    ListEmptyComponent={
+                      status === "loading" ? (
+                        <LoadingState />
+                      ) : status === "error" ? (
+                        <ErrorState
+                          message={readError ?? "Something went wrong."}
+                          onRetry={() => void reload()}
+                        />
+                      ) : (
                         <EmptyState label={emptyListLabel(tab)} />
-                      ) : null}
-                    </>
-                  }
-                  ListEmptyComponent={
-                    status === "loading" ? (
-                      <LoadingState />
-                    ) : status === "error" ? (
-                      <ErrorState
-                        message={readError ?? "Something went wrong."}
-                        onRetry={() => void reload()}
-                      />
-                    ) : (
-                      <EmptyState label={emptyListLabel(tab)} />
-                    )
-                  }
-                  stickySectionHeadersEnabled={false}
-                  removeClippedSubviews={false}
-                />
+                      )
+                    }
+                    stickySectionHeadersEnabled={false}
+                    removeClippedSubviews={false}
+                  />
+                )}
               </View>
             </ListPager>
           </ListReorder.Root>
@@ -308,11 +315,11 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
 /**
  * The list's pager. It holds its page while a row is held or dragged,
  * so the row's pan owns the finger. A resting row leaves the pager on,
- * so a sideways drag still pages. The read is context, so a pickup
- * re-renders the pager and not the screen.
+ * so a sideways drag still pages. The read is the drag surfaces'
+ * shared state, so the Board's own surface counts too.
  */
 function ListPager(props: React.ComponentProps<typeof Pager>) {
-  const dragging = ListReorder.useDragging();
+  const dragging = useSurfaceDragging();
   return <Pager {...props} enabled={!dragging} />;
 }
 

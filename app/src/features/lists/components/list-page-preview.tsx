@@ -5,9 +5,13 @@ import { CardGroupRow, cardPosition } from "@/components/ui/card-group-row";
 import { EmptyState } from "@/components/ui/list-states";
 import { taskFaceHeight } from "@/components/task-row-face";
 import { useCompletedOpen } from "@/lib/folded-completed";
+import { useBoardFoldOpen } from "@/lib/folded-board";
+import { BOARD_LIST } from "@/lib/list-tabs";
 import type { SortMode } from "@/lib/settings";
+import { useTaskList } from "@/stores/tasks/task-state";
 import { measure, pageGutter, spacing, touchTarget } from "@/theme/tokens";
 import { useListSections } from "../hooks/use-list-sections";
+import { foldBoard, selectBoardSections, selectDeeds } from "../lib/board";
 import { emptyListLabel, type ListsSection } from "../lib/list-sections";
 import { ListSectionHeader } from "./list-section-header";
 import { RepairNotice } from "./list-notices";
@@ -22,15 +26,15 @@ import { RepairNotice } from "./list-notices";
  * Exported for its fold test: the preview takes input from no one, so
  * the rows it would draw are the whole of its behaviour.
  */
-export function previewSections(
-  sections: ListsSection[],
+export function previewSections<S extends ListsSection>(
+  sections: S[],
   height: number,
   repairs: number,
   completedOpen: boolean,
-): { section: ListsSection; data: ListsSection["data"] }[] {
+): { section: S; data: S["data"] }[] {
   // The page's top padding, and a rough banner height when one shows.
   let left = Math.max(0, height - spacing.m - (repairs > 0 ? 72 : 0));
-  const out: { section: ListsSection; data: ListsSection["data"] }[] = [];
+  const out: { section: S; data: S["data"] }[] = [];
   for (const section of sections) {
     const faint = section.tone === "faint";
     const folded = faint && !completedOpen;
@@ -76,14 +80,71 @@ export function previewSections(
  * through the shared group header and the still row. A headerless
  * group, as My order draws, gets no header here either.
  */
-export function ListPagePreview({
+export function ListPagePreview(props: {
+  tab: string;
+  sortMode: SortMode;
+  /** The pager's height, in px. Only the rows that fit it draw. */
+  height: number;
+}) {
+  return props.tab === BOARD_LIST ? (
+    <BoardPreview sortMode={props.sortMode} height={props.height} />
+  ) : (
+    <ListPreview {...props} />
+  );
+}
+
+/** The Board's picture of the page: the same five groups, folded and
+    drawn still. */
+function BoardPreview({
+  sortMode,
+  height,
+}: {
+  sortMode: SortMode;
+  height: number;
+}) {
+  const tasks = useTaskList();
+  const openGroups = useBoardFoldOpen();
+  const folded = React.useMemo(() => {
+    const sections = selectBoardSections(selectDeeds(tasks), sortMode);
+    return foldBoard(sections, (group) => openGroups.has(group));
+  }, [tasks, sortMode, openGroups]);
+  const visible = previewSections(folded, height, 0, true);
+
+  return (
+    <View testID="board-preview" style={styles.root} pointerEvents="none">
+      <View style={styles.content}>
+        {visible.map(({ section, data }) => (
+          <View key={section.key}>
+            <ListSectionHeader
+              title={section.title}
+              count={section.data.length}
+              tone={section.tone}
+              expanded={section.foldable ? openGroups.has(section.status) : undefined}
+            />
+            {data.map((task, index) => (
+              <CardGroupRow
+                key={task.uri}
+                position={cardPosition(index, section.data.length)}
+              >
+                <View style={styles.main}>
+                  <PreviewRow task={task} done={task.data?.completed != null} />
+                </View>
+              </CardGroupRow>
+            ))}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function ListPreview({
   tab,
   sortMode,
   height,
 }: {
   tab: string;
   sortMode: SortMode;
-  /** The pager's height, in px. Only the rows that fit it draw. */
   height: number;
 }) {
   const { sections, repairs, onlyCompleted } = useListSections(tab, sortMode);

@@ -35,6 +35,8 @@ export type Settings = {
   weekStart: WeekStart;
   /** The Today list's tab. It starts on (ADR 20261125-today-list). */
   todayList: Toggle;
+  /** The Board's tab. It starts off (ADR 20261125-deed-board-is-the-kanban-list). */
+  boardList: Toggle;
 };
 
 const DEFAULTS: Settings = {
@@ -44,6 +46,7 @@ const DEFAULTS: Settings = {
   weekView: "spread",
   weekStart: "monday",
   todayList: "on",
+  boardList: "off",
 };
 
 const LOCAL_KEYS: Record<keyof Settings, string> = {
@@ -53,6 +56,7 @@ const LOCAL_KEYS: Record<keyof Settings, string> = {
   weekView: "monkey-tasks.week-view",
   weekStart: "monkey-tasks.week-start",
   todayList: "monkey-tasks.today-list",
+  boardList: "monkey-tasks.board-list",
 };
 
 const FILE_NAME = "monkey-tasks-settings.json";
@@ -92,6 +96,7 @@ function pick<K extends keyof Settings>(
     weekView: ["spread", "rows"],
     weekStart: ["monday", "sunday"],
     todayList: ["on", "off"],
+    boardList: ["on", "off"],
   };
   return typeof value === "string" && allowed[key].includes(value)
     ? (value as Settings[K])

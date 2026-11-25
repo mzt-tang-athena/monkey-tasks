@@ -1,5 +1,5 @@
 import type { TaskItem } from "@/types/task";
-import { MAIN_LIST, TODAY_LIST } from "@/lib/list-tabs";
+import { BOARD_LIST, MAIN_LIST, TODAY_LIST } from "@/lib/list-tabs";
 import type { SectionTone, TaskSection } from "@/stores/tasks/selectors";
 
 /**
@@ -34,6 +34,9 @@ export function emptyListLabel(tab: string): string {
   }
   if (tab === TODAY_LIST) {
     return "Nothing due today.";
+  }
+  if (tab === BOARD_LIST) {
+    return "No deeds yet. Board holds the tasks with a status.";
   }
   return "Nothing on this list yet.";
 }

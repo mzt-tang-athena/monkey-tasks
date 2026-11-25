@@ -23,8 +23,9 @@ const note = PROPERTIES.find((property) => property.key === "note")!;
 const reference = PROPERTIES.find((property) => property.key === "reference")!;
 
 describe("the property registry", () => {
-  it("keeps the order Due, Repeat, Alerts, Reference, Note", () => {
+  it("keeps the order Status, Due, Repeat, Alerts, Reference, Note", () => {
     expect(PROPERTIES.map((property) => property.key)).toEqual([
+      "status",
       "due",
       "repeat",
       "alerts",

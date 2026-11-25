@@ -577,4 +577,44 @@ describe("saveTaskEdit on a deed", () => {
     expect(written).toContain("created: 2026-09-12");
     expect(written.match(/^created:/gm)).toHaveLength(1);
   });
+
+  it("writes Done with a completed date, in one write", async () => {
+    state.fileText = DEED_TEXT;
+    const result = await saveTaskEdit(
+      safAdapter,
+      deed(),
+      edit({ name: "Water the beds", status: "[[done]]" }),
+    );
+
+    const written = state.writes[0].text;
+    expect(state.writes).toHaveLength(1);
+    expect(written).toContain('status: "[[done]]"');
+    expect(written).toMatch(/^completed: \d{4}-\d{2}-\d{2}T/m);
+    expect(result.data?.status).toBe("[[done]]");
+    expect(result.data?.completed).toBeTruthy();
+  });
+
+  it("leaves Done by removing the completed date", async () => {
+    const doneText = DEED_TEXT.replace(
+      "---\n",
+      "---\ncompleted: 2026-10-26\n",
+    ).replace('status: "[[active]]"', 'status: "[[done]]"');
+    state.fileText = doneText;
+    const item: TaskItem = {
+      ...deed(),
+      text: doneText,
+      data: { ...deed().data!, status: "[[done]]", completed: "2026-10-26" },
+    };
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ name: "Water the beds", status: "[[backlog]]" }),
+    );
+
+    const written = state.writes[0].text;
+    expect(written).toContain('status: "[[backlog]]"');
+    expect(written).not.toContain("completed:");
+    expect(result.data?.completed).toBeUndefined();
+  });
 });

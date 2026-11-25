@@ -10,6 +10,7 @@ import { monthEndRule } from "@/lib/recurrence";
 import { renameNote } from "@/lib/vault/rename";
 import { safeFileName } from "@/lib/vault/file-name";
 import { takeTaskShape } from "@/lib/vault/task-kind";
+import { nowStamp } from "@/utils/dates";
 import type { TaskEdit, TaskItem } from "@/types/task";
 
 /** The day part of a stored due, or null with no due. */
@@ -49,6 +50,22 @@ export async function saveTaskEdit(
   }
   text = updateProperty(text, "due", edit.due);
   text = updateProperty(text, "recurrence", recurrenceToWrite(item, edit));
+  // A deed's status moves with `completed`, which is the one done flag:
+  // setting Done writes a date, and leaving Done removes it. A plain
+  // task keeps both lines alone. A caller that predates the field
+  // leaves the note's own status as it was.
+  const status =
+    edit.status === undefined ? (item.data?.status ?? null) : edit.status;
+  text = updateProperty(text, "status", status);
+  if (status === "[[done]]" && item.data?.completed == null) {
+    text = updateProperty(text, "completed", nowStamp());
+  } else if (
+    status != null &&
+    status !== "[[done]]" &&
+    item.data?.completed != null
+  ) {
+    text = updateProperty(text, "completed", null);
+  }
   // An unknown value reads as harsh, so an unchanged weight keeps its
   // line and its warning.
   const weight = item.data?.["alert weight"] ?? "harsh";

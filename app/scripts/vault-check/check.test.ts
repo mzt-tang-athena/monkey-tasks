@@ -329,4 +329,30 @@ describe("deed notes", () => {
     });
     expect(findings[0].reason).toContain("alert weight");
   });
+
+  it("names a blocked by link that reaches no note", () => {
+    const dir = vault({
+      "Deeds/Garden.md":
+        '---\nkind: "[[deeds]]"\nstatus: "[[active]]"\nblocked by:\n  - "[[Gone note]]"\n---\n',
+    });
+
+    const { findings } = checkVault(dir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      file: "Deeds/Garden.md",
+      line: 4,
+      kind: "warning",
+      reason: "blocked by [[Gone note]] reaches no note",
+    });
+  });
+
+  it("accepts a blocked by link that reaches a note, done or not", () => {
+    const dir = vault({
+      "Deeds/Garden.md":
+        '---\nkind: "[[deeds]]"\nstatus: "[[active]]"\nblocked by:\n  - "[[Order things]]"\n---\n',
+      "Tasks/Order things.md": task(),
+    });
+
+    expect(checkVault(dir)).toEqual({ notes: 2, findings: [] });
+  });
 });

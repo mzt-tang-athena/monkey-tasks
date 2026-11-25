@@ -115,7 +115,7 @@ test.describe("Settings", () => {
     await expect(row(page, supplements)).toBeVisible();
 
     await openSettings(page);
-    const today = page.getByRole("switch", { name: "Today" });
+    const today = page.getByRole("switch", { name: "Today list" });
     await expect(today).toHaveAttribute("aria-checked", "true");
     await press(page, today);
     await expect(today).toHaveAttribute("aria-checked", "false");
@@ -135,7 +135,7 @@ test.describe("Settings", () => {
     // Turn it back on, so the suite's other specs see the shipped
     // default.
     await openSettings(page);
-    await press(page, page.getByRole("switch", { name: "Today" }));
+    await press(page, page.getByRole("switch", { name: "Today list" }));
     await page.goBack();
     await expect(listTab(page, "Today")).toHaveAttribute("aria-selected", "true");
   });

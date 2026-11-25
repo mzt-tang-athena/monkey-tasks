@@ -1,4 +1,4 @@
-import type { AlertWeight, TaskFrontmatter } from "@monkey-tasks/schemas";
+import type { AlertWeight, TaskFrontmatter, TaskStatus } from "@monkey-tasks/schemas";
 
 export type TaskItem = {
   /**
@@ -52,6 +52,7 @@ export type BrokenList = {
 export type CaptureTarget =
   | { kind: "main" }
   | { kind: "today" }
+  | { kind: "board" }
   | { kind: "list"; name: string };
 
 export type ParsedCapture = {
@@ -71,6 +72,8 @@ export type ParsedCapture = {
 /** The fields the task editor can change on a note. */
 export type TaskEdit = {
   name: string;
+  /** A deed's status. A plain task holds null, or leaves it out. */
+  status?: TaskStatus | null;
   due: string | null;
   recurrence: string | null;
   /** The one list by name; null means Main. */

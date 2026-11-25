@@ -37,7 +37,11 @@ export const taskRowFace = {
  * tech, so this name is the one a reader hears. A linked reference
  * reads after the meta, so a reader hears the note the task points at.
  */
-export function taskRowLabel(task: TaskItem, done: boolean): string {
+export function taskRowLabel(
+  task: TaskItem,
+  done: boolean,
+  blockedBy?: string | null,
+): string {
   const meta = taskMeta(task, done);
   return [
     task.name,
@@ -45,6 +49,7 @@ export function taskRowLabel(task: TaskItem, done: boolean): string {
     meta.badDate ? "bad date" : null,
     meta.recurring ? "repeats" : null,
     meta.overdue ? "overdue" : null,
+    blockedBy == null ? null : `blocked by ${blockedBy}`,
     parseReferences(task.body).join(", "),
   ]
     .filter((part): part is string => part != null && part !== "")
@@ -74,6 +79,7 @@ export function TaskRowFace({
   timeAlign = "under",
   toggle,
   renderText,
+  blockedBy,
 }: {
   task: TaskItem;
   done: boolean;
@@ -84,6 +90,8 @@ export function TaskRowFace({
   /** Wraps the text, so the live row can make it a press target. The
       wrapper must carry `faceStyles.text`. */
   renderText?: (content: React.ReactNode) => React.ReactNode;
+  /** The deed's first open blocker, named under the row. */
+  blockedBy?: string | null;
 }) {
   const { faceStyles, styles } = useThemedStyles(makeStyles);
   const meta = taskMeta(task, done);
@@ -94,6 +102,7 @@ export function TaskRowFace({
   // would add its gap under every single-line row (ADR 0012).
   const hasMeta = timeUnder || badDate || recurring || overdue;
   const references = parseReferences(task.body);
+  const blocked = blockedBy != null && blockedBy !== "";
 
   // A non-breaking space joins the meta words in the button's name. The
   // flex gap draws the space on screen but leaves no text for the name.
@@ -121,6 +130,16 @@ export function TaskRowFace({
           <Icon name="link" size={12} color="accent" />
           <Text style={styles.reference} numberOfLines={1}>
             {references.join(", ")}
+          </Text>
+        </View>
+      ) : null}
+      {/* A deed that waits on another note names it here, in the danger
+          ink, beside the board's own rail. */}
+      {blocked ? (
+        <View testID="blocker-line" style={styles.referenceRow} aria-hidden>
+          <Icon name="link" size={12} color="danger" />
+          <Text style={styles.blocker} numberOfLines={1}>
+            {blockedBy}
           </Text>
         </View>
       ) : null}
@@ -297,6 +316,13 @@ const makeStyles = (colors: Palette) => ({
       lineHeight: 18,
       fontFamily: fonts.body,
       color: colors.accent,
+    },
+    blocker: {
+      flexShrink: 1,
+      fontSize: 12,
+      lineHeight: 18,
+      fontFamily: fonts.body,
+      color: colors.danger,
     },
     overdueText: {
       fontSize: 13,

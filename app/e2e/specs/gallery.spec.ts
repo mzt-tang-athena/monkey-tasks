@@ -155,6 +155,22 @@ async function checkPaint(
     cell("segmented-control:selected").getByRole("tab", { name: "Week" }),
     `${where} selected segment`,
   ).toHaveCSS("background-color", rgb(p.accent));
+  await expect(
+    page.getByTestId("gallery-switch-on-track"),
+    `${where} switch on fill`,
+  ).toHaveCSS("background-color", rgb(p.accent));
+  await expect(
+    page.getByTestId("gallery-switch-off-track"),
+    `${where} switch off fill`,
+  ).toHaveCSS("background-color", rgb(p.pressed));
+  await expect(
+    cell("switch:on").getByRole("switch", { name: "gallery switch, on" }),
+    `${where} switch on state`,
+  ).toHaveAttribute("aria-checked", "true");
+  await expect(
+    cell("switch:off").getByRole("switch", { name: "gallery switch, off" }),
+    `${where} switch off state`,
+  ).toHaveAttribute("aria-checked", "false");
   await expect(heading("section-header:accent"), `${where} accent ink`).toHaveCSS(
     "color",
     rgb(p.accent),

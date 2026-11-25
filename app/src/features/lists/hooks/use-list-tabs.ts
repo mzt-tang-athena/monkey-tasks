@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { CaptureTarget } from "@/types/task";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
-import { MAIN_LIST, TODAY_LIST } from "@/lib/list-tabs";
+import { BOARD_LIST, MAIN_LIST, TODAY_LIST } from "@/lib/list-tabs";
 import { selectList, useSelectedList } from "@/lib/selected-list";
 import { useSetting } from "@/lib/settings-store";
 import { useListTabs, type ListTab } from "@/stores/tasks/selectors";
@@ -18,7 +18,11 @@ import { useListTabs, type ListTab } from "@/stores/tasks/selectors";
  */
 export function useListTabState() {
   const [todayList] = useSetting("todayList");
-  const builtins = React.useMemo(() => ({ todayList }), [todayList]);
+  const [boardList] = useSetting("boardList");
+  const builtins = React.useMemo(
+    () => ({ todayList, boardList }),
+    [todayList, boardList],
+  );
   const tabs = useListTabs(builtins);
   const selected = useSelectedList();
   // A list note can vanish while its tab is open, and Today can be
@@ -45,6 +49,9 @@ export function useListTabState() {
         if (name === TODAY_LIST) {
           return { kind: "today" as const };
         }
+        if (name === BOARD_LIST) {
+          return { kind: "board" as const };
+        }
         return { kind: "list" as const, name };
       }),
     [tabs],
@@ -58,7 +65,9 @@ export function useListTabState() {
         ? target.kind === "main"
         : tab === TODAY_LIST
           ? target.kind === "today"
-          : target.kind === "list" && target.name === tab,
+          : tab === BOARD_LIST
+            ? target.kind === "board"
+            : target.kind === "list" && target.name === tab,
     );
     return found === -1 ? 1 : found;
   }, [targets, tab]);

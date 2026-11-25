@@ -47,6 +47,53 @@ function Screen({
   );
 }
 
+/** The same rows, with a status header below them to drop on. */
+function ZonedScreen({
+  onReorder,
+}: {
+  onReorder: (event: ReorderEvent<Row>) => void;
+}) {
+  return (
+    <GestureHandlerRootView>
+      <List.Root onReorder={onReorder} renderGhost={() => null}>
+        {[
+          { name: "Alpha", index: 0 },
+          { name: "Bravo", index: 1 },
+        ].map(({ name, index }) => (
+          <List.Item
+            key={name}
+            payload={{ name }}
+            id={name}
+            group="active"
+            index={index}
+            count={2}
+            testID={`reorder-item:${name}`}
+          >
+            <List.Grip testID={`reorder-grip:${name}`} label={`reorder ${name}`} />
+          </List.Item>
+        ))}
+        <List.Zone
+          target="backlog"
+          label="Move to Backlog"
+          testID="zone-backlog"
+        >
+          <List.Item
+            payload={{ name: "Plan" }}
+            id="Plan"
+            group="backlog"
+            index={0}
+            count={1}
+            disabled
+            testID="reorder-item:Plan"
+          >
+            <List.Grip testID="reorder-grip:Plan" label="reorder Plan" />
+          </List.Item>
+        </List.Zone>
+      </List.Root>
+    </GestureHandlerRootView>
+  );
+}
+
 function pointer(type: string, x: number, y: number) {
   return new PointerEvent(type, {
     bubbles: true,
@@ -282,8 +329,63 @@ describe("createReorderSurface", () => {
     ]);
   });
 
-  it("steps a row one place from the keyboard through the drop's event", async () => {
+  it("sends the zone a drop lands on, with none of a reorder's span", async () => {
     const onReorder = vi.fn();
+    render(<ZonedScreen onReorder={onReorder} />);
+    ["Alpha", "Bravo", "Plan"].forEach((name, at) => {
+      placeBox(screen.getByTestId(`reorder-item:${name}`), {
+        x: 0,
+        y: at * 48,
+        width: 390,
+        height: 48,
+      });
+      placeBox(screen.getByTestId(`reorder-grip:${name}`), {
+        x: 360,
+        y: at * 48,
+        width: 44,
+        height: 44,
+      });
+    });
+    placeBox(screen.getByTestId("zone-backlog"), {
+      x: 0,
+      y: 200,
+      width: 390,
+      height: 56,
+    });
+    const grip = screen.getByTestId("reorder-grip:Alpha");
+
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerdown", 370, 12));
+    });
+    await wait(50);
+    expect(screen.getByTestId("drag-ghost"), "the grip picked the row up").toBeTruthy();
+
+    for (let step = 0; step < 2; step += 1) {
+      await act(async () => {
+        grip.dispatchEvent(pointer("pointermove", 370, 220));
+      });
+      await wait(16);
+    }
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerup", 370, 220));
+    });
+    await wait(50);
+
+    expect(onReorder.mock.calls).toEqual([
+      [
+        {
+          payload: { name: "Alpha" },
+          group: "active",
+          from: 0,
+          to: 0,
+          keys: ["Alpha", "Bravo"],
+          zone: "backlog",
+        },
+      ],
+    ]);
+  });
+
+  it("steps a row one place from the keyboard through the drop's event", async () => {    const onReorder = vi.fn();
     render(
       <Screen
         rows={[

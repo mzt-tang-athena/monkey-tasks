@@ -2,6 +2,26 @@
 // file. Do not edit it: a test fails when it is out of date.
 
 export const sampleNotes: Record<string, Record<string, string>> = {
+  "board": {
+    "Deeds/Build a snowman.md":
+      "---\nkind: \"[[deeds]]\"\nstatus: \"[[dropped]]\"\ncreated: 2026-09-02\norder: 1\n---\n\nThe weather never came.\n",
+    "Deeds/Draft the game tutorial.md":
+      "---\nkind: \"[[deeds]]\"\nstatus: \"[[backlog]]\"\ncreated: 2026-09-20\norder: 1\n---\n\nTwo rules for the tutorial.\n",
+    "Deeds/Finish the bench.md":
+      "---\nkind: \"[[deeds]]\"\nstatus: \"[[done]]\"\ncreated: 2026-09-01\ncompleted: 2026-10-20\norder: 1\n---\n\nThe bench is finished.\n",
+    "Deeds/Learn the lathe.md":
+      "---\nkind: \"[[deeds]]\"\nstatus: \"[[someday]]\"\ncreated: 2026-09-22\norder: 1\n---\n\nA workshop class, one weekend.\n",
+    "Deeds/Plan the spring planting.md":
+      "---\nkind: \"[[deeds]]\"\nstatus: \"[[backlog]]\"\ncreated: 2026-09-21\norder: 2\n---\n\nBeds first, then the path.\n",
+    "Deeds/Ship the board design.md":
+      "---\nkind: \"[[deeds]]\"\nstatus: \"[[active]]\"\ncreated: 2026-09-14\norder: 2\nblocked by:\n  - \"[[Draft the game tutorial]]\"\n---\n\nThe backlog waits behind this one.\n",
+    "Deeds/Water the beds.md":
+      "---\nkind: \"[[deeds]]\"\nstatus: \"[[active]]\"\ncreated: 2026-09-12\norder: 1\ndue: 2026-10-28\n---\n\nWater the beds before the heat.\n",
+    "Tasks/Move the budget.md":
+      "---\nkind: \"[[tasks]]\"\nstatus: \"[[backlog]]\"\ncreated: 2026-09-25T09:00\norder: 3\n---\n\nA deed filed anywhere with a status reads on the board.\n",
+    "Tasks/Plain task.md":
+      "---\nkind: \"[[tasks]]\"\ncreated: 2026-09-26T09:00\n---\n\nThe only plain task in this vault.\n",
+  },
   "deeds": {
     "Deeds/Brainstorm.md":
       "---\nkind: \"[[deeds]]\"\nparent deed: \"[[Garden]]\"\n---\n\nIdeas that wait for a status.\n",
