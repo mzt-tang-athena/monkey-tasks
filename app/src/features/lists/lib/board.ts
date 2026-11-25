@@ -112,7 +112,11 @@ export function blockerOf(
   task: TaskItem,
   byName: ReadonlyMap<string, TaskItem>,
 ): string | null {
-  for (const link of task.data?.["blocked by"] ?? []) {
+  // A finished deed is ready, whatever it waited on.
+  if (task.data == null || taskIsDone(task.data)) {
+    return null;
+  }
+  for (const link of task.data["blocked by"] ?? []) {
     const target = byName.get(linkName(link).toLowerCase());
     if (target == null || target.data == null || taskIsDone(target.data)) {
       continue;

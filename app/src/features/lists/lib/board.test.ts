@@ -130,6 +130,15 @@ describe("blockerOf", () => {
     expect(blockerOf(task, byName())).toBeNull();
   });
 
+  it("reads a done deed as ready, whatever it waited on", () => {
+    const task = item("Build", {
+      status: "[[done]]",
+      completed: "2026-10-20",
+      "blocked by": ["[[Ship the design]]"],
+    });
+    expect(blockerOf(task, byName())).toBeNull();
+  });
+
   it("does not block on a link that reaches no note", () => {
     const task = item("Build", { "blocked by": ["[[Gone note]]"] });
     expect(blockerOf(task, byName())).toBeNull();
