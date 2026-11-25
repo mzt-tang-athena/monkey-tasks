@@ -63,7 +63,7 @@ test("the timeline line shows once hours scroll under the header", async ({
   await expect.poll(() => opacity(edge)).toBe(0);
 });
 
-test("the inbox line always shows under the title", async ({ page }) => {
+test("the inbox line always shows under the count", async ({ page }) => {
   await openInbox(page);
   const edge = page.getByTestId("inbox-edge");
   await expect.poll(() => opacity(edge)).toBe(1);
