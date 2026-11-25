@@ -14,7 +14,7 @@ Settings can add or remove it. A Kanban list follows in its own ticket.
 
 - Today shows the tasks due today. Propose whether overdue tasks join
   it, the way TickTick's Today does. The operator confirms.
-- Today is a built-in list, like Main. It writes no `lists`
+- Today is a built-in list, like Main. It writes no `list`
   value into a note, so the vault needs no schema change.
 - Settings gains a place for optional built-in lists. Today is the
   first one there. Place its tab beside Main, in the sequence
