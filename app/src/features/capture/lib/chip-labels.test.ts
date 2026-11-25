@@ -45,6 +45,10 @@ describe("targetLabel", () => {
     expect(targetLabel({ kind: "main" })).toBe("Main");
   });
 
+  it("names the Today target", () => {
+    expect(targetLabel({ kind: "today" })).toBe("Today");
+  });
+
   it("names a list by its own name", () => {
     expect(targetLabel({ kind: "list", name: "Focus" })).toBe("Focus");
   });

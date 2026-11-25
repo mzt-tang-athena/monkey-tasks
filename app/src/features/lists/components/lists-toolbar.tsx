@@ -31,6 +31,7 @@ export function ListsToolbar({
   follow,
   sortMode,
   onSortMode,
+  sortable = true,
   completed,
   onClearCompleted,
 }: {
@@ -41,6 +42,8 @@ export function ListsToolbar({
   follow?: PageFollow;
   sortMode: SortMode;
   onSortMode: (mode: SortMode) => void;
+  /** The tab has an order to pick. Today is a date view, so it does not. */
+  sortable?: boolean;
   /** The current tab's completed rows: what a clear deletes. */
   completed: readonly TaskItem[];
   onClearCompleted: (tasks: readonly TaskItem[]) => void;
@@ -119,19 +122,21 @@ export function ListsToolbar({
           follow={follow}
         />
         <View style={styles.spacer} />
-        <View ref={sortAnchor} testID="sort-menu-anchor">
-          <IconButton
-            label="sort list"
-            expanded={open === "sort"}
-            onPress={() => setOpen(open === "sort" ? null : "sort")}
-          >
-            <Icon
-              name="sort"
-              weight={sortSelected ? "fill" : "outline"}
-              color={sortSelected ? "ink" : "inkMuted"}
-            />
-          </IconButton>
-        </View>
+        {sortable ? (
+          <View ref={sortAnchor} testID="sort-menu-anchor">
+            <IconButton
+              label="sort list"
+              expanded={open === "sort"}
+              onPress={() => setOpen(open === "sort" ? null : "sort")}
+            >
+              <Icon
+                name="sort"
+                weight={sortSelected ? "fill" : "outline"}
+                color={sortSelected ? "ink" : "inkMuted"}
+              />
+            </IconButton>
+          </View>
+        ) : null}
         <View ref={moreAnchor} testID="list-menu-anchor">
           <IconButton
             label="list menu"

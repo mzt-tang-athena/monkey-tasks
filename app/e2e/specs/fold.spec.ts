@@ -8,6 +8,7 @@ import {
   openCompleted,
   row,
   sectionHeader,
+  openMain,
 } from "../locators";
 import { setTheme } from "../theme";
 import { notePaths, noteText, putNote, returnToTab } from "../vault";
@@ -45,6 +46,7 @@ const REOPENED = [
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
 });
 
@@ -106,6 +108,7 @@ test("the fold is per tab and folded again on a fresh page", async ({ page }) =>
   await expect(completedToggle(page)).toHaveAttribute("aria-expanded", "true");
 
   await page.reload();
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   await expect(completedToggle(page)).toHaveAttribute("aria-expanded", "false");
 });

@@ -51,6 +51,7 @@ export type BrokenList = {
 
 export type CaptureTarget =
   | { kind: "main" }
+  | { kind: "today" }
   | { kind: "list"; name: string };
 
 export type ParsedCapture = {

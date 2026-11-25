@@ -18,6 +18,7 @@ import { useStableCallback } from "@/hooks/use-stable-callback";
 import { useTaskEditor } from "@/hooks/use-task-editor";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
 import { toggleCompleted, useCompletedOpen } from "@/lib/folded-completed";
+import { TODAY_LIST } from "@/lib/list-tabs";
 import { useStoreMeta } from "@/stores/tasks/task-state";
 import { useClearCompleted } from "@/stores/tasks/mutations/use-clear-completed";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
@@ -25,6 +26,7 @@ import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useGrantFolder, useRefreshTasks } from "@/stores/tasks/use-vault-read";
 import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
+import { todayIso } from "@/utils/dates";
 import { ListPagePreview } from "./components/list-page-preview";
 import { ListSectionHeader } from "./components/list-section-header";
 import { FailureBanner, RepairNotice } from "./components/list-notices";
@@ -66,10 +68,8 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   // so the rule tracks a swipe on the UI thread (ADR 0046).
   const follow = usePageFollow(index);
   const { sortMode, setSortMode } = useSortMode();
-  const { shown, repairs, sections, onlyCompleted, completed } = useListSections(
-    tab,
-    sortMode,
-  );
+  const { shown, repairs, sections, onlyCompleted, completed, draggable } =
+    useListSections(tab, sortMode);
 
   const tickHold = useTickHold(toggleTask);
   const held = React.useMemo(
@@ -180,14 +180,14 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           section={section.key}
           index={at}
           count={section.data.length}
-          canDrag={sortMode === "manual" && !faint}
+          canDrag={draggable && !faint}
           onToggle={onToggle}
           onOpen={onOpen}
           onTickSettled={tickHold.settle}
         />
       );
     },
-    [sortMode, onToggle, onOpen, tickHold.settle],
+    [draggable, onToggle, onOpen, tickHold.settle],
   );
 
   const previewHeight = pagerHeight > 0 ? pagerHeight : window.height;
@@ -210,6 +210,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           follow={follow}
           sortMode={sortMode}
           onSortMode={setSortMode}
+          sortable={tab !== TODAY_LIST}
           completed={completed}
           onClearCompleted={clearCompleted}
         />
@@ -291,11 +292,13 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           pill follows the active list tab: the bar re-reads the
           default target when the tab changes, so the bar itself never
           remounts and never jumps. Main captures write no list
-          property; every other tab preselects its own list. */}
+          property; every other tab preselects its own list. Today
+          writes no list either, and dates the task today. */}
       <BottomBar
         action={dock({
           targets: tabState.targets,
           defaultTargetIndex: tabState.defaultTargetIndex,
+          dueDay: tab === TODAY_LIST ? todayIso() : undefined,
         })}
       />
     </View>

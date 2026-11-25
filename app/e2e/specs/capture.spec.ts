@@ -1,9 +1,10 @@
 import { expect, test } from "../fixtures";
 import { capture, undated } from "../data";
-import { expectInSection, row, sectionHeader, useDueOrder } from "../locators";
+import { expectInSection, row, sectionHeader, useDueOrder, openMain } from "../locators";
 
 test("a capture with a date phrase lands on its day", async ({ page }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   await useDueOrder(page);
 

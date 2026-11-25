@@ -217,4 +217,28 @@ describe("SettingsScreen", () => {
 
     expect(spy.back).toHaveBeenCalledTimes(1);
   });
+
+  it("switches the Today list off and on, and keeps the choice", () => {
+    const first = mount();
+    const today = () => screen.getByRole("switch", { name: "Today" });
+    expect(today().getAttribute("aria-checked")).toBe("true");
+    expect(
+      screen.getByText("Due today, with past tasks above them."),
+    ).toBeTruthy();
+
+    fireEvent.click(today());
+
+    expect(today().getAttribute("aria-checked")).toBe("false");
+    expect(loadSettings().todayList).toBe("off");
+    expect(globalThis.localStorage.getItem("monkey-tasks.today-list")).toBe("off");
+    first.unmount();
+
+    mount();
+    expect(today().getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(today());
+
+    expect(today().getAttribute("aria-checked")).toBe("true");
+    expect(loadSettings().todayList).toBe("on");
+  });
 });

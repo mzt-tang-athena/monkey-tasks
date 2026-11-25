@@ -6,6 +6,8 @@ import {
   startOfDay,
   todayIso,
 } from "@/utils/dates";
+import { occursOn } from "@/lib/recurrence";
+import { listTabs, MAIN_LIST, TODAY_LIST, type BuiltinTabs } from "@/lib/list-tabs";
 import type { SortMode } from "@/lib/settings";
 import { useStoreMeta, useTaskList } from "./task-state";
 
@@ -27,8 +29,8 @@ export type TaskSection = {
 };
 
 /**
- * A tab name: Main, or the name of a list note in Tasks/Lists/. Any
- * other string is a list tab.
+ * A tab name: Main, the built-in Today list, or the name of a list note
+ * in Tasks/Lists/. Any other string is a list tab.
  */
 export type ListTab = string;
 
@@ -89,20 +91,16 @@ export function groupByDue(items: TaskItem[], now: Date): DateGroups {
     }
   }
   const title = (a: TaskItem, b: TaskItem) => a.name.localeCompare(b.name);
-  // Decorate-time parse: sorting re-parses nothing per comparison.
-  const stamp = (a: TaskItem): number =>
-    a.data?.due ? (parseStoredDate(a.data.due)?.date.getTime() ?? 0) : 0;
-  const sortable = [...groups.overdue, ...groups.today, ...groups.undated];
-  const stamps = new Map(sortable.map((item) => [item.uri, stamp(item)]));
-  const byTime = (a: TaskItem, b: TaskItem) =>
-    (stamps.get(a.uri) ?? 0) - (stamps.get(b.uri) ?? 0) || title(a, b);
-  groups.overdue.sort(byTime);
-  groups.today.sort(byTime);
+  groups.overdue = sortByDueTime(groups.overdue);
+  groups.today = sortByDueTime(groups.today);
   groups.undated.sort(title);
   groups.completed.sort(title);
   groups.upcoming = [...byDay.values()]
     .sort((a, b) => a.date.getTime() - b.date.getTime())
-    .map((bucket) => ({ date: bucket.date, items: bucket.items.sort(byTime) }));
+    .map((bucket) => ({
+      date: bucket.date,
+      items: sortByDueTime(bucket.items),
+    }));
   return groups;
 }
 
@@ -127,6 +125,10 @@ export function selectOpenTasks(tasks: TaskItem[], now: Date): TaskItem[] {
  * 20261111-one-list-and-tab-order and the 2026-11-11 amendment to ADR
  * 0015.
  *
+ * Today is the built-in day view. It takes the tasks the planner's day
+ * rule puts on today, plus the overdue ones, and a tick leaves it. See
+ * ADR 20261125-today-list.
+ *
  * A task with a status is a deed, and a deed is never a list row. Main
  * would otherwise hold every deed, because none of them carries a
  * list. The board shows deeds (ADR `20261124-deeds-are-tasks-with-a-status`).
@@ -139,10 +141,73 @@ export function selectTabTasks(
   const shown = tasks.filter(
     (task) => task.data?.status == null && !isHiddenOccurrence(task, now),
   );
-  if (tab === "Main") {
+  if (tab === MAIN_LIST) {
     return shown.filter((task) => !task.data?.list);
   }
+  if (tab === TODAY_LIST) {
+    return selectTodayTasks(shown, now);
+  }
   return inList(shown, tab);
+}
+
+/**
+ * Today's rows, in two groups: the tasks the day rule puts on today,
+ * and the overdue ones. An occurrence today wins over the stored due
+ * day, so a daily task stored last week reads under Today. A done task
+ * never shows, so a tick leaves the tab. A reminder alone does not
+ * count; the due date decides.
+ */
+export function selectTodayGroups(
+  items: TaskItem[],
+  now: Date,
+): { past: TaskItem[]; today: TaskItem[] } {
+  const start = startOfDay(now).getTime();
+  const past: TaskItem[] = [];
+  const today: TaskItem[] = [];
+  for (const item of items) {
+    if (item.data?.completed != null) {
+      continue;
+    }
+    if (occursOn(item, now)) {
+      today.push(item);
+      continue;
+    }
+    const due = item.data?.due ? parseStoredDate(item.data.due) : null;
+    if (due != null && startOfDay(due.date).getTime() < start) {
+      past.push(item);
+    }
+  }
+  return { past: sortByDueTime(past), today: sortByDueTime(today) };
+}
+
+/** Today's rows in reading order: the past group, then today's. */
+export function selectTodayTasks(items: TaskItem[], now: Date): TaskItem[] {
+  const groups = selectTodayGroups(items, now);
+  return [...groups.past, ...groups.today];
+}
+
+/** Today's sections: the past group above today's, empty ones dropped. */
+export function selectTodaySections(
+  visible: TaskItem[],
+  now: Date,
+): TaskSection[] {
+  const groups = selectTodayGroups(visible, now);
+  return [
+    { title: "Past", items: groups.past, tone: "danger" as const },
+    { title: "Today", items: groups.today, tone: "ink" as const },
+  ].filter((section) => section.items.length > 0);
+}
+
+/** Due time ascending, ties by title. */
+function sortByDueTime(items: TaskItem[]): TaskItem[] {
+  const stamp = (item: TaskItem): number =>
+    item.data?.due ? (parseStoredDate(item.data.due)?.date.getTime() ?? 0) : 0;
+  const stamps = new Map(items.map((item) => [item.uri, stamp(item)]));
+  return [...items].sort(
+    (a, b) =>
+      (stamps.get(a.uri) ?? 0) - (stamps.get(b.uri) ?? 0) ||
+      a.name.localeCompare(b.name),
+  );
 }
 
 /**
@@ -252,30 +317,25 @@ export function useTabTasks(tab: ListTab): TaskItem[] {
 }
 
 /**
- * The tab bar's order: Main first, then every list note by name. Main
- * is the only fixed tab, so a list note named Focus or Main cannot make
- * a second tab.
+ * The tab bar's order as a hook: the pure rule lives in `lib/list-tabs`,
+ * so the command pane and the strip cannot drift.
  */
-export function useListTabs(): string[] {
+export function useListTabs(builtins: BuiltinTabs): string[] {
   const { lists } = useStoreMeta();
-  return React.useMemo(() => {
-    const tabs = ["Main"];
-    for (const name of lists) {
-      if (!tabs.includes(name)) {
-        tabs.push(name);
-      }
-    }
-    return tabs;
-  }, [lists]);
+  return React.useMemo(() => listTabs(lists, builtins), [lists, builtins]);
 }
 
-export function useTaskSections(
+export function useTabSections(
   visible: TaskItem[],
+  tab: ListTab,
   sortMode: SortMode = "due",
 ): TaskSection[] {
   const now = useToday();
   return React.useMemo(
-    () => selectSections(visible, now, sortMode),
-    [visible, now, sortMode],
+    () =>
+      tab === TODAY_LIST
+        ? selectTodaySections(visible, now)
+        : selectSections(visible, now, sortMode),
+    [visible, tab, sortMode, now],
   );
 }

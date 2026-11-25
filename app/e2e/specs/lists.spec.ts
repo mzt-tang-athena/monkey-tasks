@@ -2,6 +2,7 @@ import { expect, test } from "../fixtures";
 import { sections, supplements, tabs, undated, warnedWeight } from "../data";
 import { holdDrag, swipe, touchSwipe } from "../gestures";
 import {
+  completedToggle,
   expectAbove,
   listTab,
   openCompleted,
@@ -9,11 +10,13 @@ import {
   row,
   sectionHeader,
   useDueOrder,
+  openMain,
 } from "../locators";
 import { noteText, putNote, returnToTab } from "../vault";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
 });
 
@@ -215,6 +218,8 @@ test.describe("the sort control", () => {
 
 test.describe("the tab strip", () => {
   test("a clipped tab name has a fade over its edge", async ({ page }) => {
+    // A fresh page leads with Today, at the strip's own start.
+    await page.goto("/");
     // At 412 wide the strip holds more tabs than fit, so the last one
     // shows cut ("Fo"). A fade tells the user that more waits there.
     await expect(page.getByTestId("tab-fade-end")).toBeVisible();
@@ -339,14 +344,21 @@ test.describe("a note that needs repair", () => {
       '---\nkind: "[[tasks]]"\n---\n\nNo created date.\n',
     );
     await returnToTab(page);
-    await expect(page.getByText("Needs repair")).toBeVisible();
+    // The neighbouring page's peek draws the same notice, so read the
+    // live one.
+    await expect(
+      page.getByTestId("pager-live").getByText("Needs repair"),
+    ).toBeVisible();
   });
 
   test("the notice scrolls with the list", async ({ page }) => {
     // Bug 7: the notice sat fixed above the list, 168 points tall, and
     // cards slid under its edge. It is the list's header now.
     await page.setViewportSize({ width: 412, height: 560 });
-    const notice = page.getByText("Needs repair");
+    // The re-read fills the rows in stages, and a wheel into a page that
+    // is still short scrolls nothing. Wait for the whole list.
+    await expect(completedToggle(page)).toBeVisible();
+    const notice = page.getByTestId("pager-live").getByText("Needs repair");
     const before = (await notice.boundingBox())?.y ?? Number.NaN;
 
     await page.mouse.move(206, 450);
@@ -358,13 +370,17 @@ test.describe("a note that needs repair", () => {
   });
 
   test("the notice names the file and its error", async ({ page }) => {
-    await expect(page.getByText("Broken note.md")).toBeVisible();
+    await expect(
+      page.getByTestId("pager-live").getByText("Broken note.md"),
+    ).toBeVisible();
   });
 });
 
 test.describe("a note whose alert weight is a typo", () => {
   test("keeps its row and names the warning", async ({ page }) => {
-    await expect(page.getByText(warnedWeight.warning)).toBeVisible();
+    await expect(
+      page.getByTestId("pager-live").getByText(warnedWeight.warning),
+    ).toBeVisible();
 
     await press(page, listTab(page, tabs.focus));
     await expect(listTab(page, tabs.focus)).toHaveAttribute(

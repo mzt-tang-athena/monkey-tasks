@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { capture, overdue } from "../data";
 import { press, type Input } from "../gestures";
-import { row } from "../locators";
+import { row, openMain } from "../locators";
 import { notePaths, noteText } from "../vault";
 
 /**
@@ -23,6 +23,7 @@ test("a tap in the first layout frame of a row ticks it", async ({
 }) => {
   test.skip(reducedMotion === "reduce", "one project is enough");
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, "Call Mum")).toBeVisible();
 
   // The new row's tick gets a whole tap in the same task as its mount:

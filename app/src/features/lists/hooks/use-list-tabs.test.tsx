@@ -13,6 +13,28 @@ describe("useListTabState", () => {
     state.tabs = ["Main", "Tasks", "Finance"];
   });
 
+  it("opens a fresh start on the first tab, Today while it is on", () => {
+    state.tabs = ["Today", "Main", "Tasks"];
+    const { result } = renderHook(() => useListTabState());
+
+    expect(result.current.tab).toBe("Today");
+    expect(result.current.index).toBe(0);
+    expect(result.current.defaultTargetIndex).toBe(0);
+    expect(result.current.targets[0]).toEqual({ kind: "today" });
+  });
+
+  it("falls back to the first tab when Today is switched off", () => {
+    state.tabs = ["Today", "Main", "Tasks"];
+    const { result, rerender } = renderHook(() => useListTabState());
+    act(() => result.current.setTab("Today"));
+
+    state.tabs = ["Main", "Tasks"];
+    rerender();
+
+    expect(result.current.tab).toBe("Main");
+    expect(result.current.index).toBe(0);
+  });
+
   it("turns to the next tab on a page landing", () => {
     const { result } = renderHook(() => useListTabState());
     act(() => result.current.onPage(1));

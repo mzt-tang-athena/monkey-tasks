@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect, pauseClock, test } from "../fixtures";
 import { capture, undated } from "../data";
 import type { Input } from "../gestures";
-import { row } from "../locators";
+import { row, openMain } from "../locators";
 import { notePaths } from "../vault";
 
 /**
@@ -184,6 +184,7 @@ for (const input of inputs) {
       reducedMotion,
     }) => {
       await page.goto("/");
+      await openMain(page);
       await expect(row(page, undated.second)).toBeVisible();
 
       // Step the page clock, so a loaded runner cannot skip every
@@ -208,6 +209,7 @@ for (const input of inputs) {
       reducedMotion,
     }) => {
       await page.goto("/");
+      await openMain(page);
       await expect(row(page, undated.second)).toBeVisible();
       await tap(page, input, page.getByRole("button", { name: "add task" }));
       await page.getByPlaceholder("Add a task").fill(capture.typed);
@@ -306,6 +308,7 @@ for (const input of inputs) {
       );
 
       await page.goto("/");
+      await openMain(page);
       await expect(row(page, undated.second)).toBeVisible();
       await tap(page, input, page.getByRole("button", { name: "add task" }));
       await expect(page.getByRole("dialog")).toBeVisible();
@@ -354,6 +357,7 @@ for (const input of inputs) {
       page,
     }) => {
       await page.goto("/");
+      await openMain(page);
       await expect(row(page, undated.second)).toBeVisible();
       await tap(page, input, page.getByRole("button", { name: "add task" }));
       await expect(page.getByRole("dialog")).toBeVisible();
@@ -396,6 +400,7 @@ for (const input of inputs) {
       reducedMotion,
     }) => {
       await page.goto("/");
+      await openMain(page);
       await expect(row(page, undated.second)).toBeVisible();
 
       // Step the 220 ms entrance on the page clock. A loaded runner

@@ -1,7 +1,7 @@
 import { expect, pauseClock, test } from "../fixtures";
 import { undated } from "../data";
 import { expectTouchAction, holdDrag } from "../gestures";
-import { row } from "../locators";
+import { row, openMain } from "../locators";
 import type { Locator, Page } from "@playwright/test";
 
 // The motion check on the dev screen is a drag surface with two zones
@@ -76,6 +76,7 @@ test("a touch drag holds the scroller still and drops", async ({ page }) => {
 test("a menu opens at full size with reduced motion", async ({ page, reducedMotion }) => {
   test.skip(reducedMotion !== "reduce", "the motion project plays the entrance");
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   await page.getByRole("button", { name: "list menu" }).click();
   const menu = page.getByRole("menu");

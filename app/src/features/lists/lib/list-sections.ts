@@ -1,4 +1,5 @@
 import type { TaskItem } from "@/types/task";
+import { MAIN_LIST, TODAY_LIST } from "@/lib/list-tabs";
 import type { SectionTone, TaskSection } from "@/stores/tasks/selectors";
 
 /**
@@ -24,12 +25,17 @@ export const myOrderKey = "my-order";
 
 /**
  * The line an empty page shows. Main is the unfiled bucket, so its
- * line says what it holds and points at the list tabs.
+ * line says what it holds and points at the list tabs. Today names its
+ * one rule.
  */
 export function emptyListLabel(tab: string): string {
-  return tab === "Main"
-    ? "No unfiled tasks. Main holds only tasks with no list; filed tasks show on their list tab."
-    : "Nothing on this list yet.";
+  if (tab === MAIN_LIST) {
+    return "No unfiled tasks. Main holds only tasks with no list; filed tasks show on their list tab.";
+  }
+  if (tab === TODAY_LIST) {
+    return "Nothing due today.";
+  }
+  return "Nothing on this list yet.";
 }
 
 /**

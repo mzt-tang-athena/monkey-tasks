@@ -2,7 +2,8 @@ import * as React from "react";
 import type { TaskItem } from "@/types/task";
 import type { SortMode } from "@/lib/settings";
 import { useStoreMeta, useTaskList } from "@/stores/tasks/task-state";
-import { useTabTasks, useTaskSections } from "@/stores/tasks/selectors";
+import { useTabSections, useTabTasks } from "@/stores/tasks/selectors";
+import { TODAY_LIST } from "@/lib/list-tabs";
 import { buildSections, type ListsSection } from "../lib/list-sections";
 
 /**
@@ -76,7 +77,10 @@ export function useListSections(tab: string, sortMode: SortMode) {
     () => shown.filter((task) => (task.errors?.length ?? 0) === 0),
     [shown],
   );
-  const open = useTaskSections(visible, sortMode);
+  // Today is a date view: it keeps its Past and Today groups whatever
+  // the sort setting says, and a drag never reorders it.
+  const byDate = tab === TODAY_LIST;
+  const open = useTabSections(visible, tab, sortMode);
   const completed = React.useMemo(
     () =>
       visible
@@ -98,5 +102,7 @@ export function useListSections(tab: string, sortMode: SortMode) {
     completed,
     /** The tab has done tasks and no open ones. */
     onlyCompleted: open.length === 0 && completed.length > 0,
+    /** Rows can be dragged into a manual order, and Today cannot. */
+    draggable: !byDate && sortMode === "manual",
   };
 }

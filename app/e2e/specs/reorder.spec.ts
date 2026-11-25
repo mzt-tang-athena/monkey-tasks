@@ -33,6 +33,8 @@ const apples = "Groceries: milk, eggs, oats";
 
 async function openMain(page: Page) {
   await page.goto("/");
+  await expect(page.getByTestId("lists-toolbar")).toBeVisible();
+  await listTab(page, "Main").click();
   await expect(row(page, undated.second)).toBeVisible();
   await useDueOrder(page);
 }

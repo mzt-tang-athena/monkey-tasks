@@ -13,6 +13,8 @@ export type SortMode = "due" | "manual";
 export type WeekLayout = "spread" | "rows";
 /** The first day of the week, on every week-ordered surface. */
 export type WeekStart = "monday" | "sunday";
+/** A built-in list's switch: its tab shows, or it stays out. */
+export type Toggle = "on" | "off";
 
 /** The name each sort order shows on screen. */
 export const SORT_LABELS: Record<SortMode, string> = {
@@ -31,6 +33,8 @@ export type Settings = {
   weekView: WeekLayout;
   /** The day a week starts on: Monday, or Sunday. */
   weekStart: WeekStart;
+  /** The Today list's tab. It starts on (ADR 20261125-today-list). */
+  todayList: Toggle;
 };
 
 const DEFAULTS: Settings = {
@@ -39,6 +43,7 @@ const DEFAULTS: Settings = {
   theme: "budget",
   weekView: "spread",
   weekStart: "monday",
+  todayList: "on",
 };
 
 const LOCAL_KEYS: Record<keyof Settings, string> = {
@@ -47,6 +52,7 @@ const LOCAL_KEYS: Record<keyof Settings, string> = {
   theme: "monkey-tasks.theme",
   weekView: "monkey-tasks.week-view",
   weekStart: "monkey-tasks.week-start",
+  todayList: "monkey-tasks.today-list",
 };
 
 const FILE_NAME = "monkey-tasks-settings.json";
@@ -85,6 +91,7 @@ function pick<K extends keyof Settings>(
     theme: Object.keys(THEMES),
     weekView: ["spread", "rows"],
     weekStart: ["monday", "sunday"],
+    todayList: ["on", "off"],
   };
   return typeof value === "string" && allowed[key].includes(value)
     ? (value as Settings[K])

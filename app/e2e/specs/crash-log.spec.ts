@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { undated } from "../data";
-import { press, row } from "../locators";
+import { press, row, openMain } from "../locators";
 
 /**
  * Ticket 0081: the phone keeps a crash report the operator can read,
@@ -35,6 +35,7 @@ test.describe("crash log", () => {
       });
     });
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     const vault = await page.evaluate(() => globalThis.__vault?.files() ?? {});
 
@@ -77,6 +78,7 @@ test.describe("crash log", () => {
 
   test("says so when nothing was recorded", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await openSettings(page);

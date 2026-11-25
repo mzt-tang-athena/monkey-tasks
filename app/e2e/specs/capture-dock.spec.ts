@@ -1,6 +1,6 @@
 import { expect, test } from "../fixtures";
 import { capture, undated } from "../data";
-import { press, row } from "../locators";
+import { press, row, openMain } from "../locators";
 import type { Locator, Page } from "@playwright/test";
 
 // ADR 0010 caps content at 720. On a 1280 wide window the column runs
@@ -44,6 +44,7 @@ test.describe("the floating chrome on a wide window", () => {
     page,
   }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await expectInColumn(page.getByRole("tab", { name: "Lists" }), "the Lists tab");
@@ -66,6 +67,7 @@ test.describe("the floating chrome on a wide window", () => {
 
   test("the editor sheet sits inside the column", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await press(page, row(page, undated.second));
     const editor = page.getByRole("dialog", { name: "Task" });
     await expect(editor).toBeVisible();
@@ -85,6 +87,7 @@ test("a failed capture shows the toast, and Retry sends the same draft", async (
   page,
 }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   await failCapture(page);
 
@@ -106,6 +109,7 @@ test("a failed capture toast belongs to its tab and shows over no other screen",
   // The repair notice is an alert too, so the spec counts the toast.
   const toast = page.getByRole("alert").filter({ hasText: "create failed" });
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   await failCapture(page);
 
@@ -141,6 +145,7 @@ test.describe("the sheet belongs to its tab", () => {
   // controls by label.
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await page.getByRole("button", { name: "add task" }).click();
     await page.getByPlaceholder("Add a task").fill(capture.typed);
@@ -219,6 +224,7 @@ test("Escape closes the sheet while the capture input has focus", async ({
   page,
 }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   await page.getByRole("button", { name: "add task" }).click();
   const input = page.getByPlaceholder("Add a task");

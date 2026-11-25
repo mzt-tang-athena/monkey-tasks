@@ -14,11 +14,13 @@ import {
   row,
   sectionHeader,
   useDueOrder,
+  openMain,
 } from "../locators";
 import { noteText } from "../vault";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
   await useDueOrder(page);
 });

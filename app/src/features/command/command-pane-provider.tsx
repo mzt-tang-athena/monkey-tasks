@@ -10,6 +10,7 @@ import { requestCapture } from "@/lib/capture-request";
 import { selectList, useSelectedList } from "@/lib/selected-list";
 import { SORT_LABELS } from "@/lib/settings";
 import { useSetting } from "@/lib/settings-store";
+import { listTabs } from "@/lib/list-tabs";
 import { useStoreMeta } from "@/stores/tasks/task-state";
 import { THEME_NAMES } from "@/theme/palettes";
 import { useTheme } from "@/theme/theme-provider";
@@ -28,13 +29,15 @@ export function CommandPaneProvider({ children }: { children: React.ReactNode })
   const client = useQueryClient();
   const { lists } = useStoreMeta();
   const currentList = useSelectedList();
+  const [todayList] = useSetting("todayList");
   const [sortMode] = useSetting("sortMode");
   const { name: theme } = useTheme();
 
-  // The tab order: Main, then the list notes. A press moves one tab
-  // along and wraps, so every tab is reachable.
-  const tabs = ["Main", ...lists];
-  const at = tabs.indexOf(currentList);
+  // The tab order: the built-in lists that are on, then Main, then the
+  // list notes. A press moves one tab along and wraps, so every tab is
+  // reachable. It is the same order the Lists strip draws.
+  const tabs = listTabs(lists, { todayList });
+  const at = currentList == null ? -1 : tabs.indexOf(currentList);
   const nextList = tabs.length > 1 ? tabs[(at + 1) % tabs.length] : null;
 
   const value = React.useMemo<CommandPaneValue>(

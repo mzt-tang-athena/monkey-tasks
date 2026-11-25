@@ -3,7 +3,7 @@ import { expect, test } from "../fixtures";
 import { undated } from "../data";
 import { pane, search, swipeDownPx, swipeOpen } from "../commands";
 import { pullDown, touchDrag, touchHold } from "../gestures";
-import { addButton, listTab, row } from "../locators";
+import { addButton, listTab, row, openMain } from "../locators";
 
 /**
  * The operator's 2026-11-24 design: the bar's action is one wide Add
@@ -34,6 +34,7 @@ async function expectTab(
 test.describe("a tap", () => {
   test("opens the tab's own Add", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await addButton(page).click();
@@ -43,6 +44,7 @@ test.describe("a tap", () => {
 
   test("that moves a little still adds", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     const box = await addButton(page).boundingBox();
     if (box == null) {
@@ -69,6 +71,7 @@ test.describe("a tap", () => {
 test.describe("a swipe down", () => {
   test("opens the command pane with the search focused", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await swipeOpen(page);
@@ -79,6 +82,7 @@ test.describe("a swipe down", () => {
 
   test("opens it with the mouse too", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await pullDown(page, "mouse", addButton(page), swipeDownPx);
@@ -90,6 +94,7 @@ test.describe("a swipe down", () => {
 test.describe("a sideways swipe", () => {
   test("left shows the tab on the right", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await touchDrag(page, addButton(page), -40);
@@ -108,6 +113,7 @@ test.describe("a sideways swipe", () => {
 
   test("stops at either end of the bar", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await touchDrag(page, addButton(page), 40);
@@ -123,6 +129,7 @@ test.describe("a sideways swipe", () => {
 test.describe("a swipe up", () => {
   test("opens nothing and adds nothing", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     await touchDrag(page, addButton(page), 0, { dy: -40 });
@@ -139,6 +146,7 @@ test.describe("the hint of motion", () => {
     reducedMotion,
   }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     const rest = await addButton(page).boundingBox();
 
@@ -169,6 +177,7 @@ test.describe("the bar's layout", () => {
   test("four tabs and the Add button fit 360 wide", async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 640 });
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     const targets = ["Lists", "Planner", "Inbox Notes", "Journal"];
@@ -195,6 +204,7 @@ test.describe("the bar's layout", () => {
   test("the bar's glyphs draw at 24pt inside their targets", async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 640 });
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     for (const name of ["list", "calendar", "journal", "inbox", "plus"]) {

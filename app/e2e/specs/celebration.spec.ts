@@ -1,7 +1,7 @@
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { completedNotes, undated } from "../data";
-import { openCompleted, press, row } from "../locators";
+import { openCompleted, press, row, openMain } from "../locators";
 
 type Watched = { burstSeen?: boolean };
 
@@ -186,6 +186,7 @@ test.describe("completion celebration", () => {
     page,
   }, testInfo) => {
     await page.goto("/");
+    await openMain(page);
     const tick = row(page, undated.second).getByRole("checkbox", {
       name: undated.second,
     });
@@ -205,6 +206,7 @@ test.describe("completion celebration", () => {
     page,
   }, testInfo) => {
     await page.goto("/");
+    await openMain(page);
     const tick = row(page, undated.second).getByRole("checkbox", {
       name: undated.second,
     });
@@ -244,6 +246,7 @@ test.describe("completion celebration", () => {
     page,
   }, testInfo) => {
     await page.goto("/");
+    await openMain(page);
     // Open the group first: the sheet is modal, so the page behind it
     // takes no press, and the row must stay on the page after the tick.
     await openCompleted(page);
@@ -267,6 +270,7 @@ test.describe("completion celebration", () => {
     page,
   }) => {
     await page.goto("/");
+    await openMain(page);
     // A done task sits in the folded Completed group until it opens.
     await openCompleted(page);
     const target = row(page, completedNotes.timed);

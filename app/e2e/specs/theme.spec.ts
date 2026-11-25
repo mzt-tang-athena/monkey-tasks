@@ -2,7 +2,7 @@ import { AxeBuilder } from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { tomorrow, undated } from "../data";
-import { press, row } from "../locators";
+import { press, row, openMain } from "../locators";
 import { rgb, setTheme } from "../theme";
 import { THEMES, type ThemeName } from "../../src/theme/palettes";
 
@@ -52,6 +52,7 @@ async function scan(page: Page, where: string, include?: string) {
 test.describe("runtime theme switch", () => {
   test("repaints Lists without a reload", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await expectColor(page, "lists-screen", THEMES.budget.paper, "before");
 
@@ -69,11 +70,13 @@ test.describe("runtime theme switch", () => {
 
   test("keeps the choice across a restart", async ({ page }) => {
     await page.goto("/");
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     await setTheme(page, "clay");
     await expectColor(page, "lists-screen", THEMES.clay.paper, "before reload");
 
     await page.reload();
+    await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
     expect(
@@ -121,6 +124,7 @@ test.describe("every palette", () => {
   for (const name of names) {
     test(`axe holds on every screen in ${name}`, async ({ page }) => {
       await page.goto("/");
+      await openMain(page);
       await setTheme(page, name);
       await expect(row(page, undated.second)).toBeVisible();
       await scan(page, `${name} lists`);
@@ -144,6 +148,7 @@ test.describe("every palette", () => {
       await scan(page, `${name} journal`);
 
       await page.goto("/");
+      await openMain(page);
       await expect(row(page, undated.second)).toBeVisible();
       await press(
         page,
@@ -156,6 +161,7 @@ test.describe("every palette", () => {
       await scan(page, `${name} editor`, '[role="dialog"]');
 
       await page.goto("/");
+      await openMain(page);
       await expect(row(page, undated.second)).toBeVisible();
       await press(page, page.getByRole("button", { name: "add task" }));
       const sheet = page.getByRole("dialog", { name: "Add a task" });

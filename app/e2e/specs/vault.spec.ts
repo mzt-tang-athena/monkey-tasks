@@ -13,6 +13,7 @@ import {
   press,
   row,
   sectionHeader,
+  openMain,
 } from "../locators";
 import {
   failNextWrite,
@@ -30,6 +31,7 @@ test("a captured name with a colon keeps it after the vault is read again", asyn
   page,
 }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
 
   await page.getByRole("button", { name: "add task" }).click();
@@ -53,6 +55,7 @@ test("a tick on a repeating task makes its next occurrence a note", async ({
   page,
 }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, supplements)).toHaveCount(1);
 
   await press(page, row(page, supplements).getByRole("checkbox"));
@@ -83,6 +86,7 @@ test("a Retry on a tick that landed since makes no second next occurrence", asyn
   page,
 }) => {
   await page.goto("/");
+  await openMain(page);
   const target = row(page, supplements);
   await expect(target).toHaveCount(1);
   const retry = page.getByRole("button", { name: "retry tick" });
@@ -130,9 +134,11 @@ test.describe("a slow vault and a failed write", () => {
         await page.goto(
           `/?latency=${latencyMs}&fail=${encodeURIComponent(`write:${fileName}`)}`,
         );
+        await openMain(page);
         await expect(row(page, name)).toBeVisible();
       } else {
         await page.goto("/");
+        await openMain(page);
         await expect(row(page, name)).toBeVisible();
         await slowVaultAndFailWrite(page, latencyMs, fileName);
       }
@@ -176,6 +182,7 @@ test("three ticks of a month-end task land on the last day of each month", async
   page,
 }) => {
   await page.goto("/");
+  await openMain(page);
   await expect(row(page, undated.second)).toBeVisible();
 
   // A bare monthly rule on the 31st, as another app writes it. The note

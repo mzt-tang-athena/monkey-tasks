@@ -7,7 +7,9 @@ import {
   selectOpenTasks,
   selectSections,
   selectTabTasks,
+  selectTodaySections,
 } from "./selectors";
+import { TODAY_LIST } from "@/lib/list-tabs";
 
 // The selectors only read day boundaries out of `now`, so a pinned
 // local midnight keeps the ordering deterministic in any timezone.
@@ -22,6 +24,7 @@ type TaskFields = {
   recurrence?: string;
   "recurrence previous"?: string;
   status?: TaskFrontmatter["status"];
+  reminders?: string[];
 };
 
 function task(name: string, fields: TaskFields = {}): TaskItem {
@@ -201,6 +204,57 @@ describe("selectTabTasks", () => {
     ]);
     expect(isHiddenOccurrence(spawn, NOW)).toBe(true);
     expect(isHiddenOccurrence(overdue, NOW)).toBe(false);
+  });
+});
+
+describe("selectTabTasks on Today", () => {
+  // NOW is Thursday 22 October 2026, local midnight.
+  const tasks = [
+    task("Due all day", { due: "2026-10-22" }),
+    task("Due early", { due: "2026-10-22T08:00" }),
+    task("Yesterday", { due: "2026-10-21" }),
+    task("Daily", { due: "2026-10-19", recurrence: "FREQ=DAILY" }),
+    task("In a list", { due: "2026-10-22", list: "[[Errands]]" }),
+    task("Tomorrow", { due: "2026-10-23" }),
+    task("Undated", {}),
+    task("Ticked", { due: "2026-10-22", completed: "2026-10-22T07:00" }),
+    task("Reminder later", {
+      due: "2026-10-24",
+      reminders: ["2026-10-22T09:00"],
+    }),
+    task("Water the beds", { status: "[[active]]", due: "2026-10-22" }),
+  ];
+
+  it("holds the due tasks of every list and the overdue ones", () => {
+    expect(
+      names(selectTabTasks(tasks, TODAY_LIST, NOW)).sort(),
+    ).toEqual(["Daily", "Due all day", "Due early", "In a list", "Yesterday"]);
+  });
+
+  it("keeps a tick, a reminder and a deed out", () => {
+    const today = names(selectTabTasks(tasks, TODAY_LIST, NOW));
+
+    expect(today).not.toContain("Ticked");
+    expect(today).not.toContain("Reminder later");
+    expect(today).not.toContain("Water the beds");
+  });
+
+  it("groups the past above today, as the page draws them", () => {
+    // The page groups the tab's own rows, so the deed is gone already.
+    const sections = selectTodaySections(
+      selectTabTasks(tasks, TODAY_LIST, NOW),
+      NOW,
+    );
+
+    expect(sections.map((section) => section.title)).toEqual(["Past", "Today"]);
+    expect(sections.map((section) => section.tone)).toEqual(["danger", "ink"]);
+    expect(names(sections[0].items)).toEqual(["Yesterday"]);
+    expect(names(sections[1].items).sort()).toEqual([
+      "Daily",
+      "Due all day",
+      "Due early",
+      "In a list",
+    ]);
   });
 });
 
