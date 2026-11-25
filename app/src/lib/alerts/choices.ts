@@ -10,4 +10,14 @@ export type RescheduleChoice = {
   target(now: Date): string;
 };
 
-export const RESCHEDULE_CHOICES: readonly RescheduleChoice[] = [];
+export const RESCHEDULE_CHOICES: readonly RescheduleChoice[] = [
+  {
+    id: "probe",
+    title: "Probe",
+    target: (now) => {
+      const at = new Date(now.getTime() + 2 * 60 * 60_000);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+    },
+  },
+];

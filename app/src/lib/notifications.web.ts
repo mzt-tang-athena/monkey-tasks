@@ -53,3 +53,5 @@ export const postActionFailure: typeof Native.postActionFailure =
 
 export const clearActionFailureNotice: typeof Native.clearActionFailureNotice =
   async () => undefined;
+
+export const isButtonPayload: typeof Native.isButtonPayload = () => false;

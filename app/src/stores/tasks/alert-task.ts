@@ -3,7 +3,11 @@ import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import { performAlertPress, pressOf } from "./alert-actions";
 import { defaultAdapter } from "@/lib/vault/default-adapter";
-import { readTaskResponse } from "@/lib/notifications";
+import {
+  isButtonPayload,
+  postActionFailure,
+  readTaskResponse,
+} from "@/lib/notifications";
 
 /**
  * Runs a Done or Reschedule press when no screen is open. Android loads
@@ -15,9 +19,19 @@ export const ALERT_ACTION_TASK = "monkey-tasks-alert-action";
 if (Platform.OS === "android") {
   TaskManager.defineTask(ALERT_ACTION_TASK, async ({ data }) => {
     const response = readTaskResponse(data);
-    const press = response == null ? null : pressOf(response);
-    if (press != null) {
-      await performAlertPress(defaultAdapter(), press);
+    if (response != null) {
+      const press = pressOf(response);
+      if (press != null) {
+        await performAlertPress(defaultAdapter(), press);
+      }
+      return;
+    }
+    if (isButtonPayload(data)) {
+      await postActionFailure({
+        id: "unreadable",
+        title: "A button press was lost",
+        body: "The reminder could not be read. Open the task to act on it.",
+      }).catch(() => undefined);
     }
   });
   Notifications.registerTaskAsync(ALERT_ACTION_TASK).catch(() => undefined);

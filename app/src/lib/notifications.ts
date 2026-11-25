@@ -221,6 +221,31 @@ export async function exactAlarmState(): Promise<boolean> {
   return exact.granted;
 }
 
+/**
+ * The notification's data. A response from the background task carries
+ * it as JSON text in `dataString`, because only the listener path turns
+ * that text into an object.
+ */
+function contentData(content: {
+  data?: unknown;
+  dataString?: unknown;
+}): Record<string, unknown> | undefined {
+  if (content.data != null && typeof content.data === "object") {
+    return content.data as Record<string, unknown>;
+  }
+  if (typeof content.dataString !== "string") {
+    return undefined;
+  }
+  try {
+    const parsed: unknown = JSON.parse(content.dataString);
+    return parsed != null && typeof parsed === "object"
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function readResponse(
   response: Notifications.NotificationResponse | null,
 ): AlertResponse | null {
@@ -228,7 +253,7 @@ function readResponse(
     return null;
   }
   const { request } = response.notification;
-  const data = request.content.data;
+  const data = contentData(request.content);
   if (typeof data?.uri !== "string") {
     return null;
   }
@@ -244,6 +269,16 @@ function readResponse(
     alert.button = response.actionIdentifier;
   }
   return alert;
+}
+
+/** Whether a payload is a tap on one of the buttons. */
+export function isButtonPayload(payload: unknown): boolean {
+  return (
+    payload != null &&
+    typeof payload === "object" &&
+    "actionIdentifier" in payload &&
+    payload.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER
+  );
 }
 
 /** The press a background task was handed, read from its payload. */
@@ -267,7 +302,7 @@ export async function postActionFailure(input: {
   id: string;
   title: string;
   body: string;
-  uri: string;
+  uri?: string;
 }): Promise<void> {
   await ensureChannels();
   await Notifications.scheduleNotificationAsync({
@@ -275,7 +310,7 @@ export async function postActionFailure(input: {
     content: {
       title: input.title,
       body: input.body,
-      data: { uri: input.uri },
+      data: input.uri == null ? {} : { uri: input.uri },
     },
     trigger: { channelId: QUIET_CHANNEL },
   });
