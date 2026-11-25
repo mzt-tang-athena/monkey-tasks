@@ -21,7 +21,7 @@ itself still does not, so every later run inherits the trap.
 ## Acceptance
 
 - [ ] A launch with the shade open from a previous run passes.
-- [ ] The other heavy scripts start with the shade open too.
+- [ ] Each heavy script passes when it starts with the shade open.
 
 ## Outcome
 
