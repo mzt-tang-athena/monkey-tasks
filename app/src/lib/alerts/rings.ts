@@ -1,4 +1,5 @@
 import type { AlertWeight } from "@monkey-tasks/schemas";
+import type { ButtonSet } from "./choices";
 
 export type AlertRing = {
   /** Deterministic, so a rebuild replaces this ring instead of adding one. */
@@ -10,6 +11,8 @@ export type AlertRing = {
   /** Minutes after `base` this ring rings. */
   step: number;
   weight: AlertWeight;
+  /** Which buttons the ring carries. */
+  buttons: ButtonSet;
   /** `base` plus the step, in epoch ms. */
   when: number;
   title: string;
@@ -34,6 +37,7 @@ export function alertRing(input: {
   base: number;
   step: number;
   weight: AlertWeight;
+  buttons?: ButtonSet;
   title: string;
   body: string;
 }): AlertRing {
@@ -43,6 +47,8 @@ export function alertRing(input: {
     base: input.base,
     step: input.step,
     weight: input.weight,
+    // The diagnostics screen's test ring keeps the plain shape.
+    buttons: input.buttons ?? "full",
     when: input.base + input.step * MINUTE_MS,
     title: input.title,
     body: input.body,

@@ -1,8 +1,7 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { taskIsDone } from "@monkey-tasks/schemas";
-import { monthEndRule, nextAfter } from "@/lib/recurrence";
-import { createNote } from "@/lib/vault/notes";
+import { clearDoneFailure } from "../alert-actions";
 import { useVault } from "@/lib/vault/vault-provider";
 import { nowStamp } from "@/utils/dates";
 import type { TaskItem } from "@/types/task";
@@ -18,15 +17,17 @@ import {
   rowById,
   settleRow,
 } from "../rows";
+import { isUntouchedSpawn, spawnContent, spawnFileName } from "../spawn";
 import {
-  isUntouchedSpawn,
-  spawnContent,
-  spawnFileName,
-  type SpawnInput,
-} from "../spawn";
+  SuccessorKeptError,
+  completeTask,
+  messageOf,
+  nextDue,
+  spawnInput,
+  statusFor,
+} from "../task-actions";
 import { taskFromText } from "../task-notes";
 import {
-  messageOf,
   readRow,
   requireRow,
   useVaultMutation,
@@ -62,67 +63,6 @@ type Toggled = {
   /** Shown in the failure list, though the write landed. */
   notice?: string;
 };
-
-/**
- * A completion that failed after its next occurrence was made, and the
- * delete of that occurrence failed too. The new note stays, so its row
- * stays.
- */
-class SuccessorKeptError extends Error {
-  readonly successor: TaskItem;
-
-  constructor(cause: unknown, removal: unknown, successor: TaskItem) {
-    super(
-      `${messageOf(cause)}. The next occurrence could not be taken back: ${messageOf(removal)}`,
-    );
-    this.name = "SuccessorKeptError";
-    this.successor = successor;
-  }
-}
-
-/** Everything the next occurrence of `task` keeps, due on `due`. */
-function spawnInput(task: TaskItem, due: string): SpawnInput {
-  const data = task.data;
-  return {
-    title: data?.title ?? task.name,
-    previous: task.fileName.replace(/\.md$/, ""),
-    due,
-    // A bare rule on a late due day becomes the month-end rule, so the
-    // next note keeps the day (ADR 0042).
-    recurrence:
-      data?.recurrence == null || data.due == null
-        ? (data?.recurrence ?? "")
-        : monthEndRule(data.recurrence, data.due),
-    list: data?.list ?? null,
-    // A date-only due carries no time of day, so no alarm.
-    reminders: due.includes("T") ? [due] : [],
-    alertWeight: data?.["alert weight"] ?? "harsh",
-    body: task.body,
-  };
-}
-
-/** The next date of a recurring task, or null for a plain one. */
-function nextDue(task: TaskItem): string | null {
-  const rule = task.data?.recurrence;
-  return rule ? nextAfter(rule, task.data?.due) : null;
-}
-
-/**
- * The status a toggle writes beside `completed`. A deed is a task with
- * a status, and the contract keeps the two in step: a tick makes the
- * deed done, and a reopen puts it back in the queue, because the note
- * does not record which status it held before. A task with no status
- * writes none.
- */
-function statusFor(
-  task: TaskItem,
-  to: ToggleVariables["to"],
-): "[[done]]" | "[[backlog]]" | undefined {
-  if (task.data?.status == null) {
-    return undefined;
-  }
-  return to === "done" ? "[[done]]" : "[[backlog]]";
-}
 
 /**
  * Whether the task is already in the state a toggle asks for. A retry
@@ -205,62 +145,22 @@ const spec: VaultMutationSpec<ToggleVariables, Toggled, ToggleContext | undefine
     if (to === "open") {
       return reopen(before, io);
     }
-    const after = applyPatch(before, {
-      completed: nowStamp(),
-      status: statusFor(before, "done"),
-    });
-    const due = successorId == null ? null : nextDue(before);
-    if (successorId == null || due == null) {
-      await io.adapter.write(before.uri, after.text);
-      return { before, after };
-    }
-    const kept = rowById(io.rows(), successorId);
-    if (kept != null && !kept.uri.startsWith(PENDING)) {
+    const kept =
+      successorId == null ? undefined : rowById(io.rows(), successorId);
+    return completeTask(io.adapter, before, {
+      spawn: successorId != null,
+      successorId,
+      taken: new Set(
+        io
+          .rows()
+          .filter((row) => row.id !== successorId)
+          .map((row) => row.fileName),
+      ),
       // A retry after a SuccessorKeptError. The first try made the next
       // note and could not take it back, so this try keeps that note
-      // and only completes this one. A failure here takes back nothing,
-      // because this try made nothing.
-      await io.adapter.write(before.uri, after.text);
-      return { before, after, successor: kept };
-    }
-    // The next note comes first: a failed create leaves the series as
-    // it was. A failed completion takes the new note back, so the worst
-    // case is two open occurrences, never a lost series (ADR 0027).
-    const input = spawnInput(before, due);
-    const taken = new Set(
-      io
-        .rows()
-        .filter((row) => row.id !== successorId)
-        .map((row) => row.fileName),
-    );
-    const created = await createNote(
-      io.adapter,
-      // The next occurrence sits beside this one.
-      io.adapter.parentOf(before.uri),
-      spawnFileName(input.title, due, taken),
-      spawnContent(input, nowStamp()),
-      input.title,
-    );
-    const successor = taskFromText(
-      {
-        id: successorId,
-        uri: created.uri,
-        fileName: created.fileName,
-        name: input.title,
-      },
-      created.text,
-    );
-    try {
-      await io.adapter.write(before.uri, after.text);
-    } catch (error) {
-      try {
-        await io.adapter.remove(created.uri);
-      } catch (removal) {
-        throw new SuccessorKeptError(error, removal, successor);
-      }
-      throw error;
-    }
-    return { before, after, successor };
+      // and only completes this one.
+      kept: kept != null && !kept.uri.startsWith(PENDING) ? kept : undefined,
+    });
   },
   settle(rows, { id, successorId }, r, c, last) {
     if (c == null) {
@@ -385,9 +285,16 @@ export function useToggleTask(): (task: TaskItem) => Promise<void> {
         current.data != null && taskIsDone(current.data) ? "open" : "done";
       const successorId =
         to === "done" && nextDue(current) != null ? pendingId() : undefined;
-      await mutateAsync({ id: current.id, to, successorId }).catch(
-        () => undefined,
-      );
+      const applied = await mutateAsync({
+        id: current.id,
+        to,
+        successorId,
+      }).catch(() => undefined);
+      // A Done press that failed, then a tick in the list: the failure
+      // it reported is now done, so its record and notice go.
+      if (applied != null && to === "done") {
+        clearDoneFailure(current.uri);
+      }
     },
     [client, root, mutateAsync],
   );

@@ -1,5 +1,4 @@
-import { Platform } from "react-native";
-import { File, Paths } from "expo-file-system";
+import { readJson, writeJson } from "./json-store";
 
 /**
  * Alert groups the operator has cleared, keyed by task uri and alarm
@@ -58,16 +57,12 @@ export function withAcks(
   return next;
 }
 
-function parseAcked(text: string | null | undefined): AckedGroups {
-  if (text == null) {
-    return {};
-  }
-  const parsed: unknown = JSON.parse(text);
-  if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) {
+function parseAcked(value: unknown): AckedGroups {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
     return {};
   }
   const next: AckedGroups = {};
-  for (const [key, at] of Object.entries(parsed)) {
+  for (const [key, at] of Object.entries(value)) {
     if (typeof at === "number" && Number.isFinite(at)) {
       next[key] = at;
     }
@@ -76,28 +71,12 @@ function parseAcked(text: string | null | undefined): AckedGroups {
 }
 
 function readRaw(): AckedGroups {
-  try {
-    if (Platform.OS === "web") {
-      return parseAcked(globalThis.localStorage?.getItem(WEB_KEY));
-    }
-    const file = new File(Paths.document, FILE_NAME);
-    return file.exists ? parseAcked(file.textSync()) : {};
-  } catch {
-    return {};
-  }
+  return parseAcked(readJson(FILE_NAME, WEB_KEY));
 }
 
 function writeRaw(next: AckedGroups): void {
-  try {
-    const text = JSON.stringify(next);
-    if (Platform.OS === "web") {
-      globalThis.localStorage?.setItem(WEB_KEY, text);
-      return;
-    }
-    new File(Paths.document, FILE_NAME).writeSync(text);
-  } catch {
-    // The group just is not remembered past this process.
-  }
+  // The group just is not remembered past this process when this fails.
+  writeJson(FILE_NAME, WEB_KEY, next);
 }
 
 export function loadAcked(now: number = Date.now()): AckedGroups {
