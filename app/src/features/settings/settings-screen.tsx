@@ -1,6 +1,7 @@
 import * as React from "react";
-import { Linking, Platform, StyleSheet, Text, View } from "react-native";
+import { AppState, Linking, Platform, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
+import AlarmAccess from "alarm-access";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -29,14 +30,8 @@ import { CrashLogCard } from "./components/crash-log-card";
 
 const REPO = "https://github.com/mzt-tang-athena/monkey-tasks";
 
-async function openNotificationPolicy(): Promise<void> {
-  try {
-    await Linking.sendIntent(
-      "android.settings.NOTIFICATION_POLICY_ACCESS_SETTINGS",
-    );
-  } catch {
-    await Linking.openSettings();
-  }
+function openNotificationPolicy(): void {
+  AlarmAccess.openDndAccess();
 }
 
 const sortOptions: Segment<SortMode>[] = [
@@ -77,6 +72,19 @@ export default function SettingsScreen() {
   const [todayList, setTodayList] = useSetting("todayList");
   const [boardList, setBoardList] = useSetting("boardList");
   const vault = useVault();
+  // Read when this screen shows again, which is when the operator comes
+  // back from granting the access.
+  const [dndAccess, setDndAccess] = React.useState(() =>
+    AlarmAccess.hasDndAccess(),
+  );
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        setDndAccess(AlarmAccess.hasDndAccess());
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const version = appVersion();
   const channel = buildChannel();
@@ -219,7 +227,9 @@ export default function SettingsScreen() {
               </Pressable>
               <View style={styles.field}>
                 <Text style={styles.fieldHint}>
-                  An alarm stays below Do Not Disturb until you grant this.
+                  {dndAccess
+                    ? "Granted. An alarm sounds past Do Not Disturb."
+                    : "An alarm stays below Do Not Disturb until you grant this."}
                 </Text>
               </View>
             </Section>

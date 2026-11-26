@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { taskIsDone, type AlertWeight } from "@monkey-tasks/schemas";
 import { parseStoredDate } from "@/utils/dates";
@@ -19,6 +19,7 @@ import {
   ensureNotificationPermission,
   listDeliveredDetailed,
   listScheduledDetailed,
+  refreshChannels,
   scheduleRing,
   type RingNotification,
 } from "@/lib/notifications";
@@ -390,9 +391,24 @@ export async function reconcileTask(
  * read from disk is the one time the store learns about notes another
  * app changed. A tap writes the cache with `setQueryData`, which is a
  * manual update, and its mutation moves that one task's alarms.
+ *
+ * Each foreground asks for the channels again, so a Do Not Disturb
+ * grant the operator gave in Settings reaches the alarm channel.
  */
 export function useReminderSync(): void {
   const client = useQueryClient();
+  React.useEffect(() => {
+    if (Platform.OS === "web") {
+      return undefined;
+    }
+    const ask = (state: string) => {
+      if (state === "active") {
+        void refreshChannels().catch(() => undefined);
+      }
+    };
+    const subscription = AppState.addEventListener("change", ask);
+    return () => subscription.remove();
+  }, []);
   React.useEffect(
     () =>
       client.getQueryCache().subscribe((event) => {

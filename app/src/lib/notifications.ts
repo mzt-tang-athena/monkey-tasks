@@ -4,6 +4,7 @@ import {
   AndroidAudioUsage,
   AndroidImportance,
 } from "expo-notifications";
+import AlarmAccess from "alarm-access";
 import type { AlertWeight } from "@monkey-tasks/schemas";
 import type { AlertRing } from "@/lib/alerts/rings";
 import { DONE_BUTTON } from "@/lib/alerts/actions";
@@ -45,8 +46,16 @@ export type AlertResponseSubscription = { remove(): void };
 // deleted id comes back. A new sound needs a new id. The ids no build uses
 // go in STALE_CHANNELS, so the phone's settings show only live channels.
 const NORMAL_CHANNEL = "reminder-normal";
+// Android keeps a channel's Do Not Disturb bypass only when the app holds
+// Do Not Disturb access as it makes the channel, and never adds it later.
+// So the alarm has one id per state of that access, and the other id goes.
 const ALARM_CHANNEL = "reminder-alarm";
-const STALE_CHANNELS = ["reminders", "reminders-harsh", "reminders-quiet"];
+const ALARM_CHANNEL_WITH_DND = "reminder-alarm-dnd";
+const STALE_CHANNELS = [
+  "reminders",
+  "reminders-harsh",
+  "reminders-quiet",
+];
 // The expo-notifications plugin copies assets/sounds/alarm.wav to res/raw.
 const ALARM_SOUND = "alarm.wav";
 // A category identifier holds no ":" and no "-".
@@ -72,6 +81,8 @@ export async function ensureNotificationPermission(): Promise<boolean> {
 }
 
 let channels: Promise<void> | null = null;
+// What the last channel build made, so a ring posts on the channel that exists.
+let liveAlarmChannel = ALARM_CHANNEL;
 
 /**
  * Both channels, created once. The promise is kept so two rings in one
@@ -84,6 +95,17 @@ export function ensureChannels(): Promise<void> {
     throw error;
   });
   return channels;
+}
+
+/**
+ * Create the channels again. Android drops a channel's Do Not Disturb
+ * bypass when the app lacks access as it makes the channel, and keeps
+ * it when a later call asks again with access. Settings sends the
+ * operator to grant that access, so the app asks on every foreground.
+ */
+export function refreshChannels(): Promise<void> {
+  channels = null;
+  return ensureChannels();
 }
 
 async function createCategory(): Promise<void> {
@@ -105,7 +127,10 @@ async function createCategory(): Promise<void> {
 
 async function createChannels(): Promise<void> {
   await createCategory();
-  for (const id of STALE_CHANNELS) {
+  const dnd = AlarmAccess.hasDndAccess();
+  const alarmChannel = dnd ? ALARM_CHANNEL_WITH_DND : ALARM_CHANNEL;
+  liveAlarmChannel = alarmChannel;
+  for (const id of [...STALE_CHANNELS, dnd ? ALARM_CHANNEL : ALARM_CHANNEL_WITH_DND]) {
     await Notifications.deleteNotificationChannelAsync(id);
   }
   await Notifications.setNotificationChannelAsync(NORMAL_CHANNEL, {
@@ -114,13 +139,13 @@ async function createChannels(): Promise<void> {
     importance: AndroidImportance.HIGH,
     enableVibrate: true,
   });
-  await Notifications.setNotificationChannelAsync(ALARM_CHANNEL, {
+  await Notifications.setNotificationChannelAsync(alarmChannel, {
     name: "Alarms",
     description: "A task set as an alarm: sounds on the alarm stream.",
     importance: AndroidImportance.MAX,
     sound: ALARM_SOUND,
     enableVibrate: true,
-    bypassDnd: true,
+    bypassDnd: dnd,
     audioAttributes: {
       usage: AndroidAudioUsage.ALARM,
       contentType: AndroidAudioContentType.SONIFICATION,
@@ -157,7 +182,7 @@ export async function scheduleRing(ring: AlertRing): Promise<string> {
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(ring.when),
-      channelId: alarm ? ALARM_CHANNEL : NORMAL_CHANNEL,
+      channelId: alarm ? liveAlarmChannel : NORMAL_CHANNEL,
       delivery: alarm ? "alarmClock" : "bestEffort",
     },
   });

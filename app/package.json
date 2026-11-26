@@ -6,6 +6,7 @@
     "@expo/metro-runtime": "~58.0.14",
     "@monkey-tasks/schemas": "file:../contracts/packages/schemas",
     "@tanstack/react-query": "^5.104.5",
+    "alarm-access": "file:./modules/alarm-access",
     "chrono-node": "^2.10.3",
     "expo": "~58.0.16",
     "expo-clipboard": "~58.0.4",
