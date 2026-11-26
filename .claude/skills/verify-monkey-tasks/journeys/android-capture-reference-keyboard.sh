@@ -28,7 +28,6 @@ fail() {
   exit 1
 }
 
-# The focused field must hold what the operator typed, not a button.
 expect_focused() {
   local shot=$1 want=$2 got
   got=$(node "$ui" "$run/$shot.xml" focused 2>/dev/null) || got=""
@@ -43,9 +42,7 @@ open_capture() {
   "$drive" wait "~Add a task" 15 >/dev/null || fail "the capture sheet did not open"
   "$drive" keyboard up 30 >/dev/null || fail "the capture input did not raise the keyboard"
   "$drive" type "$task" >/dev/null || fail "the capture input took no text"
-  # Today is a list, so the link control shows at once. Another default
-  # target steps the pill until it does. A tap can land while the sheet
-  # is still settling, so the step retries.
+  # A tap can land while the sheet is still settling, so the step retries.
   sleep 1
   for _ in 1 2 3 4 5 6; do
     "$drive" has "~link a reference" >/dev/null 2>&1 && break
@@ -61,7 +58,6 @@ open_picker() {
   "$drive" keyboard up 30 >/dev/null || fail "the picker did not raise the keyboard"
 }
 
-# 1. Done with no link.
 open_capture
 "$drive" shot "01-typed" >/dev/null
 open_picker
@@ -75,7 +71,6 @@ expect_focused after-done "$task"
 "$drive" dump "after-done-typing" >/dev/null
 expect_focused after-done-typing "$task and eggs"
 
-# 2. Link a note, then Done.
 open_picker
 "$drive" type "egg" >/dev/null
 "$drive" wait "~chinese-steamed-eggs" 15 >/dev/null || fail "the search found no note"

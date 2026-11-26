@@ -8,9 +8,7 @@ import { Platform } from "react-native";
  * phone's screen reader owns focus there, so this does nothing.
  *
  * A surface with a better place for focus after it closes passes
- * `returnFocus`, which runs instead on every platform. The capture
- * sheet's reference picker gives the caret back to the task input this
- * way, so the keyboard stays up.
+ * `returnFocus`, which runs instead on every platform.
  */
 export function useOpenerFocus(
   open: boolean,

@@ -5,8 +5,8 @@ import { openMain, press, row } from "../locators";
 
 // The capture sheet's reference picker gives the caret back to the task
 // input when it closes (ticket 20261126-reference-keeps-the-keyboard).
-// The operator keeps typing with the keyboard still up, so the proof is
-// where focus lands after Done, after a link and after a cancel.
+// The proof is where focus lands after Done, after a link and after a
+// cancel, and that the next keys land in the box.
 
 /** Open capture on a list, which is the only target that offers a link. */
 async function openCaptureOnList(page: Page) {
@@ -26,7 +26,6 @@ async function openCaptureOnList(page: Page) {
   return page.getByPlaceholder("Add a task");
 }
 
-/** The caret keeps taking keys after the picker closes. */
 async function expectTypingResumes(page: Page, input: Locator) {
   await expect(input).toBeFocused();
   await page.keyboard.type(" and milk");
