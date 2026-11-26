@@ -2,7 +2,7 @@
 title: A pager test hangs in setup under load
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: claude-lane-pager-setup-hang
 pr:
 depends: []
 ---
