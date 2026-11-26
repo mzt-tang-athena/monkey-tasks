@@ -160,3 +160,18 @@ Consequences:
   reported success at the fork.
 - The unit's first process is `/bin/sh`. It unlinks the file and execs
   the job in place, so the pid and the exit code still carry.
+
+## Amendment 2026-11-26: CLEAN=1 no longer builds every CPU type
+
+`CLEAN=1` used to skip the `ARCHS` flag, so Gradle compiled all four
+CPU types. The amendment above leaned on that for a release, and a
+lane's clean rebuild paid 43 minutes for it.
+
+`android-build.sh` now passes `-PreactNativeArchitectures` on every
+build. It reads `ARCHS`, and the default is `x86_64`. Only
+`scripts/release.sh` sets all four types. That makes it the one place
+that builds a shippable APK.
+
+Rejected: keep the old split and document it. Two rules for one flag
+invited the mistake that started this. ADR
+`20261126-ci-carries-the-web-suite` records the wider host change.
