@@ -29,8 +29,8 @@ Every start of the app in the verify skill now shuts an open
 notification shade first. `collapse_shade` lives in `android-env.sh`.
 `android-launch.sh`, `android-drive.sh restart`, `new-run` and
 `android-coldstart.sh` call it. Each journey calls `new-run`, so each
-one starts with a shut shade. The reminder journey's own collapse at
-its start no longer needs it.
+one starts with a shut shade. The reminder journey dropped its own
+collapse at the start.
 
 Proof on the emulator at port 5584. The old launch stopped with the
 shade open ("neither a task row nor the connect notice"). The new
