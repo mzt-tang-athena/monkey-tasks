@@ -6,6 +6,7 @@ import { commitsThatWentBack, sampleCommits } from "../commits";
 import {
   expectAbove,
   expectBefore,
+  expectInSection,
   listTab,
   press,
   row,
@@ -248,6 +249,38 @@ test("a drop on Done writes completed", async ({ page }) => {
     /^completed: 2026-10-26T/m,
   );
   await expect(row(page, board.active.first)).toHaveCount(0);
+});
+
+test("un-ticking a someday deed returns it to Active", async ({ page }) => {
+  await openBoard(page);
+  const tick = (name: string) =>
+    row(page, name).getByRole("checkbox", { name });
+
+  await press(page, tick(board.someday));
+  await expect
+    .poll(async () => noteText(page, board.notes.lathe))
+    .toContain('status: "[[done]]"');
+  expect(await noteText(page, board.notes.lathe)).toMatch(/^completed: /m);
+  await expect(row(page, board.someday)).toHaveCount(0);
+
+  await press(page, header(page, "done").getByRole("button"));
+  await expect(tick(board.someday)).toHaveAttribute("aria-checked", "true");
+  await press(page, tick(board.someday));
+
+  await expect
+    .poll(async () => noteText(page, board.notes.lathe))
+    .toContain('status: "[[active]]"');
+  const reopened = (await noteText(page, board.notes.lathe)) ?? "";
+  expect(reopened).not.toContain("someday");
+  expect(reopened).not.toContain("backlog");
+  expect(reopened).not.toMatch(/^completed:/m);
+
+  await expectInSection(
+    row(page, board.someday),
+    header(page, "active"),
+    header(page, "backlog"),
+  );
+  await expect(tick(board.someday)).toHaveAttribute("aria-checked", "false");
 });
 
 test("a blocked deed shows its blocker and still drags", async ({ page }) => {

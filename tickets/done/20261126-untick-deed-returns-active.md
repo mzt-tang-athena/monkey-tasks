@@ -35,4 +35,9 @@ un-ticked deed returns to Active.
 
 ## Outcome
 
-(filled in before moving to done/)
+`statusFor` writes `[[active]]` on a reopen. A plain task still
+writes no status. The Board drag and the editor picker are as they
+were. Unit tests cover the status, the optimistic row and a plain
+task. A Board e2e ticks a Someday deed, un-ticks it, and finds it in
+Active, in both motion modes. ADR `20261126-untick-returns-active`
+records the choice. Contracts needed no change.
