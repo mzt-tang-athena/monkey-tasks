@@ -311,11 +311,17 @@ test.describe("the tab strip", () => {
       })
       .toBe(true);
 
-    const fade = await page.getByTestId("tab-fade-start").boundingBox();
-    if (fade == null) {
-      throw new Error("the start fade has no box");
-    }
-    expect(fade.x + fade.width).toBeLessThanOrEqual(await left());
+    // React Native Web sends the last scroll position 100 ms after the
+    // scroll stops, and the fade follows it.
+    await expect
+      .poll(async () => {
+        const fade = await page.getByTestId("tab-fade-start").boundingBox();
+        if (fade == null) {
+          throw new Error("the start fade has no box");
+        }
+        return fade.x + fade.width <= (await left());
+      })
+      .toBe(true);
   });
 });
 

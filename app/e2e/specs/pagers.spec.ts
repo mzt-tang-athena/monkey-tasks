@@ -926,9 +926,9 @@ test.describe("with the mouse", () => {
     });
 
     expect(read.offset, "the target tab sits past the strip's edge").toBeGreaterThan(200);
-    // The strip scrolls the selected tab in, less one fade width, and
-    // the browser stops at the content's end.
-    const target = Math.min(Math.max(0, read.offset - 30), read.maxScroll);
+    // The strip scrolls the selected tab in, less a tab's padding and
+    // the gap before it, and the browser stops at the content's end.
+    const target = Math.min(Math.max(0, read.offset - 16), read.maxScroll);
     expect(
       read.scrollLeft,
       "the strip jumps to the selected tab instead of animating",
