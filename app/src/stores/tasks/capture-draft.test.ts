@@ -50,6 +50,13 @@ describe("captureContent", () => {
     expect(text.trimEnd().endsWith("---")).toBe(true);
   });
 
+  it("writes no alert weight line, so a new note is a normal reminder", () => {
+    expect(captureContent(sample)).not.toContain("alert weight");
+    expect(
+      captureDraft(sample, { kind: "main" }, "2026-10-25").content,
+    ).not.toContain("alert weight");
+  });
+
   it("writes no list property for the Main target", () => {
     expect(captureContent(sample)).not.toContain("list:");
   });

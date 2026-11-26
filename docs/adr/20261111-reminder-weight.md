@@ -166,8 +166,10 @@ Costs we accept:
 - The alarm tone adds a native asset, so this build needs a new APK.
 - A failed-press notice now rings the normal sound. Before, it stayed
   silent.
-- Total silence yields to the alarm only once the operator grants Do
-  Not Disturb access in Settings. Priority mode and alarms-only already
-  let an alarm through without it.
+- A Do Not Disturb grant lets the alarm past the filter. It does not
+  unmute the alarm stream, so total silence still mutes the tone.
+  Priority mode and alarms-only already let an alarm through.
 - The grant adds a second alarm channel id. An operator who grants later
   sees the alarm channel replaced, not updated.
+  The app re-arms each pending alarm into the live channel. A ring armed
+  before the grant then never fires into the deleted one.

@@ -403,7 +403,7 @@ export function useReminderSync(): void {
     }
     const ask = (state: string) => {
       if (state === "active") {
-        void refreshChannels().catch(() => undefined);
+        void inTurn(refreshChannels).catch(() => undefined);
       }
     };
     const subscription = AppState.addEventListener("change", ask);

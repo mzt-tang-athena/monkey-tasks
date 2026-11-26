@@ -151,6 +151,7 @@ async function createChannels(): Promise<void> {
       contentType: AndroidAudioContentType.SONIFICATION,
     },
   });
+  await rearmAlarms();
 }
 
 /**
@@ -164,6 +165,11 @@ export async function scheduleRing(ring: AlertRing): Promise<string> {
     throw new Error("notification permission not granted");
   }
   await ensureChannels();
+  await postRing(ring);
+  return ring.id;
+}
+
+async function postRing(ring: AlertRing): Promise<void> {
   const alarm = ring.weight === "harsh";
   await Notifications.scheduleNotificationAsync({
     identifier: ring.id,
@@ -186,7 +192,40 @@ export async function scheduleRing(ring: AlertRing): Promise<string> {
       delivery: alarm ? "alarmClock" : "bestEffort",
     },
   });
-  return ring.id;
+}
+
+/**
+ * An armed alarm keeps the channel it was posted on, and the channel
+ * swap deletes that id. A ring still on the other alarm id goes back
+ * into the live channel, or it would fire into a deleted one with no
+ * bypass.
+ */
+async function rearmAlarms(): Promise<void> {
+  const alarmIds = [ALARM_CHANNEL, ALARM_CHANNEL_WITH_DND];
+  const requests = await Notifications.getAllScheduledNotificationsAsync();
+  for (const request of requests) {
+    const trigger = request.trigger as { channelId?: string | null } | null;
+    const data = ringData(request.content);
+    if (
+      data == null ||
+      data.weight !== "harsh" ||
+      trigger?.channelId == null ||
+      trigger.channelId === liveAlarmChannel ||
+      !alarmIds.includes(trigger.channelId)
+    ) {
+      continue;
+    }
+    await postRing({
+      id: request.identifier,
+      uri: data.uri,
+      base: data.base,
+      weight: data.weight,
+      buttons: data.buttons,
+      when: data.base,
+      title: request.content.title ?? "",
+      body: request.content.body ?? "",
+    });
+  }
 }
 
 function ringData(content: {
