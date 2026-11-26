@@ -98,6 +98,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "once",
     why: "the typed phrase's parse and its note, read after the send lands",
   },
+  "capture-reference-focus.spec.ts": {
+    runsIn: "both",
+    why: "where focus lands after the picker closes, which reduce must not change",
+  },
   "capture-dock.spec.ts": {
     runsIn: "once",
     why: "layout boxes and focus order on a wide window; no frame is read",

@@ -7,23 +7,29 @@ const width = 390;
 
 describe("follow", () => {
   it("follows the finger where a page waits", () => {
-    expect(follow(-60, tabs, 1)).toBe(-60);
-    expect(follow(60, tabs, 1)).toBe(60);
+    expect(follow(-60, tabs, 1, "left")).toBe(-60);
+    expect(follow(60, tabs, 1, "left")).toBe(60);
   });
 
   it("follows the finger with open bounds", () => {
-    expect(follow(-300, open, 0)).toBe(-300);
-    expect(follow(300, open, -40)).toBe(300);
+    expect(follow(-300, open, 0, "left")).toBe(-300);
+    expect(follow(300, open, -40, "left")).toBe(300);
   });
 
   it("rubber bands at a closed end on either side", () => {
-    expect(follow(50, tabs, 0)).toBeCloseTo(50 * 0.28);
-    expect(follow(-50, tabs, 2)).toBeCloseTo(-50 * 0.28);
+    expect(follow(50, tabs, 0, "left")).toBeCloseTo(50 * 0.28);
+    expect(follow(-50, tabs, 2, "left")).toBeCloseTo(-50 * 0.28);
   });
 
   it("caps the rubber band", () => {
-    expect(follow(1000, tabs, 0)).toBe(48);
-    expect(follow(-1000, tabs, 2)).toBe(-48);
+    expect(follow(1000, tabs, 0, "left")).toBe(48);
+    expect(follow(-1000, tabs, 2, "left")).toBe(-48);
+  });
+
+  it("reads the next page on the drag the caller names", () => {
+    expect(follow(60, tabs, 1, "right")).toBe(60);
+    expect(follow(50, tabs, 2, "right")).toBeCloseTo(50 * 0.28);
+    expect(follow(-50, tabs, 0, "right")).toBeCloseTo(-50 * 0.28);
   });
 });
 

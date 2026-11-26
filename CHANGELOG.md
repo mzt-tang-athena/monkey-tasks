@@ -21,6 +21,7 @@ fails a bullet that wraps or runs past 64 characters.
 - Settings can add or remove the Today list.
 - Capture on Today dates the task today.
 - The Inbox tab drops its title and keeps the note count.
+- Swipe right on Add for the next tab, left for the previous.
 
 ### Board
 
@@ -35,6 +36,14 @@ fails a bullet that wraps or runs past 64 characters.
 - A deed blocked by an open note shows a red rail.
 - Capture on Board makes a backlog deed.
 
+### Speed
+
+- A cold start shows last session's rows at once.
+- They stay dim and untappable until the fresh read lands.
+- A cold start reads your notes side by side, not in turn.
+- It reads a big vault 32 notes at a time, not all at once.
+- The first rows show sooner, most with a big vault.
+
 ### Reminders
 
 - A reminder has three buttons: Done, Later, Tomorrow.
@@ -48,6 +57,7 @@ fails a bullet that wraps or runs past 64 characters.
 
 ### Fixes
 
+- Done in the reference picker leaves the keyboard up.
 - TalkBack hears the theme and week start you picked.
 - A dropped row lands without a flash of the old order.
 

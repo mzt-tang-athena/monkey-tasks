@@ -12,11 +12,14 @@ export function CaptureReference({
   attached,
   onAttach,
   onClose,
+  returnFocus,
 }: {
   open: boolean;
   attached: string[];
   onAttach: (name: string) => void;
   onClose: () => void;
+  /** Where focus goes when the picker closes. */
+  returnFocus?: () => void;
 }) {
   const references = useReferenceNotes();
   return (
@@ -27,6 +30,7 @@ export function CaptureReference({
       attached={attached}
       onAttach={onAttach}
       error={references.error}
+      returnFocus={returnFocus}
     />
   );
 }

@@ -1,7 +1,11 @@
 import { taskFrontmatter, taskWarnings, validateNote } from "@monkey-tasks/schemas";
 import type { VaultAdapter } from "@/lib/vault/adapter";
 import { formatIssues } from "@/utils/schema-errors";
+import { settleLimited } from "@/utils/settle-limited";
 import type { TaskItem } from "@/types/task";
+
+/** The most note reads the vault has open at once. */
+export const READS_IN_FLIGHT = 32;
 
 /** The base fields of a row, before its file text is read. */
 export type TaskBase = {
@@ -58,8 +62,12 @@ export async function loadTasks(
   );
   // One unreadable entry (a folder named "Notes.md", a revoked grant)
   // must not blank the whole list, so failures are dropped per file.
-  const settled = await Promise.allSettled(
-    files.map(async (file): Promise<TaskItem> => {
+  // The reads run in a pool, so a big vault never opens every note at
+  // once (ADR 20261125-notes-read-on-the-io-pool).
+  const settled = await settleLimited(
+    files,
+    READS_IN_FLIGHT,
+    async (file): Promise<TaskItem> => {
       const text = await adapter.read(file.uri);
       return taskFromText(
         {
@@ -73,7 +81,7 @@ export async function loadTasks(
         },
         text,
       );
-    }),
+    },
   );
   return settled.flatMap((outcome) =>
     outcome.status === "fulfilled" ? [outcome.value] : [],

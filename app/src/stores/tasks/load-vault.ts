@@ -2,6 +2,7 @@ import type { VaultAdapter } from "@/lib/vault/adapter";
 import { loadLists } from "./list-notes";
 import type { BrokenList, ListItem, TaskItem } from "@/types/task";
 import { isReferenceNote, loadTasks } from "./task-notes";
+import { markOnce } from "@/lib/startup-marks";
 
 /** The folder under the granted root that holds the task notes. */
 export const TASKS_FOLDER = "Tasks";
@@ -37,10 +38,12 @@ export async function loadVault(
   lists: ListItem[];
   broken: BrokenList[];
 }> {
+  markOnce("load-start");
   const [tasksDir, deedsDir] = await Promise.all([
     adapter.findFolder(root, TASKS_FOLDER),
     adapter.findFolder(root, DEEDS_FOLDER),
   ]);
+  markOnce("folders-found");
   const [tasks, { lists, broken }, deeds] = await Promise.all([
     loadTasks(adapter, tasksDir),
     tasksDir == null
@@ -48,6 +51,7 @@ export async function loadVault(
       : loadLists(adapter, tasksDir),
     loadTasks(adapter, deedsDir, "deeds"),
   ]);
+  markOnce("load-done");
   const deedRows = deeds.filter((row) => !isReferenceNote(row));
   return { tasksDir, tasks: [...tasks, ...deedRows], lists, broken };
 }

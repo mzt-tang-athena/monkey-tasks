@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MEMORY_ROOT, createMemoryVault } from "@/lib/vault/adapters/memory";
-import { loadTasks } from "./task-notes";
+import { loadTasks, READS_IN_FLIGHT } from "./task-notes";
 
 // The test pins what a broken task note keeps: its row, its file name,
 // and the errors that explain why it cannot render as a task.
@@ -94,5 +94,38 @@ describe("loadTasks", () => {
     const tasks = await loadTasks(vault, dir);
 
     expect(tasks.map((task) => task.fileName)).toEqual(["Valid.md"]);
+  });
+
+  it("keeps the reads in flight at the pool's size and the rows in order", async () => {
+    const seed = Object.fromEntries(
+      Array.from({ length: 40 }, (_, at) => {
+        const name = `Note ${String(at).padStart(2, "0")}.md`;
+        return [`Tasks/${name}`, valid];
+      }),
+    );
+    const vault = createMemoryVault(seed);
+    vault.hooks.setLatency(20);
+    let inFlight = 0;
+    let most = 0;
+    const read = vault.read;
+    const counted = {
+      ...vault,
+      async read(uri: string) {
+        inFlight += 1;
+        most = Math.max(most, inFlight);
+        try {
+          return await read(uri);
+        } finally {
+          inFlight -= 1;
+        }
+      },
+    };
+
+    const tasks = await loadTasks(counted, dir);
+
+    expect(most).toBe(READS_IN_FLIGHT);
+    expect(tasks.map((task) => task.fileName)).toEqual(
+      Object.keys(seed).map((path) => path.replace("Tasks/", "")),
+    );
   });
 });

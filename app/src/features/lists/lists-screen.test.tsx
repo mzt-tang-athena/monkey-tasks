@@ -22,6 +22,10 @@ const spy = vi.hoisted(() => ({
   completed: [] as string[],
   listeners: new Set<() => void>(),
   sortMode: "due" as "due" | "manual",
+  /** Whether the rows on screen are last session's. */
+  stale: false,
+  /** The tab those rows belong to. */
+  cachedTab: null as string | null,
   /** Each reorder write, as the names and orders it would send. */
   writes: [] as [string, number][][],
   /** How long the stand-in row's tick holds before it lets go. */
@@ -67,17 +71,19 @@ vi.mock("@/stores/tasks/task-state", async () => {
     spy.listeners.add(listener);
     return () => spy.listeners.delete(listener);
   };
-  const meta = {
-    rootUri: "root",
-    status: "ready",
-    readError: null,
-    brokenLists: [],
-    lists: ["Errands"],
-  };
   return {
     useTaskList: () =>
       React.useSyncExternalStore(subscribe, () => spy.tasks) as TaskItem[],
-    useStoreMeta: () => meta,
+    useStoreMeta: () => ({
+      rootUri: "root",
+      status: "ready",
+      readError: null,
+      brokenLists: [],
+      lists: ["Errands"],
+      listNotes: [],
+      stale: spy.stale,
+      cachedTab: spy.cachedTab,
+    }),
   };
 });
 
@@ -103,6 +109,11 @@ vi.mock("@/stores/tasks/use-vault-read", () => ({
   useGrantFolder: () => async () => undefined,
   useRefreshTasks: () => async () => undefined,
 }));
+const cacheWrite = vi.hoisted(() => ({ rows: [] as unknown[] }));
+vi.mock("@/stores/tasks/row-cache", () => ({
+  writeCachedRows: (rows: unknown) => cacheWrite.rows.push(rows),
+}));
+
 vi.mock("@/stores/tasks/use-vault-failures", () => ({
   useVaultFailures: () => [],
 }));
@@ -258,6 +269,9 @@ beforeEach(() => {
   spy.completed = [];
   spy.writes = [];
   spy.tickSettleMs = 320;
+  spy.stale = false;
+  spy.cachedTab = "Main";
+  cacheWrite.rows = [];
   selectList("Main");
   setCompletedOpen("Main", false);
   setCompletedOpen("Errands", false);
@@ -312,6 +326,51 @@ describe("ListsScreen", () => {
 
     expect(spy.mounts.Apple).toBe(1);
     expect(spy.mounts.Banana).toBe(1);
+  });
+
+  it("keeps the launch tab's rows for the next cold start", () => {
+    spy.tasks = [task("Apple", todayIso()), task("Banana", todayIso())];
+    render(<ListsScreen dock={dock} />);
+
+    expect(cacheWrite.rows).toHaveLength(1);
+    const rows = cacheWrite.rows[0] as { tab: string; tasks: TaskItem[] };
+    // Today is off in this file's settings, so Main leads.
+    expect(rows.tab).toBe("Main");
+    expect(rows.tasks.map((item) => item.name)).toEqual(["Apple", "Banana"]);
+  });
+
+  it("draws no cached rows under a tab they do not belong to", () => {
+    spy.stale = true;
+    spy.cachedTab = "Errands";
+    spy.tasks = [task("Apple", todayIso())];
+    render(<ListsScreen dock={dock} />);
+
+    expect(screen.queryByTestId("row:Apple")).toBeNull();
+    expect(screen.getByText("Syncing your vault")).toBeTruthy();
+  });
+
+  it("keeps no rows while the cached frame stands in", () => {
+    spy.stale = true;
+    spy.tasks = [task("Apple", todayIso())];
+    render(<ListsScreen dock={dock} />);
+
+    expect(cacheWrite.rows).toEqual([]);
+  });
+
+  it("takes no tick and no press on a row of the cached frame", () => {
+    // Last session's rows may be wrong until the read lands, so they
+    // draw dimmed and inert (ADR 20261126-a-cached-first-frame).
+    spy.stale = true;
+    spy.cachedTab = "Main";
+    spy.tasks = [task("Apple", todayIso())];
+    render(<ListsScreen dock={dock} />);
+
+    fireEvent.click(screen.getByLabelText("tick Apple"));
+    fireEvent.click(screen.getByLabelText("open Apple"));
+
+    expect(spy.writes).toEqual([]);
+    expect(spy.open).not.toHaveBeenCalled();
+    expect(screen.getByText("Syncing your vault")).toBeTruthy();
   });
 
   it("opens the editor sheet from a row", () => {
