@@ -3,7 +3,7 @@ import { expect, test } from "../fixtures";
 import { capture, overdue } from "../data";
 import { press, type Input } from "../gestures";
 import { row, openMain } from "../locators";
-import { notePaths, noteText } from "../vault";
+import { noteText } from "../vault";
 
 /**
  * Ticket 0078: a press runs even when its row mounts or re-renders under
@@ -68,17 +68,16 @@ test("a tap in the first layout frame of a row ticks it", async ({
   await page.getByPlaceholder("Add a task").fill(capture.typed);
   await page.getByRole("button", { name: "send task" }).click();
 
-  await expect(row(page, capture.name)).toBeVisible();
+  // The tap ticks the row, so it can leave the open list at once. The
+  // completion is the proof that the row mounted and the tap ran, and
+  // it is the wait the row's own visibility used to be.
   await expect
-    .poll(() => notePaths(page, "Tasks/"))
-    .toContain(`Tasks/${capture.name}.md`);
+    .poll(() => noteText(page, `Tasks/${capture.name}.md`))
+    .toContain("completed: 2026-10-26T");
   const seen = await page.evaluate(
     () => (window as unknown as { firstTap: string }).firstTap,
   );
   expect(seen, "the tap ran in the mount's task").not.toBe("waiting");
-  await expect
-    .poll(() => noteText(page, `Tasks/${capture.name}.md`))
-    .toContain("completed: 2026-10-26T");
 });
 
 const inputs: Input[] = ["mouse", "touch"];

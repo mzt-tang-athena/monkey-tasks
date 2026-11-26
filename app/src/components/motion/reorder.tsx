@@ -276,22 +276,26 @@ export function createReorderSurface<P>() {
           return;
         }
         const payload = self.payloads.get(source) as P | undefined;
-        setActive(null);
         dropped.current = generation;
-        setDrops((count) => count + 1);
-        if (payload === undefined) {
-          return;
+        // The caller's write runs first, so the row changes it applies
+        // and the clear below land in one commit (ADR 0032). The write
+        // defers its optimistic step by a microtask, so a clear made
+        // first would paint the old order for a frame.
+        if (payload !== undefined) {
+          recordBreadcrumb("drag-drop", `${group} ${from}->${to}`);
+          const target =
+            zone == null ? undefined : (self.targets.get(zone) as string | undefined);
+          latest.current({
+            payload,
+            group,
+            from,
+            to,
+            keys,
+            ...(target == null ? {} : { zone: target }),
+          });
         }
-        recordBreadcrumb("drag-drop", `${group} ${from}->${to}`);
-        const target = zone == null ? undefined : (self.targets.get(zone) as string | undefined);
-        latest.current({
-          payload,
-          group,
-          from,
-          to,
-          keys,
-          ...(target == null ? {} : { zone: target }),
-        });
+        setActive(null);
+        setDrops((count) => count + 1);
       },
     }), pressCancel);
     React.useEffect(() => () => void guard.close(), [guard]);
