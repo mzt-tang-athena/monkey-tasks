@@ -5,6 +5,7 @@ import { useVault } from "@/lib/vault/vault-provider";
 import type { TaskItem } from "@/types/task";
 import { cachedRows, tasksKey, type TaskListData } from "../query";
 import { VAULT_SCOPE, deferRead, runDeferredReads } from "@/lib/vault/read-gate";
+import { clearDropFailure } from "../alert-actions";
 import { syncTaskReminders } from "../reminder-sync";
 import { PENDING, rowById } from "../rows";
 import { taskFromText } from "../task-notes";
@@ -137,6 +138,12 @@ export function useVaultMutation<V, R, C = undefined>(
       }
       for (const [before, after] of spec.alarms?.(r) ?? []) {
         void syncTaskReminders(before, after);
+        // A Didn't do press that failed, then a drop in the app, from the
+        // editor or the Board: the failure it reported is moot, so its
+        // record and notice go.
+        if (before != null && after?.data?.status === "[[dropped]]") {
+          clearDropFailure(before.uri);
+        }
       }
     },
     onError: (error, v, c) => {

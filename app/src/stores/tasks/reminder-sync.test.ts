@@ -14,7 +14,7 @@ type Stored = {
     uri: string;
     base: number;
     weight: "harsh" | "quiet";
-    buttons: "full" | "done";
+    buttons: "full" | "allday";
   };
 };
 
@@ -39,7 +39,7 @@ vi.mock("@/lib/notifications", () => ({
     base: number;
     weight: "harsh" | "quiet";
     when: number;
-    buttons: "full" | "done";
+    buttons: "full" | "allday";
     title: string;
     body: string;
   }) => {
@@ -184,7 +184,7 @@ describe("ring plan", () => {
     expect(entries.map((entry) => entry.body)).toEqual(["Due"]);
   });
 
-  it("gives an all-day task Done alone, and its reminder still rings", async () => {
+  it("gives an all-day task Done and Didn't do, and its reminder still rings", async () => {
     const base = NOW + 10 * MINUTE;
     const note = task("Pay rent", [stamp(base)], { due: "2026-11-25" });
 
@@ -192,10 +192,10 @@ describe("ring plan", () => {
 
     const entries = [...world.os.values()];
     expect(entries).toHaveLength(1);
-    expect(entries[0].data.buttons).toBe("done");
+    expect(entries[0].data.buttons).toBe("allday");
   });
 
-  it("gives a timed task Done and Reschedule", async () => {
+  it("gives a timed task Done, Snooze and Didn't do", async () => {
     const note = task("Call Mum", [stamp(NOW + 10 * MINUTE)], {
       due: stamp(NOW + 10 * MINUTE),
     });
@@ -207,12 +207,12 @@ describe("ring plan", () => {
     ).toBe(true);
   });
 
-  it("replaces a scheduled ring that has no buttons", async () => {
+  it("replaces a scheduled ring that carries other buttons", async () => {
     const base = NOW + 10 * MINUTE;
     const note = task("Call Mum", [stamp(base)]);
     await syncReminders([note]);
     for (const entry of world.os.values()) {
-      entry.data.buttons = "done";
+      entry.data.buttons = "allday";
     }
 
     await syncReminders([note]);
@@ -485,6 +485,55 @@ describe("one task", () => {
 
     expect(world.cancelled).toEqual([id(before.uri, first)]);
     expect(basesOf(before.uri)).toEqual([second]);
+  });
+
+  it("clears the ring in the tray when a due write lands, and arms the new time", async () => {
+    const first = NOW + 10 * MINUTE;
+    const second = NOW + 24 * 60 * MINUTE;
+    const before = task("Pay rent", [stamp(first)], { due: stamp(first) });
+    await syncReminders([before]);
+    deliver(id(before.uri, first));
+
+    const after = task("Pay rent", [stamp(first)], { due: stamp(second) });
+    await syncTaskReminders(before, after);
+
+    expect(world.dismissed).toEqual([id(before.uri, first)]);
+    expect(world.delivered.size).toBe(0);
+    expect(basesOf(before.uri)).toEqual([second]);
+    expect(world.acked[`${before.uri}|${first}`]).toBeDefined();
+  });
+
+  it("keeps the ring in the tray when the due did not move", async () => {
+    const first = NOW + 10 * MINUTE;
+    const before = task("Pay rent", [stamp(first)], { due: stamp(first) });
+    await syncReminders([before]);
+    deliver(id(before.uri, first));
+
+    await syncTaskReminders(before, { ...before, name: "Pay the rent" });
+    await syncTaskReminders(before, {
+      ...before,
+      data: { ...before.data!, reminders: [stamp(first), stamp(first + 30 * MINUTE)] },
+    });
+
+    expect(world.dismissed).toEqual([]);
+    expect(world.delivered.size).toBe(1);
+  });
+
+  it("keeps another task's ring when this task's due moves", async () => {
+    const first = NOW + 10 * MINUTE;
+    const rent = task("Pay rent", [], { due: stamp(first) });
+    const call = task("Call Mum", [stamp(first)]);
+    await syncReminders([rent, call]);
+    deliver(id(rent.uri, first));
+    deliver(id(call.uri, first));
+
+    await syncTaskReminders(
+      rent,
+      task("Pay rent", [], { due: stamp(first + 24 * 60 * MINUTE) }),
+    );
+
+    expect(world.dismissed).toEqual([id(rent.uri, first)]);
+    expect(world.delivered.size).toBe(1);
   });
 
   it("schedules a captured task's ring", async () => {

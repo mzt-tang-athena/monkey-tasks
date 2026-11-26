@@ -24,6 +24,9 @@ import {
   type AlertResponse,
 } from "@/lib/notifications";
 import { acknowledgeRing } from "@/stores/tasks/reminder-sync";
+import { SNOOZE_BUTTON } from "@/lib/alerts/actions";
+import { requestSnooze } from "@/lib/alerts/snooze-request";
+import { SnoozeHost } from "@/features/snooze/snooze-sheet";
 import { performAlertPress, pressOf } from "@/stores/tasks/alert-actions";
 import { TASKS_KEY } from "@/stores/tasks/query";
 import { defaultAdapter } from "@/lib/vault/default-adapter";
@@ -39,11 +42,21 @@ installCrashTestHooks();
  * The listener covers a tap while the app runs; the stored response
  * covers the tap that started the app. A button never opens the task:
  * the app runs it here, and the background task runs it when no screen
- * is up. Either way one press acts once.
+ * is up. Either way one press acts once. Snooze is the exception: it
+ * opens the app on its own sheet, and the sheet's choice is the press.
  */
 function useAlertResponses(queryClient: QueryClient): void {
   useEffect(() => {
     const handle = (alert: AlertResponse) => {
+      if (alert.button === SNOOZE_BUTTON) {
+        requestSnooze({
+          uri: alert.uri,
+          base: alert.base,
+          name: alert.name,
+          key: alert.key,
+        });
+        return;
+      }
       if (alert.button != null) {
         const press = pressOf(alert);
         if (press != null) {
@@ -122,6 +135,7 @@ export default function RootLayout() {
                                   stack's header never covers the page. */}
                               <Stack.Screen name="settings" options={{ headerShown: false }} />
                             </Stack>
+                            <SnoozeHost />
                           </TaskEditorProvider>
                         </CommandPaneProvider>
                       </CelebrationProvider>

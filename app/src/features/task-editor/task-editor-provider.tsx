@@ -75,6 +75,8 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
   // a strict render calls twice.
   const held = React.useRef<EditorState>(EMPTY_EDITOR);
   const [notice, setNotice] = React.useState<Notice | null>(null);
+  // The picker the sheet opens on, for a caller that asked for one.
+  const [startPicker, setStartPicker] = React.useState<"due" | null>(null);
   // The write in flight, so a delete or a tick waits for it.
   const inFlight = React.useRef<Promise<void> | null>(null);
   const openId = state.openId;
@@ -170,7 +172,7 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
   const opener = React.useMemo<TaskEditorValue>(
     () => ({
       showing: session != null,
-      open: (id) => {
+      open: (id, options) => {
         const target = findTask(tasks, id);
         // The editor writes task frontmatter, so a note that is not a
         // task keeps its read-only screen.
@@ -178,6 +180,7 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
           return;
         }
         setNotice(null);
+        setStartPicker(options?.picker ?? null);
         apply({
           type: "open",
           id: target.id,
@@ -253,6 +256,7 @@ export function TaskEditorProvider({ children }: { children: React.ReactNode }) 
         <EditorSheet
           open={session != null}
           progress={progress}
+          initialPicker={startPicker}
           draft={session.draft}
           done={row.data != null && taskIsDone(row.data)}
           today={new Date()}
