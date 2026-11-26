@@ -28,6 +28,7 @@ export function PickerSheet({
   doneLabel,
   onDone,
   doneDisabled = false,
+  returnFocus,
   children,
 }: {
   open: boolean;
@@ -36,6 +37,8 @@ export function PickerSheet({
   doneLabel?: string;
   onDone?: () => void;
   doneDisabled?: boolean;
+  /** Where focus goes when the picker closes. */
+  returnFocus?: () => void;
   children: React.ReactNode;
 }) {
   const { styles } = useThemedStyles(makeStyles);
@@ -61,6 +64,7 @@ export function PickerSheet({
       stacked
       label={title}
       closeLabel={`close ${title.toLowerCase()}`}
+      returnFocus={returnFocus}
     >
       <SheetGrab>
         <View style={styles.header}>

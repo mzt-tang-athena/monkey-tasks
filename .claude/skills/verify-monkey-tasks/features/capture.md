@@ -26,9 +26,9 @@ Preconditions: a fresh page on `/`.
 - **Type.** `getByPlaceholder("Add a task").fill(capture.typed)`. Chips `Fri 30` and `5:00 PM` show.
 - **Send.** `getByRole("button", { name: "send task" }).click()`. `row(page, capture.name)` shows under `Fri, 30 Oct` with `5:00 PM`.
 - **Side effect.** `noteText(page, "Tasks/Buy stamps for card.md")` contains `due: 2026-10-30`. After `returnToTab` the row is still there.
-- **Reference.** With a list target the sheet shows `link a reference` after the field. The picker searches `References` by name or ingredient. The chosen name stays as `remove reference <name>`, and Send writes `## Reference` with one link per line. The control hides on Main.
+- **Reference.** With a list target the sheet shows `link a reference` after the field. The picker searches `References` by name or ingredient. The chosen name stays as `remove reference <name>`, and Send writes `## Reference` with one link per line. The control hides on Main. Done, Escape or a link puts the caret back in the capture field (ticket 20261126-reference-keeps-the-keyboard).
 - **Failure.** Call `failNextWrite(page, "<name>.md")` before Send. A toast offers `retry capture` and `dismiss capture failure`. Retry writes the note once.
-- **Proof.** `journeys/capture.journey.ts` runs the open, type, send and side-effect steps with four screenshots. `journeys/references.journey.ts` covers the link on a list target.
+- **Proof.** `journeys/capture.journey.ts` runs the open, type, send and side-effect steps with four screenshots. `journeys/references.journey.ts` covers the link on a list target. `journeys/android-capture-reference-keyboard.sh` proves the caret and keyboard on the emulator.
 
 ## Gotchas
 

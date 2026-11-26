@@ -32,6 +32,7 @@ export function ReferencePicker({
   attached,
   onAttach,
   error = null,
+  returnFocus,
 }: {
   open: boolean;
   onClose: () => void;
@@ -41,6 +42,8 @@ export function ReferencePicker({
   attached: string[];
   onAttach: (name: string) => void;
   error?: string | null;
+  /** Where focus goes when the picker closes, in place of its opener. */
+  returnFocus?: () => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const [query, setQuery] = React.useState("");
@@ -79,6 +82,7 @@ export function ReferencePicker({
       title="Reference"
       doneLabel="Done"
       onDone={onClose}
+      returnFocus={returnFocus}
     >
       <TextField
         label="Find a reference"

@@ -49,6 +49,7 @@ fails a bullet that wraps or runs past 64 characters.
 
 ### Fixes
 
+- Done in the reference picker leaves the keyboard up.
 - TalkBack hears the theme and week start you picked.
 
 ## 1.3.0 - 2026-11-25

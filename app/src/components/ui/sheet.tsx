@@ -44,6 +44,7 @@ export function Sheet({
   scrim = false,
   stacked = false,
   covered = false,
+  returnFocus,
   children,
 }: {
   open: boolean;
@@ -68,11 +69,16 @@ export function Sheet({
    * press, and assistive tech skips it, until the cover goes.
    */
   covered?: boolean;
+  /**
+   * Where focus goes when the sheet closes, in place of the control
+   * that opened it.
+   */
+  returnFocus?: () => void;
   children: React.ReactNode;
 }) {
   const { styles } = useThemedStyles(makeStyles);
   useDismiss(open, onDismiss);
-  useOpenerFocus(open);
+  useOpenerFocus(open, returnFocus);
 
   const window = useWindowDimensions();
   const keyboard = useReanimatedKeyboardAnimation();
