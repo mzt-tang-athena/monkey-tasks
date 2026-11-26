@@ -10,6 +10,7 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 assertions=0
+unset PC_HOST
 
 fail() {
     printf 'FAIL: %s\n' "$1" >&2
