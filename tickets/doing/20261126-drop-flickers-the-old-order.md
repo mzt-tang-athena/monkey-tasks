@@ -2,7 +2,7 @@
 title: A drop shows the new order without a flicker
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: claude-lane-drop-flicker
 pr:
 depends: []
 ---
