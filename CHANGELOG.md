@@ -38,6 +38,7 @@ fails a bullet that wraps or runs past 64 characters.
 ### Speed
 
 - A cold start reads your notes side by side, not in turn.
+- It reads a big vault 32 notes at a time, not all at once.
 - The first rows show sooner, most with a big vault.
 
 ### Reminders

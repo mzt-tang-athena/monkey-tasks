@@ -43,3 +43,9 @@ A phone has more cores. We could not measure it here.
 
 The read is still one provider call per note. A vault with hundreds of
 notes still waits on the provider. A cache is the next step.
+
+The read now comes in a pool of 32. A vault of a thousand notes would
+otherwise open a thousand reads at once. A cloud provider throttles
+that, and Android caps open files near a thousand. The pool keeps the
+provider's load steady and the file handles low, and the rows keep
+their order. One failed note is still dropped alone.
