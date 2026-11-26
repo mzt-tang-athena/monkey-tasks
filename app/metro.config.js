@@ -22,6 +22,16 @@ config.resolver.nodeModulesPaths = [
 // relative imports inside the contracts package, strip the extension
 // so the TS source resolves.
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // The alarm-access native module lives in the project. A build that
+  // links node_modules from another checkout would follow a symlink out
+  // of the project, so resolve the source path here.
+  if (moduleName === "alarm-access") {
+    return context.resolveRequest(
+      context,
+      path.resolve(projectRoot, "modules", "alarm-access"),
+      platform,
+    );
+  }
   const relative = moduleName.startsWith("./") || moduleName.startsWith("../");
   const inContracts = (context.originModulePath ?? "").includes(
     "contracts/packages/schemas",
