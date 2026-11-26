@@ -3,7 +3,7 @@ title: Closing the reference picker keeps the keyboard
 created: 2026-11-26
 priority: normal
 assignee: opencode
-pr:
+pr: 243
 depends: []
 ---
 
@@ -19,10 +19,14 @@ they can keep typing.
 
 ## Acceptance
 
-- [ ] Done with no link leaves the keyboard up in the capture box.
-- [ ] Linking a reference also returns focus to the capture box.
-- [ ] Emulator frames with the operator's keyboard path.
+- [x] Done with no link leaves the keyboard up in the capture box.
+- [x] Linking a reference also returns focus to the capture box.
+- [x] Emulator frames with the operator's keyboard path.
 
 ## Outcome
 
-(filled in before moving to done/)
+Shipped in #243. The reference picker returns the caret to the capture
+input on Done, on a cancel and after a link. It does this on web and
+Android. The keyboard stays up, so the operator keeps typing. The web e2e reads
+focus in both motion modes, and the emulator journey reads the focused
+field after each Done.
