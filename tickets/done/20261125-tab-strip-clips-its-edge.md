@@ -3,7 +3,7 @@ title: The tab strip clips a letter at its edge
 created: 2026-11-25
 priority: low
 assignee: claude-lane-tab-strip
-pr:
+pr: 253
 depends: []
 ---
 
@@ -28,11 +28,27 @@ too.
 
 ## Acceptance
 
-- [ ] Emulator frames show whether it happens with motion on and off.
-- [ ] No tab shows a half letter at either edge.
-- [ ] The selected tab still scrolls into view.
-- [ ] The fade spec passes 20 runs with two workers.
+- [x] Emulator frames show whether it happens with motion on and off.
+- [x] No tab shows a half letter at either edge.
+- [x] The selected tab still scrolls into view.
+- [x] The fade spec passes 20 runs with two workers.
 
 ## Outcome
 
-(filled in before moving to done/)
+The cut letter was real, with motion on and off. The fade was a
+30 px ramp over the text. It ended inside a letter wherever a tab
+sat under the edge ("s" of Errands, "R" of Reading).
+
+- The fade now ends on the gap between two tabs.
+- A solid cover hides every cut tab, then a short ramp follows.
+- The task editor's chip row shares the fade, so it got the fix.
+- The planner has no fade. Its rail cuts at the display on purpose.
+- The selected tab scrolls in with the name before it just clear.
+
+The web flake had its own cause. The strip first draws Today and
+Main. The end fade drew before the strip had a size. The spec
+passed that check early and wheeled a strip with nothing to
+scroll. It never saw the start fade. The fade now waits for a
+size, and the spec waits for the lists.
+
+Frames and logs: `~/code/monkey-tasks/worktrees/evidence-tab-strip-edge/`.
