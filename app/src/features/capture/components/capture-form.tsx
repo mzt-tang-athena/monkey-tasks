@@ -77,6 +77,11 @@ export function CaptureForm({
   // The input, so send can drop focus, and with it the keyboard, in
   // the same frame the sheet starts to close.
   const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
+  // A closed picker gives the caret back, so the operator keeps typing
+  // with the keyboard still up.
+  const focusInput = React.useCallback(() => {
+    inputRef.current?.focus();
+  }, []);
 
   const send = () => {
     if (!draft.canSend) {
@@ -165,6 +170,7 @@ export function CaptureForm({
         attached={draft.references}
         onAttach={draft.addReference}
         onClose={onCloseReferences}
+        returnFocus={focusInput}
       />
     </>
   );
