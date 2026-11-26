@@ -119,3 +119,20 @@ test.describe("the week on a 360pt screen", () => {
     });
   }
 });
+
+test("the mode and form controls draw shorter than their 44pt targets", async ({
+  page,
+}) => {
+  for (const name of ["planner mode", "task form"]) {
+    const tabs = page.getByRole("tablist", { name }).getByRole("tab");
+    const control = await page.getByRole("tablist", { name }).boundingBox();
+    expect(control?.height, `${name} control`).toBeLessThanOrEqual(42);
+    for (const tab of await tabs.all()) {
+      const target = await tab.boundingBox();
+      const pill = await tab.locator(":scope > *").boundingBox();
+      expect(target?.height, `${name} target`).toBeGreaterThanOrEqual(43.5);
+      expect(target?.width, `${name} target`).toBeGreaterThanOrEqual(43.5);
+      expect(pill?.height, `${name} pill`).toBeLessThanOrEqual(36.5);
+    }
+  }
+});

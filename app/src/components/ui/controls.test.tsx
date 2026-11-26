@@ -147,7 +147,8 @@ describe("SegmentedControl", () => {
       <SegmentedControl label="m" segments={[...segments]} selected="day" onSelect={vi.fn()} />,
     );
     const radius = (name: string) => {
-      const style = getComputedStyle(screen.getByRole("tab", { name }));
+      const pill = screen.getByRole("tab", { name }).firstElementChild as HTMLElement;
+      const style = getComputedStyle(pill);
       return [style.borderTopLeftRadius, style.borderTopRightRadius].map((v) => parseFloat(v));
     };
     expect(radius("Day")[0]).toBeGreaterThan(0);

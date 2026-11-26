@@ -2,8 +2,8 @@
 title: The planner's segmented controls get shorter
 created: 2026-11-26
 priority: normal
-assignee:
-pr:
+assignee: claude-lane-segmented
+pr: 248
 depends: []
 ---
 
@@ -21,10 +21,14 @@ oversized. Reduce their height a little.
 
 ## Acceptance
 
-- [ ] Both controls draw shorter on the phone.
-- [ ] Each segment still passes the 44pt target check.
-- [ ] Emulator frames before and after.
+- [x] Both controls draw shorter on the phone.
+- [x] Each segment still passes the 44pt target check.
+- [x] Emulator frames before and after.
 
 ## Outcome
 
-(filled in before moving to done/)
+Every segment now draws a 36 high pill inside its 44 high press
+target. The control draws 41dp tall on the phone, down from 49dp.
+The target keeps its 44 by 44 size, so the hit area stays put.
+The Settings and task editor controls share the component and shrink
+the same way. Frames before and after sit in the PR.
