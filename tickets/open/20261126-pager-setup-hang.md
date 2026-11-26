@@ -12,7 +12,7 @@ depends: []
 In full `pagers.spec.ts` runs, one test sometimes hangs 30 s in
 `beforeEach`, at the sort button click. Two lanes saw it on
 2026-11-26, a different test each time. It never hit in 120 isolated
-runs, and CI saw the same wait time out once on PR #250.
+runs, and CI saw the same wait time out once on PR #244.
 
 - Reproduce it under two workers with the CPU loaded, and record the
   rate.
