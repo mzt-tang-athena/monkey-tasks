@@ -220,6 +220,9 @@ test.describe("the tab strip", () => {
   test("a clipped tab name has a fade over its edge", async ({ page }) => {
     // A fresh page leads with Today, at the strip's own start.
     await page.goto("/");
+    // The strip first draws Today and Main, then the list notes arrive.
+    // Measure it once they are in, or the wheel finds nothing to scroll.
+    await expect(listTab(page, tabs.focus)).toBeAttached();
     // At 412 wide the strip holds more tabs than fit, so the last one
     // shows cut ("Fo"). A fade tells the user that more waits there.
     await expect(page.getByTestId("tab-fade-end")).toBeVisible();
@@ -234,6 +237,60 @@ test.describe("the tab strip", () => {
 
     await expect(page.getByTestId("tab-fade-end")).toHaveCount(0);
     await expect(page.getByTestId("tab-fade-start")).toBeVisible();
+  });
+
+  test("no tab name shows cut at either edge", async ({ page }) => {
+    await page.goto("/");
+    await expect(listTab(page, tabs.focus)).toBeAttached();
+    const strip = page.getByRole("tablist", { name: "Lists" });
+    const names = await strip.getByRole("tab").allInnerTexts();
+
+    // Every tab in turn, so the strip rests at the start, in the middle
+    // and clamped at the end.
+    for (const picked of names) {
+      await listTab(page, picked).click();
+      await expect(listTab(page, picked)).toHaveAttribute("aria-selected", "true");
+      let last = Number.NaN;
+      await expect
+        .poll(async () => {
+          const now = await strip.evaluate((node) => node.scrollLeft);
+          const still = now === last;
+          last = now;
+          return still;
+        })
+        .toBe(true);
+
+      const fadeBox = async (id: string) =>
+        (await page.getByTestId(id).count()) === 0
+          ? null
+          : await page.getByTestId(id).boundingBox();
+      // React Native Web sends the last scroll position 100 ms after
+      // the scroll stops, and the fade follows it.
+      await expect
+        .poll(async () => {
+          const start = await fadeBox("tab-fade-start");
+          const end = await fadeBox("tab-fade-end");
+          const cut: string[] = [];
+          for (const name of names) {
+            const box = await listTab(page, name)
+              .getByText(name, { exact: true })
+              .boundingBox();
+            if (box == null) {
+              throw new Error(`the ${name} tab has no box`);
+            }
+            const right = box.x + box.width;
+            const edges = [
+              start == null ? null : start.x + start.width,
+              end == null ? null : end.x,
+            ];
+            if (edges.some((edge) => edge != null && box.x < edge - 0.5 && right > edge + 0.5)) {
+              cut.push(name);
+            }
+          }
+          return cut;
+        }, { message: `a name is cut by a fade with ${picked} selected` })
+        .toEqual([]);
+    }
   });
 
   test("the start fade leaves the selected tab's name clear", async ({ page }) => {

@@ -64,6 +64,13 @@ describe("fadeReach", () => {
     expect(reach.steps * 4).toBeLessThanOrEqual(2 * 12 + 4 - 4);
   });
 
+  it("covers a name too close to the edge to leave room for a step", () => {
+    // The second name starts 6 px in, inside the 8 px a step and its
+    // clearance take, so the fade runs on to the third.
+    const reach = fadeReach("start", { view: 200, x: 104 + 12 - 6 }, boxes, space);
+    expect(reach.cover + reach.steps * 4).toBe(188 + 12 - (104 + 12 - 6) - 4);
+  });
+
   it("draws a plain ramp until every item is measured", () => {
     const reach = fadeReach("start", { view: 200, x: 60 }, [boxes[0], null], space);
     expect(reach).toEqual({ cover: 0, steps: 5 });

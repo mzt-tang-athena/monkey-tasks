@@ -11,6 +11,9 @@ const maxSteps = 5;
 const fadeEdge = 2;
 /** The clear space the fade leaves before the first whole item. */
 const clearance = 4;
+/** A name closer to the edge than this has no room for the fade's
+    first step, so the cover takes it too. */
+const lead = clearance + stepWidth;
 
 /** Which edges of a sideways scroll hide more content. A strip that has
     not measured its view yet hides nothing. */
@@ -58,8 +61,8 @@ export function fadeReach(
   }
   const whole =
     side === "start"
-      ? ink.find((item) => item.start >= 0)
-      : ink.findLast((item) => item.end <= frame.view);
+      ? ink.find((item) => item.start >= lead)
+      : ink.findLast((item) => frame.view - item.end >= lead);
   if (whole == null) {
     return plainReach;
   }
