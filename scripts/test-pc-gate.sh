@@ -242,4 +242,4 @@ run_pc "$dir"
 [ -z "$(calls "$dir")" ] || fail "no ref: called the PC anyway"
 ok
 
-printf 'pc-gate: %s assertions passed\n' "$assertions"
+printf 'test-pc-gate: %s assertions passed\n' "$assertions"
