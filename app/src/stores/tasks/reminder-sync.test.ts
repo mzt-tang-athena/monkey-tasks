@@ -14,7 +14,7 @@ type Stored = {
     uri: string;
     base: number;
     weight: "harsh" | "quiet";
-    buttons: "full" | "done";
+    buttons: "full" | "allday";
   };
 };
 
@@ -39,7 +39,7 @@ vi.mock("@/lib/notifications", () => ({
     base: number;
     weight: "harsh" | "quiet";
     when: number;
-    buttons: "full" | "done";
+    buttons: "full" | "allday";
     title: string;
     body: string;
   }) => {
@@ -184,7 +184,7 @@ describe("ring plan", () => {
     expect(entries.map((entry) => entry.body)).toEqual(["Due"]);
   });
 
-  it("gives an all-day task Done alone, and its reminder still rings", async () => {
+  it("gives an all-day task Done and Didn't do, and its reminder still rings", async () => {
     const base = NOW + 10 * MINUTE;
     const note = task("Pay rent", [stamp(base)], { due: "2026-11-25" });
 
@@ -192,10 +192,10 @@ describe("ring plan", () => {
 
     const entries = [...world.os.values()];
     expect(entries).toHaveLength(1);
-    expect(entries[0].data.buttons).toBe("done");
+    expect(entries[0].data.buttons).toBe("allday");
   });
 
-  it("gives a timed task Done and Reschedule", async () => {
+  it("gives a timed task Done, Snooze and Didn't do", async () => {
     const note = task("Call Mum", [stamp(NOW + 10 * MINUTE)], {
       due: stamp(NOW + 10 * MINUTE),
     });
@@ -207,12 +207,12 @@ describe("ring plan", () => {
     ).toBe(true);
   });
 
-  it("replaces a scheduled ring that has no buttons", async () => {
+  it("replaces a scheduled ring that carries other buttons", async () => {
     const base = NOW + 10 * MINUTE;
     const note = task("Call Mum", [stamp(base)]);
     await syncReminders([note]);
     for (const entry of world.os.values()) {
-      entry.data.buttons = "done";
+      entry.data.buttons = "allday";
     }
 
     await syncReminders([note]);

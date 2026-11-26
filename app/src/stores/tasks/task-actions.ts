@@ -105,6 +105,11 @@ export type CompleteOptions = {
   kept?: TaskItem;
 };
 
+/** A task the operator gave up on: its status is dropped. */
+export function taskIsDropped(data: TaskFrontmatter): boolean {
+  return data.status === "[[dropped]]";
+}
+
 /**
  * Complete a task as the list's tick does. The write checks the file
  * still holds the text it was read from, because a button and a tick
@@ -113,15 +118,40 @@ export type CompleteOptions = {
  * completion takes the new note back, so the worst case is two open
  * occurrences, never a lost series (ADR 0027).
  */
-export async function completeTask(
+export function completeTask(
   adapter: VaultAdapter,
   before: ReadTask,
   options: CompleteOptions,
 ): Promise<Completion> {
-  const after = applyPatch(before, {
-    completed: nowStamp(),
-    status: statusFor(before, "done"),
-  });
+  return settleTask(
+    adapter,
+    before,
+    { completed: nowStamp(), status: statusFor(before, "done") },
+    options,
+  );
+}
+
+/**
+ * Drop a task: it takes the dropped status and no `completed`, because
+ * the contract keeps a completed date for done alone. A repeating
+ * task makes its next occurrence first, as a tick does, so skipping
+ * one occurrence never ends the series (ADR 20261125-reminder-actions).
+ */
+export function dropTask(
+  adapter: VaultAdapter,
+  before: ReadTask,
+  options: CompleteOptions,
+): Promise<Completion> {
+  return settleTask(adapter, before, { status: "[[dropped]]" }, options);
+}
+
+async function settleTask(
+  adapter: VaultAdapter,
+  before: ReadTask,
+  patch: Partial<TaskFrontmatter>,
+  options: CompleteOptions,
+): Promise<Completion> {
+  const after = applyPatch(before, patch);
   const due = options.spawn ? nextDue(before) : null;
   const writeCompletion = () =>
     writeNoteIfUnchanged(adapter, before.uri, before.text, after.text);

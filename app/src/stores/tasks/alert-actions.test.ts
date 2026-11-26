@@ -264,6 +264,93 @@ describe("Done", () => {
   });
 });
 
+describe("Didn't do", () => {
+  it("drops a one-off task with no completed date, and clears its rings", async () => {
+    const vault = createMemoryVault({ "Tasks/Call Mum.md": plain });
+    await arm(vault, "Call Mum");
+
+    await performAlertPress(vault, press("Call Mum", { kind: "drop" }));
+
+    const fields = frontmatter(vault.hooks.read("Tasks/Call Mum.md") ?? "");
+    expect(fields.status).toBe("[[dropped]]");
+    expect(fields.completed).toBeUndefined();
+    expect(Object.keys(vault.hooks.files())).toEqual(["Tasks/Call Mum.md"]);
+    expect(world.os.size).toBe(0);
+    expect(loadActionFailures()).toEqual([]);
+  });
+
+  it("replaces the status of a deed, and keeps its body", async () => {
+    const deed = plain.replace("due:", 'status: "[[backlog]]"\ndue:');
+    const vault = createMemoryVault({ "Tasks/Call Mum.md": deed });
+    await arm(vault, "Call Mum");
+
+    await performAlertPress(vault, press("Call Mum", { kind: "drop" }));
+
+    const text = vault.hooks.read("Tasks/Call Mum.md") ?? "";
+    expect(frontmatter(text).status).toBe("[[dropped]]");
+    expect(text).toContain("Body line.");
+  });
+
+  it("skips one occurrence of a repeating task and spawns the next", async () => {
+    const vault = createMemoryVault({ "Tasks/Stretch.md": daily });
+    await arm(vault, "Stretch");
+
+    await performAlertPress(vault, press("Stretch", { kind: "drop" }));
+
+    expect(Object.keys(vault.hooks.files()).sort()).toEqual([
+      "Tasks/Stretch 2026-11-26.md",
+      "Tasks/Stretch.md",
+    ]);
+    const skipped = frontmatter(vault.hooks.read("Tasks/Stretch.md") ?? "");
+    expect(skipped.status).toBe("[[dropped]]");
+    expect(skipped.completed).toBeUndefined();
+    const next = frontmatter(
+      vault.hooks.read("Tasks/Stretch 2026-11-26.md") ?? "",
+    );
+    expect(next.due).toBe("2026-11-26T10:30");
+    expect(next.status).toBeUndefined();
+    expect(next.completed).toBeUndefined();
+    const base = when("2026-11-26T10:30");
+    expect(world.os.size).toBeGreaterThan(0);
+    expect([...world.os.values()].every((entry) => entry.data.base === base)).toBe(
+      true,
+    );
+  });
+
+  it("does nothing on a note that is already dropped, whatever the press key", async () => {
+    const vault = createMemoryVault({ "Tasks/Stretch.md": daily });
+    await arm(vault, "Stretch");
+    await performAlertPress(vault, press("Stretch", { kind: "drop" }, "a|didnt"));
+    const after = vault.hooks.files();
+
+    await performAlertPress(vault, press("Stretch", { kind: "drop" }, "b|didnt"));
+    await performAlertPress(vault, press("Stretch", { kind: "done" }, "c|done"));
+
+    expect(vault.hooks.files()).toEqual(after);
+  });
+
+  it("gives its claim back after a failed write, so a second press lands", async () => {
+    const vault = createMemoryVault({ "Tasks/Call Mum.md": plain });
+    await arm(vault, "Call Mum");
+    vault.hooks.failNext("write", "Call Mum.md");
+    const same = press("Call Mum", { kind: "drop" }, "ring|didnt");
+
+    await performAlertPress(vault, same);
+
+    expect(vault.hooks.read("Tasks/Call Mum.md")).toBe(plain);
+    expect(world.posted[0].title).toBe("Didn't do did not save");
+    expect(loadActionFailures()).toMatchObject([
+      { name: "Call Mum", action: { kind: "drop" } },
+    ]);
+
+    await performAlertPress(vault, same);
+
+    expect(
+      frontmatter(vault.hooks.read("Tasks/Call Mum.md") ?? "").status,
+    ).toBe("[[dropped]]");
+  });
+});
+
 describe("Reschedule", () => {
   const target = "2026-11-25T12:30";
 
@@ -344,7 +431,7 @@ describe("a failed write", () => {
     expect(loadActionFailures()).toMatchObject([
       { action: { kind: "reschedule", target } },
     ]);
-    expect(world.posted[0].title).toBe("Reschedule did not save");
+    expect(world.posted[0].title).toBe("Snooze did not save");
   });
 
   it("reports a note that is gone", async () => {

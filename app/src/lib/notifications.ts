@@ -7,8 +7,12 @@ import {
 import AlarmAccess from "alarm-access";
 import type { AlertWeight } from "@monkey-tasks/schemas";
 import type { AlertRing } from "@/lib/alerts/rings";
-import { DONE_BUTTON } from "@/lib/alerts/actions";
-import { RESCHEDULE_CHOICES, type ButtonSet } from "@/lib/alerts/choices";
+import {
+  DONE_BUTTON,
+  DROP_BUTTON,
+  SNOOZE_BUTTON,
+} from "@/lib/alerts/actions";
+import type { ButtonSet } from "@/lib/alerts/choices";
 
 /**
  * The phone's alarms. The web build takes `notifications.web.ts`
@@ -27,8 +31,8 @@ export type RingData = {
 export type RingNotification = { id: string; data: RingData | null };
 
 /**
- * A tap on a reminder. `button` is the identifier of a Done or
- * Reschedule button, absent for a tap on the notification itself. `key`
+ * A tap on a reminder. `button` is the identifier of one of its
+ * buttons, absent for a tap on the notification itself. `key`
  * names the press, so one press acts once.
  */
 export type AlertResponse = {
@@ -58,9 +62,14 @@ const STALE_CHANNELS = [
 ];
 // The expo-notifications plugin copies assets/sounds/alarm.wav to res/raw.
 const ALARM_SOUND = "alarm.wav";
-// A category identifier holds no ":" and no "-".
-const REMINDER_CATEGORY = "reminder";
-const DONE_CATEGORY = "reminderdone";
+// A category identifier holds no ":" and no "-". Android freezes a
+// reminder's buttons when it is scheduled, so a new set takes a new id,
+// and a ring still on an older id is scheduled again (see rearmRings).
+const OLDER_CATEGORIES = ["reminder", "reminderdone"];
+const CATEGORIES: Record<ButtonSet, string> = {
+  full: "reminderactions",
+  allday: "reminderalldayactions",
+};
 const FAILURE_PREFIX = "action-failed:";
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -109,20 +118,35 @@ export function refreshChannels(): Promise<void> {
 }
 
 async function createCategory(): Promise<void> {
-  // The buttons stay in the background: a press from a killed app runs
-  // the background task and never opens the app. A tap on the
-  // notification itself still opens it.
-  const options = { opensAppToForeground: false };
-  const done = { identifier: DONE_BUTTON, buttonTitle: "Done", options };
-  await Notifications.setNotificationCategoryAsync(REMINDER_CATEGORY, [
+  // Done and Didn't do stay in the background: a press from a killed app
+  // runs the background task and never opens the app. Snooze opens the
+  // app, on the sheet that holds its choices. A tap on the notification
+  // itself still opens the task.
+  const background = { opensAppToForeground: false };
+  const done = {
+    identifier: DONE_BUTTON,
+    buttonTitle: "Done",
+    options: background,
+  };
+  const didnt = {
+    identifier: DROP_BUTTON,
+    buttonTitle: "Didn't do",
+    options: background,
+  };
+  const snooze = {
+    identifier: SNOOZE_BUTTON,
+    buttonTitle: "Snooze",
+    options: { opensAppToForeground: true },
+  };
+  await Notifications.setNotificationCategoryAsync(CATEGORIES.full, [
     done,
-    ...RESCHEDULE_CHOICES.map((choice) => ({
-      identifier: choice.id,
-      buttonTitle: choice.title,
-      options,
-    })),
+    snooze,
+    didnt,
   ]);
-  await Notifications.setNotificationCategoryAsync(DONE_CATEGORY, [done]);
+  await Notifications.setNotificationCategoryAsync(CATEGORIES.allday, [
+    done,
+    didnt,
+  ]);
 }
 
 async function createChannels(): Promise<void> {
@@ -151,7 +175,7 @@ async function createChannels(): Promise<void> {
       contentType: AndroidAudioContentType.SONIFICATION,
     },
   });
-  await rearmAlarms();
+  await rearmRings();
 }
 
 /**
@@ -182,8 +206,7 @@ async function postRing(ring: AlertRing): Promise<void> {
         base: ring.base,
         buttons: ring.buttons,
       },
-      categoryIdentifier:
-        ring.buttons === "full" ? REMINDER_CATEGORY : DONE_CATEGORY,
+      categoryIdentifier: CATEGORIES[ring.buttons],
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -195,24 +218,31 @@ async function postRing(ring: AlertRing): Promise<void> {
 }
 
 /**
- * An armed alarm keeps the channel it was posted on, and the channel
- * swap deletes that id. A ring still on the other alarm id goes back
- * into the live channel, or it would fire into a deleted one with no
- * bypass.
+ * An armed ring keeps the channel and the buttons it was posted with.
+ * The channel swap deletes the other alarm id, so an alarm still on it
+ * goes back into the live channel, or it would fire into a deleted one
+ * with no bypass. A ring on a category this build no longer makes would
+ * ring with no buttons, so it goes back under the live one. An older
+ * build's rings, with no category at all, wait for the next rebuild.
  */
-async function rearmAlarms(): Promise<void> {
+async function rearmRings(): Promise<void> {
   const alarmIds = [ALARM_CHANNEL, ALARM_CHANNEL_WITH_DND];
   const requests = await Notifications.getAllScheduledNotificationsAsync();
   for (const request of requests) {
     const trigger = request.trigger as { channelId?: string | null } | null;
     const data = ringData(request.content);
-    if (
-      data == null ||
-      data.weight !== "harsh" ||
-      trigger?.channelId == null ||
-      trigger.channelId === liveAlarmChannel ||
-      !alarmIds.includes(trigger.channelId)
-    ) {
+    if (data == null) {
+      continue;
+    }
+    const staleChannel =
+      data.weight === "harsh" &&
+      trigger?.channelId != null &&
+      trigger.channelId !== liveAlarmChannel &&
+      alarmIds.includes(trigger.channelId);
+    const staleButtons = OLDER_CATEGORIES.includes(
+      request.content.categoryIdentifier ?? "",
+    );
+    if (!staleChannel && !staleButtons) {
       continue;
     }
     await postRing({
@@ -235,7 +265,7 @@ function ringData(content: {
   return typeof uri === "string" &&
     typeof base === "number" &&
     (weight === "harsh" || weight === "quiet")
-    ? { uri, base, weight, buttons: buttons === "full" ? "full" : "done" }
+    ? { uri, base, weight, buttons: buttons === "full" ? "full" : "allday" }
     : null;
 }
 

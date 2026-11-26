@@ -24,6 +24,7 @@ import {
   type RingNotification,
 } from "@/lib/notifications";
 import { TASKS_KEY, type TaskListData } from "./query";
+import { taskIsDropped } from "./task-actions";
 
 /** A moment the OS should ring, and whether it is the task's due time. */
 type AlarmTime = { when: number; due: boolean };
@@ -54,9 +55,9 @@ export function inTurn<T>(work: () => Promise<T>): Promise<T> {
  */
 function alarmTimes(task: TaskItem | null, now: number): AlarmTime[] {
   const data = task?.data;
-  // A completed task keeps its due and reminders in the note but rings
-  // no alarm; an unreadable note has nothing to trust either.
-  if (data == null || taskIsDone(data)) {
+  // A completed or dropped task keeps its due and reminders in the note
+  // but rings no alarm; an unreadable note has nothing to trust either.
+  if (data == null || taskIsDone(data) || taskIsDropped(data)) {
     return [];
   }
   const alarms: AlarmTime[] = [];
@@ -94,8 +95,8 @@ function taskWeight(task: TaskItem): AlertWeight {
 
 /**
  * The buttons a task's rings carry. A due date with no time of day is
- * an all-day task, and rescheduling it would add a clock time it never
- * had, so it offers Done alone.
+ * an all-day task, and snoozing it would add a clock time it never
+ * had, so it offers Done and Didn't do.
  */
 function taskButtons(task: TaskItem): ButtonSet {
   const due = task.data?.due;
@@ -103,7 +104,7 @@ function taskButtons(task: TaskItem): ButtonSet {
     return "full";
   }
   const parsed = parseStoredDate(due);
-  return parsed != null && !parsed.hasTime ? "done" : "full";
+  return parsed != null && !parsed.hasTime ? "allday" : "full";
 }
 
 /** Every ring the task makes that is still ahead of `now`. */
@@ -349,9 +350,14 @@ export async function reconcileTask(
   }
   const now = Date.now();
 
-  // A tick, a deleted note, or one that no longer parses: nothing of
-  // this task stays in the tray or the schedule.
-  if (after == null || after.data == null || taskIsDone(after.data)) {
+  // A tick, a drop, a deleted note, or one that no longer parses:
+  // nothing of this task stays in the tray or the schedule.
+  if (
+    after == null ||
+    after.data == null ||
+    taskIsDone(after.data) ||
+    taskIsDropped(after.data)
+  ) {
     try {
       await acknowledgeTaskNow(uri, now, everyRing(before));
     } catch {

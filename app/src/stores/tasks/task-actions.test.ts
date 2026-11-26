@@ -5,7 +5,9 @@ import { NoteChangedError } from "@/lib/vault/notes";
 import {
   SuccessorKeptError,
   completeTask,
+  dropTask,
   rescheduleTask,
+  taskIsDropped,
   type ReadTask,
 } from "./task-actions";
 import { taskFromText } from "./task-notes";
@@ -201,6 +203,79 @@ describe("completeTask", () => {
       "Stretch 2026-11-26.md",
     );
     expect(vault.hooks.read("Tasks/Stretch 2026-11-26.md")).not.toBeNull();
+  });
+});
+
+describe("dropTask", () => {
+  it("writes the dropped status and no completed date, and nothing else", async () => {
+    const vault = createMemoryVault({ "Tasks/Call Mum.md": plain });
+
+    const dropped = await dropTask(vault, read(vault, "Call Mum.md"), {
+      spawn: true,
+      taken: new Set(),
+    });
+
+    const written = vault.hooks.read("Tasks/Call Mum.md") ?? "";
+    expect(frontmatter(written).status).toBe("[[dropped]]");
+    expect(frontmatter(written).completed).toBeUndefined();
+    expect(written).toBe(dropped.after.text);
+    expect(written.replace(/status: .*\n/, "")).toBe(plain);
+    expect(dropped.successor).toBeUndefined();
+    expect(Object.keys(vault.hooks.files())).toEqual(["Tasks/Call Mum.md"]);
+    expect(taskIsDropped(read(vault, "Call Mum.md").data)).toBe(true);
+  });
+
+  it("replaces a deed's status", async () => {
+    const deed = note({
+      title: "Call Mum",
+      status: '"[[active]]"',
+      due: "2026-11-25T11:00",
+    });
+    const vault = createMemoryVault({ "Tasks/Call Mum.md": deed });
+
+    await dropTask(vault, read(vault, "Call Mum.md"), {
+      spawn: true,
+      taken: new Set(),
+    });
+
+    expect(
+      frontmatter(vault.hooks.read("Tasks/Call Mum.md") ?? "").status,
+    ).toBe("[[dropped]]");
+  });
+
+  it("skips one occurrence: the next note is made and this one is dropped", async () => {
+    const vault = createMemoryVault({ "Tasks/Stretch.md": daily });
+
+    const dropped = await dropTask(vault, read(vault, "Stretch.md"), {
+      spawn: true,
+      taken: new Set(["Stretch.md"]),
+    });
+
+    expect(dropped.successor?.fileName).toBe("Stretch 2026-11-26.md");
+    const next = frontmatter(
+      vault.hooks.read("Tasks/Stretch 2026-11-26.md") ?? "",
+    );
+    expect(next.due).toBe("2026-11-26T08:00");
+    expect(next["recurrence previous"]).toBe("[[Stretch]]");
+    expect(next.status).toBeUndefined();
+    const skipped = frontmatter(vault.hooks.read("Tasks/Stretch.md") ?? "");
+    expect(skipped.status).toBe("[[dropped]]");
+    expect(skipped.completed).toBeUndefined();
+  });
+
+  it("takes the next note back when the drop fails", async () => {
+    const vault = createMemoryVault({ "Tasks/Stretch.md": daily });
+    vault.hooks.failNext("write", "Stretch.md");
+
+    await expect(
+      dropTask(vault, read(vault, "Stretch.md"), {
+        spawn: true,
+        taken: new Set(["Stretch.md"]),
+      }),
+    ).rejects.toThrow();
+
+    expect(Object.keys(vault.hooks.files())).toEqual(["Tasks/Stretch.md"]);
+    expect(vault.hooks.read("Tasks/Stretch.md")).toBe(daily);
   });
 });
 

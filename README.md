@@ -696,8 +696,8 @@ Phases:
    a tick, or a drag leaves the schedule matching the vault. Ticking a
    recurring task completes the occurrence. It creates the next one as
    its own note (ADR 0027). A reminder is
-   one normal notification that rings once, with Done, Later and
-   Tomorrow. A task with `alert weight: harsh` is an alarm: it sounds a
+   one normal notification that rings once, with Done, Snooze and
+   Didn't do. A task with `alert weight: harsh` is an alarm: it sounds a
    bundled tone on the alarm stream and breaks Do Not Disturb. Neither
    repeats, and a swipe clears either (ADR 20261111-reminder-weight,
    amendment 2026-11-26).

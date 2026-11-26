@@ -1,9 +1,10 @@
 import { formatLocal } from "@/utils/dates";
 
 /**
- * The Reschedule buttons on a reminder. Each moves the task to the
- * moment its `target` returns, a stored datetime. Android shows at most
- * three buttons on a notification, and Done takes one.
+ * The choices on the Snooze sheet. Each moves the task to the moment
+ * its `target` returns, a stored datetime. Android shows at most three
+ * buttons on a notification, so the sheet holds the choices and the
+ * notification holds Snooze (ADR 20261125-reminder-actions).
  */
 export type RescheduleChoice = {
   /** The button's identifier. */
@@ -42,9 +43,10 @@ export const RESCHEDULE_CHOICES: readonly RescheduleChoice[] = [
 ];
 
 /**
- * The buttons a reminder carries. A task due on a day, with no time of
- * day, is an all-day task: rescheduling it would give it a clock time
- * it never had, so it offers Done alone. A reminder of an all-day task
- * can still ring, because a reminder is always a moment.
+ * The buttons a reminder carries. `full` is Done, Snooze and Didn't
+ * do. A task due on a day, with no time of day, is an all-day task:
+ * snoozing it would give it a clock time it never had, so it offers
+ * Done and Didn't do. A reminder of an all-day task can still ring,
+ * because a reminder is always a moment.
  */
-export type ButtonSet = "full" | "done";
+export type ButtonSet = "full" | "allday";

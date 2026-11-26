@@ -22,9 +22,11 @@ import {
 } from "./reminder-sync";
 import {
   completeTask,
+  dropTask,
   messageOf,
   rescheduleTask,
   SuccessorKeptError,
+  taskIsDropped,
   type ReadTask,
 } from "./task-actions";
 import { taskFromText } from "./task-notes";
@@ -43,7 +45,7 @@ export type AlertPress = {
 
 /**
  * The press behind a tap on a button, or null for a tap on the
- * notification itself or a button this build lacks.
+ * notification itself, on Snooze, or on a button this build lacks.
  */
 export function pressOf(
   response: AlertResponse,
@@ -114,8 +116,8 @@ async function readTask(
 }
 
 /**
- * Write what a button asks for. A note already done stays as it is, so
- * a second press makes no second next occurrence.
+ * Write what a button asks for. A note already done or dropped stays as
+ * it is, so a second press makes no second next occurrence.
  */
 export async function applyAlertAction(
   adapter: VaultAdapter,
@@ -123,13 +125,17 @@ export async function applyAlertAction(
   action: AlertAction,
 ): Promise<Applied | null> {
   const { task, taken } = await readTask(adapter, uri);
-  if (taskIsDone(task.data)) {
+  if (taskIsDone(task.data) || taskIsDropped(task.data)) {
     return null;
   }
-  if (action.kind === "reschedule") {
-    return rescheduleTask(adapter, task, action.target);
+  switch (action.kind) {
+    case "reschedule":
+      return rescheduleTask(adapter, task, action.target);
+    case "drop":
+      return dropTask(adapter, task, { spawn: true, taken });
+    case "done":
+      return completeTask(adapter, task, { spawn: true, taken });
   }
-  return completeTask(adapter, task, { spawn: true, taken });
 }
 
 async function moveAlarms(applied: Applied | null, press: AlertPress) {

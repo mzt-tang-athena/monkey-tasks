@@ -59,11 +59,17 @@ fails a bullet that wraps or runs past 64 characters.
 - An alarm plays a loud tone and breaks Do Not Disturb.
 - Old tasks become normal reminders. No note changes.
 - The app drops its old reminder channels on start.
-- A reminder has three buttons: Done, Later, Tomorrow.
-- They work with the app closed or killed.
+- A reminder has three buttons: Done, Snooze, Didn't do.
+- Done and Didn't do work with the app closed or killed.
 - Done ticks the task, and a repeat makes its next note.
+- Didn't do drops a task. A repeat skips only that day.
+- A dropped task leaves your lists and folds on the Board.
+- Snooze opens a sheet: Later, Tomorrow or Pick a day.
 - Later moves it an hour on. Tomorrow moves it to 09:00.
-- Each one moves the due date and the reminder with it.
+- Later and Tomorrow move the due date and the reminder.
+- Pick a day opens the task on its due date.
+- A task due on a day offers Done and Didn't do.
+- Reminders set before this build gain the new buttons.
 - A press that cannot save says so in a notification.
 - The app lists a failed press, and can retry it.
 - This build adds a native module: install a new APK.

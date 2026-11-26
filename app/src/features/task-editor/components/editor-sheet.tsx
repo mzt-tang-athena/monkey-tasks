@@ -85,6 +85,7 @@ export type Picker =
 export function EditorSheet({
   open,
   progress,
+  initialPicker = null,
   draft,
   done,
   today,
@@ -98,6 +99,8 @@ export function EditorSheet({
 }: {
   open: boolean;
   progress: Progress;
+  /** The picker already open as the sheet shows. */
+  initialPicker?: Picker;
   draft: TaskEdit;
   /** The task is already done, so the tick reopens it. */
   done: boolean;
@@ -115,7 +118,7 @@ export function EditorSheet({
   const insets = useSafeAreaInsets();
   const window = useWindowDimensions();
   const keyboard = useKeyboardState((state) => state.height);
-  const [picker, setPicker] = React.useState<Picker>(null);
+  const [picker, setPicker] = React.useState<Picker>(initialPicker);
   const [noteOpen, setNoteOpen] = React.useState(false);
   // The linked note the preview shows, by name, or null.
   const [preview, setPreview] = React.useState<string | null>(null);

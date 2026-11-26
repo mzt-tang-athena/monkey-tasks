@@ -22,6 +22,7 @@ export default function TaskEditorScreen() {
   const params = useLocalSearchParams();
   const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
   const id = rawId ?? "";
+  const picker = params.picker === "due" ? "due" : undefined;
   const tasks = useTaskList();
   const { status } = useStoreMeta();
   const insets = useSafeAreaInsets();
@@ -31,7 +32,7 @@ export default function TaskEditorScreen() {
   const editorId = task != null && isTaskNote(task) ? task.id : null;
 
   const handOff = useStableCallback((taskId: string) => {
-    editor.open(taskId);
+    editor.open(taskId, { picker });
     if (router.canGoBack()) {
       router.back();
     } else {

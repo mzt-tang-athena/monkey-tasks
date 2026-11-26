@@ -36,7 +36,15 @@ const draft: TaskEdit = {
 };
 
 /** The sheet under the same providers as the app. */
-function Sheet({ done, onToggle }: { done: boolean; onToggle: () => void }) {
+function Sheet({
+  done,
+  onToggle,
+  initialPicker,
+}: {
+  done: boolean;
+  onToggle: () => void;
+  initialPicker?: "due";
+}) {
   const progress = useProgress(true, { ms: 220 });
   const nothing = () => {};
   return (
@@ -45,6 +53,7 @@ function Sheet({ done, onToggle }: { done: boolean; onToggle: () => void }) {
         <EditorSheet
           open
           progress={progress}
+          initialPicker={initialPicker}
           draft={draft}
           done={done}
           today={new Date(2026, 9, 26)}
@@ -108,5 +117,19 @@ describe("the editor sheet's tick", () => {
 
     expect(onToggle).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId("tick-burst")).toBeNull();
+  });
+});
+
+describe("the editor sheet's first picker", () => {
+  it("opens on the Due picker when the caller asks, as Pick a day does", async () => {
+    render(<Sheet done={false} onToggle={vi.fn()} initialPicker="due" />);
+
+    expect(await screen.findByRole("dialog", { name: "Due" })).toBeTruthy();
+  });
+
+  it("opens on the task alone otherwise", () => {
+    render(<Sheet done={false} onToggle={vi.fn()} />);
+
+    expect(screen.queryByRole("dialog", { name: "Due" })).toBeNull();
   });
 });
