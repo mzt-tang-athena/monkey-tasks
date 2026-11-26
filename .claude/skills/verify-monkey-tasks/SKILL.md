@@ -236,6 +236,9 @@ receipt plus CI's e2e-web green on the same head
 (ADR `20261126-ci-carries-the-web-suite`). Run `scripts/gate.sh full
 --web` when CI is down or the change touches the web build.
 
+When a `beforeEach` hangs at a click, keep the trace and read the page's
+last frame time (ticket `20261126-pager-setup-hang`).
+
 Speed tips for this repo:
 
 - `.worktree.env` holds this worktree's `VERIFY_PORT`. Source it, or
