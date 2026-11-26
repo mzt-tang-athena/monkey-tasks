@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  clipPreview,
   inboxFileName,
+  matchesQuery,
   noteTitle,
   previewOfBody,
   slugify,
@@ -212,7 +214,54 @@ describe("toInboxNote", () => {
       stem: "202611041210",
       title: "4 Nov 2026, 12:10",
       preview: "A thought",
+      text: "A thought",
       sortKey: 202611041210,
     });
+  });
+});
+
+describe("clipPreview", () => {
+  it("clips at the characters it is given", () => {
+    const long = "word ".repeat(200).trim();
+    expect(clipPreview(long, 240).length).toBeLessThanOrEqual(240);
+    const wide = clipPreview(long, 480);
+    expect(wide.length).toBeGreaterThan(240);
+    expect(wide.length).toBeLessThanOrEqual(480);
+    expect(wide.endsWith("…")).toBe(true);
+  });
+});
+
+describe("matchesQuery", () => {
+  const note = toInboxNote(
+    {
+      uri: "/Inbox/20261022-flight-refund.md",
+      fileName: "20261022-flight-refund.md",
+    },
+    "Call the **plumber**\n\n- fix the tap in the hall\nlast line of a long note",
+  );
+
+  it("matches the title and any line of the body, in any case", () => {
+    expect(matchesQuery(note, "FLIGHT")).toBe(true);
+    expect(matchesQuery(note, "plumber")).toBe(true);
+    expect(matchesQuery(note, "last line")).toBe(true);
+    expect(matchesQuery(note, "nothing here")).toBe(false);
+  });
+
+  it("needs every word, in any order", () => {
+    expect(matchesQuery(note, "tap plumber")).toBe(true);
+    expect(matchesQuery(note, "tap boat")).toBe(false);
+  });
+
+  it("matches a card title as the card shows it", () => {
+    const stamped = toInboxNote(
+      { uri: "/Inbox/202610260830.md", fileName: "202610260830.md" },
+      "text",
+    );
+    expect(matchesQuery(stamped, "26 oct")).toBe(true);
+  });
+
+  it("matches every note on a blank query", () => {
+    expect(matchesQuery(note, "")).toBe(true);
+    expect(matchesQuery(note, "   ")).toBe(true);
   });
 });

@@ -15,6 +15,8 @@ export type WeekLayout = "spread" | "rows";
 export type WeekStart = "monday" | "sunday";
 /** A built-in list's switch: its tab shows, or it stays out. */
 export type Toggle = "on" | "off";
+/** The Inbox's card layout: one full-width column, or two. */
+export type InboxColumns = "one" | "two";
 
 /** The name each sort order shows on screen. */
 export const SORT_LABELS: Record<SortMode, string> = {
@@ -37,6 +39,8 @@ export type Settings = {
   todayList: Toggle;
   /** The Board's tab. It starts off (ADR 20261125-deed-board-is-the-kanban-list). */
   boardList: Toggle;
+  /** The Inbox cards: one column or two. */
+  inboxColumns: InboxColumns;
 };
 
 const DEFAULTS: Settings = {
@@ -47,6 +51,7 @@ const DEFAULTS: Settings = {
   weekStart: "monday",
   todayList: "on",
   boardList: "off",
+  inboxColumns: "two",
 };
 
 const LOCAL_KEYS: Record<keyof Settings, string> = {
@@ -57,6 +62,7 @@ const LOCAL_KEYS: Record<keyof Settings, string> = {
   weekStart: "monkey-tasks.week-start",
   todayList: "monkey-tasks.today-list",
   boardList: "monkey-tasks.board-list",
+  inboxColumns: "monkey-tasks.inbox-columns",
 };
 
 const FILE_NAME = "monkey-tasks-settings.json";
@@ -97,6 +103,7 @@ function pick<K extends keyof Settings>(
     weekStart: ["monday", "sunday"],
     todayList: ["on", "off"],
     boardList: ["on", "off"],
+    inboxColumns: ["one", "two"],
   };
   return typeof value === "string" && allowed[key].includes(value)
     ? (value as Settings[K])

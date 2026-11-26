@@ -134,6 +134,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "once",
     why: "note text, frontmatter and axe around the composer",
   },
+  "inbox-view-search.spec.ts": {
+    runsIn: "both",
+    why: "a view switch remounts the list, and it must settle under reduce too",
+  },
   "journal.spec.ts": {
     runsIn: "once",
     why: "the note a send writes, the composer and axe",

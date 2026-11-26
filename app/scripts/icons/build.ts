@@ -40,6 +40,9 @@ const GLYPHS = {
   close: { phosphor: "X", size: 15 },
   check: { phosphor: "Check", size: 12 },
   command: { phosphor: "Command", size: 24 },
+  search: { phosphor: "MagnifyingGlass", size: 24 },
+  "view-one": { phosphor: "Rows", size: 24 },
+  "view-two": { phosphor: "Columns", size: 24 },
 } as const;
 
 type Weight = "regular" | "fill";

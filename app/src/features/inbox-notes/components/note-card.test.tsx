@@ -11,11 +11,26 @@ function note(title: string): InboxNote {
     stem: title,
     title,
     preview: "",
+    text: "",
     sortKey: null,
   };
 }
 
 describe("NoteCard", () => {
+  it("shows more of a long note when it is wide", () => {
+    const text = Array.from({ length: 4 }, (_, line) =>
+      `line ${line} ${"word ".repeat(20)}`.trim(),
+    ).join("\n");
+    const long = { ...note("long"), text, preview: "short preview" };
+    const { unmount } = render(<NoteCard note={long} onPress={vi.fn()} />);
+    expect(screen.getByText("short preview")).toBeTruthy();
+    unmount();
+
+    render(<NoteCard note={long} onPress={vi.fn()} wide />);
+    expect(screen.queryByText("short preview")).toBeNull();
+    expect(screen.getByText(/line 3 word/)).toBeTruthy();
+  });
+
   it("shows the file name exactly as written", () => {
     const title = "20261023-flight-email-tracker";
     render(<NoteCard note={note(title)} onPress={vi.fn()} />);
