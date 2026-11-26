@@ -21,6 +21,7 @@ echo "run: $run"
 
 "$drive" restart >/dev/null 2>&1
 "$drive" wait "~task-row:" 60 >/dev/null || { echo "no task row" >&2; exit 1; }
+"$drive" tap Main >/dev/null
 "$drive" scroll-to "~task-row:$task" >/dev/null
 "$drive" tap "~task-row:$task" >/dev/null
 "$drive" wait "sheet-handle" 15 >/dev/null || { echo "the editor did not open" >&2; exit 1; }
