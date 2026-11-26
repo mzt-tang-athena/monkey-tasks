@@ -92,37 +92,42 @@ test.describe("a swipe down", () => {
 });
 
 test.describe("a sideways swipe", () => {
-  test("left shows the tab on the right", async ({ page }) => {
+  test("right goes to the tab on the right", async ({ page }) => {
     await page.goto("/");
     await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
-    await touchDrag(page, addButton(page), -40);
+    await touchDrag(page, addButton(page), 40);
 
     await expectTab(page, "Planner", "/planner");
   });
 
-  test("right shows the tab on the left", async ({ page }) => {
+  test("left goes to the tab on the left", async ({ page }) => {
     await page.goto("/planner");
     await expect(page.getByTestId("day-heading")).toBeVisible();
 
-    await touchDrag(page, addButton(page), 40);
+    await touchDrag(page, addButton(page), -40);
 
     await expectTab(page, "Lists", "/");
   });
 
-  test("stops at either end of the bar", async ({ page }) => {
+  test("stops at either end of the bar, and turns back from it", async ({
+    page,
+  }) => {
     await page.goto("/");
     await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
 
-    await touchDrag(page, addButton(page), 40);
+    await touchDrag(page, addButton(page), -40);
     await expectTab(page, "Lists", "/");
 
     await page.goto("/journal");
     await expect(page.getByTestId("journal-screen")).toBeVisible();
-    await touchDrag(page, addButton(page), -40);
+    await touchDrag(page, addButton(page), 40);
     await expectTab(page, "Journal", "/journal");
+
+    await touchDrag(page, addButton(page), -40);
+    await expectTab(page, "Inbox Notes", "/inbox");
   });
 });
 
