@@ -145,6 +145,7 @@ adb shell mkdir -p "$(dirname "$VAULT_DIR")"
 adb push "$seed" "$VAULT_DIR" >/dev/null
 lap "seeded $VAULT_DIR"
 
+collapse_shade
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 # A kept grant shows a task row. A missing one shows the connect notice.
 # A first start on a loaded host took over 90 s.

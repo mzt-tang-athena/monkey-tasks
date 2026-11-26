@@ -26,7 +26,7 @@
 #   android-drive.sh restart                      stop and start the app, wait for a task row
 #   android-drive.sh list                         print every labelled node on screen
 #   android-drive.sh run                          print the run folder
-#   android-drive.sh new-run                      start a new run folder
+#   android-drive.sh new-run                      start a new run folder, shade shut
 #
 # A handle is an accessibility label, a testID or visible text, matched
 # exactly. Prefix it with ~ for a substring match. `outer>>inner` finds
@@ -159,6 +159,7 @@ wait_first_row() {
 }
 
 start_app() {
+  collapse_shade
   adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 }
 
@@ -368,6 +369,9 @@ case "$cmd" in
     node "$UI" "$UIXML" list
     ;;
   run) run_dir ;;
-  new-run) new_run ;;
+  new-run)
+    collapse_shade
+    new_run
+    ;;
   *) die "unknown step '$cmd'. See the top of this file." ;;
 esac

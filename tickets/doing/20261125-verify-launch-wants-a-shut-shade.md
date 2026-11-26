@@ -2,7 +2,7 @@
 title: The verify launch wants the shade shut
 created: 2026-11-25
 priority: low
-assignee:
+assignee: claude-lane-shade
 pr:
 depends: []
 ---
