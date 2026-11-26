@@ -9,6 +9,9 @@ export const PREVIEW_LINES = 8;
 /** The most characters a card's preview shows, the ellipsis included. */
 export const PREVIEW_CHARS = 240;
 
+/** The most characters a full-width card's preview shows. */
+export const WIDE_PREVIEW_CHARS = 480;
+
 /** The most characters a typed title's slug carries. */
 export const SLUG_CHARS = 60;
 
@@ -30,6 +33,8 @@ export type InboxNote = {
   title: string;
   /** The card's plain text preview. */
   preview: string;
+  /** The whole body as plain text, one line per line. Search reads it. */
+  text: string;
   /** The local `YYYYMMDDHHmm` the name carries, or null. */
   sortKey: number | null;
 };
@@ -227,19 +232,15 @@ export function plainLine(line: string): string {
 }
 
 /**
- * The card's plain text preview: the body's first lines, with the
- * marks gone and the indentation flattened. At most eight lines and 240
- * characters, with an ellipsis where it was cut.
+ * A preview of a note's plain text: the first lines, at most eight and
+ * `chars` characters, with an ellipsis where it was cut.
  */
-export function previewOfBody(body: string): string {
-  const lines = body
-    .split(/\r?\n/)
-    .map(plainLine)
-    .filter((line) => line !== "");
+export function clipPreview(text: string, chars: number): string {
+  const lines = text.split("\n").filter((line) => line !== "");
   let preview = lines.slice(0, PREVIEW_LINES).join("\n");
   let cut = lines.length > PREVIEW_LINES;
-  if (preview.length > PREVIEW_CHARS) {
-    preview = preview.slice(0, PREVIEW_CHARS - 1);
+  if (preview.length > chars) {
+    preview = preview.slice(0, chars - 1);
     const space = preview.lastIndexOf(" ");
     if (space > 0) {
       preview = preview.slice(0, space);
@@ -248,6 +249,34 @@ export function previewOfBody(body: string): string {
     cut = true;
   }
   return cut ? `${preview}…` : preview;
+}
+
+/** The card's preview of a body: plain lines, clipped. */
+export function previewOfBody(body: string): string {
+  return clipPreview(plainBody(body), PREVIEW_CHARS);
+}
+
+/** The whole body as plain readable lines, for search. */
+export function plainBody(body: string): string {
+  return body
+    .split(/\r?\n/)
+    .map(plainLine)
+    .filter((line) => line !== "")
+    .join("\n");
+}
+
+/**
+ * Whether a note answers a search. Every word of the query must appear,
+ * in any order and any case, in the card's title or the body's text.
+ * A blank query matches every note.
+ */
+export function matchesQuery(note: InboxNote, query: string): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter((word) => word !== "");
+  if (words.length === 0) {
+    return true;
+  }
+  const haystack = `${note.title}\n${note.stem}\n${note.text}`.toLowerCase();
+  return words.every((word) => haystack.includes(word));
 }
 
 /** The local capture stamp, `YYYYMMDDHHmm`. */
@@ -284,12 +313,14 @@ export function toInboxNote(
   text: string,
 ): InboxNote {
   const stem = file.fileName.replace(/\.md$/i, "");
+  const plain = plainBody(splitNote(text).body);
   return {
     uri: file.uri,
     fileName: file.fileName,
     stem,
     title: noteTitle(stem),
-    preview: previewOfBody(splitNote(text).body),
+    preview: clipPreview(plain, PREVIEW_CHARS),
+    text: plain,
     sortKey: sortKeyOf(stem),
   };
 }

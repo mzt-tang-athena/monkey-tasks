@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/list-states";
 import { VaultPrompt } from "@/components/ui/vault-prompt";
 import { useStableCallback } from "@/hooks/use-stable-callback";
-import type { InboxNote } from "@/lib/inbox-notes/model";
+import { matchesQuery, type InboxNote } from "@/lib/inbox-notes/model";
+import { useSetting } from "@/lib/settings-store";
 import { useInboxNotes } from "@/stores/inbox-notes/use-inbox-notes";
 import { pageGutter, spacing, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -22,7 +23,8 @@ import { NoteCard } from "./components/note-card";
 
 /**
  * The Inbox Notes tab: the notes in the vault's Inbox folder, newest
- * first, as a two-column card grid. The composer lives in the dock the
+ * first, as a card grid of one column or two, filtered by the search
+ * in the header. The composer lives in the dock the
  * route passes in, so the bar holds one action on every tab.
  */
 export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
@@ -37,6 +39,14 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
     grant,
   } = useInboxNotes();
   const insets = useSafeAreaInsets();
+  const [columns, setColumns] = useSetting("inboxColumns");
+  const [query, setQuery] = React.useState("");
+
+  const shown = React.useMemo(
+    () => notes.filter((note) => matchesQuery(note, query)),
+    [notes, query],
+  );
+  const searching = query.trim() !== "";
 
   const reload = React.useCallback(async () => {
     await refresh();
@@ -48,7 +58,7 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
 
   // A lone last card keeps its column width, as a Keep board does.
   const cards: (InboxNote | null)[] =
-    notes.length % 2 === 1 ? [...notes, null] : notes;
+    columns === "two" && shown.length % 2 === 1 ? [...shown, null] : shown;
 
   const empty =
     status === "loading" ? (
@@ -56,9 +66,11 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
     ) : status === "error" || status === "novault" ? null : (
       <EmptyState
         label={
-          folder == null
-            ? "No notes yet. The first note makes the Inbox folder."
-            : "No notes yet. Tap Add to write one."
+          searching
+            ? `No notes match "${query.trim()}".`
+            : folder == null
+              ? "No notes yet. The first note makes the Inbox folder."
+              : "No notes yet. Tap Add to write one."
         }
       />
     );
@@ -66,7 +78,14 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
   return (
     <View testID="inbox-notes-screen" style={styles.screen}>
       <View style={[styles.statusStrip, { height: insets.top }]} />
-      <InboxHeader count={notes.length} />
+      <InboxHeader
+        shown={shown.length}
+        total={notes.length}
+        query={query}
+        onQueryChange={setQuery}
+        columns={columns}
+        onToggleColumns={() => setColumns(columns === "two" ? "one" : "two")}
+      />
 
       {status === "novault" ? (
         <VaultPrompt
@@ -100,10 +119,12 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
 
       <View style={styles.list}>
         <FlatList
+          key={columns}
           data={cards}
           keyExtractor={(item, index) => item?.uri ?? `pad-${index}`}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
+          numColumns={columns === "two" ? 2 : 1}
+          columnWrapperStyle={columns === "two" ? styles.row : undefined}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.content}
           renderScrollComponent={renderMotionScroll}
           ListEmptyComponent={empty ?? undefined}
@@ -111,7 +132,11 @@ export default function InboxNotesScreen({ dock }: { dock: React.ReactNode }) {
             item == null ? (
               <View style={styles.fill} />
             ) : (
-              <NoteCard note={item} onPress={open} />
+              <NoteCard
+                note={item}
+                onPress={open}
+                wide={columns === "one"}
+              />
             )
           }
         />

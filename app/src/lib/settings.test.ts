@@ -124,3 +124,34 @@ describe("the built-in lists", () => {
     expect(loadSettings().todayList).toBe("off");
   });
 });
+
+describe("the Inbox columns", () => {
+  const COLUMNS_KEY = "monkey-tasks.inbox-columns";
+
+  it("starts with two columns", () => {
+    expect(loadSettings().inboxColumns).toBe("two");
+  });
+
+  it("keeps the choice of one column", () => {
+    saveSetting("inboxColumns", "one");
+
+    expect(loadSettings().inboxColumns).toBe("one");
+    expect(storage.getItem(COLUMNS_KEY)).toBe("one");
+  });
+
+  it("falls back to two for a value it cannot read", () => {
+    storage.setItem(COLUMNS_KEY, "three");
+
+    expect(loadSettings().inboxColumns).toBe("two");
+  });
+
+  it("reads the saved choice from the native file too", () => {
+    platform.os = "android";
+    sharedFakeAppFiles.files.set(
+      "file:///documents/monkey-tasks-settings.json",
+      JSON.stringify({ inboxColumns: "one" }),
+    );
+
+    expect(loadSettings().inboxColumns).toBe("one");
+  });
+});

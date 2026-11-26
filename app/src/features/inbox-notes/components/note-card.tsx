@@ -1,7 +1,11 @@
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { InboxNote } from "@/lib/inbox-notes/model";
-import { PREVIEW_LINES } from "@/lib/inbox-notes/model";
+import {
+  clipPreview,
+  PREVIEW_LINES,
+  WIDE_PREVIEW_CHARS,
+} from "@/lib/inbox-notes/model";
 import { Pressable } from "@/components/ui/pressable";
 import { radius, spacing, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -31,21 +35,32 @@ export function titleRuns(title: string): string[] {
 /**
  * One note in the grid: its title and its content preview. The title
  * is the note's name, and the preview is enough to know what the note
- * is without opening it. The card takes its accessible name from the
+ * is without opening it. A `wide` card is the only one in its row, so
+ * it keeps its own height and shows more of a long note. The card takes its accessible name from the
  * text it shows, so a screen reader and the eye read the same words.
  */
 export const NoteCard = React.memo(function NoteCard({
   note,
   onPress,
+  wide = false,
 }: {
   note: InboxNote;
   onPress: (note: InboxNote) => void;
+  wide?: boolean;
 }) {
   const { styles } = useThemedStyles(makeStyles);
+  const preview = React.useMemo(
+    () => (wide ? clipPreview(note.text, WIDE_PREVIEW_CHARS) : note.preview),
+    [wide, note.text, note.preview],
+  );
   return (
     <Pressable
       testID={`note-card:${note.fileName}`}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.card,
+        !wide && styles.share,
+        pressed && styles.pressed,
+      ]}
       onPress={() => onPress(note)}
       accessibilityRole="button"
       accessibilityHint="opens the note"
@@ -57,9 +72,9 @@ export const NoteCard = React.memo(function NoteCard({
           </Text>
         ))}
       </View>
-      {note.preview === "" ? null : (
+      {preview === "" ? null : (
         <Text style={styles.preview} numberOfLines={PREVIEW_LINES}>
-          {note.preview}
+          {preview}
         </Text>
       )}
     </Pressable>
@@ -69,7 +84,6 @@ export const NoteCard = React.memo(function NoteCard({
 const makeStyles = (colors: Palette) => ({
   styles: StyleSheet.create({
     card: {
-      flex: 1,
       minWidth: 0,
       gap: spacing.xs,
       padding: spacing.m,
@@ -77,6 +91,9 @@ const makeStyles = (colors: Palette) => ({
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.hairline,
       backgroundColor: colors.surface,
+    },
+    share: {
+      flex: 1,
     },
     pressed: {
       backgroundColor: colors.pressed,

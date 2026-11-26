@@ -161,6 +161,9 @@ export default function GalleryScreen() {
     "icons:close": <GlyphPair name="close" />,
     "icons:check": <GlyphPair name="check" />,
     "icons:command": <GlyphPair name="command" />,
+    "icons:search": <GlyphPair name="search" />,
+    "icons:view-one": <GlyphPair name="view-one" />,
+    "icons:view-two": <GlyphPair name="view-two" />,
 
     "switch:on": (
       <Switch

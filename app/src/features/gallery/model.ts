@@ -68,6 +68,9 @@ export const GALLERY_SECTIONS = [
       { id: "icons:close", label: "close" },
       { id: "icons:check", label: "check" },
       { id: "icons:command", label: "command" },
+      { id: "icons:search", label: "search" },
+      { id: "icons:view-one", label: "view-one" },
+      { id: "icons:view-two", label: "view-two" },
     ],
   },
   {
