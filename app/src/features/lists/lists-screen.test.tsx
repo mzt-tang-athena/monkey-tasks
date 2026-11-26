@@ -24,6 +24,8 @@ const spy = vi.hoisted(() => ({
   sortMode: "due" as "due" | "manual",
   /** Whether the rows on screen are last session's. */
   stale: false,
+  /** The tab those rows belong to. */
+  cachedTab: null as string | null,
   /** Each reorder write, as the names and orders it would send. */
   writes: [] as [string, number][][],
   /** How long the stand-in row's tick holds before it lets go. */
@@ -78,7 +80,9 @@ vi.mock("@/stores/tasks/task-state", async () => {
       readError: null,
       brokenLists: [],
       lists: ["Errands"],
+      listNotes: [],
       stale: spy.stale,
+      cachedTab: spy.cachedTab,
     }),
   };
 });
@@ -266,6 +270,7 @@ beforeEach(() => {
   spy.writes = [];
   spy.tickSettleMs = 320;
   spy.stale = false;
+  spy.cachedTab = "Main";
   cacheWrite.rows = [];
   selectList("Main");
   setCompletedOpen("Main", false);
@@ -334,6 +339,16 @@ describe("ListsScreen", () => {
     expect(rows.tasks.map((item) => item.name)).toEqual(["Apple", "Banana"]);
   });
 
+  it("draws no cached rows under a tab they do not belong to", () => {
+    spy.stale = true;
+    spy.cachedTab = "Errands";
+    spy.tasks = [task("Apple", todayIso())];
+    render(<ListsScreen dock={dock} />);
+
+    expect(screen.queryByTestId("row:Apple")).toBeNull();
+    expect(screen.getByText("Syncing your vault")).toBeTruthy();
+  });
+
   it("keeps no rows while the cached frame stands in", () => {
     spy.stale = true;
     spy.tasks = [task("Apple", todayIso())];
@@ -346,6 +361,7 @@ describe("ListsScreen", () => {
     // Last session's rows may be wrong until the read lands, so they
     // draw dimmed and inert (ADR 20261126-a-cached-first-frame).
     spy.stale = true;
+    spy.cachedTab = "Main";
     spy.tasks = [task("Apple", todayIso())];
     render(<ListsScreen dock={dock} />);
 

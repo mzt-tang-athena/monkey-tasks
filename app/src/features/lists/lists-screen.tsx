@@ -69,8 +69,16 @@ import type { ReorderEvent } from "@/components/motion/reorder";
 export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const { styles } = useThemedStyles(makeStyles);
   const editor = useTaskEditor();
-  const { rootUri, status, readError, stale, tasksDir, listNotes, brokenLists } =
-    useStoreMeta();
+  const {
+    rootUri,
+    status,
+    readError,
+    stale,
+    cachedTab,
+    tasksDir,
+    listNotes,
+    brokenLists,
+  } = useStoreMeta();
   markOnce("lists-render");
   // The vault's rows, not the cached frame's: a cold start that draws
   // the cache marks `rows-visible` first and this when the read lands.
@@ -109,6 +117,10 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   // They draw dimmed and take no press, tick or drag until the read
   // lands and replaces them (ADR 20261126-a-cached-first-frame).
   const inert = stale;
+  // The cache holds one tab's rows. A start that opens another tab, or
+  // a switch before the read lands, waits for the read instead of
+  // drawing these rows under the wrong tab.
+  const showingCache = stale && cachedTab === tab;
 
   // Keep the tab a cold start opens on for the next start: only that
   // tab's rows, so the cache holds what the first frame draws. The
@@ -342,7 +354,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                     contentContainerStyle={styles.content}
                     onRefresh={reload}
                     refreshing={refreshing}
-                    sections={folded}
+                    sections={inert && !showingCache ? [] : folded}
                     keyExtractor={keyExtractor}
                     renderItem={renderItem}
                     renderSectionHeader={renderSectionHeader}
@@ -356,7 +368,9 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                       </>
                     }
                     ListEmptyComponent={
-                      inert ? undefined : status === "loading" ? (
+                      inert ? (
+                        <LoadingState />
+                      ) : status === "loading" ? (
                         <LoadingState />
                       ) : status === "error" ? (
                         <ErrorState

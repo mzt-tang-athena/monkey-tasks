@@ -168,8 +168,9 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       listNotes: lists,
       brokenLists: broken,
       stale,
+      cachedTab: stale ? (cached?.tab ?? null) : null,
     }),
-    [rootUri, status, readError, tasksDir, listNames, lists, broken, stale],
+    [rootUri, status, readError, tasksDir, listNames, lists, broken, stale, cached],
   );
 
   return (

@@ -30,6 +30,8 @@ export type StoreMeta = {
    * (ADR `20261126-a-cached-first-frame`).
    */
   stale: boolean;
+  /** The tab the cached rows belong to, or null when none show. */
+  cachedTab: string | null;
 };
 
 /**
@@ -48,6 +50,7 @@ const NO_META: StoreMeta = {
   listNotes: [],
   brokenLists: [],
   stale: false,
+  cachedTab: null,
 };
 
 export const TaskListContext = React.createContext<TaskItem[]>(NO_LIST);
