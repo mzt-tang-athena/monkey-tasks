@@ -2,7 +2,7 @@
 title: The verify journeys follow the app
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: claude-lane-verify-journeys
 pr:
 depends: [20261125-verify-launch-wants-a-shut-shade]
 ---
