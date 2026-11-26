@@ -487,6 +487,55 @@ describe("one task", () => {
     expect(basesOf(before.uri)).toEqual([second]);
   });
 
+  it("clears the ring in the tray when a due write lands, and arms the new time", async () => {
+    const first = NOW + 10 * MINUTE;
+    const second = NOW + 24 * 60 * MINUTE;
+    const before = task("Pay rent", [stamp(first)], { due: stamp(first) });
+    await syncReminders([before]);
+    deliver(id(before.uri, first));
+
+    const after = task("Pay rent", [stamp(first)], { due: stamp(second) });
+    await syncTaskReminders(before, after);
+
+    expect(world.dismissed).toEqual([id(before.uri, first)]);
+    expect(world.delivered.size).toBe(0);
+    expect(basesOf(before.uri)).toEqual([second]);
+    expect(world.acked[`${before.uri}|${first}`]).toBeDefined();
+  });
+
+  it("keeps the ring in the tray when the due did not move", async () => {
+    const first = NOW + 10 * MINUTE;
+    const before = task("Pay rent", [stamp(first)], { due: stamp(first) });
+    await syncReminders([before]);
+    deliver(id(before.uri, first));
+
+    await syncTaskReminders(before, { ...before, name: "Pay the rent" });
+    await syncTaskReminders(before, {
+      ...before,
+      data: { ...before.data!, reminders: [stamp(first), stamp(first + 30 * MINUTE)] },
+    });
+
+    expect(world.dismissed).toEqual([]);
+    expect(world.delivered.size).toBe(1);
+  });
+
+  it("keeps another task's ring when this task's due moves", async () => {
+    const first = NOW + 10 * MINUTE;
+    const rent = task("Pay rent", [], { due: stamp(first) });
+    const call = task("Call Mum", [stamp(first)]);
+    await syncReminders([rent, call]);
+    deliver(id(rent.uri, first));
+    deliver(id(call.uri, first));
+
+    await syncTaskReminders(
+      rent,
+      task("Pay rent", [], { due: stamp(first + 24 * 60 * MINUTE) }),
+    );
+
+    expect(world.dismissed).toEqual([id(rent.uri, first)]);
+    expect(world.delivered.size).toBe(1);
+  });
+
   it("schedules a captured task's ring", async () => {
     const base = NOW + 10 * MINUTE;
     const captured = task("Call Mum", [stamp(base)]);

@@ -57,10 +57,12 @@ Tomorrow left the notification for that reason.
 - Done and Didn't do run in the background, with the app killed.
 - Snooze opens the app on a small sheet. It offers Later, Tomorrow
   and Pick a day. Later and Tomorrow keep their times and their write.
-- Pick a day opens the task on its Due picker. It clears the reminder,
-  as a tap on the notification does.
-- The notification clears when a choice lands. Closing the sheet
-  changes nothing, so the reminder stays.
+- Pick a day opens the task on its Due picker. The reminder stays
+  until the operator saves a date. Backing out changes nothing.
+- A saved due that moved clears the task's ring in the tray. The new
+  due arms its own ring.
+- Later and Tomorrow clear the notification when they land. Closing
+  the sheet changes nothing, so the reminder stays.
 - Didn't do on a one-off task writes `status: "[[dropped]]"`. It
   writes no `completed`, because the contract keeps that for done.
   The task leaves the open lists and folds under Dropped on the Board.

@@ -277,6 +277,27 @@ async function acknowledgeTaskNow(
   await dismissDelivered(delivered.map((entry) => entry.id));
 }
 
+/**
+ * Dismiss the rings of one task that sit in the tray, and remember
+ * their groups as acknowledged. A scheduled ring stays: the caller
+ * plans those against the new state.
+ */
+async function acknowledgeDeliveredNow(
+  uri: string,
+  now: number,
+): Promise<void> {
+  const delivered = (await listDeliveredDetailed()).filter(
+    (entry) => entry.data?.uri === uri,
+  );
+  recordAcks(
+    delivered.flatMap((entry) =>
+      entry.data == null ? [] : [{ uri, base: entry.data.base }],
+    ),
+    now,
+  );
+  await dismissDelivered(delivered.map((entry) => entry.id));
+}
+
 /** Clear one alarm group. Throws when the OS refuses; callers decide. */
 export async function acknowledgeRingNow(
   ring: Pick<AlertRing, "uri" | "base">,
@@ -364,6 +385,19 @@ export async function reconcileTask(
       // Best effort; the next rebuild clears what this missed.
     }
     return;
+  }
+
+  // A due that moved leaves the ring in the tray with nothing to ring
+  // for, so a date picked from Snooze clears the reminder it answered.
+  if (
+    before?.data != null &&
+    (before.data.due ?? null) !== (after.data.due ?? null)
+  ) {
+    try {
+      await acknowledgeDeliveredNow(uri, now);
+    } catch {
+      // Best effort; a tap on the ring or the next rebuild clears it.
+    }
   }
 
   if (sameRings(ringsFor(before, now), ringsFor(after, now))) {

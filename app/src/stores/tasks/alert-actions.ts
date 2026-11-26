@@ -66,15 +66,24 @@ export function pressOf(
       };
 }
 
+function clearSpentFailures(uri: string, kind: AlertAction["kind"]): void {
+  for (const id of clearActionFailuresFor(uri, kind)) {
+    void clearActionFailureNotice(id).catch(() => undefined);
+  }
+}
+
 /**
  * The app ticked the task itself, so a Done press that failed is spent.
  * Its record and its notice go, or the app would report a failure that
  * no longer exists.
  */
 export function clearDoneFailure(uri: string): void {
-  for (const id of clearActionFailuresFor(uri, "done")) {
-    void clearActionFailureNotice(id).catch(() => undefined);
-  }
+  clearSpentFailures(uri, "done");
+}
+
+/** The app dropped the task itself, so a Didn't do press that failed is spent. */
+export function clearDropFailure(uri: string): void {
+  clearSpentFailures(uri, "drop");
 }
 
 /** What a press changed. Absent when the note already held the state. */

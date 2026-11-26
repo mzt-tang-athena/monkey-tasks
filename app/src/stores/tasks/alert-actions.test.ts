@@ -88,6 +88,7 @@ import { sharedFakeAppFiles } from "@/testing/fake-app-files";
 import { parseStoredDate } from "@/utils/dates";
 import {
   clearDoneFailure,
+  clearDropFailure,
   performAlertPress,
   pressOf,
   type AlertPress,
@@ -522,6 +523,39 @@ describe("clearDoneFailure", () => {
 
   it("does nothing for another task", () => {
     clearDoneFailure(`${TASKS}/Stretch.md`);
+
+    expect(loadActionFailures()).toHaveLength(2);
+    expect(world.cleared).toEqual([]);
+  });
+});
+
+describe("clearDropFailure", () => {
+  const uri = `${TASKS}/Call Mum.md`;
+
+  beforeEach(() => {
+    for (const action of [{ kind: "drop" }, { kind: "done" }] as const) {
+      recordActionFailure({
+        id: `${uri}|${action.kind}`,
+        uri,
+        name: "Call Mum",
+        action,
+        message: "disk full",
+        at: 1,
+      });
+    }
+  });
+
+  it("drops the Didn't do record and its notice, and keeps a Done one", () => {
+    clearDropFailure(uri);
+
+    expect(loadActionFailures().map((entry) => entry.id)).toEqual([
+      `${uri}|done`,
+    ]);
+    expect(world.cleared).toEqual([`${uri}|drop`]);
+  });
+
+  it("does nothing for another task", () => {
+    clearDropFailure(`${TASKS}/Stretch.md`);
 
     expect(loadActionFailures()).toHaveLength(2);
     expect(world.cleared).toEqual([]);

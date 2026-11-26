@@ -14,7 +14,6 @@ import {
 import { openTask } from "@/lib/task-route";
 import { defaultAdapter } from "@/lib/vault/default-adapter";
 import { useSheetClock } from "@/hooks/use-sheet-clock";
-import { acknowledgeRing } from "@/stores/tasks/reminder-sync";
 import { performAlertPress } from "@/stores/tasks/alert-actions";
 import { TASKS_KEY } from "@/stores/tasks/query";
 import { radius, spacing, type, type Palette } from "@/theme/tokens";
@@ -25,7 +24,8 @@ import { useThemedStyles } from "@/theme/theme-provider";
  * Pick a day. Later and Tomorrow write through the same press as the
  * old buttons did, so the times and the failure notice stay the same
  * (ADR 20261125-reminder-actions). Pick a day opens the task's Due
- * picker. Closing the sheet changes nothing, so the reminder stays.
+ * picker and leaves the reminder up until a date is saved. Closing the
+ * sheet changes nothing, so the reminder stays.
  */
 export function SnoozeHost() {
   const request = useSnoozeRequest();
@@ -66,9 +66,6 @@ function SnoozeSheet({
 
   const pickDay = () => {
     clearSnoozeRequest();
-    if (request.base != null) {
-      void acknowledgeRing({ uri: request.uri, base: request.base });
-    }
     openTask(request.uri, { picker: "due" });
   };
 

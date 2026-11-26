@@ -69,6 +69,7 @@ fails a bullet that wraps or runs past 64 characters.
 - Later moves it an hour on. Tomorrow moves it to 09:00.
 - Later and Tomorrow move the due date and the reminder.
 - Pick a day opens the task on its due date.
+- The reminder stays until you save a date.
 - A task due on a day offers Done and Didn't do.
 - Reminders set before this build gain the new buttons.
 - A press that cannot save says so in a notification.

@@ -14,12 +14,13 @@
 # it, so WAVE picks one set per run: tick (the default), drop or snooze.
 #
 # SNOOZE_CHOICES, in the snooze wave, names the choices to take on
-# the Snooze sheet, as a comma list of Later, Tomorrow, "Pick a day" and
-# Back. Each one gets its own task. Snooze opens the app on the sheet,
+# the Snooze sheet, as a comma list of Later, Tomorrow, "Pick a day" (backs
+# out of the picker), "Pick a day and save" and Back. Each one gets its own task. Snooze opens the app on the sheet,
 # and the choice must
-# land: Later and Tomorrow move the due and clear the reminder, Pick a
-# day opens the task on its Due picker, and Back leaves the note and the
-# reminder as they were. It defaults to all four.
+# land: Later and Tomorrow move the due and clear the reminder. Pick a day
+# opens the task on its Due picker and keeps the reminder, even after Back
+# from the picker, until a date is saved. Back from the sheet leaves the
+# note and the reminder as they were. It defaults to the first four.
 #
 # Each task's name carries the clock minute of the run, so a second run
 # never confuses its reminders with an old one's. Every reminder rings
@@ -40,7 +41,7 @@ source "$here/android-env.sh"
 wave=${WAVE:-tick}
 case $wave in
   tick | drop) snooze_choices="" ;;
-  snooze) snooze_choices=${SNOOZE_CHOICES:-Later,Tomorrow,Pick a day,Back} ;;
+  snooze) snooze_choices=${SNOOZE_CHOICES:-Later,Tomorrow,Pick a day,Pick a day and save} ;;
   *) echo "WAVE is tick, drop or snooze" >&2; exit 2 ;;
 esac
 tasks="$VAULT_DIR/Tasks"
@@ -217,7 +218,6 @@ if [[ $wave == snooze ]]; then
   step=0
   for choice in "${choices[@]}"; do
     title=$(snooze_title "$choice")
-    slug=${title// /-}
     press_button "$title" Snooze "snooze-${choice// /}"
     "$drive" wait "Pick a day" 120 >/dev/null || fail "the Snooze sheet did not open for $title"
     "$drive" shot "snooze-sheet-${choice// /}" >/dev/null
@@ -231,10 +231,34 @@ if [[ $wave == snooze ]]; then
         "$drive" shot snooze-back >/dev/null
         ;;
       "Pick a day")
+        # The editor's own Due tile shares the picker's name, so the picker
+        # is told by its Next week chip. Backing out of the picker saves nothing, so the note and the
+        # reminder stay as they were.
         "$drive" tap "Pick a day" >/dev/null
-        "$drive" wait "Due" 60 >/dev/null || fail "Pick a day did not open the Due picker"
+        "$drive" wait "Next week" 60 >/dev/null || fail "Pick a day did not open the Due picker"
         "$drive" shot snooze-pick-due >/dev/null
-        tray_clears "$title" $((deadline + 400 + step * 30))
+        adb shell input keyevent KEYCODE_BACK
+        "$drive" gone "Next week" 20 >/dev/null || fail "Back left the Due picker open"
+        adb shell input keyevent KEYCODE_BACK
+        sleep 3
+        [[ "$(note_text "$title")" == *"due: $due"* ]] || fail "$title changed after Back from Pick a day"
+        [[ $(in_tray "$title") -gt 0 ]] || fail "Back from Pick a day cleared the reminder of $title"
+        "$drive" shot snooze-pick-back >/dev/null
+        ;;
+      "Pick a day and save")
+        # A saved date moves the due and clears the reminder it answered.
+        "$drive" tap "Pick a day" >/dev/null
+        "$drive" wait "Next week" 60 >/dev/null || fail "Pick a day did not open the Due picker"
+        [[ $(in_tray "$title") -gt 0 ]] || fail "opening the Due picker cleared the reminder of $title"
+        "$drive" tap "Tomorrow" >/dev/null
+        until ! [[ "$(note_text "$title")" == *"due: $due"* ]]; do
+          ((SECONDS < deadline + 420 + step * 30)) || fail "$title's due never moved"
+          sleep 2
+        done
+        "$drive" note "Tasks/$title.md" snooze-save-after >/dev/null
+        "$drive" shot snooze-pick-saved >/dev/null
+        grep -q "^due: ${next_day}T${due:11}$" "$run/note-snooze-save-after.md" || fail "$title's due is not $next_day at the same time"
+        tray_clears "$title" $((deadline + 440 + step * 30))
         ;;
       *)
         "$drive" tap "$choice" >/dev/null

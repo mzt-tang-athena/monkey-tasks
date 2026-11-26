@@ -8,13 +8,12 @@ import {
 } from "@/lib/alerts/snooze-request";
 import { SnoozeHost } from "./snooze-sheet";
 
-// The sheet behind the Snooze button. The press, the route and the
-// alarm list belong to other tests, so this one owns them as spies.
+// The sheet behind the Snooze button. The press and the route belong
+// to other tests, so this one owns them as spies.
 
 const spy = vi.hoisted(() => ({
   press: vi.fn(async (_adapter: unknown, _press: unknown) => null),
   open: vi.fn(),
-  acknowledge: vi.fn(async (_ring: unknown) => undefined),
   invalidate: vi.fn(async () => undefined),
 }));
 
@@ -42,10 +41,6 @@ vi.mock("@/lib/vault/default-adapter", () => ({
 
 vi.mock("@/stores/tasks/alert-actions", () => ({
   performAlertPress: spy.press,
-}));
-
-vi.mock("@/stores/tasks/reminder-sync", () => ({
-  acknowledgeRing: spy.acknowledge,
 }));
 
 vi.mock("@/lib/task-route", () => ({ openTask: spy.open }));
@@ -136,16 +131,12 @@ describe("the Snooze sheet", () => {
     );
   });
 
-  it("Pick a day opens the task on its Due picker and clears the reminder", async () => {
+  it("Pick a day opens the task on its Due picker and writes nothing", async () => {
     await shows();
 
     fireEvent.click(screen.getByRole("button", { name: "Pick a day" }));
 
     expect(spy.open).toHaveBeenCalledWith(request.uri, { picker: "due" });
-    expect(spy.acknowledge).toHaveBeenCalledWith({
-      uri: request.uri,
-      base: 1234,
-    });
     expect(spy.press).not.toHaveBeenCalled();
   });
 
@@ -157,7 +148,6 @@ describe("the Snooze sheet", () => {
 
     expect(spy.press).not.toHaveBeenCalled();
     expect(spy.open).not.toHaveBeenCalled();
-    expect(spy.acknowledge).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Later" })).toBeNull();
   });
 });
