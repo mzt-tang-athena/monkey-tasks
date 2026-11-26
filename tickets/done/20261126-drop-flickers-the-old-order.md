@@ -3,7 +3,7 @@ title: A drop shows the new order without a flicker
 created: 2026-11-26
 priority: normal
 assignee: claude-lane-drop-flicker
-pr:
+pr: 244
 depends: []
 ---
 
@@ -31,4 +31,21 @@ to the old order for a moment, and snap to the new one.
 
 ## Outcome
 
-(filled in before moving to done/)
+The drop drew the old order for one frame on the 1.3.0 APK and in the
+web suite. The surface cleared its ghost and shifts before the caller's
+optimistic write reached React. The mutation waits a yield before it
+calls `onMutate`. TanStack told the query's subscribers on a timer.
+
+The caller's write now runs first. Cache notifications flush in a
+microtask. The write and the clear share one commit (ADR 0032 and
+20261126-a-drop-and-its-write-share-a-commit).
+
+The Board shares the surface and the fix. The new e2e samples every
+commit through a drop on a paused clock. It fails on the base in both
+projects for the lists, and in reduced motion for the board. Frames
+from the fixed APK show the preview then the new order, with motion on
+and off.
+
+One frame after the drop can still draw the moved row at its old
+offset. The UI thread applies the new style a frame later. That
+predates this change and is a separate fault in the ADR.
