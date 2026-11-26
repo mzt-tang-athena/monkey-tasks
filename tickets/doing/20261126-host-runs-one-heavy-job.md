@@ -3,7 +3,7 @@ title: The host runs one heavy job at a time
 created: 2026-11-26
 priority: high
 assignee: heavy-host lane
-pr:
+pr: 000
 depends: []
 ---
 
@@ -31,19 +31,25 @@ moves to CI, which is free for this public repo.
 
 ## Acceptance
 
-- [ ] A running emulator counts as heavy for as long as it runs, or
+- [x] A running emulator counts as heavy for as long as it runs, or
       stops when its journey ends.
-- [ ] A full gate holds the heavy lock for its whole run.
-- [ ] `CLEAN=1 android-build.sh` defaults `ARCHS` to `x86_64`.
+- [x] A full gate holds the heavy lock for its whole run.
+- [x] `CLEAN=1 android-build.sh` defaults `ARCHS` to `x86_64`.
       Only `scripts/release.sh` builds all four.
-- [ ] `scripts/gate.sh full` skips the web suite when CI runs e2e-web
+- [x] `scripts/gate.sh full` skips the web suite when CI runs e2e-web
       for the repo. `scripts/gate.sh full --web` still runs it.
-- [ ] The merge bar is the local gate receipt plus CI's e2e-web green
+- [x] The merge bar is the local gate receipt plus CI's e2e-web green
       on the same head. `AGENTS.md`, the README and the verify skill
       say so.
-- [ ] An ADR records the move to CI, its alternatives and its cost.
-- [ ] `test-heavy.sh` still passes.
+- [x] An ADR records the move to CI, its alternatives and its cost.
+- [x] `test-heavy.sh` still passes.
 
 ## Outcome
 
-(filled in before moving to done/)
+Landed in one PR. The emulator now stops itself after 300 s of no use,
+and every android script stamps use when it sources `android-env.sh`. A
+full gate runs in one capped heavy unit. It leaves the web suite to CI,
+which is free on this public repo. `CLEAN=1` builds pass
+`ARCHS=x86_64` unless told otherwise, and only `scripts/release.sh`
+builds all four types. ADR `20261126-ci-carries-the-web-suite` records
+the move and what it costs.

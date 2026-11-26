@@ -103,6 +103,19 @@ The repo-specific suppressions stay in `.vale.ini` (ADR 0044).
 `scripts/sync-vale-packages.sh` fetches it once per version, and
 `make lint` runs that script first.
 
+### The gate
+
+`scripts/gate.sh` runs the CI steps here and leaves a receipt keyed by
+HEAD in `~/.local/state/local-gate/`. It picks a mode from the changed
+paths, and `fast` covers prose only.
+
+A full gate runs in one capped unit on the heavy lock, so it takes turns
+with a lane's build. It leaves the web suite to CI, which runs e2e-web
+on every PR and costs nothing here. `scripts/gate.sh full --web` runs
+the suite here too, for when CI is down. The merge bar is the local
+receipt plus CI's e2e-web green on the same head
+(ADR `20261126-ci-carries-the-web-suite`).
+
 ## Install it on a phone
 
 The `android` workflow builds a sideloadable APK on a GitHub runner. A

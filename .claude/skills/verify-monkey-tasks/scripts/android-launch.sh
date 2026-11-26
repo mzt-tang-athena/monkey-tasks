@@ -79,6 +79,22 @@ until booted; do
 done
 lap "booted"
 
+# Start the watcher that stops this emulator once nobody uses it. It
+# outlives this unit with the emulator, because the unit ends before the
+# journeys do. A second launch on a live emulator keeps the first watcher.
+start_idle_watch() {
+  local watcher
+  watcher=$(state_get watcher)
+  if [[ -n "$watcher" ]] && kill -0 "$watcher" 2>/dev/null; then
+    lap "idle watcher $watcher is up"
+    return 0
+  fi
+  setsid "$SKILL_DIR/scripts/android-idle-watch.sh" >>"$LOGFILE" 2>&1 </dev/null &
+  state_set watcher "$!"
+  lap "idle watcher $! stops the emulator after ${IDLE_SECS}s of no use"
+}
+start_idle_watch
+
 adb root >/dev/null
 wait_device "${ANDROID_VERIFY_WAIT:-180}"
 until booted; do sleep 1; done
