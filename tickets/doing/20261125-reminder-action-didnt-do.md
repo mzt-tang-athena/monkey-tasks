@@ -2,7 +2,7 @@
 title: A reminder offers "didn't do"
 created: 2026-11-25
 priority: low
-assignee:
+assignee: claude-lane-didnt-do
 pr:
 depends: [20261125-reminder-actions-done-and-reschedule]
 ---
