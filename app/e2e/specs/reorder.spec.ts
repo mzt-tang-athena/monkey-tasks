@@ -308,7 +308,8 @@ test.describe("the drop", () => {
     expect(commitsThatWentBack(commits)).toEqual([]);
   });
 
-  test("a grip drop writes the new order to the notes", async ({ page }) => {    await openMyOrder(page);
+  test("a grip drop writes the new order to the notes", async ({ page }) => {
+    await openMyOrder(page);
     await holdDrag(
       page,
       page.getByTestId(`reorder-grip:${undated.second}`),
