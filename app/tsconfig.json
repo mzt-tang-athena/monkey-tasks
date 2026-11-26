@@ -5,5 +5,22 @@
     "paths": {
       "@/*": ["./src/*"]
     }
-  }
+  },
+  "include": [
+    "index.ts",
+    "eslint.config.js",
+    "vitest.config.mts",
+    "src",
+    "e2e",
+    "modules",
+    "scripts"
+  ],
+  "exclude": [
+    "node_modules",
+    "android",
+    "ios",
+    "modules/*/android",
+    "modules/*/ios",
+    "e2e/test-results"
+  ]
 }
