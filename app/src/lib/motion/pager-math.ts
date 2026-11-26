@@ -14,11 +14,22 @@ export function canGo(bounds: PageBounds, page: number): boolean {
   );
 }
 
+/** The drag that reaches the next page or the next tab. A pager turns
+    on a leftward one, because its track follows the finger. The bar's
+    selection turns on a rightward one, because it moves with it. */
+export type NextTurn = "left" | "right";
+
 /** How far the track moves for a finger travel of `dx`. Toward a page
     it follows the finger. Past a closed end it stretches a little. */
-export function follow(dx: number, bounds: PageBounds, page: number): number {
+export function follow(
+  dx: number,
+  bounds: PageBounds,
+  page: number,
+  next: NextTurn,
+): number {
   "worklet";
-  const toward = page + (dx < 0 ? 1 : -1);
+  const forward = next === "left" ? dx < 0 : dx > 0;
+  const toward = page + (forward ? 1 : -1);
   if (dx === 0 || canGo(bounds, toward)) {
     return dx;
   }

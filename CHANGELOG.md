@@ -21,6 +21,7 @@ fails a bullet that wraps or runs past 64 characters.
 - Settings can add or remove the Today list.
 - Capture on Today dates the task today.
 - The Inbox tab drops its title and keeps the note count.
+- Swipe right on Add for the next tab, left for the previous.
 
 ### Board
 

@@ -320,3 +320,32 @@ are 270 by 600, a quarter of the screen:
 - The release smoke passes, the new step included.
 - Frames:
   `~/code/monkey-tasks/worktrees/evidence-add-button-swipes/runs/`.
+
+## Amendment, 2026-11-26: a rightward swipe moves on
+
+The operator used 1.3.0 on the phone. The sideways swipe on the Add
+button ran the wrong way, they said, though it worked. The 2026-11-24
+design read the swipe as a pager does. A pager's track follows the
+finger, so a leftward drag turns to the next page. The bar has no
+track. The selection is what moves, and it moves with the finger.
+
+- A rightward swipe goes to the next tab.
+- A leftward swipe goes to the previous tab.
+- The ends hold, and no swipe wraps.
+- The button barely moves past a closed end.
+
+`swipeNudge` asks `follow` with the finger's travel reversed. `follow`
+reads the pager's question, so the rubber band sits at the end the drag
+cannot reach. The button still moves the finger's way, up to 12pt, and
+reduce holds it still.
+
+The arrow keys already read Right as the next tab and Left as the
+previous one. The finger now agrees with them.
+
+The pager keeps its mapping. A leftward drag still turns to the next
+page on the Lists, the planner and the command pane. A page's track
+follows the finger there.
+
+Proof: `swipe-press.test.ts` and `add-button.spec.ts` cover both ends
+of the bar in both motion projects. An emulator run shows a right swipe
+on Add landing Planner from Lists.

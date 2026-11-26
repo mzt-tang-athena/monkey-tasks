@@ -23,28 +23,38 @@ describe("swipeAction", () => {
     ).toBe("commands");
   });
 
-  it("moves one tab either way", () => {
-    expect(swipeAction({ dx: -30, dy: 4, ...rest, at: 1, bounds: tabs })).toBe("next");
-    expect(swipeAction({ dx: 30, dy: 4, ...rest, at: 1, bounds: tabs })).toBe("previous");
+  it("steps the tab the finger's way", () => {
+    expect(swipeAction({ dx: 30, dy: 4, ...rest, at: 1, bounds: tabs })).toBe("next");
+    expect(swipeAction({ dx: -30, dy: 4, ...rest, at: 1, bounds: tabs })).toBe("previous");
   });
 
   it("takes a flick under the commit", () => {
     expect(
-      swipeAction({ dx: -24, dy: 0, vx: -600, vy: 0, at: 1, bounds: tabs }),
+      swipeAction({ dx: 24, dy: 0, vx: 600, vy: 0, at: 1, bounds: tabs }),
     ).toBe("next");
     expect(
-      swipeAction({ dx: 24, dy: 0, vx: 600, vy: 0, at: 1, bounds: tabs }),
+      swipeAction({ dx: -24, dy: 0, vx: -600, vy: 0, at: 1, bounds: tabs }),
     ).toBe("previous");
   });
 
   it("reads the longer travel on a diagonal", () => {
-    expect(swipeAction({ dx: -60, dy: 20, ...rest, at: 1, bounds: tabs })).toBe("next");
+    expect(swipeAction({ dx: 60, dy: 20, ...rest, at: 1, bounds: tabs })).toBe("next");
     expect(swipeAction({ dx: 20, dy: 60, ...rest, at: 1, bounds: tabs })).toBe("commands");
   });
 
   it("stops at either end without a press", () => {
-    expect(swipeAction({ dx: 120, dy: 0, ...rest, at: 0, bounds: tabs })).toBe("none");
-    expect(swipeAction({ dx: -120, dy: 0, ...rest, at: 3, bounds: tabs })).toBe("none");
+    expect(swipeAction({ dx: -120, dy: 0, ...rest, at: 0, bounds: tabs })).toBe("none");
+    expect(swipeAction({ dx: 120, dy: 0, ...rest, at: 3, bounds: tabs })).toBe("none");
+    expect(
+      swipeAction({ dx: 120, dy: 0, vx: 600, vy: 0, at: 3, bounds: tabs }),
+    ).toBe("none");
+  });
+
+  it("still moves away from an end", () => {
+    expect(swipeAction({ dx: 120, dy: 0, ...rest, at: 0, bounds: tabs })).toBe("next");
+    expect(swipeAction({ dx: -120, dy: 0, ...rest, at: 3, bounds: tabs })).toBe(
+      "previous",
+    );
   });
 
   it("does nothing on a committed swipe up", () => {
@@ -76,8 +86,12 @@ describe("swipeNudge", () => {
   });
 
   it("scarcely moves toward a closed end", () => {
-    const free = swipeNudge({ dx: -40, dy: 0, at: 1, bounds: tabs });
-    const closed = swipeNudge({ dx: -40, dy: 0, at: 3, bounds: tabs });
-    expect(Math.abs(closed.x)).toBeLessThan(Math.abs(free.x));
+    const free = swipeNudge({ dx: 40, dy: 0, at: 1, bounds: tabs });
+    expect(Math.abs(swipeNudge({ dx: 40, dy: 0, at: 3, bounds: tabs }).x)).toBeLessThan(
+      Math.abs(free.x),
+    );
+    expect(Math.abs(swipeNudge({ dx: -40, dy: 0, at: 0, bounds: tabs }).x)).toBeLessThan(
+      Math.abs(free.x),
+    );
   });
 });

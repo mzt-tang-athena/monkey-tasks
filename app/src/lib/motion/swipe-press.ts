@@ -10,9 +10,10 @@ export type SwipeAction = "commands" | "next" | "previous" | "press" | "none";
 
 /**
  * The action a release asks for. A swipe down opens the commands. A
- * sideways swipe moves one tab, and it stops at the ends, as a pager
- * does. A gesture that stays under the commit is the button's own
- * press, so a tap that moved a little still acts.
+ * rightward swipe goes to the next tab, as sliding the selection along
+ * the bar would, and a leftward one to the previous tab. The ends hold.
+ * A gesture that stays under the commit is the button's own press, so a
+ * tap that moved a little still acts.
  *
  * The commit is the button's own, a third of the pager's, because the
  * button is 44 points tall at the window's edge: a finger there has
@@ -41,9 +42,9 @@ export function swipeAction({
   const commit = motion.addButton.commit;
   const flick = motion.swipe.flick;
   if (Math.abs(dx) > Math.abs(dy)) {
-    const step = dx < 0 ? 1 : -1;
+    const step = dx > 0 ? 1 : -1;
     const past = Math.abs(dx) >= commit;
-    const flung = Math.abs(vx) >= flick && (vx < 0 ? 1 : -1) === step;
+    const flung = Math.abs(vx) >= flick && (vx > 0 ? 1 : -1) === step;
     if (!past && !flung) {
       return "press";
     }
@@ -77,7 +78,7 @@ export function swipeNudge({
   bounds: PageBounds;
 }): { x: number; y: number } {
   "worklet";
-  const share = follow(dx, bounds, at) * motion.addButton.share;
+  const share = follow(dx, bounds, at, "right") * motion.addButton.share;
   const x = Math.min(Math.max(share, -motion.addButton.nudge), motion.addButton.nudge);
   const down = Math.min(Math.max(dy, 0) * motion.addButton.share, motion.addButton.nudge);
   return { x, y: down };
