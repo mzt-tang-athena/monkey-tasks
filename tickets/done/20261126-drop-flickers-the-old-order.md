@@ -24,10 +24,10 @@ to the old order for a moment, and snap to the new one.
 
 ## Acceptance
 
-- [ ] Frames show the flash before the fix.
-- [ ] The report names the render that drew the old order.
-- [ ] Frames show no old-order frame after the fix.
-- [ ] A test fails when the old order draws after a drop.
+- [x] Frames show the flash before the fix.
+- [x] The report names the render that drew the old order.
+- [x] Frames show no old-order frame after the fix.
+- [x] A test fails when the old order draws after a drop.
 
 ## Outcome
 
