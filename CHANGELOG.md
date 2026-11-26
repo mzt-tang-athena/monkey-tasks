@@ -66,6 +66,7 @@ fails a bullet that wraps or runs past 64 characters.
 
 - Done in the reference picker leaves the keyboard up.
 - TalkBack hears the theme and week start you picked.
+- A dropped row lands without a flash of the old order.
 
 ## 1.3.0 - 2026-11-25
 

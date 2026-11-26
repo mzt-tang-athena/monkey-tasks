@@ -82,6 +82,9 @@ sha_file="$apk.sha256"
 archive="${RELEASE_ARCHIVE:-$HOME/code/monkey-tasks/archive/release-$version}"
 smoke_log="$archive/smoke.log"
 built_apk="$root/app/android/app/build/outputs/apk/release/app-release.apk"
+# The phone and the emulator need different native libraries. A proof
+# build compiles one type; a release ships all four.
+RELEASE_ARCHS="armeabi-v7a,arm64-v8a,x86,x86_64"
 
 remote="$(git remote get-url origin 2>/dev/null || true)"
 case "$remote" in
@@ -104,7 +107,7 @@ else
 fi
 printf '  1/8 gate     the full gate receipt for %s\n' "$head"
 printf '  2/8 tag      git tag -a %s -m "monkey-tasks %s"\n' "$tag" "$version"
-printf '  3/8 build    CLEAN=1 .claude/skills/verify-monkey-tasks/scripts/android-build.sh %s\n' "$root"
+printf '  3/8 build    CLEAN=1 ARCHS=%s .claude/skills/verify-monkey-tasks/scripts/android-build.sh %s\n' "$RELEASE_ARCHS" "$root"
 printf '  4/8 copy     %s and its .sha256 into %s\n' "$apk" "$archive"
 printf '  5/8 smoke    .claude/skills/verify-monkey-tasks/scripts/android-release-smoke.sh %s\n' "$archive/$apk"
 printf '  6/8 notes    cut ## %s from %s into %s\n' "$version" "$tag" "$archive/release-notes.md"
@@ -222,7 +225,8 @@ else
 fi
 
 say "3/8 build: a clean release build for every CPU type"
-CLEAN=1 .claude/skills/verify-monkey-tasks/scripts/android-build.sh "$root"
+CLEAN=1 ARCHS="$RELEASE_ARCHS" \
+    .claude/skills/verify-monkey-tasks/scripts/android-build.sh "$root"
 [ -f "$built_apk" ] || die "the build left no APK at $built_apk"
 
 say "4/8 copy: $apk and its checksum into $archive"

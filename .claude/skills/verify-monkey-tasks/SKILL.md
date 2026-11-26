@@ -149,6 +149,8 @@ caller's process tree gets a printed line and the job runs in place.
 - `android-build.sh <checkout>`: the full release build.
 - `android-release-smoke.sh <apk>`: the release smoke on the emulator.
 - `heavy-emulator.sh <script> [args]`: any emulator script.
+- `scripts/gate.sh full`: the repo's gate. Its tsc, eslint and vitest
+  peak at 2.2 GB with no cap, so the whole run takes one slot.
 
 Each starts itself in its own unit, capped at 8G, and queues on
 `/tmp/monkey-tasks-heavy.lock`. A plain run waits and exits with the
@@ -164,6 +166,14 @@ $S/heavy-emulator.sh $S/android-launch.sh
 `heavy-emulator.sh` takes the heavy lock, then the emulator lock, and
 leaves the emulator running for the next pass. `MONKEY_HEAVY_LOCK=1`
 means you hold the lock, so a job runs in place and nothing nests.
+
+The emulator does not hold the lock after its unit ends. It stops
+itself instead. `android-launch.sh` starts `android-idle-watch.sh`,
+which stops it after `ANDROID_VERIFY_IDLE` seconds (300) with no use.
+Every android script stamps use when it sources `android-env.sh`. A
+script that is still running keeps the emulator up too, so a journey
+never loses it. A leftover emulator cost 2911 MB for 90 minutes on
+2026-11-26.
 
 Logs land in `$MONKEY_LOG_DIR`, default `/tmp/monkey-tasks`.
 
@@ -220,6 +230,12 @@ worktree with `scripts/worktree-setup.sh`. Run `scripts/gate.sh`
 before the PR. Lanes wait on the heavy lock, so every slot one takes
 delays the rest.
 
+A full gate leaves the web suite to CI. CI runs e2e-web on every PR,
+and it costs nothing in a public repo. The merge bar is the local
+receipt plus CI's e2e-web green on the same head
+(ADR `20261126-ci-carries-the-web-suite`). Run `scripts/gate.sh full
+--web` when CI is down or the change touches the web build.
+
 Speed tips for this repo:
 
 - `.worktree.env` holds this worktree's `VERIFY_PORT`. Source it, or
@@ -254,12 +270,13 @@ JavaScript over a base APK's native layer. `full` means a real build.
 A swap proves JavaScript, not native code. The cache holds one APK per
 fingerprint, so delete folders under it by hand when the disk fills.
 
-A proof build targets only the emulator's x86_64, so it does not
-install on the phone. Set `ARCHS` to build more.
+Every build targets only the emulator's x86_64, so it does not install
+on the phone. `CLEAN=1` included: the flag changes where the build runs,
+not which CPU types it compiles. Set `ARCHS` to build more.
 
-Never ship a swapped APK. A release builds with `android-build.sh`
-and `CLEAN=1`, for every CPU type. A tagged commit forces the full
-path here. ADR
+Never ship a swapped APK. `scripts/release.sh` runs the build with
+`CLEAN=1` and `ARCHS=armeabi-v7a,arm64-v8a,x86,x86_64`, the only place
+that builds all four. A tagged commit forces the full path here. ADR
 `20261118-fast-android-proof` records the limits.
 
 The `android` workflow also builds a release APK from a branch in 19 to
@@ -534,6 +551,8 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 - `android-release-smoke.sh <apk>` runs the release smoke in its own capped unit.
 - `web-suite.sh <checkout> <tag> <port>` runs the full web suite in its own capped unit.
 - `heavy-emulator.sh <script> [args]` runs an emulator script under both locks.
+- `android-idle-watch.sh` stops an emulator that nothing has used for
+  `ANDROID_VERIFY_IDLE` seconds.
 - `heavy.sh` is the prelude the scripts above source.
 - `android-launch.sh [apk]` boots, installs, seeds, grants and waits.
 - `android-doctor.sh [--host]` is the read-only check.

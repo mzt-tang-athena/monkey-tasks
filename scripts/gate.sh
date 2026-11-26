@@ -6,15 +6,20 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF'
-usage: scripts/gate.sh [fast|full] [--sha <sha>] [--no-status]
+usage: scripts/gate.sh [fast|full] [--web] [--sha <sha>] [--no-status]
 
   fast        run make lint
   full        run make ci, else make lint then make check
+  --web       run the web suite here too, even where CI runs it
   --sha       require this commit to be HEAD with a clean tree
   --no-status skip the local-gate commit status
 
 With no mode, the changed paths against origin/main pick one. Prose only
 means fast. Anything else means full.
+
+A full gate runs in the repo's heavy unit, so one heavy job runs at a
+time. It leaves the web suite to CI when this repo's workflow runs
+e2e-web and the repo is public, because those minutes cost nothing.
 EOF
 }
 
@@ -41,14 +46,30 @@ has_target() {
     make -n "$1" >/dev/null 2>&1
 }
 
+# The web suite rides CI where that costs nothing: a public repo whose
+# workflow runs e2e-web. Any doubt runs it here, and --web forces it.
+ci_carries_web() {
+    local workflow="$root/.github/workflows/ci.yml"
+    [ -n "$slug" ] || return 1
+    [ -f "$workflow" ] || return 1
+    grep -qE '^  e2e-web:' "$workflow" || return 1
+    command -v gh >/dev/null 2>&1 || return 1
+    [ "$(gh api "repos/$slug" --jq .private 2>/dev/null)" = false ] || return 1
+}
+
 mode=""
 requested_sha=""
 post_status=true
+web_requested=false
+gate_args=("$@")
 
 while [ $# -gt 0 ]; do
     case "$1" in
         fast|full)
             mode=$1
+            ;;
+        --web)
+            web_requested=true
             ;;
         --sha)
             [ $# -ge 2 ] || { usage >&2; exit 2; }
@@ -117,6 +138,7 @@ if [ -z "$mode" ]; then
 fi
 
 steps=()
+web=false
 if [ "$mode" = fast ]; then
     if has_target lint; then steps+=("make lint"); fi
 else
@@ -126,6 +148,20 @@ else
         if has_target lint; then steps+=("make lint"); fi
         if has_target check; then steps+=("make check"); fi
     fi
+    if $web_requested || ! ci_carries_web; then web=true; fi
+    if $web && has_target web-suite; then
+        steps+=("make web-suite")
+    elif ! $web; then
+        printf 'local-gate: CI runs the web suite for %s; pass --web to run it here\n' "$slug"
+    fi
+fi
+
+# A full gate is one heavy job. It runs in the repo's capped unit, so a
+# lane's build and a lane's gate take turns instead of sharing the box.
+# A repo without the prelude, and a caller that holds the lock, run here.
+heavy_prelude="$root/.claude/skills/verify-monkey-tasks/scripts/heavy.sh"
+if [ "$mode" = full ] && [ -f "$heavy_prelude" ]; then
+    . "$heavy_prelude" gate "${gate_args[@]+"${gate_args[@]}"}"
 fi
 
 started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -172,9 +208,11 @@ final_mode=$mode
 final_result=$result
 prev_mode=""
 prev_dirty=true
+prev_web=false
 if [ -f "$receipt" ]; then
     prev_mode="$(jq -r '.mode // empty' "$receipt" 2>/dev/null || true)"
     prev_dirty="$(jq -r 'if .dirty == false then "false" else "true" end' "$receipt" 2>/dev/null || printf true)"
+    prev_web="$(jq -r 'if .web == true then "true" else "false" end' "$receipt" 2>/dev/null || printf false)"
 fi
 
 keep=false
@@ -186,6 +224,10 @@ if [ -n "$prev_mode" ]; then
     elif [ "$prev_dirty" = "$dirty" ] && [ "$(rank "$prev_mode")" -gt "$(rank "$mode")" ]; then
         keep=true
         keep_why="higher mode wins"
+    elif [ "$prev_dirty" = "$dirty" ] && [ "$(rank "$prev_mode")" -eq "$(rank "$mode")" ] &&
+        [ "$prev_web" = true ] && ! $web; then
+        keep=true
+        keep_why="the web suite ran on this tree"
     fi
 fi
 
@@ -208,13 +250,14 @@ else
         --arg sha "$head" \
         --arg mode "$mode" \
         --argjson dirty "$dirty" \
+        --argjson web "$web" \
         --arg started_at "$started_at" \
         --argjson duration_s "$duration_s" \
         --argjson changed_files "$changed_json" \
         --argjson steps "$steps_json" \
         --arg result "$result" \
         '{repo: $repo, sha: $sha, mode: $mode, dirty: $dirty,
-          started_at: $started_at, duration_s: $duration_s,
+          web: $web, started_at: $started_at, duration_s: $duration_s,
           changed_files: $changed_files, steps: $steps,
           result: $result}' > "$tmp"
     mv -f "$tmp" "$receipt"

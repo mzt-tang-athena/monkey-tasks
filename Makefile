@@ -7,9 +7,11 @@ include template.mk
 # markdown the branch changed, so the run stays quick.
 lint: check-docs check-changelog check-changelog-entry
 
-# What scripts/gate.sh runs for code: the ci job's steps, then the web
-# suite. The suite takes the heavy lock itself.
-ci: typecheck eslint vitest lint test-pre-commit test-release test-heavy web-suite
+# What scripts/gate.sh runs for code: the ci job's steps. The web suite
+# rides CI, which runs e2e-web for free on this public repo, so a PR's
+# gate leaves it out. `scripts/gate.sh full --web` runs it here, and a
+# lane still needs it when CI is down.
+ci: typecheck eslint vitest lint test-pre-commit test-release test-heavy
 
 typecheck:
 	cd app && npx tsc --noEmit
