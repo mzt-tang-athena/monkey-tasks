@@ -12,20 +12,27 @@
 # and the app log.
 set -euo pipefail
 drive="$(dirname "$0")/../scripts/android-drive.sh"
-task="Plan weekend hike"
+task="Call Mum"
 completed() { grep -q '^completed:' "$run/note-$1.md"; }
+# The app opens on Today. Book train tickets home has no date, so only
+# Main shows it.
+open_main() {
+  "$drive" tap Main >/dev/null
+  "$drive" wait "task-row:Book train tickets home" 20 >/dev/null
+}
 
 run=$("$drive" new-run)
 for motion in on off; do
   "$drive" motion "$motion" >/dev/null
-  read -r x y _ < <("$drive" bounds "~TODAY")
+  open_main
+  read -r x y _ < <("$drive" bounds "repair-notice")
   "$drive" shot "swipe-motion-$motion-before" >/dev/null
   "$drive" frames "swipe-motion-$motion" 1 swipe "@$x,$y" -600 0 300 >/dev/null
   "$drive" wait "Nothing on this list yet." 10
   "$drive" shot "swipe-motion-$motion-after" >/dev/null
 done
 "$drive" motion on >/dev/null
-# The restart lands on Main with no row yet; wait before reading one.
+open_main
 "$drive" wait "task-row:$task" 20 >/dev/null
 
 "$drive" note "Tasks/$task.md" before >/dev/null
@@ -36,6 +43,9 @@ fi
 read -r x y _ < <("$drive" bounds "task-row:$task>>$task")
 "$drive" shot tick-before >/dev/null
 "$drive" record tick 4 tap "@$x,$y" >/dev/null
+# Completed folds on every start, so the ticked row hides under its header.
+"$drive" scroll-to "~Completed" >/dev/null
+"$drive" tap "~Completed" >/dev/null
 "$drive" scroll-to "task-row:$task>>$task" >/dev/null
 "$drive" shot tick-after >/dev/null
 "$drive" note "Tasks/$task.md" ticked >/dev/null

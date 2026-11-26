@@ -37,8 +37,8 @@ Native-only check. Run it after `scripts/android-launch.sh <apk>`:
 .claude/skills/verify-monkey-tasks/journeys/android-list-swipe.sh
 ```
 
-- **Switch list, motion on and off.** It reads the `~TODAY` header's center, then swipes 600 px left in 300 ms inside `frames`. `Nothing on this list yet.` must show. With motion on, `swipe-motion-on-frames/sheet.png` shows Main sliding out and Errands sliding in over more than one frame. With `motion off` the grid jumps from Main to Errands with no frame between.
-- **Tick.** It taps `task-row:Plan weekend hike>>mark done`, records it to `tick.mp4`, scrolls to the row under Completed and reads the note. `note-ticked.md` must hold `completed:`.
+- **Switch list, motion on and off.** It opens Main (the app starts on Today), reads the `repair-notice` center, then swipes 600 px left in 300 ms inside `frames`. `Nothing on this list yet.` must show. With motion on, `swipe-motion-on-frames/sheet.png` shows Main sliding out and Errands sliding in over more than one frame. With `motion off` the grid jumps from Main to Errands with no frame between.
+- **Tick.** It taps `task-row:Call Mum>>mark done`, records it to `tick.mp4`, opens the folded Completed header, scrolls to the row and reads the note. `note-ticked.md` must hold `completed:`.
 - **Untick round trip.** It taps `mark not done`, scrolls back up, and compares `note-unticked.md` with `note-before.md` byte for byte.
 - **Proof.** The run folder holds the shots, both grids, the notes and `app.log`.
 
