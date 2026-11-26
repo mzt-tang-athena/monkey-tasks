@@ -72,6 +72,11 @@ motion, gestures and the vault grant, which the preview cannot show. It needs th
 Android SDK in `~/Android/Sdk` and KVM. Its Android section has the
 steps, and it says what still needs the phone.
 
+The skill's `android-coldstart.sh` times a cold start. It runs the
+installed APK N times and prints one table. The table holds the first
+frame, the vault read and the first rows. A build made with
+`EXPO_PUBLIC_STARTUP_MARKS=1` logs the stages. A release APK logs none.
+
 Run the schema tests from `contracts/packages/schemas`:
 
 ```bash

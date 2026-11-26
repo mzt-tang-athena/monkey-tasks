@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { VaultAdapter } from "./adapter";
 import { defaultAdapter } from "./default-adapter";
+import { markOnce } from "@/lib/startup-marks";
 
 /**
  * Which vault the app talks to, and the root the user granted in it
@@ -42,6 +43,7 @@ export function VaultProvider({
       } catch {
         saved = null;
       }
+      markOnce("root-read");
       if (live) {
         setRoot(saved);
         setBooted(true);

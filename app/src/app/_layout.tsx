@@ -27,6 +27,7 @@ import { acknowledgeRing } from "@/stores/tasks/reminder-sync";
 import { performAlertPress, pressOf } from "@/stores/tasks/alert-actions";
 import { TASKS_KEY } from "@/stores/tasks/query";
 import { defaultAdapter } from "@/lib/vault/default-adapter";
+import { markOnce } from "@/lib/startup-marks";
 
 // Before anything renders: a release build closes on the first
 // uncaught error, and a closed app cannot report what broke.
@@ -67,6 +68,7 @@ function useAlertResponses(queryClient: QueryClient): void {
 }
 
 export default function RootLayout() {
+  markOnce("root-render");
   // One client per app instance. Building it during render would throw the
   // cache away on every render, and every mounted query would refetch.
   const [queryClient] = useState(() => makeQueryClient());

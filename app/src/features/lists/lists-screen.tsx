@@ -1,5 +1,11 @@
 import * as React from "react";
-import { SectionList, StyleSheet, View, useWindowDimensions } from "react-native";
+import {
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TaskItem } from "@/types/task";
 import { BottomBar } from "@/components/bottom-bar/bottom-bar";
@@ -18,14 +24,23 @@ import { VaultPrompt } from "@/components/ui/vault-prompt";
 import { useStableCallback } from "@/hooks/use-stable-callback";
 import { useTaskEditor } from "@/hooks/use-task-editor";
 import { recordBreadcrumb } from "@/lib/breadcrumbs";
+import { markOnce } from "@/lib/startup-marks";
 import { toggleCompleted, useCompletedOpen } from "@/lib/folded-completed";
-import { BOARD_LIST, TODAY_LIST } from "@/lib/list-tabs";
+import { BOARD_LIST, MAIN_LIST, TODAY_LIST } from "@/lib/list-tabs";
 import { useStoreMeta } from "@/stores/tasks/task-state";
+import { writeCachedRows } from "@/stores/tasks/row-cache";
+import { useTabTasks } from "@/stores/tasks/selectors";
 import { useClearCompleted } from "@/stores/tasks/mutations/use-clear-completed";
 import { useReorderSection } from "@/stores/tasks/mutations/use-reorder-section";
 import { useToggleTask } from "@/stores/tasks/mutations/use-toggle-task";
 import { useGrantFolder, useRefreshTasks } from "@/stores/tasks/use-vault-read";
-import { measure, pageGutter, spacing, type Palette } from "@/theme/tokens";
+import {
+  measure,
+  pageGutter,
+  spacing,
+  type,
+  type Palette,
+} from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { todayIso } from "@/utils/dates";
 import { ListPagePreview } from "./components/list-page-preview";
@@ -54,7 +69,24 @@ import type { ReorderEvent } from "@/components/motion/reorder";
 export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const { styles } = useThemedStyles(makeStyles);
   const editor = useTaskEditor();
-  const { rootUri, status, readError } = useStoreMeta();
+  const {
+    rootUri,
+    status,
+    readError,
+    stale,
+    cachedTab,
+    tasksDir,
+    listNotes,
+    brokenLists,
+  } = useStoreMeta();
+  markOnce("lists-render");
+  // The vault's rows, not the cached frame's: a cold start that draws
+  // the cache marks `rows-visible` first and this when the read lands.
+  React.useEffect(() => {
+    if (status === "ready" && !stale) {
+      markOnce("rows-ready");
+    }
+  }, [status, stale]);
   const toggleTask = useToggleTask();
   const clearCompleted = useClearCompleted();
   const reorderSection = useReorderSection();
@@ -72,6 +104,57 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
   const { sortMode, setSortMode } = useSortMode();
   const { shown, repairs, sections, onlyCompleted, completed, draggable } =
     useListSections(tab, sortMode);
+  // The first frame that draws rows, from the cache or the read. The
+  // cold start harness times this (ticket 20261124-faster-cold-start).
+  React.useEffect(() => {
+    if (shown.length > 0) {
+      markOnce("rows-visible");
+    }
+  }, [shown]);
+
+  // While the cached rows stand in for the read, they may already be
+  // wrong: a note changed, added or deleted while the app sat closed.
+  // They draw dimmed and take no press, tick or drag until the read
+  // lands and replaces them (ADR 20261126-a-cached-first-frame).
+  const inert = stale;
+  // The cache holds one tab's rows. A start that opens another tab, or
+  // a switch before the read lands, waits for the read instead of
+  // drawing these rows under the wrong tab.
+  const showingCache = stale && cachedTab === tab;
+
+  // Keep the tab a cold start opens on for the next start: only that
+  // tab's rows, so the cache holds what the first frame draws. The
+  // Board is left out, because its rows drag
+  // (ADR 20261126-a-cached-first-frame).
+  const launchTab = tabState.tabs[0];
+  const launchRows = useTabTasks(
+    launchTab === BOARD_LIST || launchTab == null ? MAIN_LIST : launchTab,
+  );
+  React.useEffect(() => {
+    if (status !== "ready" || stale || rootUri == null) {
+      return;
+    }
+    if (launchTab == null || launchTab === BOARD_LIST || launchRows.length === 0) {
+      return;
+    }
+    writeCachedRows({
+      root: rootUri,
+      tasksDir,
+      tab: launchTab,
+      tasks: launchRows,
+      lists: listNotes,
+      brokenLists,
+    });
+  }, [
+    status,
+    stale,
+    rootUri,
+    tasksDir,
+    launchTab,
+    launchRows,
+    listNotes,
+    brokenLists,
+  ]);
 
   const tickHold = useTickHold(toggleTask);
   const held = React.useMemo(
@@ -139,6 +222,8 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
     recordBreadcrumb("tick", task.data?.title ?? task.name);
     tickHold.toggle(task, held);
   });
+  const noToggle = React.useCallback(() => undefined, []);
+  const noOpen = React.useCallback(() => undefined, []);
   // A row body press opens the task editor sheet over this list.
   const onOpen = useStableCallback((task: TaskItem) => {
     recordBreadcrumb("open", task.data?.title ?? task.name);
@@ -182,14 +267,14 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           section={section.key}
           index={at}
           count={section.data.length}
-          canDrag={draggable && !faint}
-          onToggle={onToggle}
-          onOpen={onOpen}
+          canDrag={!inert && draggable && !faint}
+          onToggle={inert ? noToggle : onToggle}
+          onOpen={inert ? noOpen : onOpen}
           onTickSettled={tickHold.settle}
         />
       );
     },
-    [draggable, onToggle, onOpen, tickHold.settle],
+    [draggable, onToggle, onOpen, tickHold.settle, inert, noToggle, noOpen],
   );
 
   const previewHeight = pagerHeight > 0 ? pagerHeight : window.height;
@@ -213,16 +298,22 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
           sortMode={sortMode}
           onSortMode={setSortMode}
           sortable={tab !== TODAY_LIST}
-          completed={completed}
+          completed={inert ? [] : completed}
           onClearCompleted={clearCompleted}
         />
         {/* A failed tick or field write leaves the list usable, so each
             one is a quiet banner over it, not the error state. */}
         {status !== "error" ? <FailureBanner /> : null}
+        {/* Last session's rows are on screen while the vault reads. The
+            line says so, and the rows below stay untappable. */}
+        {stale ? (
+          <Text style={styles.syncing} role="status">
+            Syncing your vault</Text>
+        ) : null}
         {/* A row's pan owns the finger once its hold activates. A
             resting row leaves the pager on, so a swipe still pages. */}
         <View
-          style={styles.pageHost}
+          style={[styles.pageHost, inert && styles.dim]}
           onLayout={(e) => setPagerHeight(e.nativeEvent.layout.height)}
         >
           <ListReorder.Root
@@ -253,14 +344,17 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                     itself stays mounted (ticket 0087). The Board is its
                     own list of deeds, so it takes the page whole. */}
                 {tab === BOARD_LIST ? (
-                  <BoardPage sortMode={sortMode} onOpen={onOpen} />
+                  <BoardPage
+                    sortMode={sortMode}
+                    onOpen={inert ? noOpen : onOpen}
+                  />
                 ) : (
                   <SectionList<TaskItem, ListsSection>
                     key={tab}
                     contentContainerStyle={styles.content}
                     onRefresh={reload}
                     refreshing={refreshing}
-                    sections={folded}
+                    sections={inert && !showingCache ? [] : folded}
                     keyExtractor={keyExtractor}
                     renderItem={renderItem}
                     renderSectionHeader={renderSectionHeader}
@@ -274,7 +368,9 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
                       </>
                     }
                     ListEmptyComponent={
-                      status === "loading" ? (
+                      inert ? (
+                        <LoadingState />
+                      ) : status === "loading" ? (
                         <LoadingState />
                       ) : status === "error" ? (
                         <ErrorState
@@ -344,6 +440,16 @@ const makeStyles = (colors: Palette) => ({
     // The pager's slot: the page below the toolbar and the banners.
     pageHost: {
       flex: 1,
+    },
+    // Cached rows read as waiting, not as the vault's answer.
+    dim: {
+      opacity: 0.55,
+    },
+    syncing: {
+      ...type.caption,
+      color: colors.inkMuted,
+      textAlign: "center",
+      paddingVertical: spacing.xs,
     },
     page: {
       flex: 1,
