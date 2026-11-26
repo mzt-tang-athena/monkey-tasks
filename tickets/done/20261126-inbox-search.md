@@ -3,7 +3,7 @@ title: Search the Inbox from its header
 created: 2026-11-26
 priority: normal
 assignee: lane-inbox-view-search
-pr:
+pr: 250
 depends: []
 ---
 
@@ -22,11 +22,17 @@ header, the way Google Keep does.
 
 ## Acceptance
 
-- [ ] The header holds a search bar.
-- [ ] Typing filters the cards by title and body.
-- [ ] Clearing the search restores every card.
-- [ ] Emulator frames with and without a search.
+- [x] The header holds a search bar.
+- [x] Typing filters the cards by title and body.
+- [x] Clearing the search restores every card.
+- [x] Emulator frames with and without a search.
 
 ## Outcome
 
-(filled in before moving to done/)
+The Inbox header holds a search bar. It filters the cards as you type.
+Every word must appear in the title or the whole body, in any case. A
+clear button and an emptied field both restore every card. The count
+line stays under the bar and reads "1 of 7 notes" while searching. The
+three header designs are in `evidence-inbox-view-search/frames/`. Proof:
+web spec in both motion modes, and emulator frames of a search in each
+view. The screen tree names the field "search notes".
