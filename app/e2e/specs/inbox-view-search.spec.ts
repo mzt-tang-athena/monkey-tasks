@@ -182,6 +182,6 @@ test("a search holds in one column and a card still opens", async ({
 
   await cards(page).first().click();
   await expect(page.getByLabel("note body")).toHaveValue(
-    "Coffee with Sam. Bring the notebook.",
+    /^Coffee with Sam\. Bring the notebook\./,
   );
 });

@@ -501,15 +501,19 @@ stays out of the Lists failure banner.
 
 ### Inbox Notes
 
-`features/inbox-notes` shows the notes in `Inbox/` as a two-column card
-grid, newest first. It reads no task state and does not use the task
-store. The tab's action is the note composer.
+`features/inbox-notes` shows the notes in `Inbox/` as a card grid, newest
+first, in one column or two. It reads no task state and does not use the
+task store. The tab's action is the note composer. The header is a
+search bar with the view button inside it, and the note count under it.
+The search filters by title and body as you type. The view choice is the
+`inboxColumns` setting, so it survives a restart. A search does not.
 
 | Piece | Holds |
 |---|---|
 | `inbox-notes-screen.tsx` | The read, the grid, the header and the bottom bar's action slot. |
 | `note-editor-screen.tsx` | The body-only editor and its conflict notice. |
-| `components/note-card.tsx` | One card: the name as the title and the body as the preview. |
+| `components/inbox-header.tsx` | The search bar, the view button and the count line. |
+| `components/note-card.tsx` | One card: the name as the title and the body as the preview. A one-column card shows more of the body. |
 | `components/note-dock.tsx` | The Add button, the note sheet and the failure toast. |
 | `components/note-form.tsx` | The body field, the optional title and the send control. |
 | `hooks/use-note-sheet.ts` | The sheet's clock, the draft and the failure toast. |
@@ -518,7 +522,8 @@ store. The tab's action is the note composer.
 functions. A bare `YYYYMMDDHHmm` name shows as a local date and time.
 Every other name shows exactly as written, so a slug or a sentence
 keeps its words. A card shows up to eight lines of the body with the markdown
-marks gone and the indentation flattened. A long name wraps after a hyphen,
+marks gone and the indentation flattened. Search reads the whole body in
+that plain form, and every word of the query must match. A long name wraps after a hyphen,
 never inside a word. `lib/inbox-notes/read-inbox.ts`
 lists, reads, creates and saves the notes. A read never makes the
 folder; the first capture does.
