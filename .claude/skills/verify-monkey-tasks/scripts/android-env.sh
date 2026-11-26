@@ -23,9 +23,15 @@ UI="$SKILL_DIR/scripts/android-ui.mjs"
 # The last screen tree that android-drive.sh read.
 UIXML="$STATE/android-$EMU_PORT.ui.xml"
 
-# One line per key: pid, run (the evidence dir), apk, apk_sha.
+# One line per key: pid, run (the evidence dir), apk, apk_sha, watcher.
 ASTATE="$STATE/android-$EMU_PORT.state"
 LOGFILE="$STATE/android-$EMU_PORT.emulator.log"
+# The idle watcher stops an emulator that nobody has touched for this
+# long. Every android script stamps a touch when it sources this file, so
+# the stamp says the lane is still at work. A leftover emulator holds
+# about 3 GB outside the heavy lock, so it must not outlive its use.
+IDLE_STAMP="$STATE/android-$EMU_PORT.used"
+IDLE_SECS="${ANDROID_VERIFY_IDLE:-300}"
 
 state_get() { if [[ -f "$ASTATE" ]]; then sed -n "s/^$1=//p" "$ASTATE" | tail -1; fi; }
 state_set() {
@@ -44,6 +50,30 @@ ours() {
 booted() {
   [[ "$(adb -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == 1 ]]
 }
+
+# Stop the emulator this skill started on our port and wait for it to go.
+# android-cleanup.sh and the idle watcher both stop it this way.
+stop_emulator() {
+  local pid
+  pid=$(state_get pid)
+  ours "$pid" || return 0
+  adb -s "$SERIAL" emu kill >/dev/null 2>&1
+  for _ in $(seq 1 30); do
+    ours "$pid" || return 0
+    sleep 1
+  done
+  kill "$pid" 2>/dev/null
+  sleep 2
+  ours "$pid" && return 1
+  return 0
+}
+
+# A script that sources this file is a script at work on the emulator.
+# It stamps use only when an emulator of ours is up, so a launch that has
+# not booted yet does not start the idle clock.
+if [[ -n "$(state_get pid)" ]]; then
+  touch "$IDLE_STAMP" 2>/dev/null || true
+fi
 
 new_run() {
   local run="$EVIDENCE_ROOT/android-$(date +%Y%m%d-%H%M%S)"

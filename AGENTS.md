@@ -13,8 +13,16 @@ decision record. The tickets in `tickets/` are the work queue.
   once, and again when `@playwright/test` moves.
 - Run `scripts/gate.sh` before a PR. It runs the repo's checks and
   leaves a receipt for HEAD. The steps live in the `lint` and `ci`
-  Makefile targets: `ci` adds tsc, eslint, vitest and the web suite.
+  Makefile targets: `ci` adds tsc, eslint, vitest and the hook tests.
   Prose-only changes get `fast`.
+- The web suite rides CI. CI runs e2e-web on every PR, and this public
+  repo's runners cost nothing. A full gate leaves the suite out. The
+  merge bar is the local receipt plus CI's e2e-web green on the same
+  head. `scripts/gate.sh full --web` runs the suite here, for when CI
+  is down.
+- A full gate runs in one capped heavy unit. It takes turns with a
+  lane's build instead of sharing the box. `test-heavy.sh` proves the
+  lock still queues.
 
 ## Rules for any change
 

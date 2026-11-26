@@ -3,8 +3,8 @@
 # lands at $1/app/android/app/build/outputs/apk/release/app-release.apk.
 # The build runs in one shared builder folder, so Gradle and CMake reuse
 # the native outputs of the last build. CLEAN=1 builds in place from
-# scratch instead, for a release, for every CPU type. A proof build
-# targets only the emulator's x86_64; set ARCHS to change that.
+# scratch instead. Every build targets the emulator's x86_64 unless
+# ARCHS says otherwise; only scripts/release.sh builds all four types.
 # Usage: android-build.sh <checkout> [--background]
 . "$(dirname "$0")/heavy.sh" android-build "$@" || exit 1
 set -o pipefail
@@ -26,9 +26,8 @@ else
 fi
 cd "$work/app" || exit 1
 npx expo prebuild --platform android --no-install > "$logs/prebuild.log" 2>&1 || { echo "prebuild failed"; exit 1; }
-archs=()
-[ "${CLEAN:-0}" = 1 ] || archs=(-PreactNativeArchitectures="${ARCHS:-x86_64}")
-cd android && ./gradlew assembleRelease --no-daemon "${archs[@]}" > "$logs/gradle.log" 2>&1
+cd android && ./gradlew assembleRelease --no-daemon \
+  -PreactNativeArchitectures="${ARCHS:-x86_64}" > "$logs/gradle.log" 2>&1
 rc=$?
 echo "end $(date +%T) exit $rc"
 out=app/build/outputs/apk/release

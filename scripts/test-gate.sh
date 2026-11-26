@@ -23,7 +23,8 @@ fixture() {
     mkdir -p "$dir/repo/scripts" "$dir/bin" "$dir/state"
     cp "$gate" "$dir/repo/scripts/gate.sh"
     chmod +x "$dir/repo/scripts/gate.sh"
-    printf 'ci:\n\t@true\n\nlint:\n\t@true\n' > "$dir/repo/Makefile"
+    printf 'ci:\n\t@true\n\nlint:\n\t@true\n\nweb-suite:\n\t@touch web-ran\n' \
+        > "$dir/repo/Makefile"
     cat > "$dir/bin/date" <<EOF
 #!/usr/bin/env bash
 if [ "\${1:-}" = "+%s%3N" ]; then
@@ -45,15 +46,26 @@ EOF
     printf '%s\n' "$dir"
 }
 
-# run_gate <fixture dir> [gate args] runs a gate and keeps its exit code
-# and output.
+# run_gate <fixture dir> [gate args] runs a full gate and keeps its exit
+# code and output. run_gate_fast does the same for a fast one.
 run_gate() {
+    local dir="$1" mode=full
+    shift
+    set +e
+    out="$(cd "$dir/repo" && PATH="$dir/bin:$PATH" \
+        FAKE_CLOCK="$dir/clock" LOCAL_GATE_STATE="$dir/state" \
+        ./scripts/gate.sh "$mode" "$@" 2>&1)"
+    code=$?
+    set -e
+}
+
+run_gate_fast() {
     local dir="$1"
     shift
     set +e
     out="$(cd "$dir/repo" && PATH="$dir/bin:$PATH" \
         FAKE_CLOCK="$dir/clock" LOCAL_GATE_STATE="$dir/state" \
-        ./scripts/gate.sh full "$@" 2>&1)"
+        ./scripts/gate.sh fast "$@" 2>&1)"
     code=$?
     set -e
 }
@@ -147,6 +159,90 @@ case "$out" in
     *'local-gate: full fail'*) ;;
     *) fail "failed check: did not report a fail: $out" ;;
 esac
+assertions=$((assertions + 1))
+
+# A full gate runs under the repo's heavy prelude, so one heavy job runs
+# at a time. A fast gate stays out of it.
+dir="$(fixture heavy 1000)"
+mkdir -p "$dir/repo/.claude/skills/verify-monkey-tasks/scripts"
+cat > "$dir/repo/.claude/skills/verify-monkey-tasks/scripts/heavy.sh" <<'EOF'
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    echo "heavy: source this file" >&2
+    exit 2
+fi
+printf 'heavy prelude %s\n' "$1"
+EOF
+git -C "$dir/repo" add -A
+git -C "$dir/repo" commit -qm "add the heavy prelude"
+run_gate "$dir" --no-status
+[ "$code" -eq 0 ] || fail "heavy: expected exit 0, got $code: $out"
+assertions=$((assertions + 1))
+case "$out" in
+    *'heavy prelude gate'*) ;;
+    *) fail "heavy: a full gate did not source the prelude: $out" ;;
+esac
+assertions=$((assertions + 1))
+run_gate_fast "$dir" --no-status
+[ "$code" -eq 0 ] || fail "heavy: a fast gate exited $code: $out"
+case "$out" in
+    *'heavy prelude'*) fail "heavy: a fast gate sourced the prelude: $out" ;;
+esac
+assertions=$((assertions + 1))
+
+# The web suite rides CI where the workflow runs e2e-web and the repo is
+# public. --web runs it here, and its receipt outranks a later plain run.
+dir="$(fixture web-on-ci 1000)"
+git -C "$dir/repo" remote add origin https://github.com/example/template.git
+mkdir -p "$dir/repo/.github/workflows"
+printf 'jobs:\n  e2e-web:\n    runs-on: ubuntu-latest\n' \
+    > "$dir/repo/.github/workflows/ci.yml"
+git -C "$dir/repo" add -A
+git -C "$dir/repo" commit -qm "ci runs e2e-web"
+cat > "$dir/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+if [ "${1:-}" = api ] && [ "${2:-}" = repos/example/template ]; then
+    printf 'false\n'
+fi
+exit 0
+EOF
+chmod +x "$dir/bin/gh"
+run_gate "$dir"
+[ "$code" -eq 0 ] || fail "web on CI: expected exit 0, got $code: $out"
+assertions=$((assertions + 1))
+jq -e '.web == false' "$(receipt "$dir")" >/dev/null ||
+    fail "web on CI: the receipt says the web suite ran"
+[ -e "$dir/repo/web-ran" ] && fail "web on CI: the gate ran the web suite"
+assertions=$((assertions + 1))
+case "$out" in
+    *'CI runs the web suite for example/template'*) ;;
+    *) fail "web on CI: no line about CI: $out" ;;
+esac
+assertions=$((assertions + 1))
+
+run_gate "$dir" --web
+[ "$code" -eq 0 ] || fail "web forced: expected exit 0, got $code: $out"
+assertions=$((assertions + 1))
+jq -e '.web == true' "$(receipt "$dir")" >/dev/null ||
+    fail "web forced: the receipt says the web suite did not run"
+[ -e "$dir/repo/web-ran" ] || fail "web forced: the web suite did not run"
+assertions=$((assertions + 1))
+
+rm -f "$dir/repo/web-ran"
+run_gate "$dir"
+case "$out" in
+    *'the web suite ran on this tree'*) ;;
+    *) fail "web kept: a plain run replaced the web receipt: $out" ;;
+esac
+assertions=$((assertions + 1))
+jq -e '.web == true' "$(receipt "$dir")" >/dev/null ||
+    fail "web kept: the receipt lost its web run"
+assertions=$((assertions + 1))
+
+# A repo whose workflow runs no e2e-web job runs the suite here.
+dir="$(fixture no-web-job 1000)"
+run_gate "$dir" --no-status
+[ "$code" -eq 0 ] || fail "no web job: expected exit 0, got $code: $out"
+[ -e "$dir/repo/web-ran" ] || fail "no web job: the gate skipped the web suite"
 assertions=$((assertions + 1))
 
 printf 'gate: %s assertions passed\n' "$assertions"

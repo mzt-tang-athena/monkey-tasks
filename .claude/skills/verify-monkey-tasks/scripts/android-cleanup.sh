@@ -8,19 +8,21 @@ set -uo pipefail
 source "$(dirname "$0")/android-env.sh"
 
 pid=$(state_get pid)
+watcher=$(state_get watcher)
+if [[ -n "$watcher" ]]; then
+  kill "$watcher" 2>/dev/null
+fi
 if ours "$pid"; then
-  adb -s "$SERIAL" emu kill >/dev/null 2>&1
-  for _ in $(seq 1 30); do ours "$pid" || break; sleep 1; done
-  if ours "$pid"; then
-    kill "$pid"
-    sleep 2
+  if stop_emulator; then
+    echo "stopped emulator pid $pid on port $EMU_PORT"
+  else
+    echo "pid $pid did not stop" >&2
   fi
-  ours "$pid" && echo "pid $pid did not stop" >&2 || echo "stopped emulator pid $pid on port $EMU_PORT"
 else
   echo "no emulator of ours on port $EMU_PORT, so nothing was killed"
 fi
 run=$(state_get run)
-rm -f "$ASTATE" "$ASTATE.tmp" "$STATE/android-$EMU_PORT".*.xml
+rm -f "$ASTATE" "$ASTATE.tmp" "$STATE/android-$EMU_PORT".*.xml "$IDLE_STAMP"
 rm -rf "$STATE/android-$EMU_PORT-seed"
 
 if [[ "${1:-}" == --delete-avd ]]; then
