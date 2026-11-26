@@ -2,7 +2,7 @@
 title: The planner's segmented controls get shorter
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: claude-lane-segmented
 pr:
 depends: []
 ---
