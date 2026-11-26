@@ -34,7 +34,7 @@ describe("the sample notes", () => {
           file: "Tasks/Descale the kettle.md",
           line: 5,
           kind: "warning",
-          reason: 'alert weight "loud" is not harsh or quiet, so it rings harsh',
+          reason: 'alert weight "loud" is not harsh or quiet, so it is a normal reminder',
         },
         {
           file: "Tasks/Lists/Garden.md",

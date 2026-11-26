@@ -55,8 +55,8 @@ export function spawnContent(input: SpawnInput, created: string): string {
     ["recurrence", input.recurrence],
     ["list", input.list],
     ["reminders", input.reminders],
-    // Only a cue carries the key, so a need's note stays clean.
-    ["alert weight", input.alertWeight === "quiet" ? "quiet" : null],
+    // Only an alarm carries the key, so a normal reminder's note stays clean.
+    ["alert weight", input.alertWeight === "harsh" ? "harsh" : null],
     ["recurrence previous", link(input.previous)],
   ];
   let text = "---\n\n---\n";

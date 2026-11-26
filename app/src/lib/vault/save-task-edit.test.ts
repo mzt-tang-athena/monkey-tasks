@@ -76,7 +76,7 @@ function task(): TaskItem {
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
-      "alert weight": "harsh",
+      "alert weight": "quiet",
       due: "2026-10-21",
       reminders: ["2026-10-21T09:00"],
       list: "[[Focus]]",
@@ -92,7 +92,7 @@ function edit(overrides: Partial<TaskEdit> = {}): TaskEdit {
     recurrence: null,
     list: "Focus",
     reminders: ["2026-10-21T09:00"],
-    alertWeight: "harsh",
+    alertWeight: "quiet",
     body: "\nOld body.\n",
     ...overrides,
   };
@@ -143,7 +143,7 @@ describe("saveTaskEdit", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
-        "alert weight": "harsh",
+        "alert weight": "quiet",
         due: "2027-01-31",
         recurrence: "FREQ=MONTHLY;BYMONTHDAY=-1",
       },
@@ -166,38 +166,11 @@ describe("saveTaskEdit", () => {
     expect(retimed.data?.recurrence).toBe("FREQ=MONTHLY;BYMONTHDAY=-1");
   });
 
-  it("writes the weight quiet once, in place", async () => {
+  it("writes the weight harsh once, in place", async () => {
     const weighted =
-      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21\nalert weight: harsh\nreminders:\n  - 2026-10-21T09:00\nlist: "[[Focus]]"\n---\n\nOld body.\n';
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21\nalert weight: quiet\nreminders:\n  - 2026-10-21T09:00\nlist: "[[Focus]]"\n---\n\nOld body.\n';
     const item: TaskItem = { ...task(), text: weighted };
     state.fileText = weighted;
-
-    const result = await saveTaskEdit(
-      safAdapter,
-      item,
-      edit({ alertWeight: "quiet" }),
-    );
-
-    expect(state.writes).toHaveLength(1);
-    expect(result.text).toBe(weighted.replace("alert weight: harsh", "alert weight: quiet"));
-    expect(result.text.match(/alert weight/g)).toHaveLength(1);
-    expect(result.data?.["alert weight"]).toBe("quiet");
-  });
-
-  it("removes the weight for a need and leaves no blank line", async () => {
-    const quiet =
-      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21\nalert weight: quiet\nreminders:\n  - 2026-10-21T09:00\nlist: "[[Focus]]"\n---\n\nOld body.\n';
-    const base = task();
-    const item: TaskItem = {
-      ...base,
-      text: quiet,
-      data: {
-        kind: "[[tasks]]",
-        created: "2026-10-20",
-        "alert weight": "quiet",
-      },
-    };
-    state.fileText = quiet;
 
     const result = await saveTaskEdit(
       safAdapter,
@@ -205,9 +178,51 @@ describe("saveTaskEdit", () => {
       edit({ alertWeight: "harsh" }),
     );
 
-    expect(result.text).toBe(quiet.replace("alert weight: quiet\n", ""));
-    expect(result.text).not.toContain("alert weight");
+    expect(result.text).toBe(weighted.replace("alert weight: quiet", "alert weight: harsh"));
+    expect(result.text.match(/alert weight/g)).toHaveLength(1);
     expect(result.data?.["alert weight"]).toBe("harsh");
+  });
+
+  it("adds the weight for an alarm only when the note has none", async () => {
+    const item = task();
+    state.fileText = item.text;
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ alertWeight: "harsh" }),
+    );
+
+    expect(result.text.match(/^alert weight: harsh$/gm)).toHaveLength(1);
+    expect(result.data?.["alert weight"]).toBe("harsh");
+  });
+
+  it("removes the weight for a normal reminder and leaves no blank line", async () => {
+    const harsh =
+      '---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: 2026-10-21\nalert weight: harsh\nreminders:\n  - 2026-10-21T09:00\nlist: "[[Focus]]"\n---\n\nOld body.\n';
+    const item: TaskItem = {
+      ...task(),
+      text: harsh,
+      data: {
+        kind: "[[tasks]]",
+        created: "2026-10-20",
+        "alert weight": "harsh",
+        due: "2026-10-21",
+        reminders: ["2026-10-21T09:00"],
+        list: "[[Focus]]",
+      },
+    };
+    state.fileText = harsh;
+
+    const result = await saveTaskEdit(
+      safAdapter,
+      item,
+      edit({ alertWeight: "quiet" }),
+    );
+
+    expect(result.text).toBe(harsh.replace("alert weight: harsh\n", ""));
+    expect(result.text).not.toContain("alert weight");
+    expect(result.data?.["alert weight"]).toBe("quiet");
   });
 
   it("leaves the note untouched when the weight does not change", async () => {
@@ -243,7 +258,7 @@ describe("saveTaskEdit", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
-        "alert weight": "harsh",
+        "alert weight": "quiet",
       },
     };
     state.fileText = minimal.text;
@@ -274,7 +289,7 @@ describe("saveTaskEdit", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
-        "alert weight": "harsh",
+        "alert weight": "quiet",
       },
     };
     state.fileText = loud;
@@ -287,7 +302,7 @@ describe("saveTaskEdit", () => {
 
     expect(result.text).toContain("alert weight: loud");
     expect(result.warnings).toEqual([
-      'alert weight "loud" is not harsh or quiet, so it rings harsh',
+      'alert weight "loud" is not harsh or quiet, so it is a normal reminder',
     ]);
   });
 
@@ -300,7 +315,7 @@ describe("saveTaskEdit", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
-        "alert weight": "harsh",
+        "alert weight": "quiet",
         list: "[[Focus]]",
       },
     };
@@ -328,7 +343,7 @@ describe("saveTaskEdit", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
-        "alert weight": "harsh",
+        "alert weight": "quiet",
         list: "[[Focus]]",
       },
     };
@@ -463,7 +478,7 @@ describe("saveTaskEdit", () => {
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
-        "alert weight": "harsh",
+        "alert weight": "quiet",
         title: "Water plants",
         due: "2026-10-27",
       },
@@ -531,7 +546,7 @@ describe("saveTaskEdit on a deed", () => {
       data: {
         kind: "[[tasks]]",
         status: "[[active]]",
-        "alert weight": "harsh",
+        "alert weight": "quiet",
         due: "2026-10-28",
       },
       body: "\nWater the beds.\n",

@@ -88,7 +88,7 @@ export function captureDraft(
     data: {
       kind: "[[tasks]]",
       created,
-      "alert weight": "harsh",
+      "alert weight": "quiet",
       ...(status ? { status } : {}),
       ...(due ? { due } : {}),
       ...(listName ? { list: `[[${listName}]]` } : {}),

@@ -41,10 +41,10 @@ describe("loadTasks", () => {
 
     const [row] = await loadTasks(vault, dir);
 
-    expect(row.data?.["alert weight"]).toBe("harsh");
+    expect(row.data?.["alert weight"]).toBe("quiet");
     expect(row.errors).toBeUndefined();
     expect(row.warnings).toEqual([
-      'alert weight "loud" is not harsh or quiet, so it rings harsh',
+      'alert weight "loud" is not harsh or quiet, so it is a normal reminder',
     ]);
   });
 

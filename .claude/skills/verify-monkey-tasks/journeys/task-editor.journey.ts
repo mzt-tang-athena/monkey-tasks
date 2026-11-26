@@ -105,33 +105,33 @@ test("the editor writes each property as it is picked", async ({ page }, info) =
   await page.waitForTimeout(300);
   await shot("06b-alert-added");
 
-  // The weight covers the whole task, and writes as soon as it is picked.
-  await alerts.getByRole("tab", { name: "Quiet" }).click();
-  await expect.poll(() => noteText(page, path)).toContain("alert weight: quiet");
-  await expect(alerts.getByRole("tab", { name: "Quiet" })).toHaveAttribute(
-    "aria-selected",
+  // The switch covers the whole task, and writes as soon as it is flipped.
+  await alerts.getByRole("switch", { name: "alarm" }).click();
+  await expect.poll(() => noteText(page, path)).toContain("alert weight: harsh");
+  await expect(alerts.getByRole("switch", { name: "alarm" })).toHaveAttribute(
+    "aria-checked",
     "true",
   );
-  await alerts.getByRole("tab", { name: "Quiet" }).scrollIntoViewIfNeeded();
+  await alerts.getByRole("switch", { name: "alarm" }).scrollIntoViewIfNeeded();
   await shot("06c-alert-weight");
   // The scrim's close control sits in the sheet's own overlay.
   await page.getByRole("button", { name: "close alerts" }).click();
   await expect(alerts).toHaveCount(0);
   await expect(editor.getByRole("button", { name: "change alerts" })).toContainText(
-    "Quiet",
+    "Alarm",
   );
-  await shot("06d-quiet-tile");
+  await shot("06d-alarm-tile");
 
-  // Harsh is the default, so it takes the key off the note.
+  // A normal reminder is the default, so it takes the key off the note.
   await editor.getByRole("button", { name: "change alerts" }).click();
   await expect(alerts).toHaveCSS("opacity", "1");
-  await alerts.getByRole("tab", { name: "Harsh" }).click();
+  await alerts.getByRole("switch", { name: "alarm" }).click();
   await expect.poll(() => noteText(page, path)).not.toContain("alert weight");
   await page.getByRole("button", { name: "close alerts" }).click();
   await expect(alerts).toHaveCount(0);
   await expect(
     editor.getByRole("button", { name: "change alerts" }),
-  ).not.toContainText("Quiet");
+  ).not.toContainText("Alarm");
 
   // A note.
   await editor.getByRole("button", { name: /^(add|edit) note$/ }).click();

@@ -107,3 +107,69 @@ An error still means "the note fails, and the app hides it".
 Alternative: read the unknown value as `harsh` with no message.
 That was simpler.
 The operator would learn of the typo only when a cue rang loud.
+
+## Amendment 2026-11-26: a normal notification by default, an alarm by choice
+
+The operator tried 1.3.0 on their phone. The reminders felt wacky, and
+the harsh one made no real sound. They asked for the simplest system
+first. This amendment replaces the Decision above. The contract half is
+contracts ADR `20261126-alert-weight-opts-in-to-an-alarm`.
+
+What the 1.3.0 harsh channel did, measured on the emulator:
+
+- The channel had a sound. It held the phone's default notification
+  tone, tagged as an alarm sound. A ring played it once, on the alarm
+  stream, even with the ringer silent and Do Not Disturb on priority.
+- That tone is one short ding. The phone picks it. A phone with a
+  quiet or empty default tone gives no real alarm sound. We could not
+  reach the operator's phone, so we infer this cause.
+- `bypassDnd` was false on the channel. Android only keeps that flag
+  when the app already holds Do Not Disturb access as it creates the
+  channel. The app created it on first launch, before any grant.
+
+The new rules:
+
+- A task rings one normal notification at its time. It uses the phone's
+  default sound and vibration. It shows Done, Later and Tomorrow. It
+  follows Do Not Disturb, and a swipe clears it.
+- A task with `alert weight: harsh` is an alarm. It sounds a tone the
+  app bundles (`alarm.wav`, four seconds) on the alarm stream. It uses
+  alarm clock delivery, and asks the phone to break Do Not Disturb.
+- Nothing repeats. We removed the unswipeable ring and the 1, 5 and
+  15 minute re-rings. The alarm needs neither to sound.
+- Absent, `quiet` and any unreadable value mean a normal reminder.
+  Existing lines stay as they are, with no vault edit.
+- The editor has one Alarm switch. It writes `harsh`, or removes the
+  line.
+- The channels are `reminder-normal` and one alarm channel. The app
+  deletes `reminders`, `reminders-harsh` and `reminders-quiet` on start.
+  Android restores a deleted channel's sound when its id comes back, so
+  an id never serves a second sound.
+- Android keeps a channel's Do Not Disturb bypass only when the app
+  holds that access as it makes the channel. A later grant never adds
+  the bypass. The alarm has two channel ids,
+  `reminder-alarm` and `reminder-alarm-dnd`. The app uses the one that
+  matches the access, and deletes the other.
+- A small local native module, `modules/alarm-access`, reads the access
+  and opens the system screen that grants it. Settings shows whether the
+  operator granted it. The app asks again on each foreground.
+
+Alternatives we rejected:
+
+- **Keep the phone's default tone for the alarm.** It needs no asset.
+  It leaves the alarm only as loud as the phone's notification tone.
+- **A looping, unswipeable alarm.** It sounds longest. Expo cannot set
+  the insistent flag, and the operator asked for the simple path.
+
+Costs we accept:
+
+- The alarm tone adds a native asset, so this build needs a new APK.
+- A failed-press notice now rings the normal sound. Before, it stayed
+  silent.
+- A Do Not Disturb grant lets the alarm past the filter. It does not
+  unmute the alarm stream, so total silence still mutes the tone.
+  Priority mode and alarms-only already let an alarm through.
+- The grant adds a second alarm channel id. An operator who grants later
+  sees the alarm channel replaced, not updated.
+  The app re-arms each pending alarm into the live channel. A ring armed
+  before the grant then never fires into the deleted one.

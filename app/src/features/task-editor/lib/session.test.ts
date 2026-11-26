@@ -18,7 +18,7 @@ function draft(overrides: Partial<TaskEdit> = {}): TaskEdit {
     recurrence: null,
     list: null,
     reminders: [],
-    alertWeight: "harsh",
+    alertWeight: "quiet",
     body: "",
     ...overrides,
   };
@@ -66,10 +66,10 @@ describe("the editor's write queue", () => {
   });
 
   it("writes a change of the alert weight alone", () => {
-    const { jobs } = run([open, change({ alertWeight: "quiet" })]);
+    const { jobs } = run([open, change({ alertWeight: "harsh" })]);
 
     expect(jobs).toEqual([
-      { edit: draft({ alertWeight: "quiet" }), expected: OPENED },
+      { edit: draft({ alertWeight: "harsh" }), expected: OPENED },
     ]);
   });
 

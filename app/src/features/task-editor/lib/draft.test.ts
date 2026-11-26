@@ -127,14 +127,14 @@ describe("draftOf", () => {
     });
   });
 
-  it("reads a note with no weight as Harsh", () => {
+  it("reads a note with no weight as a normal reminder", () => {
     const task = item({
       data: {
         kind: "[[tasks]]",
         created: "2026-10-20",
       } as unknown as TaskItem["data"],
     });
-    expect(draftOf(task).alertWeight).toBe("harsh");
+    expect(draftOf(task).alertWeight).toBe("quiet");
   });
 
   it("reads a quiet note as Quiet", () => {

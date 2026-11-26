@@ -52,6 +52,10 @@ export default defineConfig({
         find: /^expo-clipboard$/,
         replacement: `${src}/testing/expo-clipboard-stub.ts`,
       },
+      {
+        find: /^alarm-access$/,
+        replacement: `${src}/testing/alarm-access-stub.ts`,
+      },
     ],
   },
   test: {

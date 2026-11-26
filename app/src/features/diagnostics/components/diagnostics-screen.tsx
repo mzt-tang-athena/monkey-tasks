@@ -64,7 +64,6 @@ export default function DevScreen() {
         alertRing({
           uri: "diagnostics://test",
           base: at,
-          step: 0,
           weight: "harsh",
           title: "monkey-tasks",
           body: "10s test fired",

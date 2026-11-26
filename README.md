@@ -419,7 +419,7 @@ the list, the title, and one control per property. A property with a
 value is a tile. One without is a chip in the add strip. `model.ts` is
 the property registry: Due, Repeat, Alerts and Note. Reference (ticket
 0091) joins it as one more entry. The Alerts picker also holds the
-task's alert weight, Harsh or Quiet.
+task's Alarm switch.
 
 Each committed change writes at once. `lib/session.ts` is the session
 reducer and its queue: one write per task, last draft wins, and a
@@ -685,10 +685,12 @@ Phases:
    rebuilds the alarm list after every successful vault read. A capture,
    a tick, or a drag leaves the schedule matching the vault. Ticking a
    recurring task completes the occurrence. It creates the next one as
-   its own note (ADR 0027). An alert uses its task's `alert weight`. A
-   harsh alert rings on the alarm stream and escalates at 1, 5 and 15
-   minutes. A quiet one rings once in silence. A tap or a tick clears
-   the group (ADR 20261111-reminder-weight).
+   its own note (ADR 0027). A reminder is
+   one normal notification that rings once, with Done, Later and
+   Tomorrow. A task with `alert weight: harsh` is an alarm: it sounds a
+   bundled tone on the alarm stream and breaks Do Not Disturb. Neither
+   repeats, and a swipe clears either (ADR 20261111-reminder-weight,
+   amendment 2026-11-26).
 7. Later: deeds on a board, as tasks with a status, in the tickets
    above. Capture text highlighting (0008). Location triggers,
    MCP capture on athena, ntfy fallback, and the athena operational

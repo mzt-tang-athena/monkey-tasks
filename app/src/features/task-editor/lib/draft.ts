@@ -10,7 +10,7 @@ export function draftOf(task: TaskItem): TaskEdit {
     recurrence: task.data?.recurrence ?? null,
     list: task.data?.list == null ? null : listName(task.data.list),
     reminders: task.data?.reminders ?? [],
-    alertWeight: task.data?.["alert weight"] ?? "harsh",
+    alertWeight: task.data?.["alert weight"] ?? "quiet",
     body: task.body,
   };
 }

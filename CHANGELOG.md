@@ -46,6 +46,13 @@ fails a bullet that wraps or runs past 64 characters.
 
 ### Reminders
 
+- A reminder is one normal notification. It rings once.
+- It uses your phone's sound and follows Do Not Disturb.
+- A swipe clears it. It never repeats.
+- A task can be an alarm. The editor has one Alarm switch.
+- An alarm plays a loud tone and breaks Do Not Disturb.
+- Old tasks become normal reminders. No note changes.
+- The app drops its old reminder channels on start.
 - A reminder has three buttons: Done, Later, Tomorrow.
 - They work with the app closed or killed.
 - Done ticks the task, and a repeat makes its next note.

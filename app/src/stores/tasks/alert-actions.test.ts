@@ -10,7 +10,6 @@ type Stored = {
   data: {
     uri: string;
     base: number;
-    step: number;
     weight: "harsh" | "quiet";
     buttons: boolean;
   };
@@ -41,7 +40,6 @@ vi.mock("@/lib/notifications", () => ({
     id: string;
     uri: string;
     base: number;
-    step: number;
     weight: "harsh" | "quiet";
   }) => {
     world.os.set(ring.id, {
@@ -49,7 +47,6 @@ vi.mock("@/lib/notifications", () => ({
       data: {
         uri: ring.uri,
         base: ring.base,
-        step: ring.step,
         weight: ring.weight,
         buttons: true,
       },
@@ -150,9 +147,7 @@ async function arm(vault: ReturnType<typeof createMemoryVault>, name: string) {
 }
 
 function ringIdsOf(name: string, stored: string): string[] {
-  return [0, 1, 5, 15].map((step) =>
-    alertRingId(`${TASKS}/${name}.md`, when(stored), step),
-  );
+  return [alertRingId(`${TASKS}/${name}.md`, when(stored))];
 }
 
 beforeEach(() => {
@@ -228,11 +223,10 @@ describe("Done", () => {
     });
     const before = vault.hooks.read("Tasks/Call Mum.md");
     const ring = {
-      id: alertRingId(`${TASKS}/Call Mum.md`, when(DUE), 0),
+      id: alertRingId(`${TASKS}/Call Mum.md`, when(DUE)),
       data: {
         uri: `${TASKS}/Call Mum.md`,
         base: when(DUE),
-        step: 0,
         weight: "harsh" as const,
         buttons: true,
       },

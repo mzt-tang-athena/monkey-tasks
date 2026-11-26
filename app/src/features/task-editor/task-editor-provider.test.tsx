@@ -80,7 +80,7 @@ function task(overrides: Partial<TaskItem> = {}): TaskItem {
     fileName: "Call.md",
     name: "Call Mum",
     text: TEXT,
-    data: { kind: "[[tasks]]", created: "2026-10-20", "alert weight": "harsh" },
+    data: { kind: "[[tasks]]", created: "2026-10-20", "alert weight": "quiet" },
     body: "\nOld body.\n",
     ...overrides,
   };
@@ -221,33 +221,31 @@ describe("the task editor sheet", () => {
     expect(written().due).toBeNull();
   });
 
-  it("shows the note's weight in the Alerts picker, then writes Quiet", async () => {
+  it("offers one Alarm switch, off for a normal reminder, and writes harsh", async () => {
     mount();
     openTask();
 
     fireEvent.click(screen.getByRole("button", { name: "add reminder" }));
-    const tab = (name: string) =>
-      screen.getByRole("tab", { name }).getAttribute("aria-selected");
-    expect(tab("Harsh")).toBe("true");
-    expect(tab("Quiet")).toBe("false");
+    const alarm = () => screen.getByRole("switch", { name: "alarm" });
+    expect(alarm().getAttribute("aria-checked")).toBe("false");
     expect(
-      screen.getByText("Harsh rings on the alarm stream. Quiet is silent."),
+      screen.getByText("Sounds an alarm and breaks Do Not Disturb."),
     ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Quiet" }));
+    fireEvent.click(alarm());
 
     await waitFor(() => expect(store.edit).toHaveBeenCalledTimes(1));
-    expect(written().alertWeight).toBe("quiet");
-    expect(tab("Quiet")).toBe("true");
+    expect(written().alertWeight).toBe("harsh");
+    expect(alarm().getAttribute("aria-checked")).toBe("true");
   });
 
-  it("opens a quiet task at Quiet, and says so on its Alerts tile", () => {
+  it("opens an alarm task with the switch on, and says so on its Alerts tile", () => {
     store.tasks = [
       task({
         data: {
           kind: "[[tasks]]",
           created: "2026-10-20",
-          "alert weight": "quiet",
+          "alert weight": "harsh",
           reminders: ["2026-10-28T09:00"],
         },
       }),
@@ -256,10 +254,10 @@ describe("the task editor sheet", () => {
     openTask();
 
     const tile = screen.getByRole("button", { name: "change alerts" });
-    expect(tile.textContent).toContain("Quiet");
+    expect(tile.textContent).toContain("Alarm");
     fireEvent.click(tile);
     expect(
-      screen.getByRole("tab", { name: "Quiet" }).getAttribute("aria-selected"),
+      screen.getByRole("switch", { name: "alarm" }).getAttribute("aria-checked"),
     ).toBe("true");
     expect(store.edit).not.toHaveBeenCalled();
   });
