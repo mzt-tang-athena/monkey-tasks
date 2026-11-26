@@ -53,6 +53,10 @@ with 40 notes, interleaved before and after:
 - With 190 notes, three runs: tap to rows 9.1 s to 6.0 s.
 
 The rest of the wait is the native start before the JS runs (1.8 s,
-38%). With few notes the draw of the first frame also counts. A cached
-first frame is the next step. It changes what a user sees, so it needs a
-design review first. Nothing needed a new vault property.
+38%). With few notes the draw of the first frame also counts.
+
+The cached first frame shipped too (ADR `20261126-a-cached-first-frame`).
+The launch tab's rows sit in app storage and draw at once, dimmed and
+untappable. The read replaces them in full. With 190 notes, rows showed
+3.3 s after the tap against 4.3 s without the cache. That is three
+interleaved pairs. Nothing needed a new vault property.
