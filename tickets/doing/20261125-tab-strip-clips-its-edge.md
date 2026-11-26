@@ -2,7 +2,7 @@
 title: The tab strip clips a letter at its edge
 created: 2026-11-25
 priority: low
-assignee:
+assignee: claude-lane-tab-strip
 pr:
 depends: []
 ---
