@@ -51,3 +51,15 @@ step. It buys the same coverage CI gives for free.
 Pay for faster runners: Blacksmith, BuildJet or Namespace. e2e-web is
 11 minutes on free minutes. A paid runner saves a few minutes a PR and
 costs a subscription and a second CI vendor to configure.
+
+## Amendment, 2026-11-26: the template owns the gate
+
+The gate changes above first lived only in this repo's copy of
+`scripts/gate.sh`. Every gate printed `template: differs`, and a
+`make sync-template` would have undone them.
+
+The template now carries the web skip, `--web` and the receipt's `web`
+field (project-template ADR `20261126-gate-web-skip-and-prelude`). The
+heavy lock moved into `scripts/gate-prelude.sh`, which a full gate
+sources first. That file is repo owned, so the template names no path
+that only this repo has. The gate behaves as before.

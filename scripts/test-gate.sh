@@ -161,31 +161,26 @@ case "$out" in
 esac
 assertions=$((assertions + 1))
 
-# A full gate runs under the repo's heavy prelude, so one heavy job runs
-# at a time. A fast gate stays out of it.
-dir="$(fixture heavy 1000)"
-mkdir -p "$dir/repo/.claude/skills/verify-monkey-tasks/scripts"
-cat > "$dir/repo/.claude/skills/verify-monkey-tasks/scripts/heavy.sh" <<'EOF'
-if [ "${BASH_SOURCE[0]}" = "$0" ]; then
-    echo "heavy: source this file" >&2
-    exit 2
-fi
-printf 'heavy prelude %s\n' "$1"
+# A repo's scripts/gate-prelude.sh runs first in a full gate, with the
+# gate's arguments. A fast gate stays out of it.
+dir="$(fixture prelude 1000)"
+cat > "$dir/repo/scripts/gate-prelude.sh" <<'EOF'
+printf 'prelude args:%s\n' "$*"
 EOF
 git -C "$dir/repo" add -A
-git -C "$dir/repo" commit -qm "add the heavy prelude"
+git -C "$dir/repo" commit -qm "add the prelude"
 run_gate "$dir" --no-status
-[ "$code" -eq 0 ] || fail "heavy: expected exit 0, got $code: $out"
+[ "$code" -eq 0 ] || fail "prelude: expected exit 0, got $code: $out"
 assertions=$((assertions + 1))
 case "$out" in
-    *'heavy prelude gate'*) ;;
-    *) fail "heavy: a full gate did not source the prelude: $out" ;;
+    *'prelude args:full --no-status'*) ;;
+    *) fail "prelude: a full gate did not source it with its arguments: $out" ;;
 esac
 assertions=$((assertions + 1))
 run_gate_fast "$dir" --no-status
-[ "$code" -eq 0 ] || fail "heavy: a fast gate exited $code: $out"
+[ "$code" -eq 0 ] || fail "prelude: a fast gate exited $code: $out"
 case "$out" in
-    *'heavy prelude'*) fail "heavy: a fast gate sourced the prelude: $out" ;;
+    *'prelude args'*) fail "prelude: a fast gate sourced the prelude: $out" ;;
 esac
 assertions=$((assertions + 1))
 
@@ -243,6 +238,30 @@ dir="$(fixture no-web-job 1000)"
 run_gate "$dir" --no-status
 [ "$code" -eq 0 ] || fail "no web job: expected exit 0, got $code: $out"
 [ -e "$dir/repo/web-ran" ] || fail "no web job: the gate skipped the web suite"
+assertions=$((assertions + 1))
+
+# A repo with no web-suite target runs as before: no web step, no CI line,
+# and a receipt that says the suite did not run.
+dir="$(fixture no-web-target 1000)"
+printf 'ci:\n\t@true\n\nlint:\n\t@true\n' > "$dir/repo/Makefile"
+git -C "$dir/repo" remote add origin https://github.com/example/template.git
+mkdir -p "$dir/repo/.github/workflows"
+printf 'jobs:\n  e2e-web:\n    runs-on: ubuntu-latest\n' \
+    > "$dir/repo/.github/workflows/ci.yml"
+git -C "$dir/repo" add -A
+git -C "$dir/repo" commit -qm "no web suite"
+cat > "$dir/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+printf 'false\n'
+EOF
+chmod +x "$dir/bin/gh"
+run_gate "$dir" --no-status
+[ "$code" -eq 0 ] || fail "no web target: expected exit 0, got $code: $out"
+jq -e '.web == false and (.steps | map(.cmd) == ["make ci"])' "$(receipt "$dir")" >/dev/null ||
+    fail "no web target: the receipt shows a web step"
+case "$out" in
+    *'CI runs the web suite'*) fail "no web target: the gate named a web suite: $out" ;;
+esac
 assertions=$((assertions + 1))
 
 printf 'gate: %s assertions passed\n' "$assertions"
