@@ -3,7 +3,7 @@ title: The tab rule follows a half swipe again
 created: 2026-11-26
 priority: high
 assignee: omp
-pr: PR
+pr: 252
 depends: []
 ---
 
