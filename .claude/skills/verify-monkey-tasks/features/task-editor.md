@@ -43,11 +43,10 @@ Preconditions: a fresh page on `/`.
 - **Alerts.** `add reminder`, then `save reminder`. Each reminder row has
   `remove reminder <words>`. A timed due shows a plain `At due` row with
   no remove control.
-- **Alert weight.** In the dialog `Alerts`, the tab list `Alert weight`
-  holds the tabs `Harsh` and `Quiet`. `Quiet` writes
-  `alert weight: quiet`, and the `change alerts` tile then ends in
-  "Quiet". `Harsh` takes the key off the note. The weight hides while a
-  reminder is in the add flow.
+- **Alarm.** In the dialog `Alerts`, the switch `alarm` is off for a
+  normal reminder. On writes `alert weight: harsh`, and the
+  `change alerts` tile then ends in "Alarm". Off takes the key off the
+  note. The switch hides while a reminder is in the add flow.
 - **Reference.** `link a reference` opens the dialog `Reference`. The
   search field `Find a reference` matches a note by name or by an
   ingredient. A result reads `<name>, <category>, <type>` and a press
