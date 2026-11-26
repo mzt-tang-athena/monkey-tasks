@@ -1,7 +1,8 @@
 include template.mk
 
 .PHONY: lint ci typecheck eslint vitest web-suite hooks check-docs \
-	check-changelog check-changelog-entry test-pre-commit test-release test-heavy
+	check-changelog check-changelog-entry test-pre-commit test-release test-heavy \
+	test-pc-gate
 
 # What scripts/gate.sh runs for a prose-only branch. Vale reads only the
 # markdown the branch changed, so the run stays quick.
@@ -11,7 +12,7 @@ lint: check-docs check-changelog check-changelog-entry
 # rides CI, which runs e2e-web for free on this public repo, so a PR's
 # gate leaves it out. `scripts/gate.sh full --web` runs it here, and a
 # lane still needs it when CI is down.
-ci: typecheck eslint vitest lint test-pre-commit test-release test-heavy
+ci: typecheck eslint vitest lint test-pre-commit test-release test-heavy test-pc-gate
 
 typecheck:
 	cd app && npx tsc --noEmit
@@ -40,6 +41,9 @@ check-changelog-entry:
 
 test-pre-commit:
 	@bash scripts/test-pre-commit.sh
+
+test-pc-gate:
+	@bash scripts/test-pc-gate.sh
 
 test-release:
 	@bash scripts/test-check-release-notes.sh
