@@ -18,6 +18,8 @@ source "$here/../scripts/android-env.sh"
 
 task="Pick up milk"
 run=$("$drive" new-run)
+# The operator types on a real keyboard, so the soft keyboard shows too.
+adb shell settings put secure show_ime_with_hard_keyboard 1 >/dev/null
 echo "run: $run"
 
 fail() {
@@ -42,11 +44,15 @@ open_capture() {
   "$drive" keyboard up 30 >/dev/null || fail "the capture input did not raise the keyboard"
   "$drive" type "$task" >/dev/null || fail "the capture input took no text"
   # Today is a list, so the link control shows at once. Another default
-  # target steps the pill until it does.
-  if ! "$drive" has "~link a reference" >/dev/null 2>&1; then
-    "$drive" tap "~target list:" >/dev/null
-    "$drive" wait "~link a reference" 10 >/dev/null || fail "no list offers a link"
-  fi
+  # target steps the pill until it does. A tap can land while the sheet
+  # is still settling, so the step retries.
+  sleep 1
+  for _ in 1 2 3 4 5 6; do
+    "$drive" has "~link a reference" >/dev/null 2>&1 && break
+    "$drive" tap "~target list:" >/dev/null 2>&1 || true
+    sleep 1
+  done
+  "$drive" wait "~link a reference" 10 >/dev/null || fail "no list offers a link"
 }
 
 open_picker() {
