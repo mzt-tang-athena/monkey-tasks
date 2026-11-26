@@ -28,7 +28,12 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === "alarm-access") {
     return context.resolveRequest(
       context,
-      path.resolve(projectRoot, "modules", "alarm-access"),
+      path.resolve(
+        projectRoot,
+        "modules",
+        "alarm-access",
+        platform === "web" ? "index.web.ts" : "index.ts",
+      ),
       platform,
     );
   }
