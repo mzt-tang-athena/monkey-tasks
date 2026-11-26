@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { BrokenList, TaskItem } from "@/types/task";
+import type { BrokenList, ListItem, TaskItem } from "@/types/task";
 
 /**
  * The store's read side, in two contexts: the row list and the store's
@@ -20,8 +20,16 @@ export type StoreMeta = {
   rootUri: string | null;
   /** The list notes' names, sorted: the tabs after Main. */
   lists: string[];
+  /** The same notes with their uris, for the row cache. */
+  listNotes: ListItem[];
   /** Notes in Lists/ that fail validation. Shown, never dropped. */
   brokenLists: BrokenList[];
+  /**
+   * The rows on screen are last session's, and the vault read that
+   * replaces them is still running. They stay untappable until it lands
+   * (ADR `20261126-a-cached-first-frame`).
+   */
+  stale: boolean;
 };
 
 /**
@@ -37,7 +45,9 @@ const NO_META: StoreMeta = {
   tasksDir: null,
   rootUri: null,
   lists: [],
+  listNotes: [],
   brokenLists: [],
+  stale: false,
 };
 
 export const TaskListContext = React.createContext<TaskItem[]>(NO_LIST);

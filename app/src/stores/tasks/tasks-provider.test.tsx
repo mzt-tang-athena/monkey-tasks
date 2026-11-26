@@ -39,7 +39,13 @@ const deletes: string[] = [];
 
 vi.mock("react-native", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-native")>()),
-  Platform: { OS: "android" },
+  Platform: {
+    get OS() {
+      return "android";
+    },
+    select: (options: Record<string, unknown>) =>
+      options.android ?? options.default,
+  },
   AppState: {
     addEventListener: () => ({ remove: () => undefined }),
   },
@@ -58,6 +64,21 @@ vi.mock("./load-vault", async (importOriginal) => {
     },
   };
 });
+
+// The row cache lives in app files, which a node test has none of. It
+// is held here instead, and the tests read what the store wrote.
+const cacheStore = vi.hoisted(() => ({
+  rows: null as unknown as CachedRows | null,
+  cleared: 0,
+}));
+vi.mock("./row-cache", () => ({
+  readCachedRows: () => cacheStore.rows,
+  clearCachedRows: () => {
+    cacheStore.cleared += 1;
+  },
+  MAX_CACHED_ROWS: 200,
+}));
+
 
 // The alarm code runs for real on a fake OS that keeps a list of the
 // alarms it holds.
@@ -94,6 +115,7 @@ import { VaultProvider } from "@/lib/vault/vault-provider";
 import { useStoreSnapshot, type StoreSnapshot } from "@/testing/store-snapshot";
 import { todayIso } from "@/utils/dates";
 import { TasksProvider } from "./tasks-provider";
+import type { CachedRows } from "./row-cache";
 import type { TaskListData } from "./query";
 import type { TaskItem } from "@/types/task";
 import { spawnContent } from "./spawn";
@@ -354,6 +376,8 @@ beforeEach(() => {
   os.alarms.clear();
   latest = null;
   queryClient = null;
+  cacheStore.rows = null;
+  cacheStore.cleared = 0;
 });
 
 describe("TasksProvider", () => {
@@ -1361,5 +1385,78 @@ describe("deeds", () => {
     // The note keeps its place and its status.
     expect(vault.hooks.read(DEED)).not.toBeNull();
     expect(byName("Water the beds").data?.status).toBe("[[active]]");
+  });
+});
+describe("the cached first frame (ADR 20261126-a-cached-first-frame)", () => {
+  const cachedNote: TaskItem = {
+    id: `content://vault/Tasks/From last time.md`,
+    uri: `content://vault/Tasks/From last time.md`,
+    fileName: "From last time.md",
+    name: "From last time",
+    text: "",
+    data: { kind: "[[tasks]]", created: "2026-10-20", "alert weight": "harsh" },
+    body: "",
+  };
+
+  function cachedRows(tab = "Main"): CachedRows {
+    return {
+      version: 1,
+      root: MEMORY_ROOT,
+      tasksDir: TASKS,
+      tab,
+      tasks: [cachedNote],
+      lists: [{ name: "Focus", uri: `${TASKS}/Lists/Focus.md` }],
+      brokenLists: [],
+    };
+  }
+
+  it("draws last session's rows while the read runs, and the read replaces them", async () => {
+    cacheStore.rows = cachedRows();
+    const gate = Promise.withResolvers<void>();
+    loadGate = gate.promise;
+
+    await mount();
+
+    // The read is still open, and the rows on screen are the cache's.
+    expect(store().status).toBe("ready");
+    expect(store().stale).toBe(true);
+    expect(store().tasks.map((task) => task.name)).toEqual(["From last time"]);
+
+    loadGate = null;
+    gate.resolve();
+    await flush();
+
+    // The read wins, in full: the cached row is gone from the store.
+    expect(store().stale).toBe(false);
+    expect(store().tasks.map((task) => task.name)).toEqual(["Call"]);
+  });
+
+  /** A vault whose Today tab has a row, so the write path keeps the cache. */
+  function dueVault(): VaultSeed {
+    return {
+      "Tasks/Due today.md": `---\nkind: "[[tasks]]"\ncreated: 2026-10-20\ndue: ${todayIso()}\n---\n\nBody.\n`,
+      "Tasks/Lists/Focus.md": FOCUS_TEXT,
+    };
+  }
+
+  it("drops rows from another grant instead of drawing them", async () => {
+    cacheStore.rows = { ...cachedRows(), root: "content://tree/another-vault" };
+
+    await mount(dueVault());
+    await flush();
+
+    expect(cacheStore.cleared).toBe(1);
+    // The vault's own row is what shows, never the cache's.
+    expect(store().tasks.map((task) => task.name)).toEqual(["Due today"]);
+    expect(store().stale).toBe(false);
+  });
+
+  it("drops rows when the Tasks folder has moved", async () => {
+    cacheStore.rows = { ...cachedRows(), tasksDir: `${MEMORY_ROOT}/Old Tasks` };
+
+    await mount(dueVault());
+    await flush();
+
+    expect(cacheStore.cleared).toBe(1);
   });
 });

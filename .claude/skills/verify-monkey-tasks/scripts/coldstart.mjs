@@ -208,6 +208,7 @@ function runOf(dir) {
     ["load start", marks["load-start"]],
     ["folders", marks["folders-found"]],
     ["load done", marks["load-done"]],
+    ["rows visible", marks["rows-visible"]],
     ["rows ready", rowsAt],
     ["rows drawn", drawn],
     ["main idle", idle],

@@ -72,7 +72,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   const { mode, day, today, setMode, setDay, openDay } = usePlannerRoute();
   const tasks = useValid(useTaskList());
   const openTasks = useValid(useOpenTasks());
-  const { status } = useStoreMeta();
+  const { status, stale } = useStoreMeta();
   const toggleTask = useToggleTask();
   const patchTask = usePatchTask();
   const refresh = useRefreshTasks();
@@ -157,7 +157,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
     >
       <PlanDrag.Root onDrop={drop} renderGhost={(task) => <GhostPill task={task} />}>
         <PlannerListProvider value={list}>
-          {status === "ready" && mode === "day" ? (
+          {status === "ready" && !stale && mode === "day" ? (
             <DaySpread
               date={day}
               today={today}
@@ -182,7 +182,10 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
                 inset
                 follow={follow}
               />
-              {status === "loading" ? (
+              {/* Cached rows hold the open tab's tasks only, so the
+                  planner waits for the read rather than drawing a part
+                  (ADR 20261126-a-cached-first-frame). */}
+              {status === "loading" || stale ? (
                 <View style={layout.gutter}>
                   <LoadingState label="Loading tasks" />
                 </View>
@@ -196,7 +199,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
                   />
                 </View>
               ) : null}
-              {status === "ready" && mode === "week" ? (
+              {status === "ready" && !stale && mode === "week" ? (
                 <WeekPane
                   // A new week start moves the pager's origin, so the
                   // pane mounts again rather than reading a stale one.
@@ -211,7 +214,7 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
                   follow={follow}
                 />
               ) : null}
-              {status === "ready" && mode === "month" ? (
+              {status === "ready" && !stale && mode === "month" ? (
                 <MonthPane
                   month={month}
                   tasks={tasks}

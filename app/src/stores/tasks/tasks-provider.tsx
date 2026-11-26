@@ -8,7 +8,8 @@ import {
 import { useVault } from "@/lib/vault/vault-provider";
 import { makeQueryClient } from "@/lib/react-query";
 import type { BrokenList, ListItem, TaskItem } from "@/types/task";
-import { tasksQueryOptions } from "./query";
+import { tasksKey, tasksQueryOptions, type TaskListData } from "./query";
+import { clearCachedRows, readCachedRows, type CachedRows } from "./row-cache";
 import { useReminderSync } from "./reminder-sync";
 import { messageOf } from "./mutations/use-vault-mutation";
 import {
@@ -73,6 +74,59 @@ function TaskStore({ children }: { children: React.ReactNode }) {
   // task's alarms.
   useReminderSync();
 
+  // Last session's rows, read once from app storage. They seed the
+  // query under the granted root so the first frame draws rows instead
+  // of the skeleton, and the read that follows always replaces them
+  // (ADR 20261126-a-cached-first-frame).
+  const [cached] = React.useState<CachedRows | null>(readCachedRows);
+  const seeded = React.useRef<{ root: string; rows: TaskListData } | null>(null);
+  // Each reason to drop the file runs once, not on every render.
+  const dropped = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (!booted || rootUri == null || cached == null) {
+      return;
+    }
+    // The rows name the folder they came from. A different grant drops
+    // them rather than drawing rows from a vault that is not this one.
+    if (cached.root !== rootUri) {
+      if (dropped.current !== cached.root) {
+        dropped.current = cached.root;
+        clearCachedRows();
+      }
+      return;
+    }
+    if (seeded.current?.root === rootUri || vault.data != null) {
+      return;
+    }
+    const rows: TaskListData = {
+      tasksDir: cached.tasksDir,
+      tasks: cached.tasks,
+      lists: cached.lists,
+      broken: cached.brokenLists,
+    };
+    seeded.current = { root: rootUri, rows };
+    client.setQueryData(tasksKey(rootUri), rows, { updatedAt: 0 });
+  }, [booted, rootUri, cached, client, vault.data]);
+
+  // When the read names a different Tasks folder, the vault moved and
+  // the rows are from the old one.
+  React.useEffect(() => {
+    if (cached == null || vault.data == null) {
+      return;
+    }
+    const moved = `${cached.root}>${vault.data.tasksDir ?? ""}`;
+    if (vault.data.tasksDir !== cached.tasksDir && dropped.current !== moved) {
+      dropped.current = moved;
+      clearCachedRows();
+    }
+  }, [cached, vault.data]);
+
+  // The rows on screen came from the cache until a read stamps them.
+  // Only the seed carries no update time, and a read always does, so
+  // the seed's copy counts as stale and a read's never does.
+  const stale = vault.data != null && vault.dataUpdatedAt === 0;
+
   const tasks = vault.data?.tasks ?? NO_TASKS;
   const tasksDir = vault.data?.tasksDir ?? null;
   const lists = vault.data?.lists ?? NO_LISTS;
@@ -111,9 +165,11 @@ function TaskStore({ children }: { children: React.ReactNode }) {
       tasksDir,
       rootUri,
       lists: listNames,
+      listNotes: lists,
       brokenLists: broken,
+      stale,
     }),
-    [rootUri, status, readError, tasksDir, listNames, broken],
+    [rootUri, status, readError, tasksDir, listNames, lists, broken, stale],
   );
 
   return (
