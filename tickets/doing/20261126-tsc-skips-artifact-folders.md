@@ -2,7 +2,7 @@
 title: Typecheck skips build and test artifacts
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: claude
 pr:
 depends: []
 ---
