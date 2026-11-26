@@ -23,6 +23,8 @@ fails a bullet that wraps or runs past 64 characters.
 - The Inbox tab drops its title and keeps the note count.
 - A search bar tops the Inbox. It matches titles and note text.
 - A button in the bar shows the Inbox as one column or two.
+- The tab fade ends on a gap, so no tab name shows cut.
+- The chip row in the task editor fades the same way.
 - The Inbox remembers its one or two column choice.
 - Swipe right on Add for the next tab, left for the previous.
 - The Day, Week, Month and form toggles draw shorter.

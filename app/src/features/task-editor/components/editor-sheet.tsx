@@ -19,7 +19,12 @@ import { SheetGrab } from "@/components/motion/sheet-drag";
 import { ReferencePicker } from "@/components/references/reference-picker";
 import { ReferenceSheet } from "@/components/references/reference-sheet";
 import { Banner } from "@/components/ui/banner";
-import { EdgeFade, fadedEdges } from "@/components/ui/edge-fade";
+import {
+  EdgeFade,
+  fadedEdges,
+  fadeReach,
+  type FadeBox,
+} from "@/components/ui/edge-fade";
 import { Icon } from "@/components/ui/icon";
 import { IconButton } from "@/components/ui/icon-button";
 import { Menu } from "@/components/ui/menu";
@@ -469,6 +474,9 @@ export function EditorSheet({
   );
 }
 
+/** A chip's padding, and the space between two chips. */
+const chipSpace = { inset: spacing.xs, gap: spacing.s };
+
 /**
  * The chips of the properties with no value, in one row. A row wider
  * than the sheet scrolls, and the edge that hides a chip fades.
@@ -482,7 +490,9 @@ function AddStrip({
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const [frame, setFrame] = React.useState({ view: 0, content: 0, x: 0 });
+  const [places, setPlaces] = React.useState<Record<string, FadeBox>>({});
   const fade = fadedEdges(frame);
+  const boxes = properties.map((property) => places[property.key] ?? null);
   return (
     <View>
       <MotionScrollView
@@ -508,6 +518,16 @@ function AddStrip({
             key={property.key}
             style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
             onPress={() => onPick(property)}
+            onLayout={(event: LayoutChangeEvent) => {
+              const { x, width } = event.nativeEvent.layout;
+              setPlaces((current) => {
+                const place = current[property.key];
+                if (place?.x === x && place.width === width) {
+                  return current;
+                }
+                return { ...current, [property.key]: { x, width } };
+              });
+            }}
             accessibilityRole="button"
             accessibilityLabel={property.names.add}
           >
@@ -516,8 +536,20 @@ function AddStrip({
           </Pressable>
         ))}
       </MotionScrollView>
-      {fade.start ? <EdgeFade side="start" testID="strip-fade-start" /> : null}
-      {fade.end ? <EdgeFade side="end" testID="strip-fade-end" /> : null}
+      {fade.start ? (
+        <EdgeFade
+          side="start"
+          reach={fadeReach("start", frame, boxes, chipSpace)}
+          testID="strip-fade-start"
+        />
+      ) : null}
+      {fade.end ? (
+        <EdgeFade
+          side="end"
+          reach={fadeReach("end", frame, boxes, chipSpace)}
+          testID="strip-fade-end"
+        />
+      ) : null}
     </View>
   );
 }

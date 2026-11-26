@@ -15,10 +15,13 @@ import {
 import type { PageFollow } from "@/components/motion/page-follow";
 import { TabUnderline } from "@/components/motion/tab-underline";
 import type { MarkPlace } from "@/lib/motion/mark-math";
-import { EdgeFade, edgeFadeWidth, fadedEdges } from "./edge-fade";
+import { EdgeFade, fadedEdges, fadeReach } from "./edge-fade";
 import { Pressable } from "./pressable";
 import { radius, spacing, touchTarget, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
+
+/** A tab's padding, and the space between two tabs. */
+const tabSpace = { inset: spacing.m, gap: spacing.xs };
 
 /**
  * A row of tabs that scrolls sideways, with a rule under the selected
@@ -26,8 +29,9 @@ import { useThemedStyles } from "@/theme/theme-provider";
  * view, so the name of the page on screen is never off the edge. The
  * user can still scroll it by hand. Each tab is at least 44 by 44.
  * Where more tabs wait past an edge, the edge fades, so a clipped
- * name reads as "more this way" and not as a bug. The fade paints the
- * surface color, so the strip belongs on a surface. With a page follow
+ * name reads as "more this way" and not as a bug. The fade ends on the
+ * gap between two tabs, so no name shows cut. It paints the surface
+ * color, so the strip belongs on a surface. With a page follow
  * from a pager, the rule tracks the swipe (ADR 0046).
  */
 export function TabStrip({
@@ -60,9 +64,9 @@ export function TabStrip({
     if (selectedX == null) {
       return;
     }
-    // Past the start fade, so the fade never pales the selected name.
+    // The name before the selected tab just clears the edge.
     strip.current?.scrollTo({
-      x: Math.max(0, selectedX - edgeFadeWidth),
+      x: Math.max(0, selectedX - tabSpace.inset - tabSpace.gap),
       animated: !reduced,
     });
   }, [selectedX, reduced]);
@@ -127,8 +131,20 @@ export function TabStrip({
           testID="tab-underline"
         />
       </MotionScrollView>
-      {fade.start ? <EdgeFade side="start" testID="tab-fade-start" /> : null}
-      {fade.end ? <EdgeFade side="end" testID="tab-fade-end" /> : null}
+      {fade.start ? (
+        <EdgeFade
+          side="start"
+          reach={fadeReach("start", frame, boxes, tabSpace)}
+          testID="tab-fade-start"
+        />
+      ) : null}
+      {fade.end ? (
+        <EdgeFade
+          side="end"
+          reach={fadeReach("end", frame, boxes, tabSpace)}
+          testID="tab-fade-end"
+        />
+      ) : null}
     </View>
   );
 }
