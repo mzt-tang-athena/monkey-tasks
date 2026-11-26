@@ -121,6 +121,11 @@ the suite here too, for when CI is down. The merge bar is the local
 receipt plus CI's e2e-web green on the same head
 (ADR `20261126-ci-carries-the-web-suite`).
 
+`scripts/pc-gate.sh <ref>` runs the full gate on the operator's PC in
+about 3 minutes. It copies the receipt back under the same name. The ref
+must be on origin. If the PC does not answer, the local gate runs instead
+(ADR `20261127-pc-runs-the-heavy-gates`).
+
 ## Install it on a phone
 
 The `android` workflow builds a sideloadable APK on a GitHub runner. A
