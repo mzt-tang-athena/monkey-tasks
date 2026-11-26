@@ -1331,7 +1331,7 @@ describe("deeds", () => {
     expect(byName("Water the beds").data?.status).toBe("[[active]]");
   });
 
-  it("ticks a deed done, then reopens it as backlog", async () => {
+  it("ticks a deed done, then reopens it as active", async () => {
     await mountDeeds();
     const deed = byName("Water the beds");
 
@@ -1351,7 +1351,65 @@ describe("deeds", () => {
     await flush();
 
     const reopened = vault.hooks.read(DEED) as string;
-    expect(reopened).toContain('status: "[[backlog]]"');
+    expect(reopened).toContain('status: "[[active]]"');
+    expect(reopened).not.toContain("completed:");
+  });
+
+  it("reopens a someday deed as active, not backlog", async () => {
+    await mount({
+      [DEED]: DEED_TEXT.replace("[[active]]", "[[someday]]"),
+    });
+
+    await act(async () => {
+      await store().toggle(byName("Water the beds"));
+    });
+    await flush();
+    expect(vault.hooks.read(DEED)).toContain('status: "[[done]]"');
+
+    await act(async () => {
+      await store().toggle(byName("Water the beds"));
+    });
+    await flush();
+
+    const reopened = vault.hooks.read(DEED) as string;
+    expect(reopened).toContain('status: "[[active]]"');
+    expect(reopened).not.toContain("someday");
+    expect(reopened).not.toContain("backlog");
+  });
+
+  it("shows the reopened deed as active before the write lands", async () => {
+    await mountDeeds();
+    await act(async () => {
+      await store().toggle(byName("Water the beds"));
+    });
+    await flush();
+    holdWrites = true;
+
+    await act(async () => {
+      void store().toggle(byName("Water the beds"));
+    });
+    await flush();
+
+    expect(byName("Water the beds").data?.status).toBe("[[active]]");
+    expect(byName("Water the beds").data?.completed).toBeUndefined();
+
+    await release();
+  });
+
+  it("reopens a plain task without giving it a status", async () => {
+    await mountDeeds();
+
+    await act(async () => {
+      await store().toggle(byName("Call"));
+    });
+    await flush();
+    await act(async () => {
+      await store().toggle(byName("Call"));
+    });
+    await flush();
+
+    const reopened = vault.hooks.read("Tasks/Call.md") as string;
+    expect(reopened).not.toContain("status:");
     expect(reopened).not.toContain("completed:");
   });
 

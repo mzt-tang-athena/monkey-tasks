@@ -6,6 +6,7 @@ import {
   SuccessorKeptError,
   completeTask,
   rescheduleTask,
+  statusFor,
   type ReadTask,
 } from "./task-actions";
 import { taskFromText } from "./task-notes";
@@ -59,6 +60,30 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("statusFor", () => {
+  function deed(status: string | undefined): ReadTask {
+    const text = note(status == null ? { title: "Bed" } : { title: "Bed", status });
+    const vault = createMemoryVault({ "Tasks/Bed.md": text });
+    return read(vault, "Bed.md");
+  }
+
+  it("marks a deed done on a tick", () => {
+    expect(statusFor(deed('"[[someday]]"'), "done")).toBe("[[done]]");
+  });
+
+  it.each(["[[done]]", "[[someday]]", "[[backlog]]", "[[dropped]]"])(
+    "returns a deed read as %s to active on a reopen",
+    (status) => {
+      expect(statusFor(deed(`"${status}"`), "open")).toBe("[[active]]");
+    },
+  );
+
+  it("writes no status for a plain task", () => {
+    expect(statusFor(deed(undefined), "done")).toBeUndefined();
+    expect(statusFor(deed(undefined), "open")).toBeUndefined();
+  });
 });
 
 describe("completeTask", () => {
