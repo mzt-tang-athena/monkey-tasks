@@ -154,7 +154,7 @@ if [[ -n $reschedule ]]; then
   "$drive" note "Tasks/$later.md" later-after >/dev/null
   tray_clears "$later" $((deadline + 210))
   new_due=$(grep '^due:' "$run/note-later-after.md" | cut -d' ' -f2)
-  [[ $(grep -c '^  - ' "$run/note-later-after.md") -eq 1 && "$(grep '^  - ' "$run/note-later-after.md" | tr -d ' -')" == "$new_due" ]] ||
+  [[ $(grep -c '^  - ' "$run/note-later-after.md") -eq 1 && "$(sed -n 's/^  - //p' "$run/note-later-after.md")" == "$new_due" ]] ||
     fail "$later's reminders is not the one new moment $new_due"
   ahead=$(( $(TZ=Pacific/Auckland date -d "$new_due" +%s) - $(adb shell date +%s | tr -d '\r') ))
   case $reschedule in
