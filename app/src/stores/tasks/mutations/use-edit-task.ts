@@ -1,7 +1,6 @@
 import * as React from "react";
 import { saveTaskEdit } from "@/lib/vault/save-task-edit";
 import type { TaskEdit, TaskItem } from "@/types/task";
-import { clearDropFailure } from "../alert-actions";
 import { settleRow } from "../rows";
 import {
   requireRow,
@@ -63,11 +62,6 @@ export function useEditTask(): (
         edit,
         expected: expected ?? task.text,
       });
-      // A Didn't do press that failed, then a drop in the editor: the
-      // failure it reported is moot, so its record and notice go.
-      if (after.data?.status === "[[dropped]]") {
-        clearDropFailure(task.uri);
-      }
       return after;
     },
     [mutateAsync],

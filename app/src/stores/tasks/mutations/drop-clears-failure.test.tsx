@@ -12,8 +12,10 @@ import type { TaskEdit } from "@/types/task";
 import { tasksKey, type TaskListData } from "../query";
 import { taskFromText } from "../task-notes";
 
-// A drop in the editor, as the status picker sends it. The failure a
-// Didn't do press left on the same task is then moot.
+// A drop in the app, from the editor's status picker or a drag onto
+// the Board's Dropped header. Both write through the shared vault
+// mutation, which clears the failure a Didn't do press left on the
+// same task, because that failure is then moot.
 
 const world = vi.hoisted(() => ({ cleared: [] as string[] }));
 
@@ -35,15 +37,13 @@ vi.mock("../reminder-sync", () => ({
   reconcileTask: async () => undefined,
 }));
 
-const vault = createMemoryVault({
-  "Tasks/Call Mum.md":
-    '---\nkind: "[[tasks]]"\ncreated: 2026-11-20\ntitle: Call Mum\n---\nBody.\n',
-});
+const held = vi.hoisted(() => ({ vault: null as unknown }));
 vi.mock("@/lib/vault/vault-provider", () => ({
-  useVault: () => ({ adapter: vault, root: MEMORY_ROOT }),
+  useVault: () => ({ adapter: held.vault, root: "memory://vault" }),
 }));
 
 import { useEditTask } from "./use-edit-task";
+import { usePatchTask } from "./use-patch-task";
 
 const uri = `${MEMORY_ROOT}/Tasks/Call Mum.md`;
 const draft: TaskEdit = {
@@ -57,6 +57,11 @@ const draft: TaskEdit = {
 };
 
 function setup() {
+  const vault = createMemoryVault({
+    "Tasks/Call Mum.md":
+      '---\nkind: "[[tasks]]"\ncreated: 2026-11-20\ntitle: Call Mum\n---\nBody.\n',
+  });
+  held.vault = vault;
   const client = new QueryClient();
   const row = taskFromText(
     { id: uri, uri, fileName: "Call Mum.md", name: "Call Mum" },
@@ -71,7 +76,11 @@ function setup() {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
-  return { row, ...renderHook(() => useEditTask(), { wrapper }) };
+  return {
+    row,
+    edit: renderHook(() => useEditTask(), { wrapper }).result,
+    patch: renderHook(() => usePatchTask(), { wrapper }).result,
+  };
 }
 
 beforeEach(() => {
@@ -89,11 +98,11 @@ beforeEach(() => {
   }
 });
 
-describe("useEditTask", () => {
+describe("a drop in the app", () => {
   it("clears a failed Didn't do press when the editor drops the task", async () => {
-    const { row, result } = setup();
+    const { row, edit } = setup();
 
-    await result.current(row, { ...draft, status: "[[dropped]]" });
+    await edit.current(row, { ...draft, status: "[[dropped]]" });
 
     expect(loadActionFailures().map((entry) => entry.id)).toEqual([
       `${uri}|done`,
@@ -101,10 +110,22 @@ describe("useEditTask", () => {
     expect(world.cleared).toEqual([`${uri}|drop`]);
   });
 
-  it("keeps the record when the edit is not a drop", async () => {
-    const { row, result } = setup();
+  it("clears it when a Board drag patches the status to dropped", async () => {
+    const { row, patch } = setup();
 
-    await result.current(row, { ...draft, status: "[[active]]" });
+    await patch.current(row, { status: "[[dropped]]" });
+
+    expect(loadActionFailures().map((entry) => entry.id)).toEqual([
+      `${uri}|done`,
+    ]);
+    expect(world.cleared).toEqual([`${uri}|drop`]);
+  });
+
+  it("keeps the record when the write leaves the task in another status", async () => {
+    const { row, edit, patch } = setup();
+
+    await edit.current(row, { ...draft, status: "[[active]]" });
+    await patch.current(row, { status: "[[someday]]" });
 
     expect(loadActionFailures()).toHaveLength(2);
     expect(world.cleared).toEqual([]);
