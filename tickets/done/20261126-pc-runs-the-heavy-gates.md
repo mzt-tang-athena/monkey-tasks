@@ -3,7 +3,7 @@ title: A repo script runs the gate on the PC
 created: 2026-11-26
 priority: normal
 assignee: omp
-pr:
+pr: 249
 depends: [20261126-host-runs-one-heavy-job]
 ---
 
@@ -33,11 +33,17 @@ Make it a lane's real option with a repo script:
 
 ## Acceptance
 
-- [ ] `pc-gate.sh <pushed ref>` writes a passing receipt on athena.
-- [ ] `pr-land` accepts a PC receipt for a PR head.
-- [ ] A refused ssh falls back to the local gate, with a line.
-- [ ] The ADR records the PC runner and its fallback.
+- [x] `pc-gate.sh <pushed ref>` writes a passing receipt on athena.
+- [x] `pr-land` accepts a PC receipt for a PR head.
+- [x] A refused ssh falls back to the local gate, with a line.
+- [x] The ADR records the PC runner and its fallback.
 
 ## Outcome
 
-(filled in before moving to done/)
+`scripts/pc-gate.sh <ref>` runs the full gate on the PC in about 3
+minutes. It copies the receipt back under the same name, so `pr-land`
+reads it. The PC posts the status. A host that does not answer runs the
+local gate, with a line. ADR `20261127-pc-runs-the-heavy-gates` records
+the PC runner and its fallback.
+
+Next: lanes call `scripts/pc-gate.sh` for their final gate.
