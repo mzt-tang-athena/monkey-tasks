@@ -4,15 +4,17 @@
 # the app, waits for the reminders, then presses a button on each from
 # the notification shade, with the app killed before every press:
 #
-#   <tag> Plain   Done writes completed
+#   <tag> Plain   Done writes completed and clears the reminder
 #   <tag> Daily   Done writes completed and makes the next note
-#   <tag> Later   the Reschedule button moves the due and the reminder
+#   <tag> Later   the named button moves the due and the reminder
 #   <tag> Gone    the note is deleted first, so Done fails and says so
 #
 # Each task's name carries the clock minute of the run, so a second run
-# never confuses its reminders with an old one's. Needs an instance from
-# android-launch.sh. RESCHEDULE_BUTTON names the Reschedule button to
-# press. With none set, that task is not written.
+# never confuses its reminders with an old one's. Every reminder rings
+# on the normal channel with Done, Later and Tomorrow (ADRs
+# 20261125-reminder-actions and 20261111-reminder-weight). Needs an
+# instance from android-launch.sh. RESCHEDULE_BUTTON names the button to
+# press, Later or Tomorrow. With none set, that task is not written.
 #
 #   RESCHEDULE_BUTTON=Later journeys/android-reminder-actions.sh
 #
@@ -37,6 +39,13 @@ device_date() { adb shell date -d "@$1" +%Y-%m-%dT%H:%M | tr -d '\r'; }
 note_text() { adb shell "cat '$tasks/$1.md'" | tr -d '\r'; }
 note_exists() { adb shell "test -f '$tasks/$1.md' && echo yes || echo no" | tr -d '\r'; }
 in_tray() { adb shell dumpsys notification --noredact | grep -c "${1// /%2520}.md:" || true; }
+tray_clears() {
+  local title=$1 limit=$2
+  until [[ $(in_tray "$title") -eq 0 ]]; do
+    ((SECONDS < limit)) || fail "$title stayed in the tray"
+    sleep 2
+  done
+}
 fail() { echo "FAIL: $*" >&2; echo "evidence: $run" >&2; exit 1; }
 
 # am kill takes a cached process only, so the app must be off screen
@@ -108,6 +117,8 @@ grep -q 'actions=[2-9]' "$run/tray-before.txt" || fail "no reminder carries butt
 for label in Done Later Tomorrow; do
   grep -q "\] \"$label\"" "$run/tray-before.txt" || fail "no reminder shows $label"
 done
+grep -q 'channel=reminder-normal' "$run/tray-before.txt" || fail "no reminder rang on reminder-normal"
+grep -q 'channel=reminder-alarm' "$run/tray-before.txt" && fail "a plain reminder rang as an alarm"
 
 press_button() {
   local title=$1 button=$2 name=$3
@@ -121,7 +132,7 @@ until [[ "$(note_text "$plain")" == *completed:* ]]; do
   sleep 2
 done
 "$drive" note "Tasks/$plain.md" plain-after >/dev/null
-[[ $(in_tray "$plain") -eq 0 ]] || fail "$plain stayed in the tray"
+tray_clears "$plain" $((deadline + 90))
 
 press_button "$daily" Done daily
 until [[ "$(note_exists "$next_note")" == yes ]]; do
@@ -132,7 +143,7 @@ done
 "$drive" note "Tasks/$next_note.md" daily-next >/dev/null
 grep -q '^completed:' "$run/note-daily-after.md" || fail "$daily did not gain completed:"
 grep -q "^due: $next_day" "$run/note-daily-next.md" || fail "the next note is not due tomorrow"
-[[ $(in_tray "$daily") -eq 0 ]] || fail "$daily stayed in the tray"
+tray_clears "$daily" $((deadline + 150))
 
 if [[ -n $reschedule ]]; then
   press_button "$later" "$reschedule" later
@@ -141,7 +152,15 @@ if [[ -n $reschedule ]]; then
     sleep 2
   done
   "$drive" note "Tasks/$later.md" later-after >/dev/null
-  [[ $(in_tray "$later") -eq 0 ]] || fail "$later stayed in the tray"
+  tray_clears "$later" $((deadline + 210))
+  new_due=$(grep '^due:' "$run/note-later-after.md" | cut -d' ' -f2)
+  [[ $(grep -c '^  - ' "$run/note-later-after.md") -eq 1 && "$(grep '^  - ' "$run/note-later-after.md" | tr -d ' -')" == "$new_due" ]] ||
+    fail "$later's reminders is not the one new moment $new_due"
+  ahead=$(( $(TZ=Pacific/Auckland date -d "$new_due" +%s) - $(adb shell date +%s | tr -d '\r') ))
+  case $reschedule in
+    Later) ((ahead > 3000 && ahead <= 3900)) && [[ ${new_due: -1} =~ [05] ]] || fail "Later set $new_due, $ahead s ahead, not an hour on in five minutes" ;;
+    Tomorrow) [[ $new_due == "$next_day"T09:00 ]] || fail "Tomorrow set $new_due, not $next_day 09:00" ;;
+  esac
 fi
 
 press_button "$gone" Done gone
@@ -166,14 +185,14 @@ until [[ "$(note_text "$gone")" == *completed:* ]]; do
   sleep 2
 done
 "$drive" note "Tasks/$gone.md" gone-after-retry >/dev/null
-[[ $(in_tray "$gone") -eq 0 ]] || fail "$gone stayed in the tray after the retry"
+tray_clears "$gone" $((deadline + 360))
 
 # The failure banner and the repair banner can push every row below the
 # fold, and the restart waits for a visible one. The app is up either
 # way, so the journey scrolls to a row it knows.
 adb shell cmd statusbar collapse
 "$drive" restart >/dev/null || true
-"$drive" scroll-to "task-row:$later" down >/dev/null || true
+[[ -n $reschedule ]] && { "$drive" scroll-to "task-row:$later" down >/dev/null || true; }
 "$drive" shot app-failure-list >/dev/null
 "$drive" log >/dev/null
 echo "pass: Done, Done on a repeating task${reschedule:+, $reschedule}, and a failed press, each with the app killed"
