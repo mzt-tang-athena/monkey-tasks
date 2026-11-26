@@ -64,18 +64,18 @@ export function spawnInput(task: TaskItem, due: string): SpawnInput {
 /**
  * The status a toggle writes beside `completed`. A deed is a task with
  * a status, and the contract keeps the two in step: a tick makes the
- * deed done, and a reopen puts it back in the queue, because the note
- * does not record which status it held before. A task with no status
- * writes none.
+ * deed done, and a reopen returns it to Active, because the note does
+ * not record which status it held before. A task with no status writes
+ * none.
  */
 export function statusFor(
   task: TaskItem,
   to: "done" | "open",
-): "[[done]]" | "[[backlog]]" | undefined {
+): "[[done]]" | "[[active]]" | undefined {
   if (task.data?.status == null) {
     return undefined;
   }
-  return to === "done" ? "[[done]]" : "[[backlog]]";
+  return to === "done" ? "[[done]]" : "[[active]]";
 }
 
 /** The next date of a recurring task, or null for a plain one. */

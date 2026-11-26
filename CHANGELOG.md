@@ -41,6 +41,7 @@ fails a bullet that wraps or runs past 64 characters.
 - Done writes the completion date. Leaving Done clears it.
 - A deed blocked by an open note shows a red rail.
 - Capture on Board makes a backlog deed.
+- Un-tick a done deed and it returns to Active.
 
 ### Speed
 

@@ -115,8 +115,9 @@ HEAD in `~/.local/state/local-gate/`. It picks a mode from the changed
 paths, and `fast` covers prose only.
 
 A full gate runs in one capped unit on the heavy lock, so it takes turns
-with a lane's build. It leaves the web suite to CI, which runs e2e-web
-on every PR and costs nothing here. `scripts/gate.sh full --web` runs
+with a lane's build. `scripts/gate-prelude.sh` sets that up, so the gate
+stays the template's copy. It leaves the web suite to CI, which runs
+e2e-web on every PR and costs nothing here. `scripts/gate.sh full --web` runs
 the suite here too, for when CI is down. The merge bar is the local
 receipt plus CI's e2e-web green on the same head
 (ADR `20261126-ci-carries-the-web-suite`).

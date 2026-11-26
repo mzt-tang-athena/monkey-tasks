@@ -17,9 +17,13 @@ usage: scripts/gate.sh [fast|full] [--web] [--sha <sha>] [--no-status]
 With no mode, the changed paths against origin/main pick one. Prose only
 means fast. Anything else means full.
 
-A full gate runs in the repo's heavy unit, so one heavy job runs at a
-time. It leaves the web suite to CI when this repo's workflow runs
-e2e-web and the repo is public, because those minutes cost nothing.
+A repo with a web-suite make target gets the suite in a full gate. The
+gate leaves it to CI when the workflow runs an e2e-web job and the repo is
+public, because those minutes cost nothing. --web runs it here anyway.
+
+A repo may add scripts/gate-prelude.sh. A full gate sources it with the
+gate's arguments before any step runs. The prelude may run the gate again
+somewhere else, such as a capped unit or a lock, and then exit.
 EOF
 }
 
@@ -148,20 +152,19 @@ else
         if has_target lint; then steps+=("make lint"); fi
         if has_target check; then steps+=("make check"); fi
     fi
-    if $web_requested || ! ci_carries_web; then web=true; fi
-    if $web && has_target web-suite; then
-        steps+=("make web-suite")
-    elif ! $web; then
-        printf 'local-gate: CI runs the web suite for %s; pass --web to run it here\n' "$slug"
+    if has_target web-suite; then
+        if $web_requested || ! ci_carries_web; then
+            web=true
+            steps+=("make web-suite")
+        else
+            printf 'local-gate: CI runs the web suite for %s; pass --web to run it here\n' "$slug"
+        fi
     fi
 fi
 
-# A full gate is one heavy job. It runs in the repo's capped unit, so a
-# lane's build and a lane's gate take turns instead of sharing the box.
-# A repo without the prelude, and a caller that holds the lock, run here.
-heavy_prelude="$root/.claude/skills/verify-monkey-tasks/scripts/heavy.sh"
-if [ "$mode" = full ] && [ -f "$heavy_prelude" ]; then
-    . "$heavy_prelude" gate "${gate_args[@]+"${gate_args[@]}"}"
+prelude="$root/scripts/gate-prelude.sh"
+if [ "$mode" = full ] && [ -f "$prelude" ]; then
+    . "$prelude" "${gate_args[@]+"${gate_args[@]}"}"
 fi
 
 started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
