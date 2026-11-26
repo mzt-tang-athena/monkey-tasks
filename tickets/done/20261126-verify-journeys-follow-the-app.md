@@ -3,7 +3,7 @@ title: The verify journeys follow the app
 created: 2026-11-26
 priority: normal
 assignee: claude-lane-verify-journeys
-pr:
+pr: 257
 depends: [20261125-verify-launch-wants-a-shut-shade]
 ---
 
@@ -28,10 +28,24 @@ journeys inherits a failure it did not cause.
 
 ## Acceptance
 
-- [ ] Each journey passes twice, or the PR retires it with a reason.
-- [ ] A lane naming one of these journeys no longer inherits a
+- [x] Each journey passes twice, or the PR retires it with a reason.
+- [x] A lane naming one of these journeys no longer inherits a
       failure from it.
 
 ## Outcome
 
-(filled in before moving to done/)
+No journey retired. Each one missed an app change.
+
+- `android-list-swipe.sh`: the app opens on Today. The journey opens
+  Main and swipes from the repair banner. It ticks `Call Mum`, since
+  `Plan weekend hike` sits on Focus. It opens the folded Completed
+  group before it reads the ticked row.
+- `android-references.sh`: the task has no date and lives on Main.
+  The journey taps Main first.
+- `android-reminder-actions.sh`: it passed on this head, so the
+  failure was a race. We inferred that and did not reproduce it.
+  Done writes the note, then clears the tray. The journey read the
+  tray at once, so it now waits. It also checks the normal channel,
+  no alarm, and one reminder at the new due after Later or Tomorrow.
+
+Each journey passed twice on the emulator.
