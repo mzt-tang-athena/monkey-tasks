@@ -170,9 +170,10 @@ means you hold the lock, so a job runs in place and nothing nests.
 The emulator does not hold the lock after its unit ends. It stops
 itself instead. `android-launch.sh` starts `android-idle-watch.sh`,
 which stops it after `ANDROID_VERIFY_IDLE` seconds (300) with no use.
-Every android script stamps use when it sources `android-env.sh`, so a
-journey keeps it alive. A leftover emulator cost 2911 MB for 90 minutes
-on 2026-11-26.
+Every android script stamps use when it sources `android-env.sh`. A
+script that is still running keeps the emulator up too, so a journey
+never loses it. A leftover emulator cost 2911 MB for 90 minutes on
+2026-11-26.
 
 Logs land in `$MONKEY_LOG_DIR`, default `/tmp/monkey-tasks`.
 
