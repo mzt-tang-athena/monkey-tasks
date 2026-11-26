@@ -41,6 +41,8 @@ export const listScheduled: typeof Native.listScheduled = async () => [];
 
 export const exactAlarmState: typeof Native.exactAlarmState = async () => false;
 
+export const askExactAlarms: typeof Native.askExactAlarms = async () => undefined;
+
 export const takeAlertResponse: typeof Native.takeAlertResponse = () => null;
 
 export const addAlertResponseListener: typeof Native.addAlertResponseListener =

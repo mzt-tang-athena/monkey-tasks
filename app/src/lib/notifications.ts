@@ -249,6 +249,14 @@ export async function exactAlarmState(): Promise<boolean> {
 }
 
 /**
+ * Ask the phone to allow exact alarms. Without it, Android may ring an
+ * alarm minutes late. The call opens the system screen that grants it.
+ */
+export async function askExactAlarms(): Promise<void> {
+  await Notifications.requestExactAlarmPermissionsAsync();
+}
+
+/**
  * The notification's data. A response from the background task carries
  * it as JSON text in `dataString`, because only the listener path turns
  * that text into an object.

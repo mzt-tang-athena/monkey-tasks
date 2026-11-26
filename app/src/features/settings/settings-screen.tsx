@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollEdge } from "@/components/motion/scroll-edge";
 import { MotionScrollView } from "@/components/motion/scroll-view";
 import { useVault } from "@/lib/vault/vault-provider";
+import { askExactAlarms, exactAlarmState } from "@/lib/notifications";
 import { useSetting } from "@/lib/settings-store";
 import { appVersion, buildChannel } from "@/lib/build-info";
 import type { SortMode, TaskForm, WeekLayout, WeekStart } from "@/lib/settings";
@@ -77,14 +78,22 @@ export default function SettingsScreen() {
   const [dndAccess, setDndAccess] = React.useState(() =>
     AlarmAccess.hasDndAccess(),
   );
+  const [exactAlarms, setExactAlarms] = React.useState(true);
+  React.useEffect(() => {
+    void exactAlarmState().then(setExactAlarms, () => undefined);
+  }, []);
+  const readAccess = React.useCallback(() => {
+    setDndAccess(AlarmAccess.hasDndAccess());
+    void exactAlarmState().then(setExactAlarms, () => undefined);
+  }, []);
   React.useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        setDndAccess(AlarmAccess.hasDndAccess());
+        readAccess();
       }
     });
     return () => subscription.remove();
-  }, []);
+  }, [readAccess]);
 
   const version = appVersion();
   const channel = buildChannel();
@@ -230,6 +239,26 @@ export default function SettingsScreen() {
                   {dndAccess
                     ? "Granted. An alarm sounds past Do Not Disturb."
                     : "An alarm stays below Do Not Disturb until you grant this."}
+                </Text>
+              </View>
+              <Divider />
+              <Pressable
+                role="button"
+                accessibilityLabel="Alarms and reminders"
+                onPress={() => void askExactAlarms()}
+                style={({ pressed }) => [
+                  styles.action,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.actionLabel}>Alarms and reminders</Text>
+                <Icon name="chevron-right" color="inkFaint" />
+              </Pressable>
+              <View style={styles.field}>
+                <Text style={styles.fieldHint}>
+                  {exactAlarms
+                    ? "Granted. An alarm rings at its minute."
+                    : "Until you grant this, the phone may ring an alarm late."}
                 </Text>
               </View>
             </Section>
