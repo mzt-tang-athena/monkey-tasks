@@ -17,8 +17,9 @@ export type Segment<Key extends string> = {
 /**
  * A row of segments with one selected, such as Day, Week and Month.
  * A segment shows a label or an icon. The selected segment fills, and
- * its corners square off where it meets a neighbour. Each segment is
- * at least 44 by 44.
+ * its corners square off where it meets a neighbour. Each segment's
+ * press target is at least 44 by 44. The pill it draws is shorter, and
+ * the target's spare height overlaps what sits above and below.
  */
 export function SegmentedControl<Key extends string>({
   segments,
@@ -44,24 +45,29 @@ export function SegmentedControl<Key extends string>({
         return (
           <Pressable
             key={segment.key}
-            style={({ pressed }) => [
-              styles.segment,
-              stretch && styles.stretch,
-              active && styles.active,
-              pressed && !active && styles.pressed,
-              active && corners(index, last, styles),
-            ]}
+            style={[styles.segment, stretch && styles.stretch]}
             onPress={() => onSelect(segment.key)}
             role="tab"
             aria-selected={active}
             accessibilityLabel={segment.accessibilityLabel ?? segment.label}
           >
-            {segment.icon != null ? (
-              <Icon name={segment.icon} color={active ? "onAccent" : "inkMuted"} />
-            ) : (
-              <Text style={[styles.text, active && styles.textActive]}>
-                {segment.label}
-              </Text>
+            {({ pressed }) => (
+              <View
+                style={[
+                  styles.pill,
+                  active && styles.active,
+                  pressed && !active && styles.pressed,
+                  active && corners(index, last, styles),
+                ]}
+              >
+                {segment.icon != null ? (
+                  <Icon name={segment.icon} color={active ? "onAccent" : "inkMuted"} />
+                ) : (
+                  <Text style={[styles.text, active && styles.textActive]}>
+                    {segment.label}
+                  </Text>
+                )}
+              </View>
             )}
           </Pressable>
         );
@@ -86,6 +92,11 @@ function corners(
   return index === last ? styles.last : styles.middle;
 }
 
+/** The pill's height. The press target keeps `touchTarget`. */
+const pillHeight = 36;
+const inset = 2;
+const spare = (touchTarget - pillHeight) / 2;
+
 const makeStyles = (colors: Palette) => ({
   styles: StyleSheet.create({
     control: {
@@ -94,11 +105,17 @@ const makeStyles = (colors: Palette) => ({
       borderRadius: radius,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.hairline,
-      padding: 2,
+      padding: inset,
+      alignItems: "center",
+      height: pillHeight + 2 * inset + 2 * StyleSheet.hairlineWidth,
     },
     segment: {
       minHeight: touchTarget,
       minWidth: touchTarget,
+      paddingVertical: spare,
+    },
+    pill: {
+      flexGrow: 1,
       alignItems: "center",
       justifyContent: "center",
       borderRadius: radius,

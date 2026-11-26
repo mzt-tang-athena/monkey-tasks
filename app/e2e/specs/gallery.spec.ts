@@ -152,7 +152,9 @@ async function checkPaint(
     `${where} disabled fill`,
   ).toHaveCSS("background-color", rgb(p.pressed));
   await expect(
-    cell("segmented-control:selected").getByRole("tab", { name: "Week" }),
+    cell("segmented-control:selected")
+      .getByRole("tab", { name: "Week" })
+      .locator(":scope > *"),
     `${where} selected segment`,
   ).toHaveCSS("background-color", rgb(p.accent));
   await expect(
