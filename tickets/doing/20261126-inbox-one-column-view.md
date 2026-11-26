@@ -2,7 +2,7 @@
 title: The Inbox shows one column or two
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: lane-inbox-view-search
 pr:
 depends: []
 ---

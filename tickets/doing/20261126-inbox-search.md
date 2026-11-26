@@ -2,7 +2,7 @@
 title: Search the Inbox from its header
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: lane-inbox-view-search
 pr:
 depends: []
 ---
