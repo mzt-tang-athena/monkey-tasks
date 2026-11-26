@@ -3,7 +3,7 @@ title: A reminder offers "didn't do"
 created: 2026-11-25
 priority: low
 assignee: claude-lane-didnt-do
-pr:
+pr: 261
 depends: [20261125-reminder-actions-done-and-reschedule]
 ---
 
@@ -20,9 +20,15 @@ occurrence of a repeating task could be its own record.
 
 ## Acceptance
 
-- [ ] The operator picks what "didn't do" writes.
-- [ ] The button writes it from the notification with the app killed.
+- [x] The operator picks what "didn't do" writes.
+- [x] The button writes it from the notification with the app killed.
 
 ## Outcome
 
-(filled in before moving to done/)
+The operator picked on 2026-11-26. A one-off task takes `status:
+"[[dropped]]"` and no `completed`. A repeat spawns its next note and
+drops this one. Android shows three buttons at most, so a reminder
+now carries Done, Snooze and Didn't do. Snooze opens a sheet with
+Later, Tomorrow and Pick a day. An all-day task offers Done and
+Didn't do. ADR `20261125-reminder-actions` has the amendment. PR
+#261 proved each button on the emulator with the app killed.
