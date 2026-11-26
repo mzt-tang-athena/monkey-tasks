@@ -3,7 +3,7 @@ title: The host runs one heavy job at a time
 created: 2026-11-26
 priority: high
 assignee: heavy-host lane
-pr: 000
+pr: 245
 depends: []
 ---
 
