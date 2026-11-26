@@ -329,6 +329,15 @@ function commonScenarios(input: "mouse" | "touch") {
     await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
     const width = (await pagerBox(page, "list-pager")).width;
+    // The rule follows the pager on its own frame, so the rows can show
+    // a frame or more before it stands under Main.
+    await expect
+      .poll(async () => {
+        const stands = await underline(page);
+        const under = await tabRule(page, tabs.main);
+        return Math.abs(stands.x - under.left);
+      })
+      .toBeLessThanOrEqual(1);
     const rest = await underline(page);
     const main = await tabRule(page, tabs.main);
     const next = await tabRule(page, tabs.next);
