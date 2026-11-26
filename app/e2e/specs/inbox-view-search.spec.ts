@@ -185,3 +185,15 @@ test("a search holds in one column and a card still opens", async ({
     /^Coffee with Sam\. Bring the notebook\./,
   );
 });
+
+test("a reload while searching shows every card again", async ({ page }) => {
+  await openInbox(page);
+  await search(page).fill("atlas");
+  await expect(cards(page)).toHaveCount(1);
+
+  await page.reload();
+  await page.getByRole("tab", { name: "Inbox Notes", exact: true }).click();
+  await expect(page.getByTestId("note-card:202610260830.md")).toBeVisible();
+  await expect(search(page)).toHaveValue("");
+  await expect(cards(page)).toHaveCount(SAMPLE_NOTES);
+});
