@@ -345,8 +345,10 @@ fall due in a few minutes, kills the app, then presses a button on each.
 installed APK. Each run force-stops the app, records a Perfetto trace
 and runs `am start -W`. It waits for the first rows, then stops the
 trace. `scripts/coldstart.mjs` reads each trace and prints one table.
-The table holds the platform's first frame, the app's own stages, the
-first rows and the main thread going idle. It adds the CPU time of the
+The table holds the platform's first frame and the app's own stages.
+It holds the rows the first frame draws, and the main thread going
+idle. `rows visible` comes from the cached frame when there is one.
+`rows ready` comes from the read. It adds the CPU time of the
 main and JS threads between the stages. It also lists the CPU by
 process during the vault read. Run it through `heavy-emulator.sh`:
 

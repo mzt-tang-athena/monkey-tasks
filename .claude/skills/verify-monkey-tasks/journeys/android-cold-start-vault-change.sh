@@ -47,6 +47,9 @@ adb push "$work/added.md" "$notes/$added.md" >/dev/null
 adb shell "rm '$notes/$removed.md'"
 
 "$drive" restart >/dev/null
+# A cached first frame draws last session's rows first. The fresh read
+# is what this journey proves, so it waits for it.
+"$drive" gone "~Syncing your vault" 120 >/dev/null
 "$drive" tap "Main" >/dev/null
 "$drive" scroll-to "task-row:$added" >/dev/null
 "$drive" scroll-to "task-row:$edited changed" up >/dev/null
