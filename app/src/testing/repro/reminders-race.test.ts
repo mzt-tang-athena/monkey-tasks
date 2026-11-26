@@ -82,22 +82,21 @@ describe("alarm sync races (ticket 0052)", () => {
   it("schedules each reminder once when two rebuilds overlap", async () => {
     const tasks = ["A", "B", "C", "D"].map((name) => task(name));
     await Promise.all([syncReminders(tasks), syncReminders(tasks)]);
-    // Four tasks, a harsh alert's four rings each, scheduled once.
-    expect(alarms.size).toBe(16);
-    expect(schedules).toBe(16);
+    expect(alarms.size).toBe(4);
+    expect(schedules).toBe(4);
   });
 
   it("schedules a reopened task once when a rebuild overlaps", async () => {
     const before = [task("A"), task("B"), task("C"), task("D", false)];
     await syncReminders(before);
-    expect(alarms.size).toBe(12);
+    expect(alarms.size).toBe(3);
     const reopened = task("D");
     const after = [...before.slice(0, 3), reopened];
     await Promise.all([
       syncReminders(after),
       syncTaskReminders(task("D", false), reopened),
     ]);
-    expect([...alarms.values()].filter((name) => name === "D")).toHaveLength(4);
-    expect(schedules).toBe(16);
+    expect([...alarms.values()].filter((name) => name === "D")).toHaveLength(1);
+    expect(schedules).toBe(4);
   });
 });

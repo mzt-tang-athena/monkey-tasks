@@ -300,7 +300,7 @@ describe("ListsScreen", () => {
     const warned: TaskItem = {
       ...task("Descale the kettle"),
       warnings: [
-        'alert weight "loud" is not harsh or quiet, so it rings harsh',
+        'alert weight "loud" is not harsh or quiet, so it is a normal reminder',
       ],
     };
     spy.tasks = [warned, task("Banana")];
@@ -309,7 +309,7 @@ describe("ListsScreen", () => {
     expect(screen.getByTestId("row:Descale the kettle")).toBeTruthy();
     expect(
       screen.getByText(
-        '• alert weight "loud" is not harsh or quiet, so it rings harsh',
+        '• alert weight "loud" is not harsh or quiet, so it is a normal reminder',
       ),
     ).toBeTruthy();
   });

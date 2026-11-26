@@ -13,7 +13,6 @@ type Stored = {
   data: {
     uri: string;
     base: number;
-    step: number;
     weight: "harsh" | "quiet";
     buttons: "full" | "done";
   };
@@ -38,7 +37,6 @@ vi.mock("@/lib/notifications", () => ({
     id: string;
     uri: string;
     base: number;
-    step: number;
     weight: "harsh" | "quiet";
     when: number;
     buttons: "full" | "done";
@@ -58,7 +56,6 @@ vi.mock("@/lib/notifications", () => ({
       data: {
         uri: ring.uri,
         base: ring.base,
-        step: ring.step,
         weight: ring.weight,
         buttons: ring.buttons,
       },
@@ -130,7 +127,7 @@ function task(
     data: {
       kind: "[[tasks]]",
       created: "2026-10-20",
-      "alert weight": options.weight ?? "harsh",
+      "alert weight": options.weight ?? "quiet",
       reminders,
       ...(options.due != null ? { due: options.due } : {}),
       ...(options.completed != null ? { completed: options.completed } : {}),
@@ -138,14 +135,14 @@ function task(
   };
 }
 
-function id(uri: string, base: number, step: number): string {
-  return alertRingId(uri, base, step);
+function id(uri: string, base: number): string {
+  return alertRingId(uri, base);
 }
 
-function stepsOf(uri: string, base: number): number[] {
+function basesOf(uri: string): number[] {
   return [...world.os.values()]
-    .filter((entry) => entry.data.uri === uri && entry.data.base === base)
-    .map((entry) => entry.data.step)
+    .filter((entry) => entry.data.uri === uri)
+    .map((entry) => entry.data.base)
     .sort((a, b) => a - b);
 }
 
@@ -176,22 +173,15 @@ afterEach(() => {
 });
 
 describe("ring plan", () => {
-  it("makes one alarm minute when a due and a reminder share it", async () => {
+  it("makes one ring when a due and a reminder share a minute", async () => {
     const base = NOW + 10 * MINUTE;
     const note = task("Pay rent", [stamp(base)], { due: stamp(base) });
 
     await syncReminders([note]);
 
     const entries = [...world.os.values()];
-    expect(new Set(entries.map((entry) => entry.data.base))).toEqual(
-      new Set([base]),
-    );
-    expect(entries.map((entry) => entry.body)).toEqual([
-      "Due",
-      "Due",
-      "Due",
-      "Due",
-    ]);
+    expect(entries.map((entry) => entry.data.base)).toEqual([base]);
+    expect(entries.map((entry) => entry.body)).toEqual(["Due"]);
   });
 
   it("gives an all-day task Done alone, and its reminder still rings", async () => {
@@ -201,8 +191,8 @@ describe("ring plan", () => {
     await syncReminders([note]);
 
     const entries = [...world.os.values()];
-    expect(entries).toHaveLength(4);
-    expect(entries.every((entry) => entry.data.buttons === "done")).toBe(true);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].data.buttons).toBe("done");
   });
 
   it("gives a timed task Done and Reschedule", async () => {
@@ -227,37 +217,43 @@ describe("ring plan", () => {
 
     await syncReminders([note]);
 
-    expect(stepsOf(note.uri, base)).toEqual([0, 1, 5, 15]);
-    expect(world.cancelled).toHaveLength(4);
-    expect([...world.os.values()].every((entry) => entry.data.buttons === "full")).toBe(
-      true,
-    );
+    expect(basesOf(note.uri)).toEqual([base]);
+    expect(world.cancelled).toEqual([id(note.uri, base)]);
+    expect(
+      [...world.os.values()].every((entry) => entry.data.buttons === "full"),
+    ).toBe(true);
   });
 
-  it("makes four harsh rings at 0, 1, 5 and 15 minutes", async () => {
+  it("makes one ring for a normal reminder, and never a repeat", async () => {
     const base = NOW + 10 * MINUTE;
     const note = task("Call Mum", [stamp(base)]);
 
     await syncReminders([note]);
 
-    expect(stepsOf(note.uri, base)).toEqual([0, 1, 5, 15]);
-    expect(
-      [...world.os.values()]
-        .map((entry) => entry.when - base)
-        .sort((a, b) => a - b),
-    ).toEqual([0, 1, 5, 15].map((step) => step * MINUTE));
-    expect(new Set([...world.os.keys()])).toEqual(
-      new Set([0, 1, 5, 15].map((step) => id(note.uri, base, step))),
-    );
+    const entries = [...world.os.values()];
+    expect(entries).toHaveLength(1);
+    expect(entries[0].when).toBe(base);
+    expect(entries[0].weight).toBe("quiet");
   });
 
-  it("makes one quiet ring", async () => {
+  it("makes one ring for an alarm, and never a repeat", async () => {
     const base = NOW + 10 * MINUTE;
-    const note = task("Stretch", [stamp(base)], { weight: "quiet" });
+    const note = task("Take the pill", [stamp(base)], { weight: "harsh" });
 
     await syncReminders([note]);
 
-    expect(world.os.size).toBe(1);
+    const entries = [...world.os.values()];
+    expect(entries).toHaveLength(1);
+    expect(entries[0].when).toBe(base);
+    expect(entries[0].weight).toBe("harsh");
+  });
+
+  it("reads a note with no weight as a normal reminder", async () => {
+    const note = task("Call Mum", [stamp(NOW + 10 * MINUTE)]);
+    delete (note.data as Record<string, unknown>)["alert weight"];
+
+    await syncReminders([note]);
+
     expect([...world.os.values()][0].weight).toBe("quiet");
   });
 
@@ -289,138 +285,109 @@ describe("ring plan", () => {
     ]);
 
     const entries = [...world.os.values()];
-    const whens = entries.map((entry) => entry.when);
-    expect(whens).toEqual([...whens].sort((a, b) => a - b));
-    expect(whens[0]).toBe(due);
-    expect(
-      entries.filter((entry) => entry.data.base === due).map((entry) => entry.body),
-    ).toEqual(["Due", "Due", "Due", "Due"]);
-    expect(
-      entries
-        .filter((entry) => entry.data.base === later)
-        .map((entry) => entry.body),
-    ).toEqual(["Task reminder", "Task reminder", "Task reminder", "Task reminder"]);
+    expect(entries.map((entry) => entry.when)).toEqual([due, later]);
+    expect(entries.map((entry) => entry.body)).toEqual([
+      "Due",
+      "Task reminder",
+    ]);
   });
 
   it("rings a reminder on a date-only due", async () => {
     await syncReminders([
       task("Pay rent", [stamp(NOW + 10 * MINUTE)], { due: "2999-01-01" }),
     ]);
-    expect(world.os.size).toBe(4);
+    expect(world.os.size).toBe(1);
     expect([...world.os.values()][0].body).toBe("Task reminder");
   });
 });
 
 describe("rebuild", () => {
-  it("leaves a running group's future rings alone and never re-arms a delivered one", async () => {
+  it("never re-arms a delivered ring", async () => {
     const base = NOW + 10 * MINUTE;
     const note = task("Call Mum", [stamp(base)]);
     await syncReminders([note]);
-    deliver(id(note.uri, base, 0));
-    deliver(id(note.uri, base, 1));
+    deliver(id(note.uri, base));
 
     vi.setSystemTime(base + 2 * MINUTE);
     const result = await syncReminders([note]);
 
     expect(result).toEqual({ scheduled: 0, skipped: true });
     expect(world.cancelled).toEqual([]);
-    expect(stepsOf(note.uri, base)).toEqual([5, 15]);
-    expect(world.os.has(id(note.uri, base, 0))).toBe(false);
-    expect(world.delivered.has(id(note.uri, base, 0))).toBe(true);
+    expect(world.os.size).toBe(0);
+    expect(world.delivered.has(id(note.uri, base))).toBe(true);
   });
 
-  it("does not re-arm an acknowledged group's follow-ups", async () => {
+  it("drops a ring an older build scheduled, and arms the new one", async () => {
+    const base = NOW + 10 * MINUTE;
+    const note = task("Call Mum", [stamp(base)]);
+    const old = `${id(note.uri, base)}:5`;
+    world.os.set(old, {
+      id: old,
+      when: base + 5 * MINUTE,
+      title: "Call Mum",
+      body: "Task reminder",
+      weight: "harsh",
+      data: { uri: note.uri, base, weight: "harsh", buttons: "full" },
+    });
+
+    await syncReminders([note]);
+
+    expect(world.cancelled).toEqual([old]);
+    expect([...world.os.keys()]).toEqual([id(note.uri, base)]);
+  });
+
+  it("does not re-arm an acknowledged ring", async () => {
     const base = NOW + 10 * MINUTE;
     const note = task("Call Mum", [stamp(base)]);
     await syncReminders([note]);
 
     await acknowledgeRing({ uri: note.uri, base });
     expect(world.os.size).toBe(0);
-    expect(world.cancelled).toHaveLength(4);
+    expect(world.cancelled).toEqual([id(note.uri, base)]);
 
-    vi.setSystemTime(base + 2 * MINUTE);
     await syncReminders([note]);
     expect(world.os.size).toBe(0);
   });
 
-  it("cancels future follow-ups when the weight turns quiet", async () => {
+  it("re-arms a ring on the other channel when the weight changes", async () => {
     const base = NOW + 10 * MINUTE;
-    const loud = task("Call Mum", [stamp(base)]);
-    await syncReminders([loud]);
+    const normal = task("Call Mum", [stamp(base)]);
+    await syncReminders([normal]);
 
-    const quiet = task("Call Mum", [stamp(base)], { weight: "quiet" });
-    vi.setSystemTime(NOW + 2 * MINUTE);
-    await syncReminders([quiet]);
+    const alarm = task("Call Mum", [stamp(base)], { weight: "harsh" });
+    await syncReminders([alarm]);
 
-    // The follow-ups go, and the first ring is re-armed on the quiet
-    // channel, so an edit before it rings is honored.
-    expect(world.cancelled.sort()).toEqual(
-      [0, 1, 5, 15].map((step) => id(loud.uri, base, step)).sort(),
-    );
-    expect(stepsOf(quiet.uri, base)).toEqual([0]);
-    expect([...world.os.values()][0].weight).toBe("quiet");
+    expect(world.cancelled).toEqual([id(normal.uri, base)]);
+    expect(world.os.get(id(alarm.uri, base))?.weight).toBe("harsh");
   });
 
-  it("cancels a running harsh group when the task turns quiet", async () => {
-    const base = NOW + 10 * MINUTE;
-    const later = base + 40 * MINUTE;
-    const loud = task("Call Mum", [stamp(base), stamp(later)]);
-    await syncReminders([loud]);
-    deliver(id(loud.uri, base, 0));
-    deliver(id(loud.uri, base, 1));
-
-    const quiet = task("Call Mum", [stamp(base), stamp(later)], {
-      weight: "quiet",
-    });
-    vi.setSystemTime(base + 2 * MINUTE);
-    await syncReminders([quiet]);
-
-    expect(world.cancelled.sort()).toEqual(
-      [
-        ...[5, 15].map((step) => id(loud.uri, base, step)),
-        ...[0, 1, 5, 15].map((step) => id(loud.uri, later, step)),
-      ].sort(),
-    );
-    expect(stepsOf(quiet.uri, base)).toEqual([]);
-    expect(world.delivered.has(id(quiet.uri, base, 0))).toBe(true);
-    expect(stepsOf(quiet.uri, later)).toEqual([0]);
-    expect(world.os.get(id(quiet.uri, later, 0))?.weight).toBe("quiet");
-  });
-
-  it("moves a running due group when the due changes", async () => {
+  it("moves a due ring when the due changes", async () => {
     const first = NOW + 10 * MINUTE;
     const moved = first + 30 * MINUTE;
     const before = task("Pay rent", [], { due: stamp(first) });
     await syncReminders([before]);
 
-    vi.setSystemTime(first + 2 * MINUTE);
     const after = task("Pay rent", [], { due: stamp(moved) });
     await syncReminders([after]);
 
-    expect(world.cancelled.sort()).toEqual(
-      [0, 1, 5, 15].map((step) => id(before.uri, first, step)).sort(),
-    );
-    expect(stepsOf(after.uri, first)).toEqual([]);
-    expect(stepsOf(after.uri, moved)).toEqual([0, 1, 5, 15]);
+    expect(world.cancelled).toEqual([id(before.uri, first)]);
+    expect(basesOf(after.uri)).toEqual([moved]);
   });
 
-  it("cancels a removed reminder's running group and keeps the other", async () => {
+  it("cancels a removed reminder's ring and keeps the other", async () => {
     const first = NOW + 10 * MINUTE;
     const kept = first + 20 * MINUTE;
     const before = task("Call Mum", [stamp(first), stamp(kept)]);
     await syncReminders([before]);
 
-    vi.setSystemTime(first + 2 * MINUTE);
     const after = task("Call Mum", [stamp(kept)]);
     await syncReminders([after]);
 
-    expect(world.cancelled.sort()).toEqual(
-      [0, 1, 5, 15].map((step) => id(before.uri, first, step)).sort(),
-    );
-    expect(stepsOf(after.uri, kept)).toEqual([0, 1, 5, 15]);
+    expect(world.cancelled).toEqual([id(before.uri, first)]);
+    expect(basesOf(after.uri)).toEqual([kept]);
   });
 
-  it("cancels a done task's rings", async () => {
+  it("cancels a done task's ring", async () => {
     const base = NOW + 10 * MINUTE;
     const open = task("Call Mum", [stamp(base)]);
     await syncReminders([open]);
@@ -428,11 +395,10 @@ describe("rebuild", () => {
     const done = task("Call Mum", [stamp(base)], {
       completed: stamp(NOW),
     });
-    vi.setSystemTime(NOW + 2 * MINUTE);
     await syncReminders([done]);
 
     expect(world.os.size).toBe(0);
-    expect(world.cancelled).toHaveLength(4);
+    expect(world.cancelled).toEqual([id(open.uri, base)]);
   });
 
   it("does not cancel anything when permission is denied", async () => {
@@ -454,39 +420,38 @@ describe("rebuild", () => {
 });
 
 describe("one task", () => {
-  it("a tick clears only that task's rings and its tray entries", async () => {
+  it("a tick clears only that task's ring and its tray entry", async () => {
     const base = NOW + 10 * MINUTE;
-    const call = task("Call Mum", [stamp(base)]);
+    const call = task("Call Mum", [stamp(base), stamp(base + 30 * MINUTE)]);
     const post = task("Post letter", [stamp(base)]);
     await syncReminders([call, post]);
-    deliver(id(call.uri, base, 0));
+    deliver(id(call.uri, base));
 
     const ticked = task("Call Mum", [], { completed: stamp(NOW) });
     await syncTaskReminders(call, ticked);
 
-    expect(world.cancelled.sort()).toEqual(
-      [1, 5, 15].map((step) => id(call.uri, base, step)).sort(),
-    );
-    expect(world.dismissed).toEqual([id(call.uri, base, 0)]);
-    expect(stepsOf(post.uri, base)).toEqual([0, 1, 5, 15]);
+    expect(world.cancelled).toEqual([id(call.uri, base + 30 * MINUTE)]);
+    expect(world.dismissed).toEqual([id(call.uri, base)]);
+    expect(basesOf(post.uri)).toEqual([base]);
   });
 
-  it("clears a quiet task's tray entry on a tick", async () => {
+  it("clears an alarm's tray entry on a tick", async () => {
     const base = NOW + 10 * MINUTE;
-    const cue = task("Stretch", [stamp(base)], { weight: "quiet" });
-    await syncReminders([cue]);
-    deliver(id(cue.uri, base, 0));
+    const alarm = task("Take the pill", [stamp(base)], { weight: "harsh" });
+    await syncReminders([alarm]);
+    deliver(id(alarm.uri, base));
 
     await syncTaskReminders(
-      cue,
-      task("Stretch", [], { weight: "quiet", completed: stamp(NOW) }),
+      alarm,
+      task("Take the pill", [], { weight: "harsh", completed: stamp(NOW) }),
     );
 
-    expect(world.dismissed).toEqual([id(cue.uri, base, 0)]);
+    expect(world.dismissed).toEqual([id(alarm.uri, base)]);
     expect(world.os.size).toBe(0);
   });
 
-  it("moves a reminder: the old group goes, the new one is scheduled", async () => {    const first = NOW + 10 * MINUTE;
+  it("moves a reminder: the old ring goes, the new one is scheduled", async () => {
+    const first = NOW + 10 * MINUTE;
     const second = NOW + 40 * MINUTE;
     const before = task("Call Mum", [stamp(first)]);
     await syncReminders([before]);
@@ -494,11 +459,8 @@ describe("one task", () => {
     const after = task("Call Mum", [stamp(second)]);
     await syncTaskReminders(before, after);
 
-    expect(world.cancelled.sort()).toEqual(
-      [0, 1, 5, 15].map((step) => id(before.uri, first, step)).sort(),
-    );
-    expect(stepsOf(before.uri, second)).toEqual([0, 1, 5, 15]);
-    expect(world.os.size).toBe(4);
+    expect(world.cancelled).toEqual([id(before.uri, first)]);
+    expect(basesOf(before.uri)).toEqual([second]);
   });
 
   it("does nothing when the reminders did not move", async () => {
@@ -509,10 +471,10 @@ describe("one task", () => {
     await syncTaskReminders(call, { ...call, name: "Call Mum back" });
 
     expect(world.cancelled).toEqual([]);
-    expect(world.os.size).toBe(4);
+    expect(world.os.size).toBe(1);
   });
 
-  it("reschedules the due group when an edit moves it", async () => {
+  it("reschedules the due ring when an edit moves it", async () => {
     const first = NOW + 10 * MINUTE;
     const second = NOW + 20 * MINUTE;
     const before = task("Pay rent", [], { due: stamp(first) });
@@ -521,17 +483,15 @@ describe("one task", () => {
     const after = task("Pay rent", [], { due: stamp(second) });
     await syncTaskReminders(before, after);
 
-    expect(world.cancelled.sort()).toEqual(
-      [0, 1, 5, 15].map((step) => id(before.uri, first, step)).sort(),
-    );
-    expect(stepsOf(before.uri, second)).toEqual([0, 1, 5, 15]);
+    expect(world.cancelled).toEqual([id(before.uri, first)]);
+    expect(basesOf(before.uri)).toEqual([second]);
   });
 
-  it("schedules a captured task's first rings", async () => {
+  it("schedules a captured task's ring", async () => {
     const base = NOW + 10 * MINUTE;
     const captured = task("Call Mum", [stamp(base)]);
     await syncTaskReminders(null, captured);
-    expect(world.os.size).toBe(4);
+    expect(world.os.size).toBe(1);
     expect([...world.os.values()][0].title).toBe("Call Mum");
   });
 

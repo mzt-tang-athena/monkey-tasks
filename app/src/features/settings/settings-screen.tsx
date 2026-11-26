@@ -219,7 +219,7 @@ export default function SettingsScreen() {
               </Pressable>
               <View style={styles.field}>
                 <Text style={styles.fieldHint}>
-                  A harsh alert stays below Do Not Disturb until you grant this.
+                  An alarm stays below Do Not Disturb until you grant this.
                 </Text>
               </View>
             </Section>

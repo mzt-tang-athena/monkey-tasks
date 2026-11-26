@@ -57,7 +57,7 @@ export const broken = "Broken note";
 export const warnedWeight = {
   name: "Descale the kettle",
   path: "Tasks/Descale the kettle.md",
-  warning: 'alert weight "loud" is not harsh or quiet, so it rings harsh',
+  warning: 'alert weight "loud" is not harsh or quiet, so it is a normal reminder',
 } as const;
 
 /** An overdue task with no time: due yesterday. */

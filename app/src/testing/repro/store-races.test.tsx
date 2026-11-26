@@ -562,7 +562,7 @@ describe("store races (ticket 0052)", () => {
     // rings too; the kept successor is the second alarm minute.
     const parentMinute = new Date(2099, 0, 1, 9, 0).getTime();
     const successorMinute = new Date(2099, 0, 2, 9, 0).getTime();
-    expect(scheduledAt).toHaveLength(8);
+    expect(scheduledAt).toHaveLength(2);
     expect(scheduledAt).toContain(parentMinute);
     expect(scheduledAt).toContain(successorMinute);
   });
@@ -663,7 +663,7 @@ describe("preview and empty folder (ticket 0051)", () => {
         recurrence: sample.data?.recurrence ?? null,
         list: null,
         reminders: [],
-        alertWeight: sample.data?.["alert weight"] ?? "harsh",
+        alertWeight: sample.data?.["alert weight"] ?? "quiet",
         body: "",
       });
     });

@@ -66,14 +66,14 @@ export async function saveTaskEdit(
   ) {
     text = updateProperty(text, "completed", null);
   }
-  // An unknown value reads as harsh, so an unchanged weight keeps its
+  // An unknown value reads as quiet, so an unchanged weight keeps its
   // line and its warning.
-  const weight = item.data?.["alert weight"] ?? "harsh";
+  const weight = item.data?.["alert weight"] ?? "quiet";
   if (edit.alertWeight !== weight) {
     text = updateProperty(
       text,
       "alert weight",
-      edit.alertWeight === "quiet" ? "quiet" : null,
+      edit.alertWeight === "harsh" ? "harsh" : null,
     );
   }
   text = setBlockList(text, "reminders", edit.reminders);

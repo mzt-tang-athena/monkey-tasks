@@ -4,10 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { IconButton } from "@/components/ui/icon-button";
 import { Pressable } from "@/components/ui/pressable";
-import {
-  SegmentedControl,
-  type Segment,
-} from "@/components/ui/segmented-control";
+import { Switch } from "@/components/ui/switch";
 import type { AlertWeight } from "@monkey-tasks/schemas";
 import { startOfDay } from "@/utils/dates";
 import { radius, spacing, touchTarget, type, type Palette } from "@/theme/tokens";
@@ -16,18 +13,12 @@ import { clockOf, dayOf, storedOf, whenWords, type Clock } from "../lib/when";
 import { DateGrid, TimeFace } from "./date-pieces";
 import { DEFAULT_CLOCK } from "./due-picker";
 
-/** The words on screen are the vault's values (ADR 20261111-reminder-weight). */
-const weightSegments: Segment<AlertWeight>[] = [
-  { key: "harsh", label: "Harsh" },
-  { key: "quiet", label: "Quiet" },
-];
-
 /**
  * The Alerts picker: the timed due as "At due", then one row per
  * reminder with its remove control. Add reminder opens the same day
  * grid and time face as the Due picker, and the new reminder writes as
- * soon as it is added. The weight under them covers every alert of the
- * task, and writes as soon as it is picked.
+ * soon as it is added. The Alarm switch under them covers every alert of
+ * the task, and writes as soon as it is flipped.
  */
 export function AlertsPicker({
   reminders,
@@ -132,22 +123,20 @@ export function AlertsPicker({
           <Text style={styles.addText}>Add reminder</Text>
         </Pressable>
       )}
-      {/* The add flow is one task at a time, so the weight waits. */}
+      {/* The add flow is one task at a time, so the switch waits. */}
       {adding ? null : (
-        <View style={styles.weight}>
-          <Text style={styles.weightLabel} aria-hidden>
-            Alert weight
-          </Text>
-          <SegmentedControl
-            label="Alert weight"
-            segments={weightSegments}
-            selected={weight}
-            onSelect={onWeight}
-            stretch
+        <View style={styles.alarm}>
+          <View style={styles.alarmText}>
+            <Text style={styles.alarmLabel}>Alarm</Text>
+            <Text style={styles.hint}>
+              Sounds an alarm and breaks Do Not Disturb.
+            </Text>
+          </View>
+          <Switch
+            checked={weight === "harsh"}
+            label="alarm"
+            onCheckedChange={(on) => onWeight(on ? "harsh" : "quiet")}
           />
-          <Text style={styles.hint}>
-            Harsh rings on the alarm stream. Quiet is silent.
-          </Text>
         </View>
       )}
     </View>
@@ -222,15 +211,20 @@ const makeStyles = (colors: Palette) => ({
     spacer: {
       flex: 1,
     },
-    weight: {
-      gap: spacing.xs,
+    alarm: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.s,
       paddingTop: spacing.s,
     },
-    weightLabel: {
-      ...type.eyebrow,
+    alarmText: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    alarmLabel: {
+      ...type.body,
       fontWeight: "600",
-      letterSpacing: 0.5,
-      color: colors.inkMuted,
+      color: colors.ink,
     },
     hint: {
       ...type.caption,

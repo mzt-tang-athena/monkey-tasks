@@ -4,11 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { taskIsDone, type AlertWeight } from "@monkey-tasks/schemas";
 import { parseStoredDate } from "@/utils/dates";
 import type { TaskItem } from "@/types/task";
-import {
-  ESCALATION_MINUTES,
-  alertRing,
-  type AlertRing,
-} from "@/lib/alerts/rings";
+import { alertRing, type AlertRing } from "@/lib/alerts/rings";
 import type { ButtonSet } from "@/lib/alerts/choices";
 import {
   isAcked,
@@ -35,10 +31,6 @@ type AlarmTime = { when: number; due: boolean };
 export type AlertPlan = { schedule: AlertRing[]; cancel: string[] };
 
 const MINUTE_MS = 60_000;
-
-/** The whole harsh escalation fits in this window; quiet is shorter. */
-const LOOKBACK_MS =
-  Math.max(...ESCALATION_MINUTES.harsh) * MINUTE_MS;
 
 /**
  * Every alarm change waits for the one before it. A rebuild compares
@@ -96,7 +88,7 @@ function alarmBody(alarm: AlarmTime): string {
 }
 
 function taskWeight(task: TaskItem): AlertWeight {
-  return task.data?.["alert weight"] ?? "harsh";
+  return task.data?.["alert weight"] ?? "quiet";
 }
 
 /**
@@ -120,25 +112,16 @@ function ringsFor(task: TaskItem | null, now: number): AlertRing[] {
   }
   const weight = taskWeight(task);
   const buttons = taskButtons(task);
-  const rings: AlertRing[] = [];
-  // The window reaches back the whole escalation, so a started group
-  // still yields the follow-ups that are ahead.
-  for (const alarm of alarmTimes(task, now - LOOKBACK_MS)) {
-    for (const step of ESCALATION_MINUTES[weight]) {
-      rings.push(
-        alertRing({
-          uri: task.uri,
-          base: alarm.when,
-          step,
-          weight,
-          buttons,
-          title: task.name,
-          body: alarmBody(alarm),
-        }),
-      );
-    }
-  }
-  return rings.filter((ring) => ring.when > now);
+  return alarmTimes(task, now).map((alarm) =>
+    alertRing({
+      uri: task.uri,
+      base: alarm.when,
+      weight,
+      buttons,
+      title: task.name,
+      body: alarmBody(alarm),
+    }),
+  );
 }
 
 function sameRings(before: AlertRing[], after: AlertRing[]): boolean {
@@ -158,12 +141,10 @@ function sameRings(before: AlertRing[], after: AlertRing[]): boolean {
  * must drop. Pure: `now`, the acknowledged groups and the OS schedule
  * are its whole input.
  *
- * A scheduled ring stays only while its task is open, its group is
- * unacknowledged, its weight still matches the note, and its base
- * minute is still one of the note's alarms over the escalation window.
- * A ring whose base is ahead also leaves when its exact step is not
- * wanted. A cancelled ring that is still wanted comes back under the
- * new weight or step.
+ * A scheduled ring stays only while its id is still wanted with the
+ * same weight and buttons. A ring from an older build has an id the
+ * wanted rings never match, so it goes. A cancelled ring that is still
+ * wanted comes back with its new weight or buttons.
  */
 export function planRings(
   tasks: readonly TaskItem[],
@@ -171,20 +152,8 @@ export function planRings(
   acked: AckedGroups,
   scheduled: readonly RingNotification[],
 ): AlertPlan {
-  const byUri = new Map(tasks.map((task) => [task.uri, task]));
   const wanted = new Map<string, AlertRing>();
-  const weights = new Map<string, AlertWeight>();
-  const buttons = new Map<string, ButtonSet>();
-  const bases = new Map<string, Set<number>>();
   for (const task of tasks) {
-    weights.set(task.uri, taskWeight(task));
-    buttons.set(task.uri, taskButtons(task));
-    bases.set(
-      task.uri,
-      new Set(
-        alarmTimes(task, now - LOOKBACK_MS).map((alarm) => alarm.when),
-      ),
-    );
     for (const ring of ringsFor(task, now)) {
       if (!isAcked(acked, ring.uri, ring.base)) {
         wanted.set(ring.id, ring);
@@ -193,41 +162,27 @@ export function planRings(
   }
 
   const cancel: string[] = [];
+  const kept = new Set<string>();
   for (const entry of scheduled) {
     const data = entry.data;
     // A notification this build did not schedule is not a ring.
     if (data == null) {
       continue;
     }
-    const task = byUri.get(data.uri);
-    if (task == null || task.data == null || taskIsDone(task.data)) {
-      cancel.push(entry.id);
-      continue;
-    }
-    if (isAcked(acked, data.uri, data.base)) {
-      cancel.push(entry.id);
-      continue;
-    }
-    const weight = weights.get(data.uri);
-    // A ring scheduled before the buttons existed has none, which reads
-    // as "done". Its id stays, so the new one replaces it.
+    const ring = wanted.get(entry.id);
     if (
-      data.weight !== weight ||
-      data.buttons !== buttons.get(data.uri) ||
-      !bases.get(data.uri)?.has(data.base)
+      ring != null &&
+      ring.weight === data.weight &&
+      ring.buttons === data.buttons
     ) {
-      cancel.push(entry.id);
-      continue;
-    }
-    if (data.base > now && wanted.get(entry.id) == null) {
+      kept.add(entry.id);
+    } else {
       cancel.push(entry.id);
     }
   }
 
-  const cancelled = new Set(cancel);
-  const scheduledIds = new Set(scheduled.map((entry) => entry.id));
   const schedule = [...wanted.values()]
-    .filter((ring) => !scheduledIds.has(ring.id) || cancelled.has(ring.id))
+    .filter((ring) => !kept.has(ring.id))
     .sort((a, b) => a.when - b.when || a.id.localeCompare(b.id));
 
   return { schedule, cancel };
@@ -236,8 +191,7 @@ export function planRings(
 /**
  * Rebuild the OS alarm list from the task list after each read of the
  * vault. The notes are the truth: rings whose task is gone or done drop,
- * a running group keeps only the follow-ups its note still wants, and a
- * delivered ring is never armed again because its minute has passed.
+ * and a delivered ring is never armed again because its minute has passed.
  *
  * Alarms are best effort: the store calls this fire-and-forget, so it
  * reports what it managed and never throws.

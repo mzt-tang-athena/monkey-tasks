@@ -96,7 +96,7 @@ vi.mock("@/lib/notifications", () => ({
   listScheduledDetailed: async () =>
     [...os.alarms.values()].map((ring) => ({
       id: ring.id,
-      data: { uri: ring.uri, base: ring.base, step: ring.step, weight: ring.weight },
+      data: { uri: ring.uri, base: ring.base, weight: ring.weight },
     })),
   listDeliveredDetailed: async () => [],
   dismissDelivered: async () => undefined,
@@ -346,7 +346,7 @@ function spawnOf(body = "\nWater.\n"): string {
       recurrence: "FREQ=WEEKLY",
       list: null,
       reminders: [],
-      alertWeight: "harsh",
+      alertWeight: "quiet",
       body,
     },
     "2026-10-24",
@@ -727,9 +727,7 @@ describe("delete and Undo", () => {
     });
     await flush();
     const ringing = () =>
-      [...os.alarms.values()]
-        .filter((ring) => ring.step === 0)
-        .map((ring) => ring.base);
+      [...os.alarms.values()].map((ring) => ring.base);
     expect(ringing()).toEqual([new Date(2099, 0, 2, 9, 0).getTime()]);
 
     let deleted: Awaited<ReturnType<StoreSnapshot["remove"]>> | undefined;

@@ -18,7 +18,6 @@ export const alarmsSupported = true;
 export type RingData = {
   uri: string;
   base: number;
-  step: number;
   weight: AlertWeight;
   /** Which buttons the ring carries. */
   buttons: ButtonSet;
@@ -42,23 +41,23 @@ export type AlertResponse = {
 
 export type AlertResponseSubscription = { remove(): void };
 
-const HARSH_CHANNEL = "reminders-harsh";
-const QUIET_CHANNEL = "reminders-quiet";
+// Android freezes a channel's sound at creation, and restores it when a
+// deleted id comes back. A new sound needs a new id. The ids no build uses
+// go in STALE_CHANNELS, so the phone's settings show only live channels.
+const NORMAL_CHANNEL = "reminder-normal";
+const ALARM_CHANNEL = "reminder-alarm";
+const STALE_CHANNELS = ["reminders", "reminders-harsh", "reminders-quiet"];
+// The expo-notifications plugin copies assets/sounds/alarm.wav to res/raw.
+const ALARM_SOUND = "alarm.wav";
 // A category identifier holds no ":" and no "-".
 const REMINDER_CATEGORY = "reminder";
 const DONE_CATEGORY = "reminderdone";
 const FAILURE_PREFIX = "action-failed:";
-// Android freezes a channel's settings at creation, so the old one is
-// deleted and never reused.
-const OLD_CHANNEL = "reminders";
-
-// A harsh alert rings while the app is open; a quiet one only shows.
 Notifications.setNotificationHandler({
-  handleNotification: async (notification) => ({
+  handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
-    shouldPlaySound:
-      notification.request.content.data?.weight === "harsh",
+    shouldPlaySound: true,
     shouldSetBadge: false,
   }),
 });
@@ -77,7 +76,7 @@ let channels: Promise<void> | null = null;
 /**
  * Both channels, created once. The promise is kept so two rings in one
  * turn do not race the settings calls. The first vault read calls this,
- * so the old `reminders` channel goes without waiting for an alert.
+ * so the 1.3.0 channels go without waiting for an alert.
  */
 export function ensureChannels(): Promise<void> {
   channels ??= createChannels().catch((error: unknown) => {
@@ -106,12 +105,20 @@ async function createCategory(): Promise<void> {
 
 async function createChannels(): Promise<void> {
   await createCategory();
-  await Notifications.deleteNotificationChannelAsync(OLD_CHANNEL);
-  await Notifications.setNotificationChannelAsync(HARSH_CHANNEL, {
-    name: "Harsh reminders",
-    description: "A need: rings on the alarm stream and past Do Not Disturb.",
+  for (const id of STALE_CHANNELS) {
+    await Notifications.deleteNotificationChannelAsync(id);
+  }
+  await Notifications.setNotificationChannelAsync(NORMAL_CHANNEL, {
+    name: "Reminders",
+    description: "One ring at the reminder's time. Follows Do Not Disturb.",
+    importance: AndroidImportance.HIGH,
+    enableVibrate: true,
+  });
+  await Notifications.setNotificationChannelAsync(ALARM_CHANNEL, {
+    name: "Alarms",
+    description: "A task set as an alarm: sounds on the alarm stream.",
     importance: AndroidImportance.MAX,
-    sound: "default",
+    sound: ALARM_SOUND,
     enableVibrate: true,
     bypassDnd: true,
     audioAttributes: {
@@ -119,20 +126,12 @@ async function createChannels(): Promise<void> {
       contentType: AndroidAudioContentType.SONIFICATION,
     },
   });
-  await Notifications.setNotificationChannelAsync(QUIET_CHANNEL, {
-    name: "Quiet reminders",
-    description: "A cue: silent and easy to clear.",
-    importance: AndroidImportance.DEFAULT,
-    sound: null,
-    enableVibrate: false,
-    bypassDnd: false,
-  });
 }
 
 /**
- * Schedule one ring under its own id. A harsh first ring uses alarm
- * clock delivery, so it survives a reboot and the ringer being silent;
- * its follow-ups use best effort, so the phone shows one alarm icon.
+ * Schedule one ring under its own id. An alarm uses alarm clock
+ * delivery, so it fires on time in Doze and shows the alarm icon. A
+ * normal reminder is best effort.
  */
 export async function scheduleRing(ring: AlertRing): Promise<string> {
   const granted = await ensureNotificationPermission();
@@ -140,7 +139,7 @@ export async function scheduleRing(ring: AlertRing): Promise<string> {
     throw new Error("notification permission not granted");
   }
   await ensureChannels();
-  const harsh = ring.weight === "harsh";
+  const alarm = ring.weight === "harsh";
   await Notifications.scheduleNotificationAsync({
     identifier: ring.id,
     content: {
@@ -150,18 +149,16 @@ export async function scheduleRing(ring: AlertRing): Promise<string> {
         uri: ring.uri,
         weight: ring.weight,
         base: ring.base,
-        step: ring.step,
         buttons: ring.buttons,
       },
       categoryIdentifier:
         ring.buttons === "full" ? REMINDER_CATEGORY : DONE_CATEGORY,
-      sticky: harsh,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(ring.when),
-      channelId: harsh ? HARSH_CHANNEL : QUIET_CHANNEL,
-      delivery: ring.step === 0 && harsh ? "alarmClock" : "bestEffort",
+      channelId: alarm ? ALARM_CHANNEL : NORMAL_CHANNEL,
+      delivery: alarm ? "alarmClock" : "bestEffort",
     },
   });
   return ring.id;
@@ -170,12 +167,11 @@ export async function scheduleRing(ring: AlertRing): Promise<string> {
 function ringData(content: {
   data?: Record<string, unknown>;
 }): RingData | null {
-  const { uri, base, step, weight, buttons } = content.data ?? {};
+  const { uri, base, weight, buttons } = content.data ?? {};
   return typeof uri === "string" &&
     typeof base === "number" &&
-    typeof step === "number" &&
     (weight === "harsh" || weight === "quiet")
-    ? { uri, base, step, weight, buttons: buttons === "full" ? "full" : "done" }
+    ? { uri, base, weight, buttons: buttons === "full" ? "full" : "done" }
     : null;
 }
 
@@ -318,7 +314,7 @@ export async function postActionFailure(input: {
       body: input.body,
       data: input.uri == null ? {} : { uri: input.uri },
     },
-    trigger: { channelId: QUIET_CHANNEL },
+    trigger: { channelId: NORMAL_CHANNEL },
   });
 }
 

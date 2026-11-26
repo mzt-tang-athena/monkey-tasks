@@ -240,7 +240,7 @@ describe("the one list field", () => {
       kind: "warning",
     });
     expect(findings[0].reason).toBe(
-      'alert weight "loud" is not harsh or quiet, so it rings harsh',
+      'alert weight "loud" is not harsh or quiet, so it is a normal reminder',
     );
   });
 
