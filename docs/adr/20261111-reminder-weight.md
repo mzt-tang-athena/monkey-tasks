@@ -141,10 +141,18 @@ The new rules:
   Existing lines stay as they are, with no vault edit.
 - The editor has one Alarm switch. It writes `harsh`, or removes the
   line.
-- The channels are `reminder-normal` and `reminder-alarm`. The app
+- The channels are `reminder-normal` and one alarm channel. The app
   deletes `reminders`, `reminders-harsh` and `reminders-quiet` on start.
   Android restores a deleted channel's sound when its id comes back, so
   an id never serves a second sound.
+- Android keeps a channel's Do Not Disturb bypass only when the app
+  holds that access as it makes the channel. A later grant never adds
+  the bypass. The alarm has two channel ids,
+  `reminder-alarm` and `reminder-alarm-dnd`. The app uses the one that
+  matches the access, and deletes the other.
+- A small local native module, `modules/alarm-access`, reads the access
+  and opens the system screen that grants it. Settings shows whether the
+  operator granted it. The app asks again on each foreground.
 
 Alternatives we rejected:
 
@@ -158,6 +166,8 @@ Costs we accept:
 - The alarm tone adds a native asset, so this build needs a new APK.
 - A failed-press notice now rings the normal sound. Before, it stayed
   silent.
-- Total silence yields to the alarm only when the app held Do Not
-  Disturb access as it made the channel. Priority mode and alarms-only
-  already let an alarm through.
+- Total silence yields to the alarm only once the operator grants Do
+  Not Disturb access in Settings. Priority mode and alarms-only already
+  let an alarm through without it.
+- The grant adds a second alarm channel id. An operator who grants later
+  sees the alarm channel replaced, not updated.
