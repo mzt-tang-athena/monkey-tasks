@@ -21,11 +21,17 @@ It may be a reduced-motion artifact, so confirm it on the phone first.
   the fade over a cut letter.
 - Check the task editor and the planner for the same edge.
 
+CI saw the same edge on 2026-11-26, on PR #238. The spec at
+`lists.spec.ts:220` waits for `tab-fade-start` after a wheel scroll,
+and it timed out. A re-run passed. The start fade flakes on the web
+too.
+
 ## Acceptance
 
 - [ ] Emulator frames show whether it happens with motion on and off.
 - [ ] No tab shows a half letter at either edge.
 - [ ] The selected tab still scrolls into view.
+- [ ] The fade spec passes 20 runs with two workers.
 
 ## Outcome
 
