@@ -538,6 +538,12 @@ also stays unproven. Leave those to the phone pass, and say so in the report.
 - A starved emulator stops drawing (screenshots come back black) and drops taps. The picker walk then fails with `picker-stuck.txt`. Wait for the host to calm down, or stop the other load, and launch again. Once the grant exists, launch no longer needs the picker.
 - Heavy screen capture can spoil a gesture. A `screencap` loop during a swipe left the page unturned. `frames` uses `screenrecord`, and the same swipe turned the page.
 - A swipe that ends off screen reads as a system gesture. Drive clamps the end to the screen.
+- An open notification shade covers the app, and no task row can show
+  under it. A run that presses a notification button can leave it open.
+  Every start of the app shuts it first: `android-launch.sh`, `$D restart`,
+  `$D new-run` (so each journey) and `android-coldstart.sh` call
+  `collapse_shade` from `android-env.sh`. A script of your own that starts
+  the app should call it too.
 - `FRESH=1` clears the app data, so the notification permission goes.
   Launch grants it again, so no prompt covers the app.
 - After `force-stop` the old window lingers in the screen tree for a moment. `$D restart` waits for it to go.

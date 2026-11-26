@@ -31,6 +31,7 @@ for i in $(seq 1 "$runs"); do
   d=$out/run-$i
   mkdir -p "$d"
   adb shell am force-stop "$PKG"
+  collapse_shade
   adb shell input keyevent KEYCODE_HOME
   sleep 4
   adb logcat -c

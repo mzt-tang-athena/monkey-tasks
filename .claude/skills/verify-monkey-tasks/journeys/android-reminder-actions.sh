@@ -56,9 +56,6 @@ kill_app() {
   fail "the app survived am kill"
 }
 
-# A shade left open by an earlier run covers the app, and then no task
-# row can show.
-adb shell cmd statusbar collapse
 now=$(adb shell date +%s | tr -d '\r')
 due=$(device_date $((now + 180)))
 next_day=$(date -d "${due:0:10} +1 day" +%Y-%m-%d)

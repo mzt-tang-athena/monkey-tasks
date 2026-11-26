@@ -51,6 +51,12 @@ booted() {
   [[ "$(adb -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == 1 ]]
 }
 
+# An open notification shade covers the app, and no task row can show
+# under it. A run that ended with the shade open leaves it for the next
+# one, so every start of the app shuts it first. A closed shade makes
+# this a no-op.
+collapse_shade() { adb -s "$SERIAL" shell cmd statusbar collapse >/dev/null 2>&1 || true; }
+
 # Stop the emulator this skill started on our port and wait for it to go.
 # android-cleanup.sh and the idle watcher both stop it this way.
 stop_emulator() {
