@@ -3,7 +3,7 @@ title: Reminders, kept simple
 created: 2026-11-26
 priority: high
 assignee: opencode
-pr: TBD
+pr: 0
 depends: []
 ---
 
