@@ -2,8 +2,11 @@ import * as React from "react";
 
 /** What a screen reads to open the task editor. */
 export type TaskEditorValue = {
-  /** Opens the editor sheet for the task with this id. */
-  open: (id: string) => void;
+  /**
+   * Opens the editor sheet for the task with this id, on a picker when
+   * the caller names one.
+   */
+  open: (id: string, options?: { picker?: "due" }) => void;
   /** True while the editor sheet shows. */
   showing: boolean;
 };

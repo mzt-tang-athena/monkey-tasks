@@ -4,6 +4,7 @@ const world = vi.hoisted(() => ({
   made: [] as { id: string; options: Record<string, unknown> }[],
   deleted: [] as string[],
   granted: false,
+  categories: new Map<string, { identifier: string; buttonTitle: string; options: { opensAppToForeground: boolean } }[]>(),
   armed: new Map<string, { content: Record<string, unknown>; trigger: Record<string, unknown> }>(),
 }));
 
@@ -14,7 +15,12 @@ vi.mock("expo-notifications", () => ({
   AndroidAudioUsage: { ALARM: 4 },
   AndroidAudioContentType: { SONIFICATION: 4 },
   setNotificationHandler: () => undefined,
-  setNotificationCategoryAsync: async () => undefined,
+  setNotificationCategoryAsync: async (
+    id: string,
+    actions: { identifier: string; buttonTitle: string; options: { opensAppToForeground: boolean } }[],
+  ) => {
+    world.categories.set(id, actions);
+  },
   getPermissionsAsync: async () => ({ granted: true }),
   scheduleNotificationAsync: async (request: {
     identifier: string;
@@ -52,6 +58,7 @@ beforeEach(() => {
   world.deleted.length = 0;
   world.granted = false;
   world.armed.clear();
+  world.categories.clear();
   vi.resetModules();
 });
 
@@ -161,5 +168,79 @@ describe("the reminder channels", () => {
 
     expect(channelOf("alert:n:1")).toBe("reminder-normal");
     expect(channelOf("alert:old:1:5")).toBe("reminders-harsh");
+  });
+});
+
+describe("the reminder buttons", () => {
+  it("offers Done, Snooze and Didn't do, and Snooze alone opens the app", async () => {
+    const { ensureChannels } = await channels();
+    await ensureChannels();
+
+    const buttons = (id: string) =>
+      world.categories
+        .get(id)
+        ?.map((a) => [a.identifier, a.buttonTitle, a.options.opensAppToForeground]);
+    expect(buttons("reminderactions")).toEqual([
+      ["done", "Done", false],
+      ["snooze", "Snooze", true],
+      ["didnt", "Didn't do", false],
+    ]);
+    expect(buttons("reminderalldayactions")).toEqual([
+      ["done", "Done", false],
+      ["didnt", "Didn't do", false],
+    ]);
+    // Android shows three buttons at most.
+    for (const actions of world.categories.values()) {
+      expect(actions.length).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it("schedules a ring under the category its buttons name", async () => {
+    const { scheduleRing } = await channels();
+    await scheduleRing({ ...ALARM_RING, id: "alert:f:1", weight: "quiet" });
+    await scheduleRing({
+      ...ALARM_RING,
+      id: "alert:d:1",
+      weight: "quiet",
+      buttons: "allday",
+    });
+
+    expect(world.armed.get("alert:f:1")?.content.categoryIdentifier).toBe(
+      "reminderactions",
+    );
+    expect(world.armed.get("alert:d:1")?.content.categoryIdentifier).toBe(
+      "reminderalldayactions",
+    );
+  });
+
+  it("arms a ring from the Later and Tomorrow build again under the new buttons", async () => {
+    const armedBefore = (id: string, category: string, buttons: string) =>
+      world.armed.set(id, {
+        content: {
+          title: "Call Mum",
+          body: "Due",
+          categoryIdentifier: category,
+          data: { uri: "u", base: 5, weight: "quiet", buttons },
+        },
+        trigger: { channelId: "reminder-normal" },
+      });
+    armedBefore("alert:full:5", "reminder", "full");
+    armedBefore("alert:done:5", "reminderdone", "done");
+    armedBefore("alert:live:5", "reminderactions", "full");
+    const { ensureChannels } = await channels();
+
+    await ensureChannels();
+
+    expect(world.armed.get("alert:full:5")?.content).toMatchObject({
+      categoryIdentifier: "reminderactions",
+      title: "Call Mum",
+      data: { buttons: "full", base: 5 },
+    });
+    expect(world.armed.get("alert:done:5")?.content).toMatchObject({
+      categoryIdentifier: "reminderalldayactions",
+      data: { buttons: "allday" },
+    });
+    expect(world.armed.size).toBe(3);
+    expect(channelOf("alert:full:5")).toBe("reminder-normal");
   });
 });

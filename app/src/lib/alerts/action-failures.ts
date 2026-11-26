@@ -36,6 +36,7 @@ function isFailure(value: unknown): value is ActionFailure {
     typeof entry.at === "number" &&
     action != null &&
     (action.kind === "done" ||
+      action.kind === "drop" ||
       (action.kind === "reschedule" && typeof action.target === "string"))
   );
 }

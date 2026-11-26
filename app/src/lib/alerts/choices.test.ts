@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buttonAction, DONE_BUTTON } from "./actions";
+import {
+  actionLabel,
+  buttonAction,
+  DONE_BUTTON,
+  DROP_BUTTON,
+  SNOOZE_BUTTON,
+} from "./actions";
 import { RESCHEDULE_CHOICES, laterTarget, tomorrowTarget } from "./choices";
 
 // The operator picked these times on 2026-11-25: Later is an hour on,
@@ -58,17 +64,16 @@ describe("tomorrowTarget", () => {
 describe("the button set", () => {
   const now = new Date(2026, 10, 25, 10, 1, 0);
 
-  it("is Done, Later and Tomorrow", () => {
+  it("holds Later and Tomorrow for the Snooze sheet", () => {
     expect(RESCHEDULE_CHOICES.map((choice) => choice.title)).toEqual([
       "Later",
       "Tomorrow",
     ]);
-    // Android shows three buttons at most.
-    expect(RESCHEDULE_CHOICES.length + 1).toBeLessThanOrEqual(3);
   });
 
   it("reads each button back as its action", () => {
     expect(buttonAction(DONE_BUTTON, now)).toEqual({ kind: "done" });
+    expect(buttonAction(DROP_BUTTON, now)).toEqual({ kind: "drop" });
     expect(buttonAction("later", now)).toEqual({
       kind: "reschedule",
       target: "2026-11-25T11:05",
@@ -79,7 +84,16 @@ describe("the button set", () => {
     });
   });
 
-  it("reads a button this build lacks as nothing", () => {
-    expect(buttonAction("snooze", now)).toBeNull();
+  it("reads Snooze and a button this build lacks as nothing", () => {
+    expect(buttonAction(SNOOZE_BUTTON, now)).toBeNull();
+    expect(buttonAction("archive", now)).toBeNull();
+  });
+
+  it("names each action for the failure notice", () => {
+    expect(actionLabel({ kind: "done" })).toBe("Done");
+    expect(actionLabel({ kind: "drop" })).toBe("Didn't do");
+    expect(actionLabel({ kind: "reschedule", target: "2026-11-25T11:05" })).toBe(
+      "Snooze",
+    );
   });
 });

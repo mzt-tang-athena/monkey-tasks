@@ -45,3 +45,40 @@ still reaches the date sheet.
 - An all-day task moves only through the date sheet, one more tap.
 - Android freezes a reminder's buttons at scheduling time.
   A change to the set needs a reschedule, which a rebuild does.
+
+## Amendment 2026-11-26: Snooze and Didn't do
+
+The operator asked for a fourth action, "Didn't do". Android shows
+three buttons at most (`Notification.MAX_ACTION_BUTTONS` is 3). Expo
+SDK 58 adds no way past it, and a fourth button never shows.
+Tomorrow left the notification for that reason.
+
+- A reminder now carries Done, Snooze and Didn't do.
+- Done and Didn't do run in the background, with the app killed.
+- Snooze opens the app on a small sheet. It offers Later, Tomorrow
+  and Pick a day. Later and Tomorrow keep their times and their write.
+- Pick a day opens the task on its Due picker. The reminder stays
+  until the operator saves a date. Backing out changes nothing.
+- A saved due that moved clears the task's ring in the tray. The new
+  due arms its own ring.
+- Later and Tomorrow clear the notification when they land. Closing
+  the sheet changes nothing, so the reminder stays.
+- Didn't do on a one-off task writes `status: "[[dropped]]"`. It
+  writes no `completed`, because the contract keeps that for done.
+  The task leaves the open lists and folds under Dropped on the Board.
+- Didn't do on a repeat makes the next occurrence, as Done does.
+  It then drops this one (ADR 0027). Skipping a day never ends
+  the series.
+- A dropped task rings no alarm. A second press on it writes nothing.
+- An all-day task offers Done and Didn't do. It has no Snooze, for the
+  reason above.
+- Android freezes a reminder's buttons when we schedule it. The new
+  sets have new category ids. Each start schedules a ring from the
+  old sets again under the new ones. The channel swap does the same
+  for alarms. A reminder already in the tray keeps its old buttons.
+  Later and Tomorrow on it still work.
+
+We rejected Didn't do in place of Tomorrow. That keeps three
+buttons and costs the one-tap move to tomorrow. We rejected one
+merged Later and Tomorrow button. It would keep only one of the
+two common times.
