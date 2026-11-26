@@ -6,20 +6,33 @@ import { Platform } from "react-native";
  * the web it reads `document.activeElement` on the frame the surface
  * opens and focuses it again when the surface closes (ADR 0040). A
  * phone's screen reader owns focus there, so this does nothing.
+ *
+ * A surface with a better place for focus after it closes passes
+ * `returnFocus`, which runs instead on every platform.
  */
-export function useOpenerFocus(open: boolean): void {
+export function useOpenerFocus(
+  open: boolean,
+  returnFocus?: () => void,
+): void {
   const opener = React.useRef<HTMLElement | null>(null);
+  const restore = React.useRef(returnFocus);
   React.useLayoutEffect(() => {
-    if (Platform.OS !== "web" || !open) {
+    restore.current = returnFocus;
+  }, [returnFocus]);
+  React.useLayoutEffect(() => {
+    if (!open) {
       return;
     }
-    opener.current = document.activeElement as HTMLElement | null;
+    if (Platform.OS === "web") {
+      opener.current = document.activeElement as HTMLElement | null;
+    }
     return () => {
       const target = opener.current;
+      const to = restore.current;
       opener.current = null;
       // The screen is inert until the host's own layout effect clears
       // it, so the focus waits one microtask.
-      queueMicrotask(() => target?.focus?.());
+      queueMicrotask(() => (to != null ? to() : target?.focus?.()));
     };
   }, [open]);
 }

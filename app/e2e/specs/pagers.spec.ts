@@ -14,10 +14,8 @@ import {
   dragPx,
   expectTouchAction,
   holdShare,
-  mouseDrag,
   mouseHold,
   touchCancel,
-  touchDrag,
   touchDrift,
   touchHold,
   touchSwipe,
@@ -293,19 +291,25 @@ function isMotion(testInfo: TestInfo): boolean {
 
 /** The scenarios every input path runs. */
 function commonScenarios(input: "mouse" | "touch") {
-  const drag = async (page: Page, dx: number, steps?: number) => {
-    const target = page.getByTestId("list-pager");
-    if (input === "touch") {
-      await touchDrag(page, target, dx, { steps });
-    } else {
-      await mouseDrag(page, target, dx, { steps });
-    }
-  };
   const turn = async (page: Page, target: Parameters<typeof swipe>[1]) => {
     if (input === "touch") {
       await touchSwipe(page, target, "left");
     } else {
       await swipe(page, target, "left");
+    }
+  };
+  // A flick the caller can time: the button stays down until the page
+  // clock steps once, so the pager has followed the finger, and the
+  // release therefore carries the whole travel.
+  const flick = async (page: Page) => {
+    const target = page.getByTestId("list-pager");
+    const during = async () => {
+      await frame(page);
+    };
+    if (input === "touch") {
+      await touchHold(page, target, -dragPx.flick, during, { steps: 4 });
+    } else {
+      await mouseHold(page, target, -dragPx.flick, during, { steps: 4 });
     }
   };
 
@@ -442,14 +446,28 @@ function commonScenarios(input: "mouse" | "touch") {
     await page.clock.resume();
   });
 
-  test("two fast drags move two tabs", async ({ page }) => {
+  test("two fast drags move two tabs", async ({ page }, testInfo) => {
     await page.goto("/");
     await openMain(page);
     await expect(row(page, undated.second)).toBeVisible();
+    const width = (await pagerBox(page, "list-pager")).width;
 
-    await drag(page, -dragPx.flick, 4);
-    await page.waitForTimeout(100);
-    await drag(page, -dragPx.flick, 4);
+    await pauseClock(page);
+    await flick(page);
+    // One frame into the settle, so the track stands between two pages
+    // and the landing is still pending. The second flick therefore
+    // begins on a settle in flight: its begin lands the pending page,
+    // and its own drag moves one on. A fixed gap waited on the host's
+    // frame rate here, so a stalled host lost a tab.
+    await frame(page);
+    if (isMotion(testInfo)) {
+      const x = await trackX(page);
+      expect(x, "the track stands between the pages").toBeGreaterThan(-2 * width);
+      expect(x, "the first page has not landed").toBeLessThan(-width);
+    }
+    await flick(page);
+    await frame(page, 600);
+    await page.clock.resume();
 
     await expect(listTab(page, finance)).toHaveAttribute("aria-selected", "true");
   });
