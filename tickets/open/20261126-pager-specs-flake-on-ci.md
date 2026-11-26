@@ -1,6 +1,6 @@
 ---
 title: Pager specs stop flaking on CI in reduced motion
-created: 2026-11-27
+created: 2026-11-26
 priority: normal
 assignee:
 pr:
@@ -9,14 +9,15 @@ depends: []
 
 ## Spec
 
-Three different `pagers.spec.ts` tests failed once each on CI, all
-in the reduced-motion project. Each passed on rerun, and none
-failed in local repeats.
+Two `pagers.spec.ts` tests failed once each on CI, both in the
+reduced-motion project. Each passed on rerun, and none failed in
+local repeats. A third, a week-body test, hung in `beforeEach` for
+two lanes here, never on CI.
 
 - `the tab rule follows a half swipe`, on PR #250. PR #252 fixed
   its read with a poll on state.
-- `a swipe on the week body turns the week and the rail follows`,
-  on PR #244. It hung in `beforeEach`; see ticket
+- `a swipe on the week body turns the week and the rail follows`
+  hung in `beforeEach` for two lanes here, never on CI. See ticket
   `20261126-pager-setup-hang`.
 - `a page lays out at the pager's origin, so Android can read it`
   (`pagers.spec.ts:1186`), on PR #261, run 45910480357. It passed

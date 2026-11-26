@@ -1,6 +1,6 @@
 ---
 title: A due move compares moments, not strings
-created: 2026-11-27
+created: 2026-11-26
 priority: low
 assignee:
 pr:
