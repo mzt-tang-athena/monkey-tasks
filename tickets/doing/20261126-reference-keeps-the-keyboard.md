@@ -2,7 +2,7 @@
 title: Closing the reference picker keeps the keyboard
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: opencode
 pr:
 depends: []
 ---
