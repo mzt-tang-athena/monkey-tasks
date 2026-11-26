@@ -9,6 +9,7 @@ import {
   press,
   type Input,
 } from "../gestures";
+import { commitsThatWentBack, sampleCommits } from "../commits";
 import {
   expectAbove,
   expectBefore,
@@ -278,8 +279,36 @@ test.describe("the drop", () => {
     });
   }
 
-  test("a grip drop writes the new order to the notes", async ({ page }) => {
+  test("a drop never draws the old order again", async ({ page }) => {
+    // Ticket 20261126-drop-flickers-the-old-order: the surface cleared
+    // its shifts in the drop's own commit, and the rows the write moved
+    // reached React a task later, so one commit drew the old order.
     await openMyOrder(page);
+    await expect(row(page, undated.second)).toBeVisible();
+    await row(page, undated.second).scrollIntoViewIfNeeded();
+    const point = await pointOn(page, row(page, undated.first), "upper");
+    const read = await sampleCommits(page, "reorder-item:");
+    const pointer = await press(
+      page,
+      "mouse",
+      page.getByTestId(`reorder-grip:${undated.second}`),
+      { holdMs: 0 },
+    );
+    await pointer.moveTo(point);
+    // A paused clock holds the write's cache notification, so the
+    // drop's own commit always draws before the new order can.
+    await pauseClock(page);
+    await pointer.up();
+    await expect(page.getByTestId("drag-ghost")).toHaveCount(0);
+    await page.clock.resume();
+    await expectAbove(row(page, undated.second), row(page, undated.first));
+    await expectResting(page);
+    await pauseClock(page);
+    const commits = await read();
+    expect(commitsThatWentBack(commits)).toEqual([]);
+  });
+
+  test("a grip drop writes the new order to the notes", async ({ page }) => {    await openMyOrder(page);
     await holdDrag(
       page,
       page.getByTestId(`reorder-grip:${undated.second}`),

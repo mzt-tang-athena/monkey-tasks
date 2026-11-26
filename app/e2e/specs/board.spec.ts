@@ -1,7 +1,8 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "../fixtures";
+import { expect, pauseClock, test } from "../fixtures";
 import { board } from "../data";
-import { holdDrag, holdDragTo } from "../gestures";
+import { holdDrag, holdDragTo, pointOn, press as pointerPress } from "../gestures";
+import { commitsThatWentBack, sampleCommits } from "../commits";
 import {
   expectAbove,
   expectBefore,
@@ -132,6 +133,32 @@ test("a drag inside a group writes order, and it survives a reload", async ({
     row(page, board.active.second),
     row(page, board.active.first),
   );
+});
+
+test("a card drop never draws the old order again", async ({ page }) => {
+  // Ticket 20261126-drop-flickers-the-old-order: the Board shares the
+  // reorder surface, so its drop had the same flash.
+  await openBoard(page);
+  const point = await pointOn(page, row(page, board.active.first), "upper");
+  const read = await sampleCommits(page, "board-card:");
+  const pointer = await pointerPress(
+    page,
+    "mouse",
+    grip(page, board.active.second),
+    { holdMs: 0 },
+  );
+  await pointer.moveTo(point);
+  await pauseClock(page);
+  await pointer.up();
+  await expect(page.getByTestId("drag-ghost")).toHaveCount(0);
+  await page.clock.resume();
+  await expectAbove(
+    row(page, board.active.second),
+    row(page, board.active.first),
+  );
+  await pauseClock(page);
+  const commits = await read();
+  expect(commitsThatWentBack(commits)).toEqual([]);
 });
 
 test("a drag released outside the groups writes nothing", async ({ page }) => {

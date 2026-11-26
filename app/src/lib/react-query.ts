@@ -3,7 +3,17 @@ import {
   MutationCache,
   QueryClient,
   focusManager,
+  notifyManager,
 } from "@tanstack/react-query";
+
+/**
+ * Cache notifications land in the task that wrote the cache, before
+ * the next frame. The default is a `setTimeout(0)`, which puts the
+ * rows a task behind a state change beside it. A drop then drew the
+ * old order for a frame: its ghost left and its shifts cleared in one
+ * commit, and the new order came in the next (ADR 0032).
+ */
+notifyManager.setScheduler(queueMicrotask);
 
 /** Whether a mutation's result asks to stay on screen as a notice. */
 function hasNotice(data: unknown): boolean {
