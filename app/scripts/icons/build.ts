@@ -38,6 +38,8 @@ const GLYPHS = {
   note: { phosphor: "Note", size: 16 },
   link: { phosphor: "LinkSimple", size: 16 },
   close: { phosphor: "X", size: 15 },
+  "arrow-up": { phosphor: "ArrowUp", size: 22 },
+  "caret-up-down": { phosphor: "CaretUpDown", size: 12 },
   check: { phosphor: "Check", size: 12 },
   command: { phosphor: "Command", size: 24 },
   search: { phosphor: "MagnifyingGlass", size: 24 },
