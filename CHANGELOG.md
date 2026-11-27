@@ -29,6 +29,14 @@ fails a bullet that wraps or runs past 64 characters.
 - Swipe right on Add for the next tab, left for the previous.
 - The Day, Week, Month and form toggles draw shorter.
 
+### Planner
+
+- A tap on the split handle hides the task half.
+- The calendar then fills the screen in Day, Week and Month.
+- Tap the handle again to bring the list back.
+- The planner keeps your choice over a restart.
+- Enter on the handle does the same.
+
 ### Board
 
 - A Board tab groups your deeds by status.
