@@ -2,7 +2,7 @@
 title: Pager specs stop flaking on CI in reduced motion
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: omp
 pr:
 depends: []
 ---
