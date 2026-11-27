@@ -44,6 +44,9 @@ export function MonthGrid({
   const monthIdx = viewMonth.getMonth();
   const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
   const lead = dayOfWeek(startOfMonth(viewMonth), weekStart);
+  // One cell's width, read off the weekday row. Until it reports, a
+  // cell keeps its own square, so the first frame needs no layout.
+  const [cellSize, setCellSize] = React.useState(0);
 
   // One rule pass per task over the whole grid, lead blanks included.
   // The range ends at the close of the last week row, so trailing
@@ -95,6 +98,10 @@ export function MonthGrid({
         <View
           testID={interactive ? "month-weekdays" : undefined}
           style={styles.head}
+          onLayout={(event) => {
+            const next = event.nativeEvent.layout.width / 7;
+            setCellSize((was) => (Math.abs(was - next) < 0.01 ? was : next));
+          }}
         >
           {weekOrder(WEEKDAYS, weekStart).map((name) => (
             <Text key={name} style={styles.headCell}>
@@ -105,6 +112,7 @@ export function MonthGrid({
         <GridBody
           interactive={interactive}
           cells={cells}
+          cellSize={cellSize}
           picked={picked}
           today={today}
           dotted={dotted}
@@ -120,6 +128,7 @@ export function MonthGrid({
 function GridBody({
   interactive,
   cells,
+  cellSize,
   picked,
   today,
   dotted,
@@ -129,6 +138,8 @@ function GridBody({
 }: {
   interactive: boolean;
   cells: (Date | null)[];
+  /** One cell's width, or 0 before the card has reported. */
+  cellSize: number;
   picked: PickedDay;
   today: Date;
   dotted: Set<string>;
@@ -138,15 +149,21 @@ function GridBody({
 }) {
   const { styles } = useThemedStyles(makeStyles);
   const rows: React.ReactNode[] = [];
+  // A row is one square tall and shares any spare height a hidden task
+  // list leaves. The size comes from the width, because an aspect ratio
+  // on the row would stretch its width with its height on Android.
+  const rowSize = cellSize > 0 ? { flexBasis: cellSize } : null;
+  const squareCell = cellSize > 0 ? null : styles.cellSquare;
   for (let start = 0; start < cells.length; start += 7) {
     const week = cells.slice(start, start + 7).map((day, offset) => {
       const index = start + offset;
       if (day == null) {
-        return <View key={`blank-${index}`} style={styles.cell} />;
+        return <View key={`blank-${index}`} style={[styles.cell, squareCell]} />;
       }
       const selected = isSameDay(day, picked?.day ?? null);
       const marks = [
         styles.cell,
+        squareCell,
         selected && styles.cellPicked,
         isSameDay(day, today) && styles.cellToday,
       ];
@@ -192,7 +209,11 @@ function GridBody({
     // empty row would fail the grid's required-child rule.
     const empty = cells.slice(start, start + 7).every((day) => day == null);
     rows.push(
-      <View key={`week-${start}`} role={empty ? undefined : "row"} style={styles.row}>
+      <View
+        key={`week-${start}`}
+        role={empty ? undefined : "row"}
+        style={[styles.row, rowSize]}
+      >
         {week}
       </View>,
     );
@@ -263,12 +284,12 @@ const makeStyles = (colors: Palette) => ({
       flexDirection: "column",
       flexGrow: 1,
     },
-    // A row is as tall as one of its seven square cells, and shares any
-    // spare height a hidden task list leaves.
     row: {
       flexDirection: "row",
       flexGrow: 1,
-      aspectRatio: 7,
+    },
+    cellSquare: {
+      aspectRatio: 1,
     },
     cell: {
       flex: 1,
