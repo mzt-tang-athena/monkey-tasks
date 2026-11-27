@@ -1205,7 +1205,15 @@ test("a page lays out at the pager's origin, so Android can read it", async ({ p
 
   await press(page, listTab(page, focus));
   await expect(listTab(page, focus)).toHaveAttribute("aria-selected", "true");
+  // The tab's commit sets the track's plain offset at once and the
+  // animated transform lands a render later, so the live page is a page
+  // over until it does, a cut included. This read is about where the
+  // page rests, so it waits for the two to agree.
+  await expect
+    .poll(async () => (await standing()).x, {
+      message: "the live page stands at the pager's origin",
+    })
+    .toBe(0);
   const after = await standing();
-  expect(after.x, "the live page stands at the pager's origin").toBe(0);
   expect(after.overlap, "the track stays over the host").toBeGreaterThan(0);
 });
