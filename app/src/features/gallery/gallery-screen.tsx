@@ -159,6 +159,8 @@ export default function GalleryScreen() {
     "icons:bell": <GlyphPair name="bell" />,
     "icons:note": <GlyphPair name="note" />,
     "icons:close": <GlyphPair name="close" />,
+    "icons:arrow-up": <GlyphPair name="arrow-up" />,
+    "icons:caret-up-down": <GlyphPair name="caret-up-down" />,
     "icons:check": <GlyphPair name="check" />,
     "icons:command": <GlyphPair name="command" />,
     "icons:search": <GlyphPair name="search" />,
@@ -206,6 +208,18 @@ export default function GalleryScreen() {
     ),
 
     "pill:control": <Pill label="Tomorrow" onPress={noop} />,
+    "pill:switcher": (
+      <Pill
+        label="Errands"
+        onPress={noop}
+        trailing={<Icon name="caret-up-down" color="accent" />}
+      />
+    ),
+    "pill:glyph": (
+      <Pill label="Link a reference" onPress={noop} labelHidden>
+        <Icon name="link" color="accent" />
+      </Pill>
+    ),
     "pill:chip": (
       <Pill label="15:00" tone="chip">
         <Icon name="clock-mini" />

@@ -66,6 +66,8 @@ export const GALLERY_SECTIONS = [
       { id: "icons:bell", label: "bell" },
       { id: "icons:note", label: "note" },
       { id: "icons:close", label: "close" },
+      { id: "icons:arrow-up", label: "arrow-up" },
+      { id: "icons:caret-up-down", label: "caret-up-down" },
       { id: "icons:check", label: "check" },
       { id: "icons:command", label: "command" },
       { id: "icons:search", label: "search" },
@@ -96,6 +98,8 @@ export const GALLERY_SECTIONS = [
     title: "Pill",
     states: [
       { id: "pill:control", label: "control" },
+      { id: "pill:switcher", label: "switcher" },
+      { id: "pill:glyph", label: "glyph" },
       { id: "pill:chip", label: "chip" },
     ],
   },
