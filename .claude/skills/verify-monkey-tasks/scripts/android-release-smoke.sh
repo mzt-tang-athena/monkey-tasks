@@ -72,6 +72,9 @@ note "Tasks/Groceries milk, eggs, oats.md" | grep -q "^completed: " && pass "tic
 alive "tick"
 
 step "open Completed and delete all completed"
+# Today leads the tabs, and a tick leaves Today, so Completed lives on
+# Main. The undated "Call Mum" row below is on Main too.
+$D tap Main >/dev/null && sleep 1
 $D scroll-to "~Completed" >/dev/null 2>&1
 $D tap "~Completed" >/dev/null && sleep 1
 $D scroll-to "task-row:Groceries: milk, eggs, oats" >/dev/null 2>&1 && pass "Completed opens and shows the tick" || fail "Completed did not open"
