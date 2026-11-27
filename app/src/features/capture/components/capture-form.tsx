@@ -184,7 +184,7 @@ const makeStyles = (colors: Palette) => ({
       flexDirection: "row",
       flexWrap: "wrap",
       alignItems: "center",
-      gap: spacing.xs,
+      gap: spacing.s,
     },
   }),
 });
