@@ -2,7 +2,7 @@
 title: Design the Journal tab around tap to write
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: claude-journal-design
 pr:
 depends: []
 ---
@@ -25,9 +25,17 @@ Open questions for that session:
 
 ## Acceptance
 
-- [ ] The operator agrees a design in its own session.
-- [ ] An ADR records the design.
+- [x] The operator agrees a design in its own session.
+- [x] An ADR records the design.
 
 ## Outcome
 
-(filled in before moving to done/)
+The operator settled the design on 2026-11-27. ADR
+`20261127-journal-tap-to-write` records it. They added two asks in
+the session: done tasks as a log, and `@` to find a reference.
+
+Three tickets build it:
+
+- `20261127-journal-writes-on-the-page`
+- `20261127-journal-at-finds-a-reference`
+- `20261127-journal-logs-done-tasks`
