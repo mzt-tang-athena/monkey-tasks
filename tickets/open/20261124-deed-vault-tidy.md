@@ -34,6 +34,18 @@ yes on the list first. No script rewrites all 72 deeds.
    `types`. In `deeds.base`, the Backlog and Done views filter with
    `!=` and show the opposite set. Fix both.
 
+6. **Checkpoint embeds.** Seven deeds embed a checkpoint table from
+   `20-Projects/<slug>/checkpoints#Checkpoints`, a path the PARA
+   retirement removed, so the embed renders nothing. The my-home
+   session found them on 2026-11-27. They are
+   `build-dashboard`, `design-sleep-routine`,
+   `investigate-forum-system`, `recurring-checklists`,
+   `self-heal-agents`, `yearly-review` and `deed reading project`.
+   **Proposed:** restore each table into the deed's own body from the
+   vault git commit before `3ea95d2`, then drop the embed. That keeps
+   the content and loses nothing. The alternative is dropping the
+   embed and the table together. The operator confirms which.
+
 The board ticket comes first, so item 1 can set order by dragging.
 
 ## Acceptance
