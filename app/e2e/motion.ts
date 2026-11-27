@@ -57,6 +57,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "both",
     why: "samples the ghost per frame, the lift shake and its absence",
   },
+  "planner-hide-tasks.spec.ts": {
+    runsIn: "both",
+    why: "samples the hide frame by frame, then the reduce path",
+  },
   "planner-period.spec.ts": {
     runsIn: "both",
     why: "reads the mark's live position mid-swipe, frame by frame",

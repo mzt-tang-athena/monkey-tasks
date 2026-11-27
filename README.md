@@ -453,9 +453,9 @@ Sort mode open Settings rather than repeat its pickers.
 |---|---|
 | `planner-screen.tsx` | Route and store reads, the list context, the overlays, the layout. |
 | `planner-layout.ts` | The shared frame and pane styles. Every other style sits next to its component. |
-| `components/planner-list-context.tsx` | What every task list shares: the source, the form and the row actions. |
+| `components/planner-list-context.tsx` | What every task list shares: the source, the form and the row actions. It also holds the hide choice. |
 | `components/day/` | The day. It holds the spread, the page, the timeline and list panes, and the day split. It also holds the overdue group and the swipe preview. |
-| `components/week-pane.tsx`, `month-pane.tsx` | The week and month bodies. Week puts its day boxes in the shared pager. Both put the card over the list with `SplitFit`, the day's divider held still. |
+| `components/week-pane.tsx`, `month-pane.tsx` | The week and month bodies. Week puts its day boxes in the shared pager. Both put the card over the list with `SplitFit`, the day's divider held still. A tap on the handle hides the list. The card then takes its room (ADR 20261127-planner-hides-its-tasks). |
 | `components/week-view.tsx` | The week body in both layouts, Spread and Rows. A static twin draws the pager's neighbour page. |
 | `lib/week-body.ts` | The seven days, the chip count, and the table of each layout's grid cells. |
 | `lib/plan-drag.ts` | The planner's one drag surface: the targets, the ghost payload and the pure drop patch. |

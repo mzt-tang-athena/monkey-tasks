@@ -28,6 +28,8 @@ export function MonthView({
   onPick,
   onSelectMonth,
   follow,
+  collapsed,
+  onToggle,
   children,
 }: {
   viewMonth: Date;
@@ -40,6 +42,9 @@ export function MonthView({
   onSelectMonth: (month: Date) => void;
   /** The screen's pager link: the period mark and this pager share it. */
   follow?: PageFollow;
+  /** The list pane is hidden: the card takes its room. */
+  collapsed?: boolean;
+  onToggle?: () => void;
   /** The picked-day list pane; both halves share one column. */
   children?: React.ReactNode;
 }) {
@@ -60,9 +65,12 @@ export function MonthView({
     <View style={styles.column}>
       <SplitFit
         testID="month-split"
+        collapsed={collapsed}
+        onToggle={onToggle}
         top={
           <Pager
             testID="month-pager"
+            stretch
             index={index}
             follow={follow}
             onPage={onPage}

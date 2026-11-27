@@ -41,7 +41,7 @@ export function MonthPane({
   follow?: PageFollow;
 }) {
   const { styles } = useThemedStyles(makeStyles);
-  const { source } = usePlannerList();
+  const { source, tasksHidden, toggleTasks } = usePlannerList();
   const { picked, setPicked, viewMonth, monthKey, pickedDay, monthRows, pickedTasks } =
     month;
 
@@ -86,6 +86,8 @@ export function MonthPane({
         onPick={pick}
         onSelectMonth={onSelectMonth}
         follow={follow}
+        collapsed={tasksHidden}
+        onToggle={toggleTasks}
       >
         {/* The pane under the card: the source's month list until a day
             is picked, then that day's tasks. */}

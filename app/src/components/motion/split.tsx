@@ -2,7 +2,12 @@
    ref when the gesture runs, not during render. */
 import * as React from "react";
 import { StyleSheet, View } from "react-native";
-import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
+import {
+  GestureDetector,
+  usePanGesture,
+  useSimultaneousGestures,
+  useTapGesture,
+} from "react-native-gesture-handler";
 import Animated, {
   measure,
   useAnimatedRef,
@@ -12,6 +17,9 @@ import Animated, {
 import { radius, touchTarget, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
 import { clampFraction, clampTop } from "@/lib/motion/split-math";
+import { motion } from "@/lib/motion/tokens";
+import { useProgress } from "@/lib/motion/progress";
+import { Pressable } from "@/components/ui/pressable";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
 import { useArrowKeys } from "./internal/keys";
@@ -28,7 +36,27 @@ export type SplitProps = {
   top: React.ReactNode;
   bottom: React.ReactNode;
   testID?: string;
+  /** The bottom pane is hidden: the top takes every pixel but the
+      divider. The fraction stays, so showing returns to it. */
+  collapsed?: boolean;
+  /** A tap on the grabber, or Enter on it, asks to hide or show. */
+  onToggle?: () => void;
 };
+
+/**
+ * The hide of a split's bottom pane: a 0 to 1 clock on the UI thread,
+ * and whether the pane still mounts. A hidden pane leaves the tree
+ * once the clock lands, so a keyboard or a screen reader never reaches
+ * a row with no height. It mounts again before the clock starts.
+ */
+function useCollapse(collapsed: boolean) {
+  const [gone, setGone] = React.useState(collapsed);
+  const hide = useProgress(collapsed, {
+    ms: motion.ms.settle,
+    onSettled: (at) => setGone(at === 1),
+  });
+  return { hide, mounted: !(collapsed && gone) };
+}
 
 /**
  * Two panes and a grabber, laid out by fraction. At rest each pane is a
@@ -47,14 +75,19 @@ export function Split({
   top,
   bottom,
   testID,
+  collapsed = false,
+  onToggle,
 }: SplitProps) {
   const { styles, colors } = useThemedStyles(makeStyles);
+  const { hide, mounted } = useCollapse(collapsed);
   const self = useAnimatedRef<View>();
   const grow = useSharedValue(fraction);
   const box = useSharedValue(0);
   const startTop = useSharedValue(0);
   const startY = useSharedValue(0);
+  const startGrow = useSharedValue(0);
   const grabbing = useSharedValue(0);
+  const moved = useSharedValue(0);
   const [hot, setHot] = React.useState(false);
   const pressCancel = usePressCancel();
   const gripRef = React.useRef<React.ComponentRef<typeof Animated.View>>(null);
@@ -95,6 +128,8 @@ export function Split({
     [applyStep],
   );
 
+  const toggle = React.useCallback(() => onToggle?.(), [onToggle]);
+
   useArrowKeys(gripRef, step);
 
   // A new fraction from the screen, before paint: the panes never show
@@ -113,6 +148,8 @@ export function Split({
       onBegin: () => {
         "worklet";
         grabbing.set(1);
+        moved.set(0);
+        startGrow.set(grow.value);
       },
       onActivate: (e) => {
         "worklet";
@@ -131,21 +168,55 @@ export function Split({
         if (grabbing.value !== 1 || usable <= 0) {
           return;
         }
+        if (Math.abs(e.absoluteY - startY.value) > motion.hold.slop) {
+          moved.set(1);
+        }
+        // A hidden list has no split to drag: the grabber only taps.
+        if (hide.value > 0) {
+          return;
+        }
         const raw = startTop.value + (e.absoluteY - startY.value);
         grow.set(clampTop(raw, usable, minTop, minBottom) / usable);
       },
       onFinalize: () => {
         "worklet";
-        if (grabbing.value === 1) {
-          grabbing.set(0);
+        if (grabbing.value !== 1) {
+          return;
+        }
+        grabbing.set(0);
+        // A press that never travelled is a tap, not a resize: the tap
+        // below toggles, and the split goes back to where it stood.
+        if (moved.value === 0) {
+          grow.set(startGrow.value);
+          return;
+        }
+        if (hide.value === 0) {
           toJS(onResize, grow.value);
         }
       },
     }),
   );
 
-  const topStyle = useAnimatedStyle(() => ({ flexGrow: grow.value }));
-  const bottomStyle = useAnimatedStyle(() => ({ flexGrow: 1 - grow.value }));
+  // A tap fails once the finger travels past the hold's slop, so a drag
+  // never toggles. The pan above never activates on a tap on Android,
+  // so it cannot tell a tap from a cancel by itself.
+  const tap = useTapGesture(
+    withTouchAction("none", {
+      maxDistance: motion.hold.slop,
+      onActivate: () => {
+        "worklet";
+        toJS(toggle);
+      },
+    }),
+  );
+  const gestures = useSimultaneousGestures(gesture, tap);
+
+  const topStyle = useAnimatedStyle(() => ({
+    flexGrow: grow.value + (1 - grow.value) * hide.value,
+  }));
+  const bottomStyle = useAnimatedStyle(() => ({
+    flexGrow: (1 - grow.value) * (1 - hide.value),
+  }));
   const barStyle = useAnimatedStyle(() => ({
     backgroundColor: grabbing.value > 0 ? colors.accent : colors.inkFaint,
   }));
@@ -184,27 +255,43 @@ export function Split({
         testID={testID}
         hot={hot}
         grip={
-          <GestureDetector gesture={gesture}>
+          <GestureDetector gesture={gestures}>
             <Animated.View
               ref={gripRef}
               testID={testID == null ? undefined : `${testID}:grip`}
               style={[styles.grip, hot && styles.gripHot]}
               // "adjustable" is React Native's slider role. The web build
               // maps it to `slider`, and the arrows follow the same step
-              // as TalkBack's increment and decrement.
+              // as TalkBack's increment and decrement. A hidden list keeps
+              // the same node and role, so a keyboard's focus survives the
+              // hide. The value text says the list is hidden, and the
+              // action named for the next state shows or hides it.
               accessibilityRole="adjustable"
               accessibilityLabel="resize timeline"
               accessibilityValue={{
                 min: 0,
                 max: 100,
                 now: Math.round(fraction * 100),
+                text: collapsed ? "tasks hidden" : undefined,
               }}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(fraction * 100)}
-              accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+              aria-valuetext={collapsed ? "tasks hidden" : undefined}
+              accessibilityActions={[
+                { name: "increment" },
+                { name: "decrement" },
+                collapsed
+                  ? { name: "toggle", label: "show tasks" }
+                  : { name: "toggle", label: "hide tasks" },
+              ]}
               onAccessibilityAction={(event) => {
-                step(event.nativeEvent.actionName === "increment" ? 1 : -1);
+                const name = event.nativeEvent.actionName;
+                if (name === "toggle") {
+                  toggle();
+                  return;
+                }
+                step(name === "increment" ? 1 : -1);
               }}
               tabIndex={0}
               // The hover handlers are React Native Web's, which the
@@ -227,63 +314,97 @@ export function Split({
         testID={testID == null ? undefined : `${testID}:bottom`}
         style={[styles.pane, bottomStyle]}
       >
-        {bottom}
+        {mounted ? bottom : null}
       </Animated.View>
     </Animated.View>
   );
 }
 
 /** The same split held still: a preview of a day the swipe reveals. */
-export function SplitStill(props: Omit<SplitProps, "onResize">) {
+export function SplitStill(
+  props: Omit<SplitProps, "onResize" | "onToggle">,
+) {
   const { styles } = useThemedStyles(makeStyles);
+  const collapsed = props.collapsed === true;
   return (
     <View testID={props.testID} style={styles.root}>
       <View
         testID={props.testID == null ? undefined : `${props.testID}:top`}
-        style={[styles.pane, { flexGrow: props.fraction }]}
+        style={[styles.pane, { flexGrow: collapsed ? 1 : props.fraction }]}
       >
         {props.top}
       </View>
       <Divider testID={props.testID} />
       <View
         testID={props.testID == null ? undefined : `${props.testID}:bottom`}
-        style={[styles.pane, { flexGrow: 1 - props.fraction }]}
+        style={[styles.pane, { flexGrow: collapsed ? 0 : 1 - props.fraction }]}
       >
-        {props.bottom}
+        {collapsed ? null : props.bottom}
       </View>
     </View>
   );
 }
 
 /**
- * The split held still, with the top pane at its own height: the week
- * and month cards. The card keeps the height its content gives it, the
- * divider draws the day's edge, and the list below fills the rest and
- * clips at its top. The grip is the day's mark and carries no drag,
- * because a card with an intrinsic height has nothing to grow into.
+ * The split with the top pane at its own height: the week and month
+ * cards. The card keeps the height its content gives it, the divider
+ * draws the day's edge, and the list below fills the rest and clips at
+ * its top. A collapse hands the list's room to the card, which stretches
+ * into it. The grip is a button, because a card with an intrinsic
+ * height has no split to drag. A tap on it hides or shows the list.
  */
 export function SplitFit({
   top,
   bottom,
   testID,
+  collapsed = false,
+  onToggle,
 }: {
   top: React.ReactNode;
   bottom: React.ReactNode;
   testID?: string;
+  collapsed?: boolean;
+  onToggle?: () => void;
 }) {
   const { styles } = useThemedStyles(makeStyles);
+  const { hide, mounted } = useCollapse(collapsed);
+  const [hot, setHot] = React.useState(false);
+  const topStyle = useAnimatedStyle(() => ({ flexGrow: hide.value }));
+  const bottomStyle = useAnimatedStyle(() => ({ flexGrow: 1 - hide.value }));
   return (
     <View testID={testID} style={styles.root}>
-      <View testID={testID == null ? undefined : `${testID}:top`} style={styles.fit}>
-        {top}
-      </View>
-      <Divider testID={testID} />
-      <View
-        testID={testID == null ? undefined : `${testID}:bottom`}
-        style={styles.fill}
+      <Animated.View
+        testID={testID == null ? undefined : `${testID}:top`}
+        style={[styles.fit, topStyle]}
       >
-        {bottom}
-      </View>
+        {top}
+      </Animated.View>
+      <Divider
+        testID={testID}
+        hot={hot}
+        grip={
+          <Pressable
+            testID={testID == null ? undefined : `${testID}:grip`}
+            style={[styles.grip, hot && styles.gripHot]}
+            onPress={onToggle}
+            onHoverIn={() => setHot(true)}
+            onHoverOut={() => setHot(false)}
+            accessibilityRole="button"
+            accessibilityLabel={collapsed ? "show tasks" : "hide tasks"}
+          >
+            <View
+              testID={testID == null ? undefined : `${testID}:bar`}
+              style={[styles.bar, styles.barRest]}
+            />
+          </Pressable>
+        }
+      />
+      <Animated.View
+        testID={testID == null ? undefined : `${testID}:bottom`}
+        style={[styles.fill, bottomStyle]}
+      >
+        {mounted ? bottom : null}
+      </Animated.View>
     </View>
   );
 }

@@ -41,6 +41,8 @@ export type Settings = {
   boardList: Toggle;
   /** The Inbox cards: one column or two. */
   inboxColumns: InboxColumns;
+  /** The planner's task half: "off" hides it, so the calendar fills the screen. */
+  plannerTasks: Toggle;
 };
 
 const DEFAULTS: Settings = {
@@ -52,6 +54,7 @@ const DEFAULTS: Settings = {
   todayList: "on",
   boardList: "off",
   inboxColumns: "two",
+  plannerTasks: "on",
 };
 
 const LOCAL_KEYS: Record<keyof Settings, string> = {
@@ -63,6 +66,7 @@ const LOCAL_KEYS: Record<keyof Settings, string> = {
   todayList: "monkey-tasks.today-list",
   boardList: "monkey-tasks.board-list",
   inboxColumns: "monkey-tasks.inbox-columns",
+  plannerTasks: "monkey-tasks.planner-tasks",
 };
 
 const FILE_NAME = "monkey-tasks-settings.json";
@@ -104,6 +108,7 @@ function pick<K extends keyof Settings>(
     todayList: ["on", "off"],
     boardList: ["on", "off"],
     inboxColumns: ["one", "two"],
+    plannerTasks: ["on", "off"],
   };
   return typeof value === "string" && allowed[key].includes(value)
     ? (value as Settings[K])

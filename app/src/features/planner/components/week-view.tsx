@@ -99,17 +99,19 @@ export function WeekView({
       ))}
     </View>
   ));
+  // The grid never goes under its layout's height, and takes any
+  // spare room a hidden task list leaves.
   const body: StyleProp<ViewStyle> = [
     styles.grid,
     layout === "spread" && styles.spreadGrid,
-    { height: geometry.height },
+    { minHeight: geometry.height },
   ];
 
   return (
     <View
       testID={interactive ? `week-view:${layout}` : undefined}
       aria-hidden={!interactive}
-      style={layout === "rows" && styles.card}
+      style={[styles.root, layout === "rows" && styles.card]}
     >
       {interactive ? (
         <PlanDrag.Grid
@@ -366,8 +368,12 @@ const makeStyles = (colors: Palette) => ({
       bottom: 0,
       left: 0,
     },
+    root: {
+      flexGrow: 1,
+    },
     grid: {
       flexDirection: "column",
+      flexGrow: 1,
     },
     spreadGrid: {
       gap: spreadBox.gap,
@@ -425,7 +431,7 @@ const makeStyles = (colors: Palette) => ({
 
     // Spread: boxes in pairs, and the gap between them stays paper.
     box: {
-      height: spreadBox.height,
+      minHeight: spreadBox.height,
       overflow: "hidden",
       backgroundColor: colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
@@ -484,7 +490,7 @@ const makeStyles = (colors: Palette) => ({
     },
     line: {
       flex: 1,
-      height: rowsLine.height,
+      minHeight: rowsLine.height,
     },
     lineToday: {
       backgroundColor: colors.accentSoft,

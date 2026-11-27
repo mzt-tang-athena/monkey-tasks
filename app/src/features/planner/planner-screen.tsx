@@ -85,6 +85,12 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
   const [taskForm, changeForm] = useSetting("taskForm");
   const [weekView] = useSetting("weekView");
   const [weekStart] = useSetting("weekStart");
+  const [plannerTasks, setPlannerTasks] = useSetting("plannerTasks");
+  const tasksHidden = plannerTasks === "off";
+  const toggleTasks = React.useCallback(
+    () => setPlannerTasks(tasksHidden ? "on" : "off"),
+    [tasksHidden, setPlannerTasks],
+  );
 
   // The period strip's mark and the week and month pagers share one
   // live page position, so the mark tracks a swipe on the UI thread.
@@ -137,8 +143,22 @@ export default function PlannerScreen({ dock }: { dock: DockSlot }) {
       changeForm,
       toggle,
       open: openTask,
+      tasksHidden,
+      toggleTasks,
     }),
-    [today, source, cycle, anchor, openMenu, taskForm, changeForm, toggle, openTask],
+    [
+      today,
+      source,
+      cycle,
+      anchor,
+      openMenu,
+      taskForm,
+      changeForm,
+      toggle,
+      openTask,
+      tasksHidden,
+      toggleTasks,
+    ],
   );
 
   return (

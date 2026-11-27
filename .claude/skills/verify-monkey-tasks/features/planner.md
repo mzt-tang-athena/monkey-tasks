@@ -12,6 +12,7 @@ or a month cell. The user swipes to move between days or months.
 - `planner-swipe` turns the day or the month with a swipe.
 - `planner-drag` schedules a task by a hold and drag onto an hour, a week column or a month cell.
 - `planner-split` resizes the timeline with the `resize timeline` grabber.
+- `planner-hide-tasks` hides and shows the task half with a tap on that handle. Day keeps the slider and says `tasks hidden`; Week and Month name it `hide tasks` and `show tasks`.
 
 ## How to get to it (user POV)
 
@@ -27,6 +28,7 @@ Preconditions: a fresh page on `/planner`, Day mode, today is Monday 26.
 - **Week drop.** Click the `Week` tab, then hold and drag a list row onto a day column. The task takes that day.
 - **Month.** Click `Month`, then `swipe(page, getByTestId("month-pager"), "left", "page")`. `month-title` reads `November 2026`.
 - **Split.** Drag `resize timeline` up and down. The source toggle stays above the bottom bar.
+- **Hide the tasks.** Click the handle (`day-split:grip`, `week-split:grip`, `month-split:grip`). The `:bottom` pane drops to 0 and the calendar takes its height. Click again to return. On the emulator `journeys/android-planner-hide.sh` runs it in all three modes.
 - **Proof.** Screenshot before and after each drop, and attach the note text of the moved task.
 
 ## Gotchas

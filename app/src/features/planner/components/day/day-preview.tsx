@@ -34,6 +34,7 @@ export function DayPreview({
   tasks,
   now,
   fraction,
+  collapsed,
   scroll,
 }: {
   date: Date;
@@ -43,6 +44,8 @@ export function DayPreview({
   now: Date;
   /** The split the live day shows, drawn still. */
   fraction: number;
+  /** The live day hides its list: so does the still one. */
+  collapsed: boolean;
   /** The live panes' offsets. The still page draws at them, so the
       landing jumps nowhere. */
   scroll: { timeline: number; list: number };
@@ -64,6 +67,7 @@ export function DayPreview({
         <SplitStill
           testID="day-preview-split"
           fraction={fraction}
+          collapsed={collapsed}
           minTop={motion.split.minPane}
           minBottom={motion.split.minPane}
           top={

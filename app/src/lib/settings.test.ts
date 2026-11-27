@@ -125,6 +125,41 @@ describe("the built-in lists", () => {
   });
 });
 
+describe("the planner's task half", () => {
+  const KEY = "monkey-tasks.planner-tasks";
+
+  it("shows the task half on a fresh install", () => {
+    expect(loadSettings().plannerTasks).toBe("on");
+  });
+
+  it("keeps the half hidden once it is hidden, and shows it again", () => {
+    saveSetting("plannerTasks", "off");
+
+    expect(loadSettings().plannerTasks).toBe("off");
+    expect(storage.getItem(KEY)).toBe("off");
+
+    saveSetting("plannerTasks", "on");
+
+    expect(loadSettings().plannerTasks).toBe("on");
+  });
+
+  it("falls back to shown for a value it cannot read", () => {
+    storage.setItem(KEY, "maybe");
+
+    expect(loadSettings().plannerTasks).toBe("on");
+  });
+
+  it("reads the choice from the native file too", () => {
+    platform.os = "android";
+    sharedFakeAppFiles.files.set(
+      "file:///documents/monkey-tasks-settings.json",
+      JSON.stringify({ plannerTasks: "off" }),
+    );
+
+    expect(loadSettings().plannerTasks).toBe("off");
+  });
+});
+
 describe("the Inbox columns", () => {
   const COLUMNS_KEY = "monkey-tasks.inbox-columns";
 
