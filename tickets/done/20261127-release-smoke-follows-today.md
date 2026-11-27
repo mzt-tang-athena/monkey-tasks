@@ -3,6 +3,7 @@ title: The release smoke taps Main before Completed
 created: 2026-11-27
 priority: high
 assignee: omp
+pr: 269
 pr:
 depends: []
 ---
