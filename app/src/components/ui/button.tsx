@@ -1,6 +1,7 @@
 import * as React from "react";
 import { StyleSheet, Text } from "react-native";
 import type { PressableProps } from "react-native-gesture-handler";
+import { Icon } from "./icon";
 import { Pressable } from "./pressable";
 import { fonts, spacing, radius, radii, touchTarget, type, type Palette } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -13,7 +14,7 @@ import { useThemedStyles } from "@/theme/theme-provider";
  * `tone` sets the label color.
  *
  * The circle is icon-only, so its glyph is either the children or the
- * send arrow the sheet uses; the pill reads its label.
+ * arrow-up glyph the sheet uses; the pill reads its label.
  */
 export function Button({
   label,
@@ -88,15 +89,10 @@ export function Button({
       aria-busy={busy ?? false}
     >
       {circle && children == null ? (
-        <Text
-          style={[
-            styles.circleText,
-            quiet && styles.quietText,
-            disabled && styles.disabledText,
-          ]}
-        >
-          {"↑"}
-        </Text>
+        <Icon
+          name="arrow-up"
+          color={disabled ? "inkFaint" : quiet ? "accent" : "onAccent"}
+        />
       ) : children != null ? (
         children
       ) : (
@@ -125,14 +121,7 @@ const makeStyles = (colors: Palette) => ({
       alignItems: "center",
       justifyContent: "center",
     },
-    circleText: {
-      color: colors.onAccent,
-      fontSize: 17,
-      lineHeight: 22,
-      fontFamily: fonts.body,
-      fontWeight: "700",
-    },
-  
+
     // The planner's retry control: a padded label pill.
     pill: {
       minHeight: 44,

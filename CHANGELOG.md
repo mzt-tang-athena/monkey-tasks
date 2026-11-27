@@ -84,6 +84,13 @@ fails a bullet that wraps or runs past 64 characters.
 - The app lists a failed press, and can retry it.
 - This build adds a native module: install a new APK.
 
+### Capture sheet
+
+- The list and link controls sit in one row with Send.
+- The list switcher and link control draw smaller, squarer.
+- The Send button draws a proper arrow glyph.
+- An attached link shows in the same row as the controls.
+
 ### Fixes
 
 - Done in the reference picker leaves the keyboard up.

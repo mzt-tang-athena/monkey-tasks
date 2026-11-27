@@ -106,6 +106,10 @@ export const marks: Readonly<Record<string, MotionMark>> = {
     runsIn: "both",
     why: "where focus lands after the picker closes, which reduce must not change",
   },
+  "capture-controls.spec.ts": {
+    runsIn: "both",
+    why: "the sheet's controls lay out the same under reduce, as one row at 44pt",
+  },
   "capture-dock.spec.ts": {
     runsIn: "once",
     why: "layout boxes and focus order on a wide window; no frame is read",

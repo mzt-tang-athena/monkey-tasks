@@ -2,7 +2,6 @@ import * as React from "react";
 import {
   Platform,
   StyleSheet,
-  Text,
   TextInput,
   View,
   useWindowDimensions,
@@ -14,15 +13,12 @@ import { CaptureChips } from "./capture-chips";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Pill } from "@/components/ui/pill";
-import { Pressable } from "@/components/ui/pressable";
 import {
   captureText,
   fonts,
-  radii,
   spacing,
   sheetMaxShare,
   sheetReserve,
-  type,
   type Palette,
 } from "@/theme/tokens";
 import { useThemedStyles } from "@/theme/theme-provider";
@@ -94,10 +90,6 @@ export function CaptureForm({
   };
 
   const label = targetLabel(draft.target);
-  // A link is offered after the title when the task lands on a list. A
-  // link already attached stays on screen on any target, so the sheet
-  // never hides what the task will carry.
-  const linking = draft.target.kind === "list" || draft.references.length > 0;
 
   return (
     <>
@@ -118,41 +110,35 @@ export function CaptureForm({
         autoFocus
         selectionColor={colors.accent}
       />
-      {linking ? (
-        <View style={styles.links}>
-          {draft.references.map((name) => (
-            <Pressable
-              key={name}
-              style={({ pressed }) => [styles.link, pressed && styles.pressed]}
-              onPress={() => draft.removeReference(name)}
-              accessibilityRole="button"
-              accessibilityLabel={`remove reference ${name}`}
-            >
-              <Text style={styles.linkText} numberOfLines={1}>
-                {name}
-              </Text>
-              <Icon name="close" size={12} color="accent" />
-            </Pressable>
-          ))}
+      <CaptureChips parsed={draft.parsed} />
+      <View style={styles.actions}>
+        <View style={styles.controls}>
+          <Pill
+            label={label}
+            onPress={draft.cycleTarget}
+            accessibilityLabel={`target list: ${label}`}
+            trailing={<Icon name="caret-up-down" color="accent" />}
+          />
           {draft.target.kind === "list" ? (
             <Pill
               label="Link a reference"
               accessibilityLabel="link a reference"
               onPress={onOpenReferences}
+              labelHidden
             >
-              <Icon name="plus" size={14} color="accent" />
+              <Icon name="link" color="accent" />
             </Pill>
           ) : null}
+          {draft.references.map((name) => (
+            <Pill
+              key={name}
+              label={name}
+              accessibilityLabel={`remove reference ${name}`}
+              onPress={() => draft.removeReference(name)}
+              trailing={<Icon name="close" size={12} color="accent" />}
+            />
+          ))}
         </View>
-      ) : null}
-      <CaptureChips parsed={draft.parsed} />
-      <View style={styles.actions}>
-        <Pill
-          label={label}
-          onPress={draft.cycleTarget}
-          accessibilityLabel={`target list: ${label}`}
-        />
-        <View style={styles.spacer} />
         <Button
           label="send task"
           onPress={send}
@@ -186,37 +172,19 @@ const makeStyles = (colors: Palette) => ({
       paddingVertical: spacing.m,
       ...noFocusOutline,
     },
-    links: {
+    // The controls share one row, wrapping only when attached
+    // references outgrow it. Send keeps the row's top right.
+    actions: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.s,
+    },
+    controls: {
+      flex: 1,
       flexDirection: "row",
       flexWrap: "wrap",
       alignItems: "center",
       gap: spacing.s,
-    },
-    link: {
-      minHeight: 44,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.xs,
-      paddingHorizontal: spacing.m,
-      borderRadius: radii.pill,
-      backgroundColor: colors.accentSoft,
-    },
-    linkText: {
-      ...type.control,
-      maxWidth: 200,
-      color: colors.accent,
-      fontWeight: "600",
-    },
-    pressed: {
-      backgroundColor: colors.pressed,
-    },
-    actions: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.s,
-    },
-    spacer: {
-      flex: 1,
     },
   }),
 });
