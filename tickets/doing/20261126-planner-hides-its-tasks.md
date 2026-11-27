@@ -2,7 +2,7 @@
 title: The planner can hide its task half
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: claude-code planner-hides-tasks lane
 pr:
 depends: []
 ---
