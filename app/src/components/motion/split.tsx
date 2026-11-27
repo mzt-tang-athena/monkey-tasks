@@ -17,7 +17,7 @@ import { useProgress } from "@/lib/motion/progress";
 import { Pressable } from "@/components/ui/pressable";
 import { toJS } from "./internal/bridge";
 import { withTouchAction } from "./internal/gesture";
-import { useActivateKeys, useArrowKeys } from "./internal/keys";
+import { useArrowKeys } from "./internal/keys";
 import { usePressCancel } from "./internal/press-cancel";
 
 const dividerHeight = 28;
@@ -126,7 +126,6 @@ export function Split({
   const toggle = React.useCallback(() => onToggle?.(), [onToggle]);
 
   useArrowKeys(gripRef, step);
-  useActivateKeys(gripRef, toggle);
 
   // A new fraction from the screen, before paint: the panes never show
   // a frame between the release and the state that carries it. A share
@@ -246,35 +245,36 @@ export function Split({
               style={[styles.grip, hot && styles.gripHot]}
               // "adjustable" is React Native's slider role. The web build
               // maps it to `slider`, and the arrows follow the same step
-              // as TalkBack's increment and decrement. A hidden list has
-              // nothing to resize, so the grabber is a button that shows
-              // it again.
-              accessibilityRole={collapsed ? "button" : "adjustable"}
-              accessibilityLabel={collapsed ? "show tasks" : "resize timeline"}
-              accessibilityValue={
+              // as TalkBack's increment and decrement. A hidden list keeps
+              // the same node and role, so a keyboard's focus survives the
+              // hide. The value text says the list is hidden, and the
+              // action named for the next state shows or hides it.
+              accessibilityRole="adjustable"
+              accessibilityLabel="resize timeline"
+              accessibilityValue={{
+                min: 0,
+                max: 100,
+                now: Math.round(fraction * 100),
+                text: collapsed ? "tasks hidden" : undefined,
+              }}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(fraction * 100)}
+              aria-valuetext={collapsed ? "tasks hidden" : undefined}
+              accessibilityActions={[
+                { name: "increment" },
+                { name: "decrement" },
                 collapsed
-                  ? undefined
-                  : { min: 0, max: 100, now: Math.round(fraction * 100) }
-              }
-              aria-valuemin={collapsed ? undefined : 0}
-              aria-valuemax={collapsed ? undefined : 100}
-              aria-valuenow={collapsed ? undefined : Math.round(fraction * 100)}
-              accessibilityActions={
-                collapsed
-                  ? [{ name: "activate", label: "show tasks" }]
-                  : [
-                      { name: "increment" },
-                      { name: "decrement" },
-                      { name: "hide", label: "hide tasks" },
-                    ]
-              }
+                  ? { name: "toggle", label: "show tasks" }
+                  : { name: "toggle", label: "hide tasks" },
+              ]}
               onAccessibilityAction={(event) => {
                 const name = event.nativeEvent.actionName;
-                if (name === "increment" || name === "decrement") {
-                  step(name === "increment" ? 1 : -1);
+                if (name === "toggle") {
+                  toggle();
                   return;
                 }
-                toggle();
+                step(name === "increment" ? 1 : -1);
               }}
               tabIndex={0}
               // The hover handlers are React Native Web's, which the

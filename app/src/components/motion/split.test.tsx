@@ -252,13 +252,13 @@ describe("a collapsed Split", () => {
     expect(screen.queryByText("list")).toBeNull();
   });
 
-  it("offers the grabber as a button that shows the tasks", () => {
+  it("keeps the grabber a slider, and says the tasks are hidden", () => {
     collapsed();
 
     const grip = screen.getByTestId("split:grip");
-    expect(grip.getAttribute("role")).toBe("button");
-    expect(grip.getAttribute("aria-label")).toBe("show tasks");
-    expect(grip.getAttribute("aria-valuenow")).toBeNull();
+    expect(grip.getAttribute("role")).toBe("slider");
+    expect(grip.getAttribute("aria-label")).toBe("resize timeline");
+    expect(grip.getAttribute("aria-valuetext")).toBe("tasks hidden");
   });
 
   it("does not resize on a drag, and taps back", async () => {
