@@ -2,7 +2,7 @@
 title: Capture's add, list and reference controls look right
 created: 2026-11-26
 priority: normal
-assignee:
+assignee: lane capture-controls
 pr:
 depends: []
 ---
