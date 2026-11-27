@@ -3,7 +3,7 @@ title: Design the Journal tab around tap to write
 created: 2026-11-26
 priority: normal
 assignee: claude-journal-design
-pr:
+pr: 268
 depends: []
 ---
 
