@@ -24,6 +24,8 @@ export function plannerListValue(
     changeForm: noop,
     toggle: noop,
     open: noop,
+    tasksHidden: false,
+    toggleTasks: noop,
     ...overrides,
   };
 }

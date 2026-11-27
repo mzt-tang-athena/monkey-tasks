@@ -45,7 +45,7 @@ export function DaySpread({
   onSelectDay: (date: Date) => void;
 }) {
   const live = usePlannerList();
-  const { source, taskForm } = live;
+  const { source, taskForm, tasksHidden, toggleTasks } = live;
 
   // The day index counts from the day this screen mounted. The pager
   // reads it, and a landing writes the day back through the screen.
@@ -130,6 +130,7 @@ export function DaySpread({
                 tasks={tasks}
                 now={now}
                 fraction={fraction}
+                collapsed={tasksHidden}
                 scroll={saved(page)}
               />
             )}
@@ -142,6 +143,8 @@ export function DaySpread({
               now={now}
               fraction={fraction}
               onResize={onResize}
+              collapsed={tasksHidden}
+              onToggle={toggleTasks}
               onTimelineScroll={onTimelineScroll}
               onListScroll={onListScroll}
               restorePage={index}

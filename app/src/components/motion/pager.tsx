@@ -41,6 +41,7 @@ export function Pager({
   onPage,
   renderPreview,
   fill = false,
+  stretch = false,
   enabled = true,
   follow: tracker,
   testID,
@@ -51,6 +52,9 @@ export function Pager({
   onPage: (next: number) => void;
   renderPreview: (page: number) => React.ReactNode;
   fill?: boolean;
+  /** Keeps the live page in flow, and passes a parent's spare height
+      down to it, so a card grows when its pane does. */
+  stretch?: boolean;
   /** False while a drag surface under the same root owns the
       gesture, so a row drag never turns a page. */
   enabled?: boolean;
@@ -238,16 +242,23 @@ export function Pager({
 
   return (
     <GestureDetector gesture={gesture}>
-      <View testID={testID} style={[styles.host, fill && styles.fill]} onLayout={onLayout}>
+      <View
+        testID={testID}
+        style={[styles.host, fill && styles.fill, stretch && styles.grow]}
+        onLayout={onLayout}
+      >
         <Animated.View
           testID="pager-track"
-          style={[fill && styles.fill, shift, track]}
+          style={[fill && styles.fill, stretch && styles.grow, shift, track]}
         >
           {/* One element for the pager's life, at the track's origin.
               Keeping it mounted keeps the page's scroll and rows across
               a swipe, and its place stays plain, so a commit moves it
               with its content. */}
-          <View testID="pager-live" style={fill && styles.live}>
+          <View
+            testID="pager-live"
+            style={fill ? styles.live : stretch ? styles.grow : undefined}
+          >
             {children}
           </View>
           {previews.map((rel) => (
@@ -278,6 +289,9 @@ const styles = StyleSheet.create({
   },
   fill: {
     flex: 1,
+  },
+  grow: {
+    flexGrow: 1,
   },
   // A filling pager takes its size from the host, so the live page is
   // absolute and fills it. A pager that sizes to its page keeps the live

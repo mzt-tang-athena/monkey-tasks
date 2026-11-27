@@ -5,7 +5,7 @@ import { Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { placeBox } from "@/testing/layout";
 import { motion } from "@/lib/motion/tokens";
-import { Split, SplitStill } from "./split";
+import { Split, SplitFit, SplitStill } from "./split";
 
 const box = { x: 0, y: 0, width: 400, height: 628 };
 
@@ -123,14 +123,16 @@ describe("Split", () => {
     expect(onResize.mock.calls[0][0]).toBeCloseTo(0.75, 3);
   });
 
-  it("does not report a press that never moves", async () => {
+  it("reads a press that never moves as a tap, and leaves the split alone", async () => {
     const onResize = vi.fn();
+    const onToggle = vi.fn();
     render(
       <GestureHandlerRootView>
         <Split
           testID="split"
           fraction={0.4}
           onResize={onResize}
+          onToggle={onToggle}
           minTop={150}
           minBottom={150}
           top={<Text>timeline</Text>}
@@ -147,8 +149,37 @@ describe("Split", () => {
     });
     await wait(50);
 
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(onResize).not.toHaveBeenCalled();
+    expect(Number(screen.getByTestId("split:top").style.flexGrow)).toBeCloseTo(0.4, 3);
+  });
+
+  it("does not toggle after a drag", async () => {
+    const onResize = vi.fn();
+    const onToggle = vi.fn();
+    render(
+      <GestureHandlerRootView>
+        <Split
+          testID="split"
+          fraction={0.5}
+          onResize={onResize}
+          onToggle={onToggle}
+          minTop={150}
+          minBottom={150}
+          top={<Text>timeline</Text>}
+          bottom={<Text>list</Text>}
+        />
+      </GestureHandlerRootView>,
+    );
+    layOut();
+
+    await dragGrip([
+      [200, 340],
+      [200, 380],
+    ]);
+
     expect(onResize).toHaveBeenCalledTimes(1);
-    expect(onResize.mock.calls[0][0]).toBeCloseTo(0.4, 3);
+    expect(onToggle).not.toHaveBeenCalled();
   });
 
   it("reaches the pane floor at both edges", async () => {
@@ -193,7 +224,137 @@ describe("Split", () => {
   });
 });
 
+describe("a collapsed Split", () => {
+  function collapsed(props: { onResize?: () => void; onToggle?: () => void } = {}) {
+    render(
+      <GestureHandlerRootView>
+        <Split
+          testID="split"
+          fraction={0.4}
+          collapsed
+          onResize={props.onResize ?? (() => undefined)}
+          onToggle={props.onToggle}
+          minTop={150}
+          minBottom={150}
+          top={<Text>timeline</Text>}
+          bottom={<Text>list</Text>}
+        />
+      </GestureHandlerRootView>,
+    );
+  }
+
+  it("gives the top every pixel and leaves the bottom out of the tree", async () => {
+    collapsed();
+    await wait(50);
+
+    expect(Number(screen.getByTestId("split:top").style.flexGrow)).toBeCloseTo(1, 3);
+    expect(Number(screen.getByTestId("split:bottom").style.flexGrow)).toBeCloseTo(0, 3);
+    expect(screen.queryByText("list")).toBeNull();
+  });
+
+  it("offers the grabber as a button that shows the tasks", () => {
+    collapsed();
+
+    const grip = screen.getByTestId("split:grip");
+    expect(grip.getAttribute("role")).toBe("button");
+    expect(grip.getAttribute("aria-label")).toBe("show tasks");
+    expect(grip.getAttribute("aria-valuenow")).toBeNull();
+  });
+
+  it("does not resize on a drag, and taps back", async () => {
+    const onResize = vi.fn();
+    const onToggle = vi.fn();
+    collapsed({ onResize, onToggle });
+    layOut();
+
+    await dragGrip([
+      [200, 340],
+      [200, 380],
+    ]);
+    expect(onResize).not.toHaveBeenCalled();
+    expect(onToggle).not.toHaveBeenCalled();
+
+    await act(async () => {
+      const grip = screen.getByTestId("split:grip");
+      grip.dispatchEvent(pointer("pointerdown", 200, 310));
+      grip.dispatchEvent(pointer("pointerup", 200, 310));
+    });
+    await wait(50);
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the stored fraction through a hide and a show", async () => {
+    const parts = {
+      minTop: 150,
+      minBottom: 150,
+      top: <Text>timeline</Text>,
+      bottom: <Text>list</Text>,
+    };
+    const { rerender } = render(
+      <GestureHandlerRootView>
+        <Split testID="split" fraction={0.4} onResize={() => undefined} {...parts} />
+      </GestureHandlerRootView>,
+    );
+    rerender(
+      <GestureHandlerRootView>
+        <Split testID="split" fraction={0.4} collapsed onResize={() => undefined} {...parts} />
+      </GestureHandlerRootView>,
+    );
+    await wait(500);
+    expect(Number(screen.getByTestId("split:top").style.flexGrow)).toBeCloseTo(1, 3);
+    expect(screen.queryByText("list")).toBeNull();
+
+    rerender(
+      <GestureHandlerRootView>
+        <Split testID="split" fraction={0.4} onResize={() => undefined} {...parts} />
+      </GestureHandlerRootView>,
+    );
+    expect(screen.getByText("list")).toBeTruthy();
+    await wait(500);
+    expect(Number(screen.getByTestId("split:top").style.flexGrow)).toBeCloseTo(0.4, 3);
+    expect(Number(screen.getByTestId("split:bottom").style.flexGrow)).toBeCloseTo(0.6, 3);
+  });
+});
+
+describe("SplitFit", () => {
+  it("hides the list from the grip, and the grip names the way back", async () => {
+    const onToggle = vi.fn();
+    const { rerender } = render(
+      <SplitFit testID="fit" top={<Text>card</Text>} bottom={<Text>list</Text>} onToggle={onToggle} />,
+    );
+    const grip = screen.getByRole("button", { name: "hide tasks" });
+    grip.click();
+    expect(onToggle).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <SplitFit testID="fit" collapsed top={<Text>card</Text>} bottom={<Text>list</Text>} onToggle={onToggle} />,
+    );
+    await wait(500);
+    expect(screen.queryByText("list")).toBeNull();
+    expect(Number(screen.getByTestId("fit:top").style.flexGrow)).toBeCloseTo(1, 3);
+    expect(screen.getByRole("button", { name: "show tasks" })).toBeTruthy();
+  });
+});
+
 describe("SplitStill", () => {
+  it("draws a collapsed split with the top whole and no list", async () => {
+    render(
+      <SplitStill
+        testID="still"
+        fraction={0.4}
+        collapsed
+        minTop={150}
+        minBottom={150}
+        top={<Text>timeline</Text>}
+        bottom={<Text>list</Text>}
+      />,
+    );
+    await wait(50);
+
+    expect(Number(screen.getByTestId("still:top").style.flexGrow)).toBeCloseTo(1, 3);
+    expect(screen.queryByText("list")).toBeNull();
+  });
+
   it("draws the same split with no grabber", async () => {
     render(
       <SplitStill

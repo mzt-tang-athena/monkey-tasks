@@ -223,6 +223,7 @@ const makeStyles = (colors: Palette) => ({
     // The page keeps its content height inside the pager's stretch.
     // The title sits one step over the card.
     root: {
+      flexGrow: 1,
       flexShrink: 0,
       gap: spacing.s,
     },
@@ -238,6 +239,7 @@ const makeStyles = (colors: Palette) => ({
       letterSpacing: 1.5,
     },
     card: {
+      flexGrow: 1,
       backgroundColor: colors.surface,
       borderRadius: radius,
       borderWidth: StyleSheet.hairlineWidth,
@@ -259,13 +261,17 @@ const makeStyles = (colors: Palette) => ({
     },
     grid: {
       flexDirection: "column",
+      flexGrow: 1,
     },
+    // A row is as tall as one of its seven square cells, and shares any
+    // spare height a hidden task list leaves.
     row: {
       flexDirection: "row",
+      flexGrow: 1,
+      aspectRatio: 7,
     },
     cell: {
       flex: 1,
-      aspectRatio: 1,
       alignItems: "center",
       justifyContent: "center",
       gap: 3,

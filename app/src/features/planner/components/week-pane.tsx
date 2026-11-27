@@ -42,7 +42,7 @@ export function WeekPane({
   /** The screen's pager link: the period mark and this pager share it. */
   follow?: PageFollow;
 }) {
-  const { source } = usePlannerList();
+  const { source, tasksHidden, toggleTasks } = usePlannerList();
   const [weekStart] = useSetting("weekStart");
   const weekPool = React.useMemo(
     () => pillsForSource(tasks, source, startOfWeek(day, weekStart)),
@@ -63,14 +63,17 @@ export function WeekPane({
   return (
     <SplitFit
       testID="week-split"
+      collapsed={tasksHidden}
+      onToggle={toggleTasks}
       top={
         <Pager
           testID="week-pager"
+          stretch
           index={index}
           follow={follow}
           onPage={onPage}
           renderPreview={(page) => (
-            <View style={layout.gutter}>
+            <View style={layout.gutterGrow}>
               <WeekView
                 layout={weekLayout}
                 tasks={openTasks}
@@ -82,7 +85,7 @@ export function WeekPane({
             </View>
           )}
         >
-          <View style={layout.gutter}>
+          <View style={layout.gutterGrow}>
             <WeekView
               layout={weekLayout}
               tasks={openTasks}

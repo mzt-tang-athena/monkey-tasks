@@ -22,6 +22,8 @@ export const DayPage = React.memo(function DayPage({
   now,
   fraction,
   onResize,
+  collapsed,
+  onToggle,
   onTimelineScroll,
   onListScroll,
   restorePage,
@@ -37,6 +39,9 @@ export const DayPage = React.memo(function DayPage({
   /** The top pane's share of the split. */
   fraction: number;
   onResize: (fraction: number) => void;
+  /** The list pane is hidden: the timeline takes its room. */
+  collapsed?: boolean;
+  onToggle?: () => void;
   /** The panes' scroll offsets, so the preview can draw where the
       landed page will stand. */
   onTimelineScroll?: (y: number) => void;
@@ -53,6 +58,8 @@ export const DayPage = React.memo(function DayPage({
         testID="day-split"
         fraction={fraction}
         onResize={onResize}
+        collapsed={collapsed}
+        onToggle={onToggle}
         minTop={motion.split.minPane}
         minBottom={motion.split.minPane}
         top={

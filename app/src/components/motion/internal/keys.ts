@@ -1,6 +1,9 @@
 import * as React from "react";
 import { Platform } from "react-native";
 
+const isArrowKey = (key: string) => key.startsWith("Arrow");
+const isActivateKey = (key: string) => key === "Enter" || key === " ";
+
 /**
  * Arrow keys on a focused control, for the web. `onArrow` takes 1 for
  * the up or right arrow and -1 for down or left, so each control can
@@ -42,10 +45,20 @@ export function useSwipeKeys(
   });
 }
 
-/** Runs `onKey` for an arrow key while `ref` holds the focus. */
+/** Enter and Space on a focused control, for the web: a press. */
+export function useActivateKeys(
+  ref: React.RefObject<unknown>,
+  onActivate: () => void,
+): void {
+  useFocusKeys(ref, () => onActivate(), isActivateKey);
+}
+
+/** Runs `onKey` for a key `wanted` accepts while `ref` holds the focus.
+    It takes the arrow keys unless told otherwise. */
 function useFocusKeys(
   ref: React.RefObject<unknown>,
   onKey: (key: string) => void,
+  wanted: (key: string) => boolean = isArrowKey,
 ): void {
   // The listener attaches once. A step that changes with the value
   // would otherwise leave a frame with no listener while it resubscribes.
@@ -63,7 +76,7 @@ function useFocusKeys(
       if (document.activeElement !== ref.current) {
         return;
       }
-      if (!event.key.startsWith("Arrow")) {
+      if (!wanted(event.key)) {
         return;
       }
       event.preventDefault();
@@ -71,5 +84,5 @@ function useFocusKeys(
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [ref]);
+  }, [ref, wanted]);
 }

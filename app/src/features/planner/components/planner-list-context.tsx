@@ -22,6 +22,9 @@ export type PlannerListValue = {
   changeForm: (form: TaskForm) => void;
   toggle: (task: TaskItem) => void;
   open: (task: TaskItem) => void;
+  /** The task half is hidden: the calendar takes the screen. */
+  tasksHidden: boolean;
+  toggleTasks: () => void;
 };
 
 const PlannerListContext = React.createContext<PlannerListValue | null>(null);
@@ -45,7 +48,7 @@ const noop = () => undefined;
  */
 export function useInertList(): PlannerListValue {
   const live = usePlannerList();
-  const { today, source, taskForm } = live;
+  const { today, source, taskForm, tasksHidden } = live;
   return React.useMemo(
     () => ({
       today,
@@ -57,7 +60,9 @@ export function useInertList(): PlannerListValue {
       changeForm: noop,
       toggle: noop,
       open: noop,
+      tasksHidden,
+      toggleTasks: noop,
     }),
-    [today, source, taskForm],
+    [today, source, taskForm, tasksHidden],
   );
 }

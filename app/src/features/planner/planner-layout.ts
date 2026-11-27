@@ -28,6 +28,11 @@ export const layout = StyleSheet.create({
   gutter: {
     paddingHorizontal: pageGutter,
   },
+  // The gutter on a block that takes the room a hidden list leaves.
+  gutterGrow: {
+    flexGrow: 1,
+    paddingHorizontal: pageGutter,
+  },
   // Week's calendar and its list pane share one block under the
   // header: the pane starts where the canvas ends.
   weekBody: {
