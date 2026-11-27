@@ -2,7 +2,12 @@
    ref when the gesture runs, not during render. */
 import * as React from "react";
 import { StyleSheet, View } from "react-native";
-import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
+import {
+  GestureDetector,
+  usePanGesture,
+  useSimultaneousGestures,
+  useTapGesture,
+} from "react-native-gesture-handler";
 import Animated, {
   measure,
   useAnimatedRef,
@@ -144,6 +149,7 @@ export function Split({
         "worklet";
         grabbing.set(1);
         moved.set(0);
+        startGrow.set(grow.value);
       },
       onActivate: (e) => {
         "worklet";
@@ -154,7 +160,6 @@ export function Split({
         }
         box.set(measured.height);
         startTop.set(grow.value * Math.max(measured.height - dividerHeight, 0));
-        startGrow.set(grow.value);
         startY.set(e.absoluteY);
       },
       onUpdate: (e) => {
@@ -173,18 +178,16 @@ export function Split({
         const raw = startTop.value + (e.absoluteY - startY.value);
         grow.set(clampTop(raw, usable, minTop, minBottom) / usable);
       },
-      onFinalize: (e) => {
+      onFinalize: () => {
         "worklet";
         if (grabbing.value !== 1) {
           return;
         }
         grabbing.set(0);
-        // A press that never travelled is a tap, not a resize.
+        // A press that never travelled is a tap, not a resize: the tap
+        // below toggles, and the split goes back to where it stood.
         if (moved.value === 0) {
           grow.set(startGrow.value);
-          if (!e.canceled) {
-            toJS(toggle);
-          }
           return;
         }
         if (hide.value === 0) {
@@ -193,6 +196,20 @@ export function Split({
       },
     }),
   );
+
+  // A tap fails once the finger travels past the hold's slop, so a drag
+  // never toggles. The pan above never activates on a tap on Android,
+  // so it cannot tell a tap from a cancel by itself.
+  const tap = useTapGesture(
+    withTouchAction("none", {
+      maxDistance: motion.hold.slop,
+      onActivate: () => {
+        "worklet";
+        toJS(toggle);
+      },
+    }),
+  );
+  const gestures = useSimultaneousGestures(gesture, tap);
 
   const topStyle = useAnimatedStyle(() => ({
     flexGrow: grow.value + (1 - grow.value) * hide.value,
@@ -238,7 +255,7 @@ export function Split({
         testID={testID}
         hot={hot}
         grip={
-          <GestureDetector gesture={gesture}>
+          <GestureDetector gesture={gestures}>
             <Animated.View
               ref={gripRef}
               testID={testID == null ? undefined : `${testID}:grip`}
