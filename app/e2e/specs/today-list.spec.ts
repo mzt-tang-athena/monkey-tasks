@@ -2,14 +2,16 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { supplements, supplementsTick, tabs, undated } from "../data";
 import {
+  completedToggle,
   expectAbove,
   listTab,
+  openCompleted,
   openMain,
   press,
   row,
   sectionHeader,
 } from "../locators";
-import { noteText, returnToTab } from "../vault";
+import { notePaths, noteText, returnToTab } from "../vault";
 
 /**
  * Ticket 20261125-today-list: a built-in Today list leads the tabs, due
@@ -85,6 +87,60 @@ test("a tick leaves Today and writes its completion", async ({ page }) => {
   await expect.poll(() => noteText(page, supplementsTick.note)).toContain(
     supplementsTick.completedPrefix,
   );
+});
+
+/**
+ * Ticket 20261128-today-tick-duplicates: a tick on Today left a hold
+ * behind, because the row leaves Today at once and no circle plays to
+ * end it. The hold then put the row back on its own list, ticked and
+ * struck through in a group it had never been in.
+ */
+for (const name of [past, supplements]) {
+  test(`a tick on Today leaves ${name} in Completed on Main`, async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(row(page, supplements)).toBeVisible();
+    await press(page, row(page, name).getByRole("checkbox"));
+    await expect(row(page, name)).toHaveCount(0);
+
+    await openMain(page);
+    await expect(completedToggle(page)).toBeVisible();
+    await expect(row(page, name)).toHaveCount(0);
+    await expect(sectionHeader(page, "Past")).toHaveCount(0);
+    await expect(sectionHeader(page, "Today")).toHaveCount(0);
+
+    await openCompleted(page);
+    await expect(row(page, name)).toBeVisible();
+    await expect(row(page, name).getByRole("checkbox")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+}
+
+test("untick and tick after a tick on Today make one next note", async ({
+  page,
+}) => {
+  const copies = async () =>
+    (await notePaths(page, "Tasks/")).filter((path) =>
+      path.startsWith(`Tasks/${supplements}`),
+    );
+  await page.goto("/");
+  await expect(row(page, supplements)).toBeVisible();
+  await press(page, row(page, supplements).getByRole("checkbox"));
+  await expect.poll(copies).toHaveLength(2);
+
+  await openMain(page);
+  await openCompleted(page);
+  const circle = row(page, supplements).getByRole("checkbox");
+  for (let again = 0; again < 2; again += 1) {
+    await press(page, circle);
+    await expect(circle).toHaveAttribute("aria-checked", "false");
+    await expect.poll(copies).toHaveLength(1);
+    await press(page, circle);
+    await expect.poll(copies).toHaveLength(2);
+  }
 });
 
 test("a capture on Today is due today", async ({ page }) => {
