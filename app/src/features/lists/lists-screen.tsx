@@ -156,7 +156,7 @@ export default function ListsScreen({ dock }: { dock: DockSlot }) {
     brokenLists,
   ]);
 
-  const tickHold = useTickHold(toggleTask);
+  const tickHold = useTickHold(toggleTask, shown);
   const held = React.useMemo(
     () => applyTickHold(sections, tickHold.holds, shown),
     [sections, tickHold.holds, shown],
