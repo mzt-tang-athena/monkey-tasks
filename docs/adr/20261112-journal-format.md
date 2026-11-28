@@ -168,3 +168,10 @@ This supersedes the header in the amendment above.
 
 
 
+
+## Amendment, 2026-11-27: tap the page to write
+
+ADR 20261127-journal-tap-to-write replaces the composer sheet, the Food
+chip, the `Ate:` prefix and the add-only rule. A tap on the page writes.
+The app may now rewrite a line. Food comes from a linked food
+reference, and the app still writes `#food`. The block format stays.
