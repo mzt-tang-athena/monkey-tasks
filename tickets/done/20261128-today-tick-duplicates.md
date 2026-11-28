@@ -3,7 +3,7 @@ title: A tick on Today leaves a stuck row on Main and duplicates notes
 created: 2026-11-28
 priority: high
 assignee: omp
-pr: PR
+pr: 270
 depends: []
 ---
 
