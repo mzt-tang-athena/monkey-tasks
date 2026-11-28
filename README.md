@@ -188,9 +188,9 @@ exits 1, names the mismatch, and prints the `gh release edit --draft` and
 `gh release delete` commands. It does not retract the release.
 
 ```bash
-scripts/release.sh 1.4.0 --dry-run     # print every step, change nothing
-scripts/release.sh 1.4.0 --no-publish  # rehearse the local steps
-scripts/release.sh 1.4.0               # the real release
+scripts/release.sh 1.4.1 --dry-run     # print every step, change nothing
+scripts/release.sh 1.4.1 --no-publish  # rehearse the local steps
+scripts/release.sh 1.4.1               # the real release
 ```
 
 `--no-publish` makes the tag only in this clone. It stops before the
