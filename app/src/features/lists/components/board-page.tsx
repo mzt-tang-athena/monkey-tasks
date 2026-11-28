@@ -72,7 +72,7 @@ export function BoardPage({
     return found;
   }, [deeds, byName]);
 
-  const tickHold = useTickHold(toggleTask);
+  const tickHold = useTickHold(toggleTask, deeds);
   const held = React.useMemo(
     () => applyTickHold(sections, tickHold.holds, deeds),
     [sections, tickHold.holds, deeds],
